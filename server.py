@@ -1,0 +1,114 @@
+#encoding='utf-8'
+from flask import Flask, request, stream_with_context, Response
+from flask_cors import CORS
+from gevent import pywsgi
+
+import torch
+import json
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
+
+from utils.Logger import logger
+from utils.module import clock, NpEncoder
+from config.sch_config import schConfig
+
+from chat.qwen_chat import Chat
+
+
+app = Flask(__name__)
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+TrainedModel(model, ["cuda:0", "cuda:1"])
+
+
+
+##qwen
+model_dir = 'qwen/Qwen-14B-Chat'
+tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(model_dir, device_map="auto", trust_remote_code=True).eval()
+
+
+chat = Chat(tokenizer, model)
+
+def accept_param():
+    p = json.loads(request.data.decode("utf-8"))
+    logger.debug(p)
+    return p
+
+def check_param(param, key=None):
+    """检查入参合法性
+    """
+    if isinstance(key, str):
+        assert param.get(key) ,InterruptedError(f"入参缺少{key}")        
+    elif isinstance(key, list):
+        for k in key:
+            assert param.get(k) ,InterruptedError(f"入参缺少{k}")
+
+def make_result(param, head=200, msg=None, items=None, cls=False):
+
+    if not items and head == 200:
+        head = 600
+    res = {
+            "head":head,
+            "msg":msg,
+            "items":items
+        }
+    if cls:
+        res = json.dumps(res, cls=NpEncoder)
+    return res
+
+def format_sse(data: str, event=None) -> str:
+    msg = 'data: {}\n\n'.format(data)
+    if event is not None:
+        msg = 'event: {}\n{}'.format(event, msg)
+    return msg    
+    
+
+@app.route('/eval', methods=['post'])
+@clock
+def get_eval_data():
+    param = accept_param()
+    check_param(param, key=['param'])
+    items = test.run_prediction(param['param'])
+    try:
+        result = make_result(param, items=items)
+    except AssertionError as err:
+        logger.error(traceback.format_exc())
+        result = make_result(param, head=601, msg=repr(err))
+    except Exception as err:
+        logger.error(traceback.format_exc())
+        result = make_result(param, msg=repr(err))
+    finally:
+        return result
+
+    
+
+@app.route('/chat', methods=['post'])
+@clock
+def get_chat_reponse():
+    def decorate(generator):
+        for item in generator:
+            yield format_sse(json.dumps(item, ensure_ascii=False), 'delta')
+    try:
+        param = accept_param()
+        task = param.get('task', 'chat')
+        if task == 'chat':
+            print('prompt: ' + param.get('prompt', ''))
+            result =  Response(decorate(chat.run_prediction(param['history'],
+                param.get('prompt', ''), param.get('intentCode', 'default_code'))), mimetype='text/event-stream')
+    except AssertionError as err:
+        logger.error(traceback.format_exc())
+        result = make_result(param, head=601, msg=repr(err))
+    except Exception as err:
+        logger.error(traceback.format_exc())
+        result = make_result(param, msg=repr(err))
+    finally:
+        return result
+
+
+if __name__ == '__main__':
+    ip, port = '0.0.0.0', 6500
+    server = pywsgi.WSGIServer((ip, port), app)
+    logger.debug(f"serve at {ip}:{port}")
+    server.serve_forever()
+    #uvicorn.run(app, host='0.0.0.0', port=6500, log_level="info")
