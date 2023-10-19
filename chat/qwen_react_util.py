@@ -58,11 +58,11 @@ Question: {query}"""
 
 
 
-def llm_with_plugin(prompt: str, history, model, tokenizer, list_of_plugin_info=()):
-    chat_history = [(x['user'], x['bot']) for x in history] + [(prompt, '')]
+def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
+    #chat_history = [(x['user'], x['bot']) for x in history]
 
     # 需要让模型进行续写的初始文本
-    planning_prompt = build_input_text(chat_history, list_of_plugin_info)
+    planning_prompt = build_input_text(history, list_of_plugin_info)
 
     text = ''
     while True:
@@ -80,7 +80,7 @@ def llm_with_plugin(prompt: str, history, model, tokenizer, list_of_plugin_info=
 
     new_history = []
     new_history.extend(history)
-    new_history.append({'user': prompt, 'bot': text})
+    new_history.append({'user': history[-1][0], 'bot': text})
     return text, new_history
 
 
@@ -125,6 +125,7 @@ def build_input_text(chat_history, list_of_plugin_info) -> str:
         prompt += f"\n{im_start}user\n{query}{im_end}"
         prompt += f"\n{im_start}assistant\n{response}{im_end}"
 
+    print('prompt: ' + prompt)
     assert prompt.endswith(f"\n{im_start}assistant\n{im_end}")
     prompt = prompt[: -len(f'{im_end}')]
     return prompt
@@ -138,7 +139,7 @@ def text_completion(model, tokenizer, input_text: str, stop_words) -> str:  # �
 
     # TODO: 增加流式输出的样例实现
     input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
-    output = model.generate(input_ids, stop_words_ids=stop_words_ids)
+    output = model.generate(input_ids, max_new_tokens=400, stop_words_ids=stop_words_ids)
     output = output.tolist()[0]
     output = tokenizer.decode(output, errors="ignore")
     assert output.startswith(input_text)

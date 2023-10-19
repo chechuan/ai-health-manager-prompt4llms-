@@ -1,4 +1,5 @@
 from chat.qwen_react_util import *
+from chat.qwen_tool_config import *
 
 role_map = {
         '0': '<用户>:',
@@ -14,7 +15,7 @@ class Chat(object):
         self.tokenizer = tokenizer
         self.model = model
     
-    def get_tool_name(text):
+    def get_tool_name(self, text):
         if '外部知识' in text:
             return '调用外部知识库'
         elif '询问用户' in text:
@@ -24,12 +25,12 @@ class Chat(object):
         else:
             return '直接回复用户问题'
 
-    def generate(input_text):
+    def generate(self, input_text):
         ids = self.tokenizer.encode(input_text)
-        input_ids = torch.LongTensor([ids]).to(self.model.device)
-        
+        input_ids = torch.LongTensor([ids]).to(self.model.device) 
         out = self.model.generate(
             input_ids=input_ids,
+            max_new_tokens=400,
             do_sample=False,
             temperature=0
         )
@@ -37,16 +38,49 @@ class Chat(object):
         return out_text.split('请输出需调用的工具：')[-1]
 
 
+    def get_qwen_history(self, history):
+        hs = []
+        hcnt = {}
+        for cnt in history:
+            if len(hcnt.keys()) == 2:
+                hs.append(hcnt)
+                hcnt = {}
+            if cnt['role'] == '1' or cnt['role'] == '0':
+                if 'user' in hcnt.keys():
+                    hcnt['bot'] = ''
+                    hs.append(hcnt)
+                    hcnt = {}
+                hcnt['user'] = cnt['content']
+            else:
+                if 'bot' in hcnt.keys():
+                    hcnt['user'] = ''
+                    hs.append(hcnt)
+                    hcnt = {}
+                hcnt['bot'] = cnt['content']
+        if hcnt:
+            if 'user' in hcnt.keys():
+                hcnt['bot'] = ''
+            else:
+                hcnt['user'] = ''
+            hs.append(hcnt)
+            hcnt = {}
+        hs = [(x['user'], x['bot']) for x in hs]
+        return hs
+
+
 
     def run_prediction(self, history, prompt, intentCode):
         hist = [{'role': role_map.get(str(cnt['role']), '1'), 'content':cnt['content']} for cnt in history]
-        his = cls_prompt + ''.join(history) + '\n请输出需调用的工具：'
-        tool = get_tool_name(self.generate(his))
+        hist = [cnt['role'] + cnt['content'] for cnt in hist]
+        his = cls_prompt + ' '.join(hist) + '\n请输出需调用的工具：'
+        tool = self.get_tool_name(self.generate(his))
+        print('工具类型：' + tool)
         if tool == '进一步询问用户的情况' or tool == '直接回复用户问题':
-            history = build_input_text([cnt['content'] for cnt in history[:-1]])
-            response, history = llm_with_plugin(prompt=hist[-1], history=history,
+            h = self.get_qwen_history(history)
+            #history = build_input_text(h, [])
+            response, qw_his = llm_with_plugin(history=h,
                     list_of_plugin_info=qwen_tools, model=self.model,
                     tokenizer=self.tokenizer)
-        elif tool == '调用外部知识库':
+        #elif tool == '调用外部知识库':
 
 
