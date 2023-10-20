@@ -6,28 +6,20 @@ from gevent import pywsgi
 import torch
 import json
 from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
-
 from utils.Logger import logger
 from utils.module import clock, NpEncoder
 from config.sch_config import schConfig
-
 from chat.qwen_chat import Chat
-
 
 app = Flask(__name__)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-TrainedModel(model, ["cuda:0", "cuda:1"])
-
-
-
 ##qwen
 model_dir = 'qwen/Qwen-14B-Chat'
+model_dir = '/root/.cache/modelscope/hub/qwen/Qwen-7B-Chat'
 tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
+print('loading model')
 model = AutoModelForCausalLM.from_pretrained(model_dir, device_map="auto", trust_remote_code=True).eval()
-
-
+print('model ready')
 chat = Chat(tokenizer, model)
 
 def accept_param():
@@ -45,7 +37,6 @@ def check_param(param, key=None):
             assert param.get(k) ,InterruptedError(f"入参缺少{k}")
 
 def make_result(param, head=200, msg=None, items=None, cls=False):
-
     if not items and head == 200:
         head = 600
     res = {
@@ -64,25 +55,6 @@ def format_sse(data: str, event=None) -> str:
     return msg    
     
 
-@app.route('/eval', methods=['post'])
-@clock
-def get_eval_data():
-    param = accept_param()
-    check_param(param, key=['param'])
-    items = test.run_prediction(param['param'])
-    try:
-        result = make_result(param, items=items)
-    except AssertionError as err:
-        logger.error(traceback.format_exc())
-        result = make_result(param, head=601, msg=repr(err))
-    except Exception as err:
-        logger.error(traceback.format_exc())
-        result = make_result(param, msg=repr(err))
-    finally:
-        return result
-
-    
-
 @app.route('/chat', methods=['post'])
 @clock
 def get_chat_reponse():
@@ -94,8 +66,8 @@ def get_chat_reponse():
         task = param.get('task', 'chat')
         if task == 'chat':
             print('prompt: ' + param.get('prompt', ''))
-            result =  Response(decorate(chat.run_prediction(param['history'],
-                param.get('prompt', ''), param.get('intentCode', 'default_code'))), mimetype='text/event-stream')
+            result = chat.run_prediction(param['history'],
+                param.get('prompt', ''), param.get('intentCode', 'default_code'))
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(param, head=601, msg=repr(err))
