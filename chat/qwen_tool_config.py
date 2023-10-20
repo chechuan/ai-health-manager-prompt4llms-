@@ -1,18 +1,17 @@
 qwen_tools = [
-        # {
-        #     "name_for_human": "谷歌搜索",
-        #     "name_for_model": "google_search",
-        #     "description_for_model": "谷歌搜索是一个通用搜索引擎，可用于访问互联网、查询百科知识、了解时事新闻等。"
-        #     + " Format the arguments as a JSON object.",
-        #     "parameters": [
-        #         {
-        #             "name": "search_query",
-        #             "description": "搜索关键词或短语",
-        #             "required": True,
-        #             "schema": {"type": "string"},
-        #         }
-        #     ],
-        # },
+         {
+             "name_for_human": "搜索引擎",
+             "name_for_model": "search",
+             "description_for_model": "使用通用搜索引擎，可用于访问互联网、查询百科知识、了解时事新闻等。" + " Format the arguments as a JSON object.",
+             "parameters": [
+                 {
+                     "name": "search_query",
+                     "description": "搜索关键词或短语",
+                     "required": True,
+                     "schema": {"type": "string"},
+                 }
+             ],
+         },
         #{
         #    "name_for_human": "文生图",
         #    "name_for_model": "image_gen",
@@ -60,24 +59,38 @@ qwen_tools = [
             "parameters": [
                 {
                     "name": "question",
-                    "description": "要询问患者的问题",
+                    "description": "要询问用户的问题",
                     "required": True,
                     "schema": {"type": "string"},
                 }
             ],
         },
+        #{
+        #    "name_for_human": "直接回复用户",
+        #    "name_for_model": "query_answer",
+        #    "description_for_model":"与用户日常交流，如果用户的问题可直接回答，或回复用户的问候，使用此工具直接作答。" + " Format the arguments as a JSON object.",
+        #    "parameters": [
+        #        {
+        #            "name": "answer",
+        #            "description": "用户问题的答案",
+        #            "required": True,
+        #            "schema": {"type": "string"},
+        #        }
+        #    ],
+        #},
         {
-            "name_for_human": "直接回复用户",
-            "name_for_model": "query_answer",
-            "description_for_model":"与用户日常交流，如果用户的问题可直接回答，或回复用户的问候，使用此工具直接作答。" + " Format the arguments as a JSON object.",
+            "name_for_human": "获取图谱知识",
+            "name_for_model": "llm_graph_qa",
+            "description_for_model": "可以帮助你查询知识图谱中的信息，并返回相应的结果。这个工具能够理解你的查询意图，并从知识图谱中检索出最相关的知识。" + " Format the arguments as a JSON object.",
             "parameters": [
                 {
-                    "name": "answer",
-                    "description": "用户问题的答案",
+                    "name": "question",
+                    "description": "未知、困惑的问题，本工具将会针对此问题提供相关知识支持",
                     "required": True,
                     "schema": {"type": "string"},
                 }
             ],
-        },
+        }
+
     ]
 

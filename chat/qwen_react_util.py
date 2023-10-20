@@ -65,14 +65,10 @@ def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
     text = ''
     while True:
         output = text_completion(model, tokenizer, planning_prompt + text, stop_words=['Observation:', 'Observation:\n'])
-        import pdb
-        pdb.set_trace()
         action, action_input, output = parse_latest_plugin_call(output)
         if action:  # 需要调用插件
             # action、action_input 分别为需要调用的插件代号、输入参数
             # observation是插件返回的结果，为字符串
-            import pdb
-            pdb.set_trace()
             observation = call_plugin(action, action_input)
             output += f'\nObservation: {observation}\nThought:'
             text += output
@@ -184,8 +180,6 @@ def call_plugin(plugin_name: str, plugin_args: str) -> str:
     # 请开发者自行完善这部分内容。这里的参考实现仅是 demo 用途，非生产用途。
     #
     print('##plugin_name: ' + plugin_name)
-    import pdb
-    pdb.set_trace()
     if plugin_name == 'google_search':
         # 使用 SerpAPI 需要在这里填入您的 SERPAPI_API_KEY！
         os.environ["SERPAPI_API_KEY"] = os.getenv("SERPAPI_API_KEY", default='')
@@ -199,4 +193,7 @@ def call_plugin(plugin_name: str, plugin_args: str) -> str:
         prompt = urllib.parse.quote(prompt)
         return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
     elif plugin_name == 'chat_with_user':
+        import pdb
+        pdb.set_trace()
+        out = call_chat_with_user(json5.loads(plugin_args)['question'])
         
