@@ -15,6 +15,7 @@ import json5
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation import GenerationConfig
+from chat.plugin_util import funcCall 
 
 
 TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_human} API. What is the {name_for_human} API useful for? {description_for_model} Parameters: {parameters}"""
@@ -55,6 +56,9 @@ Question: {query}"""
 # 输出：
 #   模型对用户最新一个问题的回答。
 #
+
+fun_call = funcCall()
+
 
 def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
     #chat_history = [(x['user'], x['bot']) for x in history]
@@ -195,5 +199,13 @@ def call_plugin(plugin_name: str, plugin_args: str) -> str:
         prompt = json5.loads(plugin_args)["prompt"]
         prompt = urllib.parse.quote(prompt)
         return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
-    #elif plugin_name == 'chat_with_user':
+    elif plugin_name == 'llm_with_documents"':
+        gen_args = {"name":"llm_with_documents", "arguments": f"{'query':
+                {json5.loads(plugin_args)['query']}}"}
+        return func_call._call(gen_args, verbose=True)
+    elif plugin_name == 'llm_with_search_engine':
+        gen_args = {"name":"llm_with_search_engine", "arguments": f"{'query':
+                {json5.loads(plugin_args)['query']}}"}
+        return func_call._call(gen_args, verbose=True)
+
         
