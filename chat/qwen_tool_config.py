@@ -65,6 +65,19 @@ qwen_tools = [
                     "schema": {"type": "string"},
                 }
             ],
-        },        
+        },
+        {
+            "name_for_human": "直接回复用户",
+            "name_for_model": "query_answer",
+            "description_for_model":"与用户日常交流，如果用户的问题可直接回答，或回复用户的问候，使用此工具直接作答。" + " Format the arguments as a JSON object.",
+            "parameters": [
+                {
+                    "name": "answer",
+                    "description": "用户问题的答案",
+                    "required": True,
+                    "schema": {"type": "string"},
+                }
+            ],
+        },
     ]
 
