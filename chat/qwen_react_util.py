@@ -67,6 +67,9 @@ def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
         output = text_completion(model, tokenizer, planning_prompt + text, stop_words=['Observation:', 'Observation:\n'])
         action, action_input, output = parse_latest_plugin_call(output)
         if action:  # 需要调用插件
+            if action == 'chat_with_user':
+                text += action_input['question']
+                break
             # action、action_input 分别为需要调用的插件代号、输入参数
             # observation是插件返回的结果，为字符串
             observation = call_plugin(action, action_input)
@@ -192,8 +195,5 @@ def call_plugin(plugin_name: str, plugin_args: str) -> str:
         prompt = json5.loads(plugin_args)["prompt"]
         prompt = urllib.parse.quote(prompt)
         return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
-    elif plugin_name == 'chat_with_user':
-        import pdb
-        pdb.set_trace()
-        out = call_chat_with_user(json5.loads(plugin_args)['question'])
+    #elif plugin_name == 'chat_with_user':
         
