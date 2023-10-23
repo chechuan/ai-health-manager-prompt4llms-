@@ -21,7 +21,7 @@ class ParamServer:
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
-            "model_name": "Baichuan2-13B-Chat",
+            "model_name": "Baichuan2-13B-Chat-API",
             "query": None,
             "score_threshold": 0.6,
             "stream": False,
@@ -36,7 +36,7 @@ class ParamServer:
             "search_engine_name": "duckduckgo",
             "top_k": 3,
             "stream": False,
-            "model_name": "Baichuan2-13B-Chat",
+            "model_name": "Baichuan2-13B-Chat-API",
             "temperature": 0.7
         }
 
