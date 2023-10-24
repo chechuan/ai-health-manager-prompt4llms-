@@ -72,7 +72,7 @@ def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
         action, action_input, output = parse_latest_plugin_call(output)
         if action:  # 需要调用插件
             if action == 'chat_with_user':
-                text += action_input['question']
+                text += json5.loads(action_input)[list(json5.loads(action_input).keys())[0]]
                 break
             # action、action_input 分别为需要调用的插件代号、输入参数
             # observation是插件返回的结果，为字符串
@@ -200,12 +200,10 @@ def call_plugin(plugin_name: str, plugin_args: str) -> str:
         prompt = urllib.parse.quote(prompt)
         return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
     elif plugin_name == 'llm_with_documents"':
-        gen_args = {"name":"llm_with_documents", "arguments": f"{'query':
-                {json5.loads(plugin_args)['query']}}"}
+        gen_args = {"name":"llm_with_documents", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
         return func_call._call(gen_args, verbose=True)
     elif plugin_name == 'llm_with_search_engine':
-        gen_args = {"name":"llm_with_search_engine", "arguments": f"{'query':
-                {json5.loads(plugin_args)['query']}}"}
+        gen_args = {"name":"llm_with_search_engine", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
         return func_call._call(gen_args, verbose=True)
 
         

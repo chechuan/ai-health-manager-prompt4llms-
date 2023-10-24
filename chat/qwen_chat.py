@@ -1,5 +1,7 @@
 from chat.qwen_react_util import *
 from chat.qwen_tool_config import *
+from chat.plugin_util import funcCall
+import json
 
 role_map = {
         '0': '<用户>:',
@@ -70,17 +72,25 @@ class Chat(object):
 
 
     def run_prediction(self, history, prompt, intentCode):
-        hist = [{'role': role_map.get(str(cnt['role']), '1'), 'content':cnt['content']} for cnt in history]
-        hist = [cnt['role'] + cnt['content'] for cnt in hist]
+        histo = [{'role': role_map.get(str(cnt['role']), '1'), 'content':cnt['content']} for cnt in history]
+        hist = [cnt['role'] + cnt['content'] for cnt in histo]
         his = cls_prompt + ' '.join(hist) + '\n请输出需调用的工具：'
         tool = self.get_tool_name(self.generate(his))
         print('工具类型：' + tool)
+        text = ''
         if tool == '进一步询问用户的情况' or tool == '直接回复用户问题':
             h = self.get_qwen_history(history)
             #history = build_input_text(h, [])
             response, qw_his = llm_with_plugin(history=h,
                     list_of_plugin_info=qwen_tools, model=self.model,
                     tokenizer=self.tokenizer)
-        #elif tool == '调用外部知识库':
+            text = response 
+        elif tool == '调用外部知识库':
+            funcall = funcCall()
+            gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": histo[-1]["content"]})}
+            resp = funcall._call(gen_args, verbose=True)
+            text = resp
+
+        return text
 
 
