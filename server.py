@@ -1,15 +1,16 @@
 #encoding='utf-8'
-from flask import Flask, request, stream_with_context, Response
+import json
+import traceback
+
+from flask import Flask, Response, request, stream_with_context
 from flask_cors import CORS
 from gevent import pywsgi
+from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
+                          BitsAndBytesConfig)
 
-import torch
-import json
-from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM, BitsAndBytesConfig
-from utils.Logger import logger
-from utils.module import clock, NpEncoder
-from config.sch_config import schConfig
 from chat.qwen_chat import Chat
+from utils.Logger import logger
+from utils.module import NpEncoder, clock
 
 app = Flask(__name__)
 

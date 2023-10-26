@@ -1,4 +1,5 @@
 # ChangeLog
+- 2023年10月26日18:07:49 update prompt_factory 引入知识工程
 - 2023年10月23日13:58:02 update langchain default model_name
 - 2023年10月20日14:52:48 update funcCall
 - 2023年10月19日16:51:39 更新dev plan

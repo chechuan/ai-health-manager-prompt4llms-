@@ -15,6 +15,11 @@ PLAN_MAP = {
             '疾病/症状/体征异常问诊': ""
         }
 
+TEMPLATE_ENV = "为{var}用户提供健康咨询和管理服务"
+TEMPLATE_SENCE = "面向{var}"
+TEMPLATE_ROLE = "请你扮演一个{var}的角色"
+TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
+
 class ParamServer:
     @property
     def llm_with_documents(cls):

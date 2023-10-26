@@ -1,7 +1,8 @@
-from chat.qwen_react_util import *
-from chat.qwen_tool_config import *
-from chat.plugin_util import funcCall
 import json
+
+from chat.plugin_util import funcCall
+from chat.qwen_react_util import *
+from config.function_call_config import function_tools
 
 role_map = {
         '0': '<用户>:',
@@ -69,8 +70,6 @@ class Chat(object):
         hs = [(x['user'], x['bot']) for x in hs]
         return hs
 
-
-
     def run_prediction(self, history, prompt, intentCode):
         histo = [{'role': role_map.get(str(cnt['role']), '1'), 'content':cnt['content']} for cnt in history]
         hist = [cnt['role'] + cnt['content'] for cnt in histo]
@@ -82,7 +81,7 @@ class Chat(object):
             h = self.get_qwen_history(history)
             #history = build_input_text(h, [])
             response, qw_his = llm_with_plugin(history=h,
-                    list_of_plugin_info=qwen_tools, model=self.model,
+                    list_of_plugin_info=function_tools, model=self.model,
                     tokenizer=self.tokenizer)
             text = response 
         elif tool == '调用外部知识库':
@@ -92,5 +91,3 @@ class Chat(object):
             text = resp
 
         return text
-
-

@@ -7,11 +7,9 @@
 '''
 
 import sys
-from functools import partial
 from pathlib import Path
 from typing import Any, AnyStr, Dict, List, Optional
 
-import torch
 import yaml
 from requests import Session
 
