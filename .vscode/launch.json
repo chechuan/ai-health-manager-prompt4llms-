@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: 当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "Python: Prompt Factory",
             "type": "python",
             "request": "launch",
@@ -12,10 +20,14 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env", "居家",
-                "--scene", "一般用户",
-                "--role", "医师",
-                "--plan", "辅助诊断"
+                "--env",
+                "居家",
+                "--scene",
+                "一般用户",
+                "--role",
+                "医师",
+                "--plan",
+                "辅助诊断"
             ]
         }
     ]

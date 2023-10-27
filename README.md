@@ -1,4 +1,5 @@
 # ChangeLog
+- 2023年10月27日14:48:46 add 日程操作模块
 - 2023年10月27日10:19:15 补充知识工程prompt readme
 - 2023年10月26日18:07:49 update src.prompt.factory 引入知识工程
 - 2023年10月23日13:58:02 update langchain default model_name
