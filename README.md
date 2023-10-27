@@ -1,5 +1,6 @@
 # ChangeLog
-- 2023年10月26日18:07:49 update prompt_factory 引入知识工程
+- 2023年10月27日10:19:15 补充知识工程prompt readme
+- 2023年10月26日18:07:49 update src.prompt.factory 引入知识工程
 - 2023年10月23日13:58:02 update langchain default model_name
 - 2023年10月20日14:52:48 update funcCall
 - 2023年10月19日16:51:39 更新dev plan
@@ -7,8 +8,10 @@
 
 # Plan
 ## v0.1
-- [ ] 对话流程, prompt组装跑通
-- [ ] `REACT_INSTRUCTION`中明确要求首次应当调用获取流程`tool`获取处理流程
-- [ ] 提供获取处理流程工具,处理流程中应包含当前支持的类别,工作流中第一次让LLM选择处理流程填充到`REACT_INSTRUCTION`中
+- [x] 对话流程, prompt组装跑通
+- [x] `REACT_INSTRUCTION`中明确要求首次应当调用获取流程`tool`获取处理流程
+- [x] 提供获取处理流程工具,处理流程中应包含当前支持的类别,工作流中第一次让LLM选择处理流程填充到`REACT_INSTRUCTION`中
 ## v0.2
-- [ ] 开发langchain、graph 知识查询工具
+- [x] 开发langchain、graph 知识查询工具
+## v0.3
+- [x] 先验知识模块开发
