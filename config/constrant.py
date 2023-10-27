@@ -30,7 +30,7 @@ task_schedule_return_demo = [
         "occur_time": "2023-10-27 12:00:00",
         "remind_rule": "提前半小时",
         "remind_time": "2023-10-27 11:30:00",
-		"ask": "",
+		"ask": "已为你执行日程操作",
 		"cron": "0 30 11 * * *"
     },
 	{
@@ -50,7 +50,7 @@ task_schedule_return_demo = [
         "occur_time": "2023-10-27 12:00:00",
         "remind_rule": "提前10分钟",
         "remind_time": "2023-10-27 11:20:00",
-		"ask": "",
+		"ask": "已为你执行日程操作",
 		"cron": ""
     },
 	{
@@ -60,7 +60,7 @@ task_schedule_return_demo = [
         "occur_time": "",
         "remind_rule": "",
         "remind_time": "",
-		"ask": "",
+		"ask": "已为你执行日程操作",
 		"cron": ""
     }
 ]
@@ -70,16 +70,62 @@ task_schedule_parameter_description = [
     {"name": "event", "description": "当前事件", "required": True, "schema": {"type": "string","option": ["取消","创建","查询","修改"]}}, 
     {"name": "tmp_time", "description": "当前时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
     {"name": "occur_time", "description": "任务发生时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-    {"name": "remind_rule", "description": "提醒规则", "required": True, "schema": {"type": "string"}}, 
-    {"name": "remind_time", "description": "提醒事件", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+    {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
+    {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
     {"name": "cron", "description": "在Linux和Unix系统中定期执行任务的时间调度器", "required": True, "schema": {"type": "string[int]"}}, 
-    {"name":"ask", "description": "当用户输入信息不全时,通过此字段进一步询问", "required": False, "schema": {"type":"string"}}
+    {"name":"ask", "description": "当用户输入信息不全时,通过此字段进一步询问;当输入信息完整,当前任务已完成时,输出: 已为你执行日程操作", "required": True, "schema": {"type":"string"}}
+]
+
+task_schedule_parameter_description_for_qwen = [
+    {
+        "name_for_human": "创建日程",
+        "name_for_model": "createPlan",
+        "description_for_model": "解析用户输入信息,创建日程. Format the arguments as a JSON object.",
+        "parameters": [
+            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
+            {"name": "occur_time", "description": "任务发生时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+            {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
+            {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+        ]
+    },
+    {
+        "name_for_human": "取消日程",
+        "name_for_model": "cancelPlan",
+        "description_for_model": "解析用户意图,当用户想取消当前意图时,调用此工具. Format the arguments as a JSON object.",
+        "parameters": [
+            {"name": "task","description": "要取消的日程名称","required": True,"schema": {"type": "string"}}
+        ]
+    },
+    {
+        "name_for_human": "修改日程",
+        "name_for_model": "changePlan",
+        "description_for_model": "修改日程提醒时间. Format the arguments as a JSON object.",
+        "parameters": [
+            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
+            {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
+            {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+        ]
+    },
+    {
+        "name_for_human": "查询日程",
+        "name_for_model": "searchPlan",
+        "description_for_model": "查询特定的日程信息. Format the arguments as a JSON object.",
+        "parameters": [
+            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}}
+        ]
+    },
 ]
 
 TEMPLATE_TASK_SCHEDULE_MANAGER = """你是一个严谨的时间管理助手，可以帮助用户定制日程、查询日程、根据给出的规则修改日程发生时间和提醒时间、取消日程提醒,以下是一些指导要求:
-- 确定日程需要明确日程名称`task`、当前时间`event`、发生时间`occur_time`、提醒规则`remind_rule`参数
-- 如果不清楚事件或时间信息，可以向用户提问
-- 仅按照给定的返回格式输出内容,不要返回任何额外的信息
+- 确定日程需要明确以下关键信息:
+    - `task`:日程名称
+    - `event`:当前时间
+    - `occur_time`:明确指出具体的发生时间,不允许自动联想,补全
+    - `remind_rule`:明确给出的提醒规则,必须由用户明确给出,如不清晰,请在`ask`字段中进一步向用户确定
+    - `remind_time`:根据`remind_rule`和`curr_time`生成
+    - `ask`: 向用户咨询/反馈的内容,字段不允许为空
+- 如果以上任何关键字段信息缺失,请在`ask`字段中向用户询问缺失内容
+- 如果task已完成,请在`ask`字段中回复: 已为你执行日程操作
 - 定制、查询、修改、取消日程的数据格式和要求如下:
 
 # 数据返回格式
@@ -88,6 +134,8 @@ TEMPLATE_TASK_SCHEDULE_MANAGER = """你是一个严谨的时间管理助手，�
 ## 参数说明如下:
 {task_schedule_parameter_description}
 
+当前日程状态:
+{curr_plan}
 当前时间: {tmp_time}
 """
 

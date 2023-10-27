@@ -15,8 +15,8 @@ import json5
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation import GenerationConfig
-from chat.plugin_util import funcCall 
 
+from chat.plugin_util import funcCall
 
 TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_human} API. What is the {name_for_human} API useful for? {description_for_model} Parameters: {parameters}"""
 
@@ -56,7 +56,6 @@ Question: {query}"""
 # 输出：
 #   模型对用户最新一个问题的回答。
 #
-
 fun_call = funcCall()
 
 

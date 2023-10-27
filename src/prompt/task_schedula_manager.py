@@ -17,25 +17,30 @@ from langchain.prompts import PromptTemplate
 sys.path.append(".")
 from config.constrant import (TEMPLATE_TASK_SCHEDULE_MANAGER,
                               task_schedule_parameter_description,
+                              task_schedule_parameter_description_for_qwen,
                               task_schedule_return_demo)
+from src.prompt.qwen_openai_api import (ChatCompletionRequest,
+                                        create_chat_completion)
 
 
 class taskSchedulaManager:
     api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
-    openai.api_base = api_config['llm']
+    openai.api_base = api_config['llm'] + "/v1"
     openai.api_key = "EMPTY"
+    model="Qwen-14B-Chat"
+    # model="Baichuan2-13B-Chat"
     def __init__(self):
         """
         用户输入: {input}
-        你的输出(json):
         """
         prompt = PromptTemplate(
-            input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "tmp_time"], 
+            input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"], 
             template=TEMPLATE_TASK_SCHEDULE_MANAGER
         )
         self.sys_prompt = prompt.format(
             task_schedule_return_demo=task_schedule_return_demo,
             task_schedule_parameter_description=task_schedule_parameter_description,
+            curr_plan=[],
             tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
         )
         self.conv_prompt = PromptTemplate(
@@ -48,15 +53,34 @@ class taskSchedulaManager:
         if kwds.get("verbose"):
             print(content)
         completion = openai.ChatCompletion.create(
-            model="Qwen-14B-Chat",
+            model=self.model,
             messages=[
                 {"role": "user","content": content}
             ],
-            top_k=0, top_p=0.8, repetition_penalty=1.1
+            top_k=0, 
+            top_p=0.8, 
+            repetition_penalty=1.1
         )
         ret = completion['choices'][0]['message']['content'].strip()
+        print(eval(ret))
         return ret
+    
+    def _run(self, query, **kwds):
+        # content = self.sys_prompt + self.conv_prompt.format(input=query)
+        if kwds.get("verbose"):
+            print(query)
+        request = ChatCompletionRequest(
+            model=self.model, 
+            content=query, 
+            functions=task_schedule_parameter_description_for_qwen,
+            messages=[{"role": "user","content": query}]
+            )
+        query, history = create_chat_completion(request)
+        ...
+
 
 if __name__ == "__main__":
     tm = taskSchedulaManager()
-    tm.run("今晚准备7点开始做饭，提前15分钟提醒我", verbose=True)
+    # tm.run("我下午开会,提前叫我", verbose=True)
+    t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+    tm._run(f"现在是{t}\n我明天开会,提前叫我", verbose=True)
