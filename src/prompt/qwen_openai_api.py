@@ -6,112 +6,27 @@
 import copy
 import json
 import re
+import sys
 import time
-from argparse import ArgumentParser
-from contextlib import asynccontextmanager
+# from argparse import ArgumentParser
+# from contextlib import asynccontextmanager
 from typing import Dict, List, Literal, Optional, Union
 
 import torch
-import uvicorn
+# import uvicorn
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from sse_starlette.sse import EventSourceResponse
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers.generation import GenerationConfig
 
+# from fastapi.middleware.cors import CORSMiddleware
+# from pydantic import BaseModel, Field
+# from sse_starlette.sse import EventSourceResponse
 
-def _gc(forced: bool = False):
-    global args
-    if args.disable_gc and not forced:
-        return
-
-    import gc
-    gc.collect()
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):  # collects GPU memory
-    yield
-    _gc(forced=True)
-
-
-app = FastAPI(lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class ModelCard(BaseModel):
-    id: str
-    object: str = "model"
-    created: int = Field(default_factory=lambda: int(time.time()))
-    owned_by: str = "owner"
-    root: Optional[str] = None
-    parent: Optional[str] = None
-    permission: Optional[list] = None
-
-
-class ModelList(BaseModel):
-    object: str = "list"
-    data: List[ModelCard] = []
-
-
-class ChatMessage(BaseModel):
-    role: Literal["user", "assistant", "system", "function"]
-    content: Optional[str]
-    function_call: Optional[Dict] = None
-
-
-class DeltaMessage(BaseModel):
-    role: Optional[Literal["user", "assistant", "system"]] = None
-    content: Optional[str] = None
-
-
-class ChatCompletionRequest(BaseModel):
-    model: str
-    messages: List[ChatMessage]
-    functions: Optional[List[Dict]] = None
-    temperature: Optional[float] = None
-    top_p: Optional[float] = None
-    max_length: Optional[int] = None
-    stream: Optional[bool] = False
-    stop: Optional[List[str]] = None
-
-
-class ChatCompletionResponseChoice(BaseModel):
-    index: int
-    message: ChatMessage
-    finish_reason: Literal["stop", "length", "function_call"]
-
-
-class ChatCompletionResponseStreamChoice(BaseModel):
-    index: int
-    delta: DeltaMessage
-    finish_reason: Optional[Literal["stop", "length"]]
-
-
-class ChatCompletionResponse(BaseModel):
-    model: str
-    object: Literal["chat.completion", "chat.completion.chunk"]
-    choices: List[
-        Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]
-    ]
-    created: Optional[int] = Field(default_factory=lambda: int(time.time()))
-
-
-@app.get("/v1/models", response_model=ModelList)
-async def list_models():
-    global model_args
-    model_card = ModelCard(id="gpt-3.5-turbo")
-    return ModelList(data=[model_card])
+sys.path.append(".")
+from src.prompt.model_init import (ChatCompletionRequest,
+                                   ChatCompletionResponse,
+                                   ChatCompletionResponseChoice,
+                                   ChatCompletionResponseStreamChoice,
+                                   ChatMessage, DeltaMessage, ModelCard,
+                                   ModelList, chat_qwen)
 
 
 # To work around that unpleasant leading-\n tokenization issue!
@@ -142,6 +57,9 @@ REACT_INSTRUCTION = """Answer the following questions as best you can. You have 
 
 {tools_text}
 
+日程的操作请遵循以下几点要求:
+1. 日程名称、时间明确后才可以创建日程
+
 Use the following format:
 
 Question: the input question you must answer
@@ -153,7 +71,10 @@ Observation: the result of the action
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
 
+Please call the provided tool implementation for each step: {tools_name_text}
 Begin!"""
+
+
 
 _TEXT_COMPLETION_CMD = object()
 
@@ -282,7 +203,9 @@ def parse_messages(messages, functions):
                 t = t.lstrip("\n")
                 if bot_msg.startswith(t) and ("\nAction: " in bot_msg):
                     bot_msg = bot_msg[len(t) :]
-            history.append([usr_msg, bot_msg])
+            # history.append([usr_msg, bot_msg])
+            history.append({"role": "user", "content": usr_msg})
+            history.append({"role": "assistant", "content": bot_msg})
         else:
             raise HTTPException(
                 status_code=400,
@@ -362,14 +285,14 @@ def create_chat_completion(request: ChatCompletionRequest):
     # global model, tokenizer
 
     gen_kwargs = {}
-    if request.temperature is not None:
-        if request.temperature < 0.01:
-            gen_kwargs['top_k'] = 1  # greedy decoding
-        else:
-            # Not recommended. Please tune top_p instead.
-            gen_kwargs['temperature'] = request.temperature
-    if request.top_p is not None:
-        gen_kwargs['top_p'] = request.top_p
+    # if request.temperature is not None:
+    #     if request.temperature < 0.01:
+    #         gen_kwargs['top_k'] = 1  # greedy decoding
+    #     else:
+    #         # Not recommended. Please tune top_p instead.
+    #         gen_kwargs['temperature'] = request.temperature
+    # if request.top_p is not None:
+    #     gen_kwargs['top_p'] = request.top_p
 
     stop_words = add_extra_stop_words(request.stop)
     if request.functions:
@@ -378,30 +301,22 @@ def create_chat_completion(request: ChatCompletionRequest):
             stop_words.append("Observation:")
 
     query, history = parse_messages(request.messages, request.functions)
-    return query, history
-    if request.stream:
-        if request.functions:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid request: Function calling is not yet implemented for stream mode.",
-            )
-        generate = predict(query, history, request.model, stop_words, gen_kwargs)
-        return EventSourceResponse(generate, media_type="text/event-stream")
+    # if request.stream:
+    #     if request.functions:
+    #         raise HTTPException(
+    #             status_code=400,
+    #             detail="Invalid request: Function calling is not yet implemented for stream mode.",
+    #         )
+    #     generate = predict(query, history, request.model, stop_words, gen_kwargs)
+    #     return EventSourceResponse(generate, media_type="text/event-stream")
 
-    stop_words_ids = [tokenizer.encode(s) for s in stop_words] if stop_words else None
+    # stop_words_ids = [tokenizer.encode(s) for s in stop_words] if stop_words else None
+    stop_words_ids = None
     if query is _TEXT_COMPLETION_CMD:
         response = text_complete_last_message(history, stop_words_ids=stop_words_ids, gen_kwargs=gen_kwargs)
     else:
-        response, _ = model.chat(
-            tokenizer,
-            query,
-            history=history,
-            stop_words_ids=stop_words_ids,
-            append_history=False,
-            **gen_kwargs
-        )
-        print(f"<chat>\n{history}\n{query}\n<!-- *** -->\n{response}\n</chat>")
-    _gc()
+        response = chat_qwen(query, history)
+        # print(f"<chat>\n{history}\n{query}\n<!-- *** -->\n{response}\n</chat>")
 
     response = trim_stop_words(response, stop_words)
     if request.functions:
@@ -463,64 +378,3 @@ async def predict(
     )
     yield "{}".format(chunk.model_dump_json(exclude_unset=True))
     yield "[DONE]"
-
-    _gc()
-
-
-def _get_args():
-    parser = ArgumentParser()
-    parser.add_argument(
-        "-c",
-        "--checkpoint-path",
-        type=str,
-        default="Qwen/Qwen-7B-Chat",
-        help="Checkpoint name or path, default to %(default)r",
-    )
-    parser.add_argument(
-        "--cpu-only", action="store_true", help="Run demo with CPU only"
-    )
-    parser.add_argument(
-        "--server-port", type=int, default=8000, help="Demo server port."
-    )
-    parser.add_argument(
-        "--server-name",
-        type=str,
-        default="127.0.0.1",
-        help="Demo server name. Default: 127.0.0.1, which is only visible from the local computer."
-        " If you want other computers to access your server, use 0.0.0.0 instead.",
-    )
-    parser.add_argument("--disable-gc", action="store_true",
-                        help="Disable GC after each response generated.")
-
-    args = parser.parse_args()
-    return args
-
-
-# if __name__ == "__main__":
-#     args = _get_args()
-
-#     tokenizer = AutoTokenizer.from_pretrained(
-#         args.checkpoint_path,
-#         trust_remote_code=True,
-#         resume_download=True,
-#     )
-
-#     if args.cpu_only:
-#         device_map = "cpu"
-#     else:
-#         device_map = "auto"
-
-#     model = AutoModelForCausalLM.from_pretrained(
-#         args.checkpoint_path,
-#         device_map=device_map,
-#         trust_remote_code=True,
-#         resume_download=True,
-#     ).eval()
-
-#     model.generation_config = GenerationConfig.from_pretrained(
-#         args.checkpoint_path,
-#         trust_remote_code=True,
-#         resume_download=True,
-#     )
-
-#     uvicorn.run(app, host=args.server_name, port=args.server_port, workers=1)

@@ -67,49 +67,54 @@ task_schedule_return_demo = [
 
 task_schedule_parameter_description = [
     {"name": "task", "description": "任务名称", "required": True, "schema": {"type": "string"}}, 
-    {"name": "event", "description": "当前事件", "required": True, "schema": {"type": "string","option": ["取消","创建","查询","修改"]}}, 
-    {"name": "tmp_time", "description": "当前时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-    {"name": "occur_time", "description": "任务发生时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-    {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
     {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-    {"name": "cron", "description": "在Linux和Unix系统中定期执行任务的时间调度器", "required": True, "schema": {"type": "string[int]"}}, 
+    # {"name": "cron", "description": "在Linux和Unix系统中定期执行任务的时间调度器", "required": True, "schema": {"type": "string[int]"}}, 
     {"name":"ask", "description": "当用户输入信息不全时,通过此字段进一步询问;当输入信息完整,当前任务已完成时,输出: 已为你执行日程操作", "required": True, "schema": {"type":"string"}}
 ]
 
 task_schedule_parameter_description_for_qwen = [
     {
-        "name_for_human": "创建日程",
+        "name_for_human": "创建日程提醒",
         "name_for_model": "createPlan",
-        "description_for_model": "解析用户输入信息,创建日程. Format the arguments as a JSON object.",
+        "description_for_model": "理解用户原始意图,明确日程和提醒时间后,调用此工具创建日程提醒. Format the arguments as a JSON object.",
         "parameters": [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
-            {"name": "occur_time", "description": "任务发生时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-            {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
-            {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+            {"name": "remind_time", "description": "提醒的时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+            {"name": "ask","description": "告知用户日程名称/时间和创建成功的信息","required": True,"schema": {"type": "string"}}
+        ]
+    },
+    {
+        "name_for_human": "询问日程提醒时间",
+        "name_for_model": "askForRemindTime",
+        "description_for_model": "用户意图为创建日程提醒,但给出的日程时间不明确,调用此工具向用户确认日程提醒的具体时间,不要重复询问. Format the arguments as a JSON object.",
+        "parameters": [
+            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
+            {"name": "ask","description": "向用户询问提醒的时间","required": True,"schema": {"type": "string"}} 
         ]
     },
     {
         "name_for_human": "取消日程",
         "name_for_model": "cancelPlan",
-        "description_for_model": "解析用户意图,当用户想取消当前意图时,调用此工具. Format the arguments as a JSON object.",
+        "description_for_model": "用户想取消当前日程时,调用本工具取消对应日程. Format the arguments as a JSON object.",
         "parameters": [
-            {"name": "task","description": "要取消的日程名称","required": True,"schema": {"type": "string"}}
+            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
+            {"name": "ask","description": "告知用户日程已取消","required": True,"schema": {"type": "string"}}
         ]
     },
     {
         "name_for_human": "修改日程",
         "name_for_model": "changePlan",
-        "description_for_model": "修改日程提醒时间. Format the arguments as a JSON object.",
+        "description_for_model": "用户想修改日程时,若已存在日程时,可调用本工具修改对应日程时间. Format the arguments as a JSON object.",
         "parameters": [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
-            {"name": "remind_rule", "description": "提醒规则,用于解析出提醒时间", "required": True, "schema": {"type": "string"}}, 
-            {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+            {"name": "remind_time", "description": "当前用户希望日程提醒的时间", "required": True, "schema": {"type": "string","format": "timestamp"}},
+            {"name": "ask", "descripton": "告知用户日程修改成功", "required": False, "schema": {"type": "string"}}
         ]
     },
     {
         "name_for_human": "查询日程",
         "name_for_model": "searchPlan",
-        "description_for_model": "查询特定的日程信息. Format the arguments as a JSON object.",
+        "description_for_model": "用户想查询特定的日程信息时调用此工具. Format the arguments as a JSON object.",
         "parameters": [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}}
         ]
