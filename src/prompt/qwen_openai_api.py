@@ -164,7 +164,8 @@ def parse_messages(messages, functions):
             usr_msg = messages[i].content.lstrip("\n").rstrip()
             bot_msg = messages[i + 1].content.lstrip("\n").rstrip()
             if system and (i == len(messages) - 2):
-                usr_msg = f"{system}\n\nQuestion: {usr_msg}"
+                history.append({"role": "system", "content": system})
+                usr_msg = f"Question: {usr_msg}"
                 system = ""
             for t in dummy_thought.values():
                 t = t.lstrip("\n")
@@ -179,8 +180,11 @@ def parse_messages(messages, functions):
                 detail="Invalid request: Expecting exactly one user (or function) role before every assistant role.",
             )
     if system:
-        assert query is not _TEXT_COMPLETION_CMD
-        query = f"{system}\n\nQuestion: {query}"
+        history = [{"role": "system", "content": system}]
+        history.append({"role": "user", "content": f"Question:{query}"})
+        query = ""
+        # assert query is not _TEXT_COMPLETION_CMD
+        # query = f"{system}\n\nQuestion: {query}"
     return query, history
 
 

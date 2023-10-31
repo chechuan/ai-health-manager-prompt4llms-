@@ -108,6 +108,19 @@ class taskSchedulaManager:
             }
         )
         return messages
+    
+    def tool_modify_schedule(self, messages, msg):
+        content = "算了，取消吧"
+        print(f"tool input: {content}")
+        messages.append(
+            {
+                "role": "assistant", 
+                "content": msg.content, 
+                "function_call": {"name":msg.function_call['name'],"arguments": content},
+                "schedule": self.update_schedule(self.get_init_schedule(), msg.function_call['arguments'])
+            }
+        )
+        return messages
 
     def get_init_schedule(self):
         return [{"task": "开会", "time": "2023-10-31T17:00:00"}]
@@ -128,7 +141,7 @@ class taskSchedulaManager:
             request = ChatCompletionRequest(model="Qwen-14B-Chat", content=query, functions=task_schedule_parameter_description_for_qwen,messages=messages,)
             msg = create_chat_completion(request).choices[0].message
             if kwds.get("verbose"):
-                print(msg.content)
+                print("output: ", msg.content)
                 if msg.function_call:
                     print("call func: ", msg.function_call['name'])
                     print("arguments: ", msg.function_call['arguments'])
@@ -143,7 +156,7 @@ class taskSchedulaManager:
                 messages = self.tool_create_schedule(messages, msg)
             elif msg.function_call['name'] == "modify_schedule":
                 # message rollout
-                ...
+                messages = self.tool_modify_schedule(messages, msg)
             else:
                 messages.append(
                     {
@@ -152,8 +165,7 @@ class taskSchedulaManager:
                         "function_call": {"name":msg.function_call['name'],"arguments": input(f"{content}:")}
                     }
                 )
-            print("messages:")
-            [print(i) for i in messages]
+            print("======="*10)
             
 
 if __name__ == "__main__":
@@ -164,7 +176,7 @@ if __name__ == "__main__":
     tsm = taskSchedulaManager()
     # tsm.run("我下午开会,提前叫我", verbose=True)
     # debug 任务时间
-    tsm._run(f"下午开会,提前叫我", verbose=True, schedule=schedule)
+    tsm._run(f"{t_claim_str}下午开会,提前叫我", verbose=True, schedule=schedule)
     # tsm._run(f"开会时间改到明天下午3点", verbose=True, schedule=schedule)
     # debug 提醒规则
     # tsm._run(f"现在的时间是{t}\n明天下午3点24开会,提前叫我", verbose=True)

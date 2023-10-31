@@ -27,9 +27,9 @@ def chat_qwen(query: str = "", history: List[Dict] = []):
         model=model,
         messages=history,
         top_k=0, 
-        top_p=0, 
+        top_p=0.5, 
         repetition_penalty=1.1,
-        temperature=0.6
+        temperature=0.5
     )
     ret = completion['choices'][0]['message']['content'].strip()
     return ret

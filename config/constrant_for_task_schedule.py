@@ -15,8 +15,6 @@ TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_h
 
 REACT_INSTRUCTION = """You are a powerful schedule management tool, please follow the following requirements to complete the corresponding tasks：
 - Answer the following questions as best you can.
-- Each step should call an Action and never give Final answer.
-- if user want to create schedule and time is unclear, call `ask_for_time` tool once to get schedule time before `create_schedule`
 - You have access to the following APIs:
 
 {tools_text}
@@ -30,13 +28,12 @@ Action Input: the input to the action, should be a JSON object
 Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can be repeated zero or more times)
 
-现在的时间是2023-10-31 14:12:09
 当前日程:
 {total_schedule}
 
 Begin!"""
 
-
+# - if user want to create schedule and time is unclear, call `ask_for_time` tool once to get schedule time before `create_schedule`
 # Thought: I now know the final answer
 # Final Answer: the final answer to the original input question
 # {"name": "cron", "description": "在Linux和Unix系统中定期执行任务的时间调度器", "required": True, "schema": {"type": "string[int]"}}, 
