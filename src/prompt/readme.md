@@ -75,3 +75,8 @@ from src.prompt.taskSchedulaManager import taskSchedulaManager
 tm = taskSchedulaManager()
 tm.run("今晚准备7点开始做饭，提前15分钟提醒我", verbose=True)
 ```
+
+## 现存问题
+- 当前初始交互上下文已达到3000左右, 首token latency较长
+- 长程记忆衰减，末端比较难严格遵循开头的提示
+- 建议分治, 识别出具体日程任务, 针对性细化流程写sys prompt, 进行局部assistant user对话

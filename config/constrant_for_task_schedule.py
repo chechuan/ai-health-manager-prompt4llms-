@@ -51,7 +51,7 @@ task_schedule_parameter_description_for_qwen = [
         "name_for_human": "创建日程",
         "name_for_model": "create_schedule",
         # "description_for_model": "创建日程提醒是一个用于创建日程的工具，在调用询问日程提醒时间工具明确时间后，调用此工具创建日程提醒. Format the arguments as a JSON object.",
-        "description_for_model": "创建日程是一个用于创建日程的工具. Format the arguments as a JSON object.",
+        "description_for_model": "一个用于创建日程的工具,如果日程时间不明确,先使用ask_for_time工具询问日程时间. Format the arguments as a JSON object.",
         "parameters": [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
             {"name": "time", "description": "提醒的时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 

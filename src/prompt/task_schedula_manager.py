@@ -67,7 +67,7 @@ class taskSchedulaManager:
         return ret
 
     def tool_ask_for_time(self, messages, msg):
-        content = "11点半"
+        content = "晚上7点半"
         print(f"tool input: {content}")
         messages.append(
             {
@@ -122,8 +122,8 @@ class taskSchedulaManager:
         messages = kwds.get("messages", [])
         if query:
             messages.append({"role": "user", "content": query, "schedule": kwds.get("schedule", [])})
-        if query or messages:
-            raise 
+        if not query and not messages:
+            raise ValueError("Query and messages can't be empty at the same time.")
         while True:
             request = ChatCompletionRequest(model="Qwen-14B-Chat", content=query, functions=task_schedule_parameter_description_for_qwen,messages=messages,)
             msg = create_chat_completion(request).choices[0].message
@@ -135,7 +135,7 @@ class taskSchedulaManager:
             if msg.function_call['name'] == "ask_for_time":
                 # conv continue
                 content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
-                messages.append({"role": msg.role, "content": content})
+                # messages.append({"role": msg.role, "content": content})
                 messages = self.tool_ask_for_time(messages, msg)
             elif msg.function_call['name'] == "create_schedule":
                 # message rollout
@@ -152,7 +152,9 @@ class taskSchedulaManager:
                         "function_call": {"name":msg.function_call['name'],"arguments": input(f"{content}:")}
                     }
                 )
-            print("messages:", messages)
+            print("messages:")
+            [print(i) for i in messages]
+            
 
 if __name__ == "__main__":
     from datetime import datetime
