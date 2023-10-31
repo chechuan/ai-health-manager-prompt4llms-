@@ -21,6 +21,7 @@ from fastapi import FastAPI, HTTPException
 # from sse_starlette.sse import EventSourceResponse
 
 sys.path.append(".")
+from config.constrant_for_task_schedule import REACT_INSTRUCTION, TOOL_DESC
 from src.prompt.model_init import (ChatCompletionRequest,
                                    ChatCompletionResponse,
                                    ChatCompletionResponseChoice,
@@ -49,31 +50,6 @@ def trim_stop_words(response, stop_words):
             if idx != -1:
                 response = response[:idx]
     return response
-
-
-TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_human} API. What is the {name_for_human} API useful for? {description_for_model} Parameters: {parameters}"""
-
-REACT_INSTRUCTION = """Answer the following questions as best you can. You have access to the following APIs:
-
-{tools_text}
-
-日程的操作请遵循以下几点要求:
-1. 日程名称、时间明确后才可以创建日程
-
-Use the following format:
-
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of [{tools_name_text}]
-Action Input: the input to the action
-Observation: the result of the action
-... (this Thought/Action/Action Input/Observation can be repeated zero or more times)
-Thought: I now know the final answer
-Final Answer: the final answer to the original input question
-
-Please call the provided tool implementation for each step: {tools_name_text}
-Begin!"""
-
 
 
 _TEXT_COMPLETION_CMD = object()
@@ -126,6 +102,7 @@ def parse_messages(messages, functions):
         system += "\n\n" + REACT_INSTRUCTION.format(
             tools_text=tools_text,
             tools_name_text=tools_name_text,
+            total_schedule=messages[-1].schedule,
         )
         system = system.lstrip("\n").rstrip()
 
@@ -141,20 +118,10 @@ def parse_messages(messages, functions):
         if content:
             content = content.lstrip("\n").rstrip()
         if role == "function":
-            if (len(messages) == 0) or (messages[-1].role != "assistant"):
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid request: Expecting role assistant before role function.",
-                )
             messages[-1].content += f"\nObservation: {content}"
             if m_idx == len(_messages) - 1:
                 messages[-1].content += "\nThought:"
         elif role == "assistant":
-            if len(messages) == 0:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid request: Expecting role user before role assistant.",
-                )
             last_msg = messages[-1].content
             last_msg_has_zh = len(re.findall(r"[\u4e00-\u9fff]+", last_msg)) > 0
             if func_call is None:
@@ -280,20 +247,8 @@ def text_complete_last_message(history, stop_words_ids, gen_kwargs):
     return output
 
 
-# @app.post("/v1/chat/completions", response_model=ChatCompletionResponse)
 def create_chat_completion(request: ChatCompletionRequest):
-    # global model, tokenizer
-
     gen_kwargs = {}
-    # if request.temperature is not None:
-    #     if request.temperature < 0.01:
-    #         gen_kwargs['top_k'] = 1  # greedy decoding
-    #     else:
-    #         # Not recommended. Please tune top_p instead.
-    #         gen_kwargs['temperature'] = request.temperature
-    # if request.top_p is not None:
-    #     gen_kwargs['top_p'] = request.top_p
-
     stop_words = add_extra_stop_words(request.stop)
     if request.functions:
         stop_words = stop_words or []
@@ -301,22 +256,13 @@ def create_chat_completion(request: ChatCompletionRequest):
             stop_words.append("Observation:")
 
     query, history = parse_messages(request.messages, request.functions)
-    # if request.stream:
-    #     if request.functions:
-    #         raise HTTPException(
-    #             status_code=400,
-    #             detail="Invalid request: Function calling is not yet implemented for stream mode.",
-    #         )
-    #     generate = predict(query, history, request.model, stop_words, gen_kwargs)
-    #     return EventSourceResponse(generate, media_type="text/event-stream")
-
-    # stop_words_ids = [tokenizer.encode(s) for s in stop_words] if stop_words else None
-    stop_words_ids = None
-    if query is _TEXT_COMPLETION_CMD:
-        response = text_complete_last_message(history, stop_words_ids=stop_words_ids, gen_kwargs=gen_kwargs)
-    else:
-        response = chat_qwen(query, history)
-        # print(f"<chat>\n{history}\n{query}\n<!-- *** -->\n{response}\n</chat>")
+    # stop_words_ids = None
+    # if query is _TEXT_COMPLETION_CMD:
+    #     response = text_complete_last_message(history, stop_words_ids=stop_words_ids, gen_kwargs=gen_kwargs)
+    # else:
+    if not history:
+        print(query)
+    response = chat_qwen(query, history)
 
     response = trim_stop_words(response, stop_words)
     if request.functions:

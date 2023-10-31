@@ -15,30 +15,21 @@ from pydantic import BaseModel, Field
 
 from src.prompt.qwen_generation_utils import make_context
 
-# from transformers import AutoTokenizer, PreTrainedTokenizer
-# from transformers.generation import GenerationConfig
-
-
-# generation_config = GenerationConfig.from_pretrained("Qwen/Qwen-14B-Chat", trust_remote_code=True)
-
 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
 openai.api_base = api_config['llm'] + "/v1"
 openai.api_key = "EMPTY"
 model="Qwen-14B-Chat"
 
 def chat_qwen(query: str = "", history: List[Dict] = []):
-    # tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen-14B-Chat", trust_remote_code=True)
-    # if history:
-    #     make_context(tokenizer, query, history)
-    if query:
+    if isinstance(query, str) and query:
         history += [{"role": "user", "content": query}]
     completion = openai.ChatCompletion.create(
         model=model,
         messages=history,
         top_k=0, 
-        top_p=1, 
+        top_p=0, 
         repetition_penalty=1.1,
-        # do_sample=False
+        temperature=0.6
     )
     ret = completion['choices'][0]['message']['content'].strip()
     return ret
@@ -62,6 +53,7 @@ class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system", "function"]
     content: Optional[str]
     function_call: Optional[Dict] = None
+    schedule: Optional[List] = None
 
 
 class DeltaMessage(BaseModel):
