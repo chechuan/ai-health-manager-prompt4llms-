@@ -3,10 +3,10 @@ import json
 import traceback
 
 from flask import Flask, Response, request, stream_with_context
-from flask_cors import CORS
+# from flask_cors import CORS
 from gevent import pywsgi
-from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
-                          BitsAndBytesConfig)
+# from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
+#                           BitsAndBytesConfig)
 
 from chat.qwen_chat import Chat
 from utils.Logger import logger
@@ -15,13 +15,14 @@ from utils.module import NpEncoder, clock
 app = Flask(__name__)
 
 ##qwen
-model_dir = 'qwen/Qwen-14B-Chat'
-model_dir = '/root/.cache/modelscope/hub/qwen/Qwen-7B-Chat'
-tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
-print('loading model')
-model = AutoModelForCausalLM.from_pretrained(model_dir, device_map="auto", trust_remote_code=True).eval()
-print('model ready')
-chat = Chat(tokenizer, model)
+# model_dir = 'qwen/Qwen-14B-Chat'
+# model_dir = '/root/.cache/modelscope/hub/qwen/Qwen-7B-Chat'
+# tokenizer = AutoTokenizer.from_pretrained(model_dir, trust_remote_code=True)
+# print('loading model')
+# model = AutoModelForCausalLM.from_pretrained(model_dir, device_map="auto", trust_remote_code=True).eval()
+# print('model ready')
+# chat = Chat(tokenizer, model)
+chat = Chat()
 
 def accept_param():
     p = json.loads(request.data.decode("utf-8"))
@@ -67,8 +68,11 @@ def get_chat_reponse():
         task = param.get('task', 'chat')
         if task == 'chat':
             print('prompt: ' + param.get('prompt', ''))
-            result = chat.run_prediction(param['history'],
-                param.get('prompt', ''), param.get('intentCode', 'default_code'))
+            result = chat.run_prediction(
+                param['history'],
+                param.get('prompt', ''), 
+                param.get('intentCode', 'default_code')
+                )
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(param, head=601, msg=repr(err))

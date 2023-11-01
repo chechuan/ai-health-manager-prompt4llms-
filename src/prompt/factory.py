@@ -35,7 +35,7 @@ class promptEngine:
         self.tpe_scene = PromptTemplate(input_variables=["var"], template=TEMPLATE_SENCE)
         self.tpe_role = PromptTemplate(input_variables=["var"], template=TEMPLATE_ROLE)
 
-    def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=True, **kwds) -> str:
+    def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=False, **kwds) -> str:
         concat_keyword = kwds.get("concat_keyword", ",") + " "
         if prompt:
             prompt += concat_keyword
