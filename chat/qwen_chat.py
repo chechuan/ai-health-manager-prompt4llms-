@@ -16,6 +16,7 @@ from langchain.prompts import PromptTemplate
 
 from chat.plugin_util import funcCall
 from chat.qwen_react_util import *
+from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
@@ -33,25 +34,11 @@ role_map = {
         '3': 'assistant'
 }
 
-TOOL_CHOOSE_PROMPT = """你是智能健康管家，可以根据用户的对话内容，从工具列表中选择对应工具完成用户的任务。
-
-现提供以下工具:
-- 调用外部知识库: 允许你在自身能力无法结局当前问题时调用外部知识库获取更专业的知识解决问题，提供帮助
-- 进一步询问用户的情况: 当前用户提供的信息不足，需要进一步询问用户相关信息以提供更全面，具体的帮助
-- 直接回复用户问题：问题过于简单，且无信息缺失，可以直接回复
-
-请遵循以下格式回复:
-Thought: 思考当前应该做什么
-Action: 选择的解决用户当前问题的工具
-Action Input: 当前工具需要用的参数,可以是调用知识库的参数,询问用户的问题,一次只针对一个主题询问
-Observation: 工具返回的内容
-...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
-Thought: bingo
-Final Answer: the final answer to the original input question
-
-[对话背景信息]
-{external_information}
-[对话背景信息]"""
+useinfo_intent_code_list = [
+    'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
+    'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
+    'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
+]
 
 def parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     h = text.find('Thought:')
@@ -146,6 +133,16 @@ class Chat(object):
         sys_prompt = self.sys_template.format(external_information=external_information)
         input_history = [{"role":"system", "content": sys_prompt}] + input_history
         return input_history
+    
+    def cls_intent(self, history):
+        """意图识别"""
+        st_key, ed_key = "<|im_start|>", "<|im_end|>"
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        prompt = INTENT_PROMPT + his_prompt
+        output_text = chat_qwen(query=prompt, max_tokens=50, top_p=0.5, temperature=0.7)
+        intent = output_text[output_text.find("Action: ")+8:]
+        return intent
 
     def run_prediction(self, 
                        history, 
@@ -153,11 +150,19 @@ class Chat(object):
                        intentCode=None,
                        **kwargs):
         """主要业务流程
+        1. 意图识别
+        2. 不同意图进入不同的处理流程
 
+        ## 多轮交互流程
         1. 拼装外部信息
         2. 准备模型输入messages
         3. 模型生成结果
         """
+        intent = self.cls_intent(history)
+        if intentCode in useinfo_intent_code_list:
+            ...
+        else:
+            ...
         ext_info_args = baseVarsForPromptEngine()
         external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
 

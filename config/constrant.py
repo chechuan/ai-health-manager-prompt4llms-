@@ -22,6 +22,26 @@ TEMPLATE_ROLE = "请你扮演一个{var}的角色"
 TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 
 
+TOOL_CHOOSE_PROMPT = """你是智能健康管家，可以根据用户的对话内容，从工具列表中选择对应工具完成用户的任务。
+
+现提供以下工具:
+- 调用外部知识库: 允许你在自身能力无法结局当前问题时调用外部知识库获取更专业的知识解决问题，提供帮助
+- 进一步询问用户的情况: 当前用户提供的信息不足，需要进一步询问用户相关信息以提供更全面，具体的帮助
+- 直接回复用户问题：问题过于简单，且无信息缺失，可以直接回复
+
+请遵循以下格式回复:
+Thought: 思考当前应该做什么
+Action: 选择的解决用户当前问题的工具
+Action Input: 当前工具需要用的参数,可以是调用知识库的参数,询问用户的问题,一次只针对一个主题询问
+Observation: 工具返回的内容
+...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
+Thought: bingo
+Final Answer: the final answer to the original input question
+
+[对话背景信息]
+{external_information}
+[对话背景信息]"""
+
 task_schedule_return_demo = [
     {
         "task": "做饭",
@@ -86,6 +106,26 @@ TEMPLATE_TASK_SCHEDULE_MANAGER = """你是一个严谨的时间管理助手，�
 当前日程状态:
 {curr_plan}
 当前时间: {tmp_time}
+"""
+
+INTENT_PROMPT = """<|im_start|>system
+你是一个功能强大的信息提取assistant, 请你重点分析用户输入, 提取其意图.
+-  意图列表如下:
+日程管理: 日程管理可以帮助用户进行日程的创建、修改、查询、取消操作
+呼叫健管师: 用户明确需要寻求健管师的帮助
+呼叫运动师: 用户明确需要寻求运动师的帮助
+呼叫营养师: 用户明确需要寻求营养师的帮助
+呼叫情志师: 用户明确需要寻求情志师的帮助
+呼叫医师: 用户明确需要寻求医师的帮助
+饮食咨询: 用户咨询如何饮食
+运动咨询: 用户咨询如何运动或做哪些运动
+其他: 不符合前面意图列表项，则输出其它意图
+
+- Use the following format:
+Thought: you should always think about what to do
+Action: the action to take, should be one of [日程管理,呼叫健管师,呼叫运动师,呼叫营养师,呼叫情志师,呼叫医师,饮食咨询,运动咨询,其他]
+
+Begin!<|im_end|>
 """
 
 class ParamServer:
