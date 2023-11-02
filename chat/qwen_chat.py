@@ -98,8 +98,16 @@ class Chat(object):
         if not out_text[1]:
             query = "帮我调整一下这句话直接给用户输出:"+ model_output + "输出结果:"
             model_output = chat_qwen(query)
-            out_text = "Thought: I know the final answer.", "直接回复用户问题", model_output
-        return out_text
+            out_text = "I know the final answer.", "直接回复用户问题", model_output
+        history.append({
+            "role": "assistant", 
+            "content": out_text[2], 
+            "function_call": {
+                "name": out_text[1],
+                "arguments": out_text[0]
+                }
+            })
+        return history
 
     def get_qwen_history(self, history):
         hs = []
@@ -155,17 +163,26 @@ class Chat(object):
 
         input_history = self.compose_input_history(history, external_information, **kwargs)
 
-        plugin_thought, plugin_name, plugin_args = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-        print(f"Thought: {plugin_thought}")
+        history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
+        
+        if history[-1].get("function_call"):
+            print(f"Thought: {history[-1]['function_call']['arguments']}")
 
-        tool_name = self.get_tool_name(plugin_name)
+        tool_name = history[-1]['function_call']['name']
+        output_text = history[-1]['content']
+
         if tool_name == '进一步询问用户的情况' or tool_name == '直接回复用户问题':
-            pass
+            ...
         elif tool_name == '调用外部知识库':
-            gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": his_change_role[-1]["content"]})}
-            resp = self.funcall._call(gen_args, verbose=True)
-            output_text = resp
-        return plugin_args
+            gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+            output_text = self.funcall._call(gen_args, verbose=True)
+
+        if not kwargs.get("streaming", False):
+            # 直接返回字符串模式
+            return output_text
+        else:
+            # 保留完整的历史内容
+            return history
 
 if __name__ == '__main__':
     chat = Chat()
