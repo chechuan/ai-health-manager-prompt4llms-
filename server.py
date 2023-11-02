@@ -68,11 +68,11 @@ def get_chat_reponse():
         task = param.get('task', 'chat')
         if task == 'chat':
             print('prompt: ' + param.get('prompt', ''))
-            result = chat.run_prediction(
-                param['history'],
-                param.get('prompt', ''), 
-                param.get('intentCode', 'default_code')
-                )
+            item = chat.run_prediction(
+                    param.get('history', []),
+                    param.get('prompt', ''),
+                    param.get('intentCode', 'default_code'))
+            result =  Response(decorate(yield item), mimetype='text/event-stream')
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(param, head=601, msg=repr(err))

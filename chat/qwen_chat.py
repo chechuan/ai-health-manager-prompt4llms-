@@ -19,6 +19,7 @@ from chat.qwen_react_util import *
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
+from extract_userInfo.userInfo_util import get_userInfo_msg
 
 # role_map = {
 #         '0': '<用户>',
@@ -150,6 +151,9 @@ class Chat(object):
         2. 准备模型输入messages
         3. 模型生成结果
         """
+        if intentCode in []:
+            return get_userInfo_msg(prompt, history)
+
         ext_info_args = baseVarsForPromptEngine()
         external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
 
