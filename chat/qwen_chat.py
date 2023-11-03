@@ -85,6 +85,7 @@ class Chat(object):
         if not out_text[1]:
             query = "帮我调整一下这句话直接给用户输出:"+ model_output + "输出结果:"
             model_output = chat_qwen(query)
+            model_output = model_output.split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         history.append({
             "role": "assistant", 
@@ -158,40 +159,41 @@ class Chat(object):
         2. 准备模型输入messages
         3. 模型生成结果
         """
-        intent = self.cls_intent(history)
         if intentCode in useinfo_intent_code_list:
             ...
+        # elif intentCode != "default_code":
+        #     ...
         else:
-            ...
-        ext_info_args = baseVarsForPromptEngine()
-        external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+            intent = self.cls_intent(history)
+            ext_info_args = baseVarsForPromptEngine()
+            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+            input_history = self.compose_input_history(history, external_information, **kwargs)
+            history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
+            
+            if history[-1].get("function_call"):
+                print(f"Thought: {history[-1]['function_call']['arguments']}")
 
-        input_history = self.compose_input_history(history, external_information, **kwargs)
+            tool_name = history[-1]['function_call']['name']
+            output_text = history[-1]['content']
 
-        history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-        
-        if history[-1].get("function_call"):
-            print(f"Thought: {history[-1]['function_call']['arguments']}")
+            if tool_name == '进一步询问用户的情况' or tool_name == '直接回复用户问题':
+                ...
+            elif tool_name == '调用外部知识库':
+                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+                output_text = self.funcall._call(gen_args, verbose=True)
 
-        tool_name = history[-1]['function_call']['name']
-        output_text = history[-1]['content']
-
-        if tool_name == '进一步询问用户的情况' or tool_name == '直接回复用户问题':
-            ...
-        elif tool_name == '调用外部知识库':
-            gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-            output_text = self.funcall._call(gen_args, verbose=True)
-
-        if not kwargs.get("streaming", False):
-            # 直接返回字符串模式
-            return output_text
-        else:
-            # 保留完整的历史内容
-            return history
+            if not kwargs.get("streaming", False):
+                # 直接返回字符串模式
+                return output_text
+            else:
+                # 保留完整的历史内容
+                return history
 
 if __name__ == '__main__':
     chat = Chat()
-    history = [{"role": "0", "content": "我最近早上头疼"}]
+    a = "我最近早上头疼，谁帮我看一下啊"
+    init_intput = input("init_input: ")
+    history = [{"role": "0", "content": init_intput}]
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = None
     output_text = chat.run_prediction(history, prompt, intentCode, verbose=False)

@@ -50,7 +50,7 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     temperature = kwargs.get("temperature", 0.5)
     max_tokens = kwargs.get("max_tokens", 512)
     
-    if not history and query:
+    if not history:
         completion = openai.Completion.create(
             model=model,
             prompt=query,
@@ -61,7 +61,8 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
         )
         ret = completion['choices'][0]['text']
     else:
-        history += [{"role": "user", "content": query}]
+        if query and not isinstance(query, object):
+            history += [{"role": "user", "content": query}]
         completion = openai.ChatCompletion.create(
             model=model,
             messages=history,
