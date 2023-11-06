@@ -42,14 +42,17 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
         temperature (number or null Optional Defaults to 0.7): 
             What sampling temperature to use, between 0 and 2. 
             Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+        do_sample (bool, optional, defaults to True)
+            Whether or not to use sampling ; use greedy decoding otherwise.
     """
     top_k = kwargs.get("top_k", 0)
     top_p = kwargs.get("top_p", 0.5)
     repetition_penalty = kwargs.get("repetition_penalty", 1.1)
     temperature = kwargs.get("temperature", 0.5)
     max_tokens = kwargs.get("max_tokens", 512)
-    model = kwargs.get("model", "Qwen-14B-Chat")    
-    
+    model = kwargs.get("model", "Qwen-14B-Chat")
+    do_sample = kwargs.get("do_sample", True)
+
     if not history:
         completion = openai.Completion.create(
             model=model,
@@ -57,7 +60,8 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
             top_p=top_p,
             top_k=top_k,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            do_sample=do_sample
         )
         ret = completion['choices'][0]['text']
     else:
@@ -70,7 +74,8 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
             top_p=top_p, 
             repetition_penalty=repetition_penalty,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            do_sample=do_sample
         )
         ret = completion['choices'][0]['message']['content'].strip()
     return ret
