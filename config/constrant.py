@@ -108,8 +108,7 @@ TEMPLATE_TASK_SCHEDULE_MANAGER = """你是一个严谨的时间管理助手，�
 当前时间: {tmp_time}
 """
 
-INTENT_PROMPT = """<|im_start|>system
-你是一个功能强大的信息提取assistant, 请你重点分析用户输入, 提取其意图.
+INTENT_PROMPT = """你是一个功能强大的信息提取assistant, 请你重点分析用户输入, 提取其意图.
 - 意图列表如下:
 辅助诊断: 用户咨询健康、疾病相关问题
 日程管理: 日程管理可以帮助用户进行日程的创建、修改、查询、取消操作
@@ -122,12 +121,13 @@ INTENT_PROMPT = """<|im_start|>system
 呼叫医师: 用户明确需要寻求医师的帮助
 其他: 不符合前面意图列表项，则输出其它意图
 
-- Use the following format:
-Thought: you should always think about what to do
-Action: the action to take, should be one of [辅助诊断,日程管理,呼叫健管师,呼叫运动师,呼叫营养师,呼叫情志师,呼叫医师,饮食咨询,运动咨询,其他]
-
-Begin!<|im_end|>
+对话历史记录如下(重点关注用户最后一次所说):
 """
+# - Use the following format:
+# Thought: you should always think about what to do
+# Action: Your chosen intention, should be one of [辅助诊断,日程管理,呼叫健管师,呼叫运动师,呼叫营养师,呼叫情志师,呼叫医师,饮食咨询,运动咨询,其他]
+
+# Begin!<|im_end|>
 
 class ParamServer:
     @property

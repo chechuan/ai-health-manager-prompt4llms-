@@ -186,11 +186,11 @@ class Chat(object):
         """意图识别"""
         st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        prompt = INTENT_PROMPT + his_prompt
-        output_text = chat_qwen(query=prompt, max_tokens=50, top_p=0.5, temperature=0.7)
-        intent = output_text[output_text.find("Action: ")+8:]
-        return intent
+        # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        his_prompt = "\n".join([f"{i['role']}: {i['content']}" for i in history])
+        prompt = INTENT_PROMPT + his_prompt + "\n\n用户的意图是(只输出意图):"
+        output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
+        return output_text
 
     def run_prediction(self, 
                        history, 
