@@ -65,6 +65,8 @@ def get_intent(text):
         return 'call_health_manager'
     elif '其它意图' in text:
         return 'other'
+    elif '日程管理'in text:
+        return 'schedule_manager'
     else:
         return 'other'
 
