@@ -1,5 +1,5 @@
+from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from src.prompt.model_init import chat_qwen
-from chat.constant import default_prompt, EXT_USRINFO_TRANSFER_INTENTCODE
 
 role_map = {
         '0': 'user',

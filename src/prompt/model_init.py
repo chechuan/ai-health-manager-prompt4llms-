@@ -18,7 +18,6 @@ from src.prompt.qwen_generation_utils import make_context
 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
 openai.api_base = api_config['llm'] + "/v1"
 openai.api_key = "EMPTY"
-model="Qwen-14B-Chat"
 
 def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     """chat with qwen api which is serve at http://10.228.67.99:26921

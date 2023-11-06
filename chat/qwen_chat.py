@@ -16,11 +16,11 @@ from langchain.prompts import PromptTemplate
 
 from chat.plugin_util import funcCall
 from chat.qwen_react_util import *
+from chat.special_intent_msg_util import *
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
-from chat.special_intent_msg_util import *
 
 # role_map = {
 #         '0': '<用户>',
@@ -230,7 +230,6 @@ class Chat(object):
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             elif tool_name == '直接回复用户问题':
                 out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode}
-
             elif tool_name == '调用外部知识库':
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
@@ -249,11 +248,11 @@ if __name__ == '__main__':
     init_intput = input("init_input: ")
     history = [{"role": "0", "content": init_intput}]
     prompt = TOOL_CHOOSE_PROMPT
-    intentCode = None
-    output_text = chat.run_prediction(history, prompt, intentCode, verbose=False)
+    intentCode = "default_code"
+    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
     while True:
         history.append({"role": "3", "content": output_text})
         conv = history[-1]
         print(f"Role: {conv['role']}\nContent: {conv['content']}")
         history.append({"role": "0", "content": input("user: ")})
-        output_text = chat.run_prediction(history, prompt, intentCode, verbose=False)
+        output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
