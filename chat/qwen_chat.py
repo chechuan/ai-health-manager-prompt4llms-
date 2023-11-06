@@ -122,6 +122,7 @@ class Chat(object):
         self.promptEngine = promptEngine()
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
+        # self.sys_template_chatter_gaily = 
     # def __init__(self, tokenizer, model):
     #     self.tokenizer = tokenizer
     #     self.model = model
@@ -225,6 +226,22 @@ class Chat(object):
         prompt = INTENT_PROMPT + his_prompt + "\n\n用户的意图是(只输出意图):"
         output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
         return output_text
+    
+    def chatter_gaily(self, history, external_information, **kwargs):
+        """闲聊
+        """
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        # sys_prompt = self.sys_template.format(external_information=external_information)
+        ext_info = (
+            "现在你是智能健康管家, 为居家用户提供健康咨询和管理服务\n"
+            "对于日常闲聊，有以下几点建议:\n"
+            "1. 整体过程应该是轻松愉快的\n"
+            "2. 你可以适当发挥一点幽默基因\n"
+            "3. 对用户是友好的\n"
+            "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家")
+        input_history = [{"role":"system", "content": ext_info}] + input_history
+        content = chat_qwen("", input_history)
+        return content
 
     def run_prediction(self, 
                        history, 
@@ -250,6 +267,13 @@ class Chat(object):
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+        elif intent == "other":
+            ext_info_args = baseVarsForPromptEngine()
+            ext_info_args.plan = "日常对话"
+            ext_info_args.role = "智能健康管家"
+            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+            output_text = self.chatter_gaily(history, external_information, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
@@ -267,20 +291,20 @@ class Chat(object):
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
 
-            if kwargs.get("streaming", True):
-                # 直接返回字符串模式
-                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-                yield out_text
-            else:
-                # 保留完整的历史内容
-                return out_history
+        if kwargs.get("streaming", True):
+            # 直接返回字符串模式
+            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+            yield out_text
+        else:
+            # 保留完整的历史内容
+            return out_history
 
 if __name__ == '__main__':
     chat = Chat()
     a = "我最近早上头疼，谁帮我看一下啊"
     # init_intput = input("init_input: ")
     # history = [{"role": "0", "content": init_intput}]
-    history = [{'msgId': '6132829035', 'role': '1', 'content': '我有点嗓子疼', 'sendTime': '2023-11-06 14:40:11'}]
+    history = [{'msgId': '6132829035', 'role': '1', 'content': input("init_input: "), 'sendTime': '2023-11-06 14:40:11'}]
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
             '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
             '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'

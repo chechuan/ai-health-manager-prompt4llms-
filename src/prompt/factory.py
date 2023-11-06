@@ -17,6 +17,7 @@ from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
 
 
 class baseVarsForPromptEngine:
+    role: str = "智能健康管家"
     # 环境, options: 居家, 机构, 外出, 开车
     env: Optional[str] = "居家"
     # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
@@ -49,12 +50,12 @@ class promptEngine:
         """
         ret = ""
         bm = args[0]
-        if bm.env:
-            ret = self.__concat(ret, self.tpe_env, bm.env, **kwds)
-        if bm.scene:
-            ret = self.__concat(ret, self.tpe_scene, bm.scene, **kwds)
         if bm.role:
             ret = self.__concat(ret, self.tpe_role, bm.role, **kwds)
+        if bm.scene:
+            ret = self.__concat(ret, self.tpe_scene, bm.scene, **kwds)
+        if bm.env:
+            ret = self.__concat(ret, self.tpe_env, bm.env, **kwds)
         if bm.plan: 
             plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
             ret = self.__concat(ret, self.tpe_plan, plan, **kwds)
