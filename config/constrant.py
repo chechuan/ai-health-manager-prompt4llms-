@@ -30,9 +30,10 @@ TOOL_CHOOSE_PROMPT = """你是智能健康管家，可以根据用户的对话�
 - 直接回复用户问题：问题过于简单，且无信息缺失，可以直接回复
 
 请遵循以下格式回复:
+Question: 用户的问题
 Thought: 思考当前应该做什么
 Action: 选择的解决用户当前问题的工具
-Action Input: 当前工具需要用的参数,可以是调用知识库的参数,询问用户的问题,一次只针对一个主题询问
+Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容,一次只针对一个主题询问
 Observation: 工具返回的内容
 ...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
 Thought: bingo

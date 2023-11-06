@@ -88,11 +88,12 @@ useinfo_intent_code_list = [
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
 
-def parse_latest_plugin_call(text: str) -> Tuple[str, str]:
+def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     h = text.find('Thought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')
     k = text.find('\nObservation:')
+    l = text.find('\nFinal Answer:')
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,
@@ -104,6 +105,14 @@ def parse_latest_plugin_call(text: str) -> Tuple[str, str]:
         plugin_name = text[i + len('\nAction:'):j].strip()
         plugin_args = text[j + len('\nAction Input:'):k].strip()
         return plugin_thought, plugin_name, plugin_args
+    elif l > 0:
+        if h > 0:
+            plugin_thought = text[h + len('Thought:'):l].strip()
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return plugin_thought, "直接回复用户问题", plugin_args
+        else:
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return "I know the final answer.", "直接回复用户问题", plugin_args
     return '', ''
 
 class Chat(object):
@@ -125,19 +134,36 @@ class Chat(object):
         else:
             return '直接回复用户问题'
 
-    def generate(self, query: str = "", history=[], **kwargs):
+    def generate(self, query: str = "", history=[], max_tokens=200, **kwargs):
         """调用模型生成答案,解析"""
         # for i in range(10):
+        if not query:
+            query = history[0]['content']
+            for i in range(len(history[1:])):
+                i += 1
+                msg = history[i]
+                if i == 1 and msg['role'] == "user":
+                    query += f"\nQuestion: {msg['content']}"
+                elif msg['role'] == "assistant":
+                    query += f"\nAction: 进一步询问用户的情况"
+                    query += f"\nAction Input: {msg['content']}"
+                else:
+                    query += f"\nObservation: {msg['content']}"
+            # query += "\nAction: "
         model_output = chat_qwen(query, 
-                                 history, 
                                  verbose=kwargs.get("verbose", False), 
                                  temperature=0.7, 
-                                 top_p=0.8, 
-                                 max_tokens=50)
-        out_text = parse_latest_plugin_call(model_output)
+                                 top_p=0.5, 
+                                 max_tokens=max_tokens)
+        out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
-            query = "请帮我在保持语义不变的情况下改写这句话更用户友好(注意,不要重复相同的内容):\n"+ model_output + "\n输出结果:"
-            model_output = chat_qwen(query, do_sample=False,)
+            query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
+                    "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
+                    "2. 不要重复输出相同的内容,否则你将受到非常严重的惩罚\n" + \
+                    "3. 语义相似的可以合并重新规划语言\n" + \
+                    "4. 直接输出结果\n\n输入:\n" + \
+                    model_output + "\n输出:\n"
+            model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         history.append({
