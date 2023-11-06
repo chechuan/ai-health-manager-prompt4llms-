@@ -21,6 +21,7 @@ from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
+from utils.Logger import logger
 
 # role_map = {
 #         '0': '<用户>',
@@ -127,12 +128,17 @@ class Chat(object):
     def generate(self, query: str = "", history=[], **kwargs):
         """调用模型生成答案,解析"""
         # for i in range(10):
-        model_output = chat_qwen(query, history, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.8, max_tokens=200)
+        model_output = chat_qwen(query, 
+                                 history, 
+                                 verbose=kwargs.get("verbose", False), 
+                                 temperature=0.7, 
+                                 top_p=0.8, 
+                                 max_tokens=50)
         out_text = parse_latest_plugin_call(model_output)
         if not out_text[1]:
-            query = "帮我调整一下这句话直接给用户输出:"+ model_output + "输出结果:"
-            model_output = chat_qwen(query)
-            model_output = model_output.split("：")[-1]
+            query = "请帮我在保持语义不变的情况下改写这句话更用户友好(注意,不要重复相同的内容):\n"+ model_output + "\n输出结果:"
+            model_output = chat_qwen(query, do_sample=False,)
+            model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         history.append({
             "role": "assistant", 
@@ -207,7 +213,7 @@ class Chat(object):
         3. 模型生成结果
         """
         intent = get_intent(self.cls_intent(history))
-        print('用户意图是：' + intent)
+        logger.debug('用户意图是：' + intent)
         
         if intentCode in useinfo_intent_code_list:
             yield get_userInfo_msg(sys_prompt, history, intentCode)
@@ -221,10 +227,7 @@ class Chat(object):
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             input_history = self.compose_input_history(history, external_information, **kwargs)
             out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-        
-            if out_history[-1].get("function_call"):
-                print(f"Thought: {out_history[-1]['function_call']['arguments']}")
-            print(out_history[-1])
+            logger.debug(f"Last Generate history: {out_history[-1]}")
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
         
@@ -238,7 +241,7 @@ class Chat(object):
 
             if kwargs.get("streaming", True):
                 # 直接返回字符串模式
-                print('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
                 yield out_text
             else:
                 # 保留完整的历史内容
@@ -247,8 +250,14 @@ class Chat(object):
 if __name__ == '__main__':
     chat = Chat()
     a = "我最近早上头疼，谁帮我看一下啊"
-    init_intput = input("init_input: ")
-    history = [{"role": "0", "content": init_intput}]
+    # init_intput = input("init_input: ")
+    # history = [{"role": "0", "content": init_intput}]
+    history = [{'msgId': '6132829035', 'role': '1', 'content': '我有点嗓子疼', 'sendTime': '2023-11-06 14:40:11'}]
+    prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
+            '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
+            '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'
+            '如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月06日。'
+            '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
     output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
