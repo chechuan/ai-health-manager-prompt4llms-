@@ -207,17 +207,17 @@ class Chat(object):
         intent = get_intent(self.cls_intent(history))
         print('用户意图是：' + intent)
         
-        ext_info_args = baseVarsForPromptEngine()
-        external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
-        input_history = self.compose_input_history(history, external_information, **kwargs)
         if intentCode in useinfo_intent_code_list:
-            yield get_userInfo_msg(sys_prompt, input_history, intentCode)
+            yield get_userInfo_msg(sys_prompt, history, intentCode)
         elif intentCode != 'default_code':
-            yield get_reminder_tips(sys_prompt, input_history, intentCode) 
+            yield get_reminder_tips(sys_prompt, history, intentCode) 
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
         else:
+            ext_info_args = baseVarsForPromptEngine()
+            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+            input_history = self.compose_input_history(history, external_information, **kwargs)
             out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
         
             if out_history[-1].get("function_call"):

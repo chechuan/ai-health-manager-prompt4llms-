@@ -77,7 +77,8 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     return ret
 
 #def truncat_history(history):
-#    for cnt in range(len(history)-1, -1, -1):
+
+    #for cnt in range(len(history)-1, -1, -1):
         
 
 class ModelCard(BaseModel):
