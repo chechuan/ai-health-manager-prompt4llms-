@@ -49,24 +49,29 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     repetition_penalty = kwargs.get("repetition_penalty", 1.1)
     temperature = kwargs.get("temperature", 0.5)
     max_tokens = kwargs.get("max_tokens", 512)
-
-    if isinstance(query, str) and query:
+    model = kwargs.get("model", "Qwen-14B-Chat")    
+    if not history and query:
+        completion = openai.Completion.create(
+            model=model,
+            prompt=query,
+            top_p=top_p,
+            top_k=top_k,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        ret = completion['choices'][0]['text']
+    else:
         history += [{"role": "user", "content": query}]
-    if kwargs.get("verbose"):
-        print(f"messages:\n")
-        for i in history:
-            print(f"Role: {i['role']}\nContent:{i['content']}")
-    
-    completion = openai.ChatCompletion.create(
-        model=model,
-        messages=history,
-        top_k=top_k, 
-        top_p=top_p, 
-        repetition_penalty=repetition_penalty,
-        temperature=temperature,
-        max_tokens=max_tokens
-    )
-    ret = completion['choices'][0]['message']['content'].strip()
+        completion = openai.ChatCompletion.create(
+            model=model,
+            messages=history,
+            top_k=top_k, 
+            top_p=top_p, 
+            repetition_penalty=repetition_penalty,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        ret = completion['choices'][0]['message']['content'].strip()
     return ret
 
 class ModelCard(BaseModel):

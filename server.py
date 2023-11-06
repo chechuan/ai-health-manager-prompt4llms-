@@ -5,12 +5,14 @@ import traceback
 from flask import Flask, Response, request, stream_with_context
 # from flask_cors import CORS
 from gevent import pywsgi
-# from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
-#                           BitsAndBytesConfig)
 
 from chat.qwen_chat import Chat
 from utils.Logger import logger
 from utils.module import NpEncoder, clock
+
+# from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
+#                           BitsAndBytesConfig)
+
 
 app = Flask(__name__)
 
@@ -68,19 +70,16 @@ def get_chat_reponse():
         task = param.get('task', 'chat')
         if task == 'chat':
             print('prompt: ' + param.get('prompt', ''))
-            item = chat.run_prediction(
-                    param.get('history', []),
-                    param.get('prompt', ''),
-                    param.get('intentCode', 'default_code'))
-            result =  Response(decorate(yield item), mimetype='text/event-stream')
+            result = chat.run_prediction(param.get('history', []),param.get('prompt', ''),param.get('intentCode', 'default_code'))
+            return  Response(decorate(result), mimetype='text/event-stream')
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(param, head=601, msg=repr(err))
     except Exception as err:
         logger.error(traceback.format_exc())
         result = make_result(param, msg=repr(err))
-    finally:
-        return result
+    #finally:
+        #return result
 
 
 if __name__ == '__main__':
