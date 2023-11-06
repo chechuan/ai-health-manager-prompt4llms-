@@ -67,8 +67,7 @@ class taskSchedulaManager:
         return ret
 
     def tool_ask_for_time(self, messages, msg):
-        content = "晚上7点半"
-        print(f"tool input: {content}")
+        content = input(f"tool input(晚上7点半): ")
         messages.append(
             {
                 "role": "assistant", 
@@ -97,8 +96,7 @@ class taskSchedulaManager:
         return sch_list
 
     def tool_create_schedule(self, messages, msg):
-        content = "改到4点半"
-        print(f"tool input: {content}")
+        content = input(f"tool input(改到4点半): ")
         messages.append(
             {
                 "role": "assistant", 
@@ -110,8 +108,7 @@ class taskSchedulaManager:
         return messages
     
     def tool_modify_schedule(self, messages, msg):
-        content = "算了，取消吧"
-        print(f"tool input: {content}")
+        content = input(f"tool input(算了，取消吧): ")
         messages.append(
             {
                 "role": "assistant", 
@@ -138,10 +135,14 @@ class taskSchedulaManager:
         if not query and not messages:
             raise ValueError("Query and messages can't be empty at the same time.")
         while True:
-            request = ChatCompletionRequest(model="Qwen-14B-Chat", content=query, functions=task_schedule_parameter_description_for_qwen,messages=messages,)
+            if len(messages) == 1:
+                print("Init user input: ", messages[0]['content'])
+            request = ChatCompletionRequest(model="Qwen-14B-Chat", 
+                                            functions=task_schedule_parameter_description_for_qwen,
+                                            messages=messages,)
             msg = create_chat_completion(request).choices[0].message
             if kwds.get("verbose"):
-                print("output: ", msg.content)
+                print(msg.content[msg.content.rfind("Thought:"):])
                 if msg.function_call:
                     print("call func: ", msg.function_call['name'])
                     print("arguments: ", msg.function_call['arguments'])
@@ -157,14 +158,10 @@ class taskSchedulaManager:
             elif msg.function_call['name'] == "modify_schedule":
                 # message rollout
                 messages = self.tool_modify_schedule(messages, msg)
-            else:
-                messages.append(
-                    {
-                        "role": "assistant", 
-                        "content": msg.content, 
-                        "function_call": {"name":msg.function_call['name'],"arguments": input(f"{content}:")}
-                    }
-                )
+            elif msg.function_call['name'] == "cancel_schedule":
+                flag = ("日程交互流程结束,是否重置 y or n?")
+                if flag.lower() != "n":
+                    messages = [{"role": "user", "content": t_claim_str + input("User Input: "), "schedule": kwds.get("schedule", [])}]
             print("======="*10)
             
 
@@ -172,11 +169,12 @@ if __name__ == "__main__":
     from datetime import datetime
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
     t_claim_str = f"现在的时间是{t}\n"
-    schedule = [{"task": "开会", "time": "2023-10-31T17:00:00"}]
+    schedule = [{"task": "开会", "time": "2023-11-03T11:40:00"}]
     tsm = taskSchedulaManager()
     # tsm.run("我下午开会,提前叫我", verbose=True)
     # debug 任务时间
-    tsm._run(f"{t_claim_str}下午开会,提前叫我", verbose=True, schedule=schedule)
+    # tsm._run(f"{t_claim_str}下午开会,提前叫我", verbose=True, schedule=schedule)
+    tsm._run(f"{t_claim_str}5分钟后的日程取消", verbose=True, schedule=schedule)
     # tsm._run(f"开会时间改到明天下午3点", verbose=True, schedule=schedule)
     # debug 提醒规则
     # tsm._run(f"现在的时间是{t}\n明天下午3点24开会,提前叫我", verbose=True)

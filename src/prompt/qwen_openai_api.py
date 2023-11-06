@@ -252,7 +252,7 @@ def text_complete_last_message(history, stop_words_ids, gen_kwargs):
 
 
 def create_chat_completion(request: ChatCompletionRequest):
-    gen_kwargs = {}
+    # gen_kwargs = {}
     stop_words = add_extra_stop_words(request.stop)
     if request.functions:
         stop_words = stop_words or []
@@ -260,14 +260,10 @@ def create_chat_completion(request: ChatCompletionRequest):
             stop_words.append("Observation:")
 
     query, history = parse_messages(request.messages, request.functions)
-    # stop_words_ids = None
-    # if query is _TEXT_COMPLETION_CMD:
-    #     response = text_complete_last_message(history, stop_words_ids=stop_words_ids, gen_kwargs=gen_kwargs)
-    # else:
     if not history:
         print(query)
-    response = chat_qwen(query, history)
-
+    response = chat_qwen(query, history, top_p=0.8, temperature=0.7, max_tokens=200)
+    # print(response)
     response = trim_stop_words(response, stop_words)
     if request.functions:
         choice_data = parse_response(response)

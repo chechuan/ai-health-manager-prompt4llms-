@@ -130,6 +130,7 @@ class Chat(object):
         if not out_text[1]:
             query = "帮我调整一下这句话直接给用户输出:"+ model_output + "输出结果:"
             model_output = chat_qwen(query)
+            model_output = model_output.split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         history.append({
             "role": "assistant", 
@@ -203,12 +204,6 @@ class Chat(object):
         2. 准备模型输入messages
         3. 模型生成结果
         """
-        
-        ext_info_args = baseVarsForPromptEngine()
-        external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
-
-        input_history = self.compose_input_history(history, external_information, **kwargs)
-
         intent = get_intent(self.cls_intent(history))
         print('用户意图是：' + intent)
         if intentCode in useinfo_intent_code_list:
@@ -252,7 +247,9 @@ class Chat(object):
 
 if __name__ == '__main__':
     chat = Chat()
-    history = [{"role": "0", "content": "我最近早上头疼"}]
+    a = "我最近早上头疼，谁帮我看一下啊"
+    init_intput = input("init_input: ")
+    history = [{"role": "0", "content": init_intput}]
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = None
     output_text = chat.run_prediction(history, prompt, intentCode, verbose=False)
