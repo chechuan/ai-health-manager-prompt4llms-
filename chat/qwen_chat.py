@@ -46,6 +46,8 @@ def get_intent(text):
         return 'play_music'
     elif '天气' in text:
         return 'check_weather'
+    elif '辅助诊断' in text:
+        return 'auxiliary_diagnosis'
     elif '医师' in text:
         return 'call_doctor'
     elif '运动师' in text:
@@ -251,8 +253,7 @@ if __name__ == '__main__':
     intentCode = "default_code"
     output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
     while True:
-        history.append({"role": "3", "content": output_text})
+        history.append({"role": "3", "content": output_text['message']})
         conv = history[-1]
-        print(f"Role: {conv['role']}\nContent: {conv['content']}")
         history.append({"role": "0", "content": input("user: ")})
         output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
