@@ -76,6 +76,10 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
         ret = completion['choices'][0]['message']['content'].strip()
     return ret
 
+#def truncat_history(history):
+#    for cnt in range(len(history)-1, -1, -1):
+        
+
 class ModelCard(BaseModel):
     id: str
     object: str = "model"
