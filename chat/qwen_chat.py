@@ -227,7 +227,6 @@ class Chat(object):
     def history_compose(self, history):
         return [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
 
-    
     def cls_intent(self, history):
         """意图识别"""
         st_key, ed_key = "<|im_start|>", "<|im_end|>"
@@ -283,8 +282,8 @@ class Chat(object):
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
         elif intent == "schedule_manager":
-            input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-            output_text = self.tsm._run(input_history, **kwargs)
+            his = self.history_compose(history)
+            output_text = self.tsm._run(his, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intent == "other":
             output_text = self.chatter_gaily(history, external_information, **kwargs)
@@ -327,7 +326,7 @@ if __name__ == '__main__':
             '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
-    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007"))
+    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007", verbose=True))
     while True:
         history.append({"role": "3", "content": output_text['message']})
         conv = history[-1]

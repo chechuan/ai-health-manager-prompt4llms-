@@ -41,6 +41,11 @@ def call_qwen(messages, functions=None):
     return messages
 
 class taskSchedulaManager:
+    headers: Dict = {"content-type": "application/json"}
+    payload_template: Dict = {
+        "customId": None,"orgCode": None,"taskName": None,"taskType": None,"taskDesc": None,
+        "intentCode": None, "repeatType": None, "cronDate": None, "fromTime": None, "toTime": None
+        }
     def __init__(self, 
                  api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']):
         """
@@ -61,7 +66,7 @@ class taskSchedulaManager:
             input_variables=["input"],
             template="用户输入: {input}\n你的输出(json):"
             )
-
+        self.session = requests.Session()
     
     def run(self, query, **kwds):
         content = self.sys_prompt + self.conv_prompt.format(input=query)
@@ -82,47 +87,113 @@ class taskSchedulaManager:
             }
         )
         return messages
-    
-    def update_schedule(self, sch_list: List[Dict], sch: Dict or AnyStr):
-        """更新日程"""
-        if isinstance(sch, dict):
-            ...
-        elif isinstance(sch, str):
-            try:
-                sch = eval(sch)
-            except Exception as err:
-                logger.debug(repr(err))
-        task_list = [i['task'] for i in sch_list]
-        if sch['task'] not in task_list:
-            sch_list.append(sch)
-        else:
-            idx = task_list.index(sch['task'])
-            sch_list[idx] = sch
-        return sch_list
 
-    def tool_create_schedule(self, messages, msg):
-        content = input(f"tool input(改到4点半): ")
-        messages.append(
-            {
-                "role": "assistant", 
-                "content": msg.content, 
-                "function_call": {"name":msg.function_call['name'],"arguments": content},
-                "schedule": self.update_schedule(self.get_init_schedule(), msg.function_call['arguments'])
-            }
-        )
-        return messages
+    def tool_create_schedule(self, msg, **kwds):
+        """调用创建日程接口
+        orgCode     String	组织编码
+        customId    String	客户id
+        taskName	String	任务内容
+        taskType	String	任务类型（reminder/clock）
+        taskDesc	String	任务备注
+        intentCode	String	意图编码 `CREATE`新建提醒 `CHANGE`更改提醒 `CANCEL`取消提醒
+        repeatType	String	提醒的频率 `EVERYDAY`每天 `W3`每周三 `M3`每月三号
+        cronDate	Date	执行时间
+        fromTime	Date	变更原始时间
+        toTime	    Date	变更目的时间
+        """
+        arguments = eval(msg.function_call['arguments'])
+        task = arguments.get("task")
+        cur_time = arguments.get("time")
+        assert task, "task name is None"
+        assert cur_time, "time is None"
+
+        url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
+        input_payload = {
+            "customId": kwds.get("customId"),
+            "orgCode": kwds.get("orgCode"),
+            "taskName": task,
+            "taskType": "reminder",
+            "intentCode": "CREATE",
+            "cronDate": cur_time
+        }
+        payload = {**self.payload_template, **input_payload}
+        headers = {"content-type": "application/json"}
+        response = self.session.post(url, json=payload, headers=headers).text
+        resp_js = json.loads(response)
+
+        assert resp_js["code"] == 200, resp_js["msg"]
+        logger.info(f"Create schedule {{{task}}} - {{{cur_time}}}.")
+        return 200
     
-    def tool_modify_schedule(self, messages, msg):
-        content = input(f"tool input(算了，取消吧): ")
-        messages.append(
-            {
-                "role": "assistant", 
-                "content": msg.content, 
-                "function_call": {"name":msg.function_call['name'],"arguments": content},
-                "schedule": self.update_schedule(self.get_init_schedule(), msg.function_call['arguments'])
-            }
-        )
-        return messages
+    def tool_cancel_schedule(self, msg, **kwds):
+        """取消日程
+        orgCode     String	组织编码
+        customId    String	客户id
+        taskName	String	任务内容
+        taskType	String	任务类型（reminder/clock）
+        taskDesc	String	任务备注
+        intentCode	String	意图编码 `CREATE`新建提醒 `CHANGE`更改提醒 `CANCEL`取消提醒
+        repeatType	String	提醒的频率 `EVERYDAY`每天 `W3`每周三 `M3`每月三号
+        cronDate	Date	执行时间
+        fromTime	Date	变更原始时间
+        toTime	    Date	变更目的时间
+        """
+        arguments = eval(msg.function_call['arguments'])
+        task = arguments.get("task")
+        cur_time = arguments.get("time")
+        assert task, "task name is None"
+        assert cur_time, "time is None"
+
+        url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
+        input_payload = {
+            "customId": kwds.get("customId"),
+            "orgCode": kwds.get("orgCode"),
+            "taskName": task,
+            "intentCode": "CANCEL"
+        }
+        payload = {**self.payload_template, **input_payload}
+        response = self.session.post(url, json=payload, headers=self.headers).text
+        resp_js = json.loads(response)
+        assert resp_js["code"] == 200, resp_js["msg"]
+        logger.info(f"Cancle schedule {{{task}}}.")
+        return task
+
+    def tool_modify_schedule(self, msg, schedule, **kwds):
+        """修改日程时间， 当前算法后端逻辑应该是根据task和from time查询 都改为toTime
+        orgCode     String	组织编码
+        customId    String	客户id
+        taskName	String	任务内容
+        taskType	String	任务类型（reminder/clock）
+        taskDesc	String	任务备注
+        intentCode	String	意图编码 `CREATE`新建提醒 `CHANGE`更改提醒 `CANCEL`取消提醒
+        repeatType	String	提醒的频率 `EVERYDAY`每天 `W3`每周三 `M3`每月三号
+        cronDate	Date	执行时间
+        fromTime	Date	变更原始时间
+        toTime	    Date	变更目的时间
+        """
+        arguments = eval(msg.function_call['arguments'])
+        task = arguments.get("task")
+        cur_time = arguments.get("time")
+        assert task, "task name is None"
+        assert cur_time, "time is None"
+
+        task_time_ori = [i for i in schedule if i['task']==arguments['task']][0]['time']
+
+        url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
+        input_payload = {
+            "customId": kwds.get("customId"),
+            "orgCode": kwds.get("orgCode"),
+            "taskName": task,
+            "intentCode": "CHANGE",
+            "fromTime": task_time_ori,
+            "toTime": cur_time
+        }
+        payload = {**self.payload_template, **input_payload}
+        response = self.session.post(url, json=payload, headers=self.headers).text
+        resp_js = json.loads(response)
+        assert resp_js["code"] == 200, resp_js["msg"]
+        logger.info(f"Change schedule {{{task}}} from {{{task_time_ori}}} to {{{cur_time}}}.")
+        return 200
 
     def get_real_time_schedule(self, **kwds):
         """查询用户实时日程
@@ -135,8 +206,7 @@ class taskSchedulaManager:
             "orgCode": "sf",
             "customId": "007"
         }
-        headers = {"content-type": "application/json"}
-        response = requests.request("POST", url, json=payload, headers=headers).text
+        response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
         if resp_js['code'] == 200:
             data = resp_js['data']
@@ -149,6 +219,8 @@ class taskSchedulaManager:
         - Args
             messages (List[Dict])
                 历史信息 包括user/assistant/function_call
+            kwds (keyword arguments)
+                - 
         
         - return
             output (str) 
@@ -165,30 +237,27 @@ class taskSchedulaManager:
         if kwds.get("verbose"):
             logger.debug(msg.content[msg.content.rfind("Thought:"):])
             if msg.function_call:
-                logger.debug("call func: ", msg.function_call['name'])
-                logger.debug("arguments: ", msg.function_call['arguments'])
+                logger.debug(f"call func: {msg.function_call['name']}")
+                logger.debug(f"arguments: {msg.function_call['arguments']}")
         if msg.function_call['name'] == "ask_for_time":
-            # conv continue
             content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
-            messages = self.tool_ask_for_time(messages, msg)
         elif msg.function_call['name'] == "create_schedule":
-            # message rollout
-            # 本示例中创建任务后跟随修改时间
-            # messages = self.tool_create_schedule(messages, msg)
+            self.tool_create_schedule(msg, **kwds)
             content = eval(msg.function_call['arguments'])['ask']
         elif msg.function_call['name'] == "modify_schedule":
-            # message rollout
-            # messages = self.tool_modify_schedule(messages, msg)
+            self.tool_modify_schedule(msg, schedule, **kwds)
             content = eval(msg.function_call['arguments'])['ask']
         elif msg.function_call['name'] == "cancel_schedule":
-            content = "已为您取消该日程"
+            task = self.tool_cancel_schedule(msg, **kwds)
+            content = f"已为您取消{task}的提醒"
         return content
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
     tsm = taskSchedulaManager()
     t_claim_str = f"现在的时间是{t}\n"
-    schedule = [{"task": "开会", "time": "2023-11-03T11:40:00"}]
+    orgCode="sf"
+    customId="007"
     # debug 任务时间
     # content = f"{t_claim_str}下午开会,提前叫我"
     # debug 直接取消
@@ -200,7 +269,7 @@ if __name__ == "__main__":
     content = "开会时间改到明天下午4点"
     history = [{"role":"user", "content": content}]
     while True:
-        content = tsm._run(history, schedule=schedule, verbose=True, orgCode="sf", customId="007")
+        content = tsm._run(history, verbose=True, orgCode=orgCode, customId=customId)
         history.append({"role":"assistant", "content": content})
         history.append({"role":"user", "content": input(f"{content}: ")})
     # tsm._run(f"开会时间改到明天下午3点", verbose=True, schedule=schedule)

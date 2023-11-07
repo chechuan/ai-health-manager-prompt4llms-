@@ -53,7 +53,7 @@ task_schedule_parameter_description_for_qwen = [
         "parameters": [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
             {"name": "time", "description": "提醒的时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-            {"name": "ask","description": "告知用户日程已创建成功及提醒的时间","required": True,"schema": {"type": "string"}}
+            {"name": "ask","description": "告知用户日程创建完成及具体的提醒时间","required": True,"schema": {"type": "string"}}
         ]
     },
     {
