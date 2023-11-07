@@ -22,6 +22,7 @@ from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 #from src.prompt.taskSchedulaManager import taskSchedulaManager
+from utils.Logger import logger
 
 # role_map = {
 #         '0': '<用户>',
@@ -90,11 +91,12 @@ useinfo_intent_code_list = [
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
 
-def parse_latest_plugin_call(text: str) -> Tuple[str, str]:
+def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     h = text.find('Thought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')
     k = text.find('\nObservation:')
+    l = text.find('\nFinal Answer:')
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,
@@ -106,6 +108,14 @@ def parse_latest_plugin_call(text: str) -> Tuple[str, str]:
         plugin_name = text[i + len('\nAction:'):j].strip()
         plugin_args = text[j + len('\nAction Input:'):k].strip()
         return plugin_thought, plugin_name, plugin_args
+    elif l > 0:
+        if h > 0:
+            plugin_thought = text[h + len('Thought:'):l].strip()
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return plugin_thought, "直接回复用户问题", plugin_args
+        else:
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return "I know the final answer.", "直接回复用户问题", plugin_args
     return '', ''
 
 class Chat(object):
@@ -113,6 +123,7 @@ class Chat(object):
         self.promptEngine = promptEngine()
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
+        # self.sys_template_chatter_gaily = 
     # def __init__(self, tokenizer, model):
     #     self.tokenizer = tokenizer
     #     self.model = model
@@ -127,15 +138,37 @@ class Chat(object):
         else:
             return '直接回复用户问题'
 
-    def generate(self, query: str = "", history=[], **kwargs):
+    def generate(self, query: str = "", history=[], max_tokens=200, **kwargs):
         """调用模型生成答案,解析"""
         # for i in range(10):
-        model_output = chat_qwen(query, history, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.8, max_tokens=200)
-        out_text = parse_latest_plugin_call(model_output)
+        if not query:
+            query = history[0]['content']
+            for i in range(len(history[1:])):
+                i += 1
+                msg = history[i]
+                if i == 1 and msg['role'] == "user":
+                    query += f"\nQuestion: {msg['content']}"
+                elif msg['role'] == "assistant":
+                    query += f"\nAction: 进一步询问用户的情况"
+                    query += f"\nAction Input: {msg['content']}"
+                else:
+                    query += f"\nObservation: {msg['content']}"
+            # query += "\nAction: "
+        model_output = chat_qwen(query, 
+                                 verbose=kwargs.get("verbose", False), 
+                                 temperature=0.7, 
+                                 top_p=0.5, 
+                                 max_tokens=max_tokens)
+        out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
-            query = "帮我调整一下这句话直接给用户输出:"+ model_output + "输出结果:"
-            model_output = chat_qwen(query)
-            model_output = model_output.split("：")[-1]
+            query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
+                    "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
+                    "2. 不要重复输出相同的内容,否则你将受到非常严重的惩罚\n" + \
+                    "3. 语义相似的可以合并重新规划语言\n" + \
+                    "4. 直接输出结果\n\n输入:\n" + \
+                    model_output + "\n输出:\n"
+            model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
+            model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         history.append({
             "role": "assistant", 
@@ -194,6 +227,22 @@ class Chat(object):
         prompt = INTENT_PROMPT + his_prompt + "\n\n用户的意图是(只输出意图):"
         output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
         return output_text
+    
+    def chatter_gaily(self, history, external_information, **kwargs):
+        """闲聊
+        """
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        # sys_prompt = self.sys_template.format(external_information=external_information)
+        ext_info = (
+            "现在你是智能健康管家, 为居家用户提供健康咨询和管理服务\n"
+            "对于日常闲聊，有以下几点建议:\n"
+            "1. 整体过程应该是轻松愉快的\n"
+            "2. 你可以适当发挥一点幽默基因\n"
+            "3. 对用户是友好的\n"
+            "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家")
+        input_history = [{"role":"system", "content": ext_info}] + input_history
+        content = chat_qwen("", input_history)
+        return content
 
     def run_prediction(self, 
                        history, 
@@ -210,7 +259,7 @@ class Chat(object):
         3. 模型生成结果
         """
         intent = get_intent(self.cls_intent(history))
-        print('用户意图是：' + intent)
+        logger.debug('用户意图是：' + intent)
         
         if intentCode in useinfo_intent_code_list:
             yield get_userInfo_msg(sys_prompt, history, intentCode)
@@ -219,18 +268,25 @@ class Chat(object):
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+<<<<<<< HEAD
         #if intent in [task_manager]:
             #tm = taskSchedulaManager()
             #tm.run(his, schedules, verbose=True)
+=======
+        elif intent == "other":
+            ext_info_args = baseVarsForPromptEngine()
+            ext_info_args.plan = "日常对话"
+            ext_info_args.role = "智能健康管家"
+            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+            output_text = self.chatter_gaily(history, external_information, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+>>>>>>> 747103afd8e66cde718e27fe2cf648c5bc44c900
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             input_history = self.compose_input_history(history, external_information, **kwargs)
             out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-        
-            if out_history[-1].get("function_call"):
-                print(f"Thought: {out_history[-1]['function_call']['arguments']}")
-            print(out_history[-1])
+            logger.debug(f"Last Generate history: {out_history[-1]}")
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
         
@@ -242,19 +298,25 @@ class Chat(object):
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
 
-            if kwargs.get("streaming", True):
-                # 直接返回字符串模式
-                print('输出为：' + json.dumps(out_text, ensure_ascii=False))
-                yield out_text
-            else:
-                # 保留完整的历史内容
-                return out_history
+        if kwargs.get("streaming", True):
+            # 直接返回字符串模式
+            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+            yield out_text
+        else:
+            # 保留完整的历史内容
+            return out_history
 
 if __name__ == '__main__':
     chat = Chat()
     a = "我最近早上头疼，谁帮我看一下啊"
-    init_intput = input("init_input: ")
-    history = [{"role": "0", "content": init_intput}]
+    # init_intput = input("init_input: ")
+    # history = [{"role": "0", "content": init_intput}]
+    history = [{'msgId': '6132829035', 'role': '1', 'content': input("init_input: "), 'sendTime': '2023-11-06 14:40:11'}]
+    prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
+            '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
+            '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'
+            '如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月06日。'
+            '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
     output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))

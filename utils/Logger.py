@@ -4,14 +4,16 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
-import sys
 import socket
-from loguru import logger
+import sys
 from pathlib import Path
+
+from loguru import logger
+
 logger.remove()
 
 class Logging:
-    def __init__(self, appid = "0", console_level='TRACE', file_level = "INFO"):
+    def __init__(self, appid = "0", console_level='TRACE', file_level = "DEBUG"):
         """日志记录模块
         :param appid: 应用id
         :param file_level: 保存文件日志logger级别

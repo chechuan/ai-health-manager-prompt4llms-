@@ -62,7 +62,7 @@ _TEXT_COMPLETION_CMD = object()
 #
 # TODO: Use real system role when the model is ready.
 #
-def parse_messages(messages, functions):
+def parse_messages(messages, functions, temp_schedule):
     if all(m.role != "user" for m in messages):
         raise HTTPException(
             status_code=400,
@@ -102,7 +102,7 @@ def parse_messages(messages, functions):
         system += "\n\n" + REACT_INSTRUCTION.format(
             tools_text=tools_text,
             tools_name_text=tools_name_text,
-            total_schedule=messages[-1].schedule,
+            temp_schedule=temp_schedule,
         )
         system = system.lstrip("\n").rstrip()
 
@@ -251,7 +251,7 @@ def text_complete_last_message(history, stop_words_ids, gen_kwargs):
     return output
 
 
-def create_chat_completion(request: ChatCompletionRequest):
+def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict]):
     # gen_kwargs = {}
     stop_words = add_extra_stop_words(request.stop)
     if request.functions:
@@ -259,7 +259,7 @@ def create_chat_completion(request: ChatCompletionRequest):
         if "Observation:" not in stop_words:
             stop_words.append("Observation:")
 
-    query, history = parse_messages(request.messages, request.functions)
+    query, history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
     if not history:
         print(query)
     response = chat_qwen(query, history, top_p=0.8, temperature=0.7, max_tokens=200)

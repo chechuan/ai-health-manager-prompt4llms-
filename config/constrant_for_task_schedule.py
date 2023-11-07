@@ -29,7 +29,7 @@ Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can be repeated zero or more times)
 
 当前日程:
-{total_schedule}
+{temp_schedule}
 
 Begin!"""
 
