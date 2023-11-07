@@ -21,7 +21,7 @@ from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
-#from src.prompt.taskSchedulaManager import taskSchedulaManager
+from src.prompt.task_schedule_manager import taskSchedulaManager
 from utils.Logger import logger
 
 # role_map = {
@@ -262,15 +262,15 @@ class Chat(object):
         logger.debug('用户意图是：' + intent)
         
         if intentCode in useinfo_intent_code_list:
-            yield get_userInfo_msg(sys_prompt, history, intentCode)
+            out_text = get_userInfo_msg(sys_prompt, history, intentCode)
         elif intentCode != 'default_code':
-            yield get_reminder_tips(sys_prompt, history, intentCode) 
+            out_text = get_reminder_tips(sys_prompt, history, intentCode) 
 
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-            yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
-        #if intent in [task_manager]:
-            #tm = taskSchedulaManager()
-            #tm.run(his, schedules, verbose=True)
+        elif intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+            out_text = {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+        elif intent in ['schedule_manager']:
+            tm = taskSchedulaManager()
+            tm.run(his, customId, orgCode, verbose=True)
         elif intent == "other":
             ext_info_args = baseVarsForPromptEngine()
             ext_info_args.plan = "日常对话"
