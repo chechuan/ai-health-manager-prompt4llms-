@@ -25,7 +25,7 @@ def get_userInfo_msg(prompt, history, intentCode):
 def get_reminder_tips(prompt, history, intentCode):
     print('remind prompt: ' + prompt)
     model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, 
-            temperature=0.1, top_p=0.2, max_tokens=500, model='Qwen-14B-Chat')
+            temperature=0.1, top_p=0.2, max_tokens=500, model='Baichuan2-7B-Chat')
 
     return {'end':True, 'message':model_output, 'intentCode':intentCode}
 

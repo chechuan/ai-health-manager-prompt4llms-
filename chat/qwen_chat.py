@@ -268,11 +268,9 @@ class Chat(object):
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
-<<<<<<< HEAD
         #if intent in [task_manager]:
             #tm = taskSchedulaManager()
             #tm.run(his, schedules, verbose=True)
-=======
         elif intent == "other":
             ext_info_args = baseVarsForPromptEngine()
             ext_info_args.plan = "日常对话"
@@ -280,7 +278,6 @@ class Chat(object):
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             output_text = self.chatter_gaily(history, external_information, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
->>>>>>> 747103afd8e66cde718e27fe2cf648c5bc44c900
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
