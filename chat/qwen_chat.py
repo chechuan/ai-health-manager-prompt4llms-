@@ -217,6 +217,10 @@ class Chat(object):
         sys_prompt = self.sys_template.format(external_information=external_information)
         input_history = [{"role":"system", "content": sys_prompt}] + input_history
         return input_history
+
+    def history_compose(self, history):
+        return [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+
     
     def cls_intent(self, history):
         """意图识别"""
@@ -270,6 +274,7 @@ class Chat(object):
             out_text = {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
         elif intent in ['schedule_manager']:
             tm = taskSchedulaManager()
+            his = self.history_compose(history)
             tm.run(his, customId, orgCode, verbose=True)
         elif intent == "other":
             ext_info_args = baseVarsForPromptEngine()
