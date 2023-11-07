@@ -223,6 +223,10 @@ class Chat(object):
         sys_prompt = self.sys_template.format(external_information=external_information)
         input_history = [{"role":"system", "content": sys_prompt}] + input_history
         return input_history
+
+    def history_compose(self, history):
+        return [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+
     
     def cls_intent(self, history):
         """意图识别"""
@@ -272,9 +276,9 @@ class Chat(object):
         logger.debug('用户意图是：' + intent)
         
         if intentCode in useinfo_intent_code_list:
-            yield get_userInfo_msg(sys_prompt, history, intentCode)
+            out_text = get_userInfo_msg(sys_prompt, history, intentCode)
         elif intentCode != 'default_code':
-            yield get_reminder_tips(sys_prompt, history, intentCode) 
+            out_text = get_reminder_tips(sys_prompt, history, intentCode) 
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
