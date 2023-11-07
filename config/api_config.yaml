@@ -2,3 +2,4 @@ local:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
   graph: http://10.4.164.240:26925
+  ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev

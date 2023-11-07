@@ -8,6 +8,9 @@
 import copy
 import json
 import sys
+from pathlib import Path
+
+import yaml
 
 sys.path.append('.')
 from typing import Tuple
@@ -21,6 +24,7 @@ from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
+from src.prompt.task_schedule_manager import taskSchedulaManager
 from utils.Logger import logger
 
 # role_map = {
@@ -118,10 +122,13 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     return '', ''
 
 class Chat(object):
-    def __init__(self, ):
+    def __init__(self, env: str ="local"):
+        api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
         self.promptEngine = promptEngine()
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
+        self.tsm = taskSchedulaManager(api_config)
+        
         # self.sys_template_chatter_gaily = 
     # def __init__(self, tokenizer, model):
     #     self.tokenizer = tokenizer
@@ -227,9 +234,13 @@ class Chat(object):
         output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
         return output_text
     
-    def chatter_gaily(self, history, external_information, **kwargs):
+    def chatter_gaily(self, history, **kwargs):
         """闲聊
         """
+        # ext_info_args = baseVarsForPromptEngine()
+        # ext_info_args.plan = "日常对话"
+        # ext_info_args.role = "智能健康管家"
+        # external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # sys_prompt = self.sys_template.format(external_information=external_information)
         ext_info = (
@@ -267,11 +278,11 @@ class Chat(object):
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+        elif intent == "schedule_manager":
+            input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            output_text = self.tsm._run(input_history, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intent == "other":
-            ext_info_args = baseVarsForPromptEngine()
-            ext_info_args.plan = "日常对话"
-            ext_info_args.role = "智能健康管家"
-            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             output_text = self.chatter_gaily(history, external_information, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
@@ -301,10 +312,10 @@ class Chat(object):
 
 if __name__ == '__main__':
     chat = Chat()
-    a = "我最近早上头疼，谁帮我看一下啊"
-    # init_intput = input("init_input: ")
+    # debug_text = "我最近早上头疼，谁帮我看一下啊"
+    debug_text = "明天下午开会，记得提醒我"
     # history = [{"role": "0", "content": init_intput}]
-    history = [{'msgId': '6132829035', 'role': '1', 'content': input("init_input: "), 'sendTime': '2023-11-06 14:40:11'}]
+    history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
             '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
             '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'
@@ -312,7 +323,7 @@ if __name__ == '__main__':
             '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
-    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
+    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007"))
     while True:
         history.append({"role": "3", "content": output_text['message']})
         conv = history[-1]

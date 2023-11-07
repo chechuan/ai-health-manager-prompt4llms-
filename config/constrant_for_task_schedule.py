@@ -31,6 +31,7 @@ Observation: the result of the action
 当前日程:
 {temp_schedule}
 
+现在时间是: {tmp_time}
 Begin!"""
 
 # - if user want to create schedule and time is unclear, call `ask_for_time` tool once to get schedule time before `create_schedule`

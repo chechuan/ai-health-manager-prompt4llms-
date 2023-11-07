@@ -12,7 +12,8 @@ from pathlib import Path
 from typing import AnyStr, Dict, List
 
 import openai
-# import yaml
+import requests
+import yaml
 from langchain.prompts import PromptTemplate
 
 sys.path.append(".")
@@ -40,10 +41,12 @@ def call_qwen(messages, functions=None):
     return messages
 
 class taskSchedulaManager:
-    def __init__(self):
+    def __init__(self, 
+                 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']):
         """
         用户输入: {input}
         """
+        self.api_config = api_config
         prompt = PromptTemplate(
             input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"], 
             template=TEMPLATE_TASK_SCHEDULE_MANAGER
@@ -53,11 +56,11 @@ class taskSchedulaManager:
             task_schedule_parameter_description=task_schedule_parameter_description,
             curr_plan=[],
             tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
-        )
+            )
         self.conv_prompt = PromptTemplate(
             input_variables=["input"],
             template="用户输入: {input}\n你的输出(json):"
-        )
+            )
 
     
     def run(self, query, **kwds):
@@ -121,44 +124,65 @@ class taskSchedulaManager:
         )
         return messages
 
-    def get_init_schedule(self):
-        return [{"task": "开会", "time": "2023-10-31T17:00:00"}]
-    
-    def _run(self, messages, schedule, **kwds):
-        """对话过程以messages形式利用历史信息
-        :param query: 用户当前输入
-        :param messages: 历史信息 包括user/assistant/function_call
-
-        :return output (str) 直接输出的文本
+    def get_real_time_schedule(self, **kwds):
+        """查询用户实时日程
         """
-        while True:
-            if len(messages) == 1:
-                logger.debug("Init user input: ", messages[0]['content'])
-            request = ChatCompletionRequest(model="Qwen-14B-Chat", 
-                                            functions=task_schedule_parameter_description_for_qwen,
-                                            messages=messages,)
-            msg = create_chat_completion(request, schedule).choices[0].message
-            if kwds.get("verbose"):
-                logger.debug(msg.content[msg.content.rfind("Thought:"):])
-                if msg.function_call:
-                    logger.debug("call func: ", msg.function_call['name'])
-                    logger.debug("arguments: ", msg.function_call['arguments'])
-            if msg.function_call['name'] == "ask_for_time":
-                # conv continue
-                content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
-                messages = self.tool_ask_for_time(messages, msg)
-            elif msg.function_call['name'] == "create_schedule":
-                # message rollout
-                # 本示例中创建任务后跟随修改时间
-                # messages = self.tool_create_schedule(messages, msg)
-                content = eval(msg.function_call['arguments'])['ask']
-            elif msg.function_call['name'] == "modify_schedule":
-                # message rollout
-                # messages = self.tool_modify_schedule(messages, msg)
-                content = eval(msg.function_call['arguments'])['ask']
-            elif msg.function_call['name'] == "cancel_schedule":
-                content = "已为您取消该日程"
-            return content
+        assert kwds.get("orgCode"), KeyError("orgCode is required")
+        assert kwds.get("customId"), KeyError("customId is required")
+
+        url = self.api_config["ai_backend"] + "/alg-api/schedule/query"
+        payload = {
+            "orgCode": "sf",
+            "customId": "007"
+        }
+        headers = {"content-type": "application/json"}
+        response = requests.request("POST", url, json=payload, headers=headers).text
+        resp_js = json.loads(response)
+        if resp_js['code'] == 200:
+            data = resp_js['data']
+            return [{"task": i['taskName'], "time": i['cronDate']} for i in data]
+        else:
+            return [{"task": "开会", "time": "2023-10-31 17:00:00"}]
+    
+    def _run(self, messages: List[Dict], **kwds):
+        """对话过程以messages形式利用历史信息
+        - Args
+            messages (List[Dict])
+                历史信息 包括user/assistant/function_call
+        
+        - return
+            output (str) 
+                直接输出的文本
+        """
+        schedule = self.get_real_time_schedule(**kwds)
+        
+        if len(messages) == 1:
+            logger.debug(f"Init user input: {messages[0]['content']}")
+        request = ChatCompletionRequest(model="Qwen-14B-Chat", 
+                                        functions=task_schedule_parameter_description_for_qwen,
+                                        messages=messages,)
+        msg = create_chat_completion(request, schedule).choices[0].message
+        if kwds.get("verbose"):
+            logger.debug(msg.content[msg.content.rfind("Thought:"):])
+            if msg.function_call:
+                logger.debug("call func: ", msg.function_call['name'])
+                logger.debug("arguments: ", msg.function_call['arguments'])
+        if msg.function_call['name'] == "ask_for_time":
+            # conv continue
+            content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
+            messages = self.tool_ask_for_time(messages, msg)
+        elif msg.function_call['name'] == "create_schedule":
+            # message rollout
+            # 本示例中创建任务后跟随修改时间
+            # messages = self.tool_create_schedule(messages, msg)
+            content = eval(msg.function_call['arguments'])['ask']
+        elif msg.function_call['name'] == "modify_schedule":
+            # message rollout
+            # messages = self.tool_modify_schedule(messages, msg)
+            content = eval(msg.function_call['arguments'])['ask']
+        elif msg.function_call['name'] == "cancel_schedule":
+            content = "已为您取消该日程"
+        return content
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
@@ -176,7 +200,7 @@ if __name__ == "__main__":
     content = "开会时间改到明天下午4点"
     history = [{"role":"user", "content": content}]
     while True:
-        content = tsm._run(history, schedule=schedule, verbose=True)
+        content = tsm._run(history, schedule=schedule, verbose=True, orgCode="sf", customId="007")
         history.append({"role":"assistant", "content": content})
         history.append({"role":"user", "content": input(f"{content}: ")})
     # tsm._run(f"开会时间改到明天下午3点", verbose=True, schedule=schedule)

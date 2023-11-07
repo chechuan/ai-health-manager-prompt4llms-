@@ -8,6 +8,7 @@ import json
 import re
 import sys
 import time
+from datetime import datetime
 # from argparse import ArgumentParser
 # from contextlib import asynccontextmanager
 from typing import Dict, List, Literal, Optional, Union
@@ -103,6 +104,7 @@ def parse_messages(messages, functions, temp_schedule):
             tools_text=tools_text,
             tools_name_text=tools_name_text,
             temp_schedule=temp_schedule,
+            tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
         )
         system = system.lstrip("\n").rstrip()
 
