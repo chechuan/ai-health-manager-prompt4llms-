@@ -21,6 +21,7 @@ from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
+#from src.prompt.taskSchedulaManager import taskSchedulaManager
 
 # role_map = {
 #         '0': '<用户>',
@@ -218,6 +219,9 @@ class Chat(object):
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+        #if intent in [task_manager]:
+            #tm = taskSchedulaManager()
+            #tm.run(his, schedules, verbose=True)
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
