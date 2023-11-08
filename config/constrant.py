@@ -35,11 +35,11 @@ TOOL_CHOOSE_PROMPT = """你是智能健康管家，可以根据用户的对话�
 Question: 用户的问题
 Thought: 思考当前应该做什么
 Action: 选择的解决用户当前问题的工具
-Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容,一次只针对一个主题询问
+Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容,一次只问一个问题
 Observation: 工具返回的内容
 ...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
 Thought: bingo
-Final Answer: the final answer to the original input question
+Final Answer: 原始输入问题结合对话中补充的信息,给出最终答案,不要过长,尽可能对用户有帮助.
 
 # 参考背景信息
 {external_information}
