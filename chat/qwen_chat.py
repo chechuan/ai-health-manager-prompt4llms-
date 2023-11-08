@@ -146,7 +146,6 @@ class Chat(object):
 
     def generate(self, query: str = "", history=[], max_tokens=200, **kwargs):
         """调用模型生成答案,解析"""
-        # for i in range(10):
         if not query:
             query = history[0]['content']
             for i in range(len(history[1:])):
@@ -159,12 +158,11 @@ class Chat(object):
                     query += f"\nAction Input: {msg['content']}"
                 else:
                     query += f"\nObservation: {msg['content']}"
-            # query += "\nAction: "
-        model_output = chat_qwen(query, 
-                                 verbose=kwargs.get("verbose", False), 
-                                 temperature=0.7, 
-                                 top_p=0.5, 
-                                 max_tokens=max_tokens)
+        # 利用Though防止生成无关信息
+        query += "\nThought: "
+        model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        
+        model_output = "\nThought: " + model_output
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
             query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
@@ -316,7 +314,8 @@ class Chat(object):
 if __name__ == '__main__':
     chat = Chat()
     # debug_text = "我最近早上头疼，谁帮我看一下啊"
-    debug_text = "明天下午开会，记得提醒我"
+    # debug_text = "明天下午开会，记得提醒我"
+    debug_text = "我对辣椒过敏"
     # history = [{"role": "0", "content": init_intput}]
     history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
@@ -326,7 +325,7 @@ if __name__ == '__main__':
             '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
-    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007", verbose=True))
+    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007"))
     while True:
         history.append({"role": "3", "content": output_text['message']})
         conv = history[-1]
