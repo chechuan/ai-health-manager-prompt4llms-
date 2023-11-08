@@ -275,9 +275,9 @@ class Chat(object):
         logger.debug('用户意图是：' + intent)
         
         if intentCode in useinfo_intent_code_list:
-            out_text = get_userInfo_msg(sys_prompt, history, intentCode)
+            yield get_userInfo_msg(sys_prompt, history, intentCode)
         elif intentCode != 'default_code':
-            out_text = get_reminder_tips(sys_prompt, history, intentCode) 
+            yield get_reminder_tips(sys_prompt, history, intentCode) 
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
