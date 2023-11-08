@@ -278,7 +278,7 @@ class Chat(object):
             yield get_userInfo_msg(sys_prompt, history, intentCode)
         elif intentCode in ['default_reminder','broadcast_bp_up','default_clock','schedule_qry_up','care_for','broadcast_bp','sport_remind','medicine_remind','dietary_remind','schedule_qry','meet_remind','measure_bp','schedule_no']:    
             yield get_reminder_tips(sys_prompt, history, intentCode) 
-        else:
+        elif intentCode != 'default_code':
             yield get_reminder_tips(sys_prompt, history, intentCode, model='Qwen-14B-Chat')
 
 
