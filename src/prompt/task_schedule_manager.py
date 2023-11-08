@@ -104,13 +104,15 @@ class taskSchedulaManager:
         arguments = eval(msg.function_call['arguments'])
         task = arguments.get("task")
         cur_time = arguments.get("time")
+        customId = kwds.get("customId")
+        orgCode = kwds.get("orgCode")
         assert task, "task name is None"
         assert cur_time, "time is None"
 
         url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
         input_payload = {
-            "customId": kwds.get("customId"),
-            "orgCode": kwds.get("orgCode"),
+            "customId": customId,
+            "orgCode": orgCode,
             "taskName": task,
             "taskType": "reminder",
             "intentCode": "CREATE",
@@ -122,7 +124,7 @@ class taskSchedulaManager:
         resp_js = json.loads(response)
 
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Create schedule {{{task}}} - {{{cur_time}}}.")
+        logger.info(f"Create schedule org:{{{orgCode}}} - uid:{{{customId}}} - {cur_time} {task}")
         return 200
     
     def tool_cancel_schedule(self, msg, **kwds):
@@ -141,6 +143,8 @@ class taskSchedulaManager:
         arguments = eval(msg.function_call['arguments'])
         task = arguments.get("task")
         cur_time = arguments.get("time")
+        customId = kwds.get("customId")
+        orgCode = kwds.get("orgCode")
         assert task, "task name is None"
         assert cur_time, "time is None"
 
@@ -155,7 +159,7 @@ class taskSchedulaManager:
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Cancle schedule {{{task}}}.")
+        logger.info(f"Cancle schedule org:{{{orgCode}}} - uid:{{{customId}}} - {task}")
         return task
 
     def tool_modify_schedule(self, msg, schedule, **kwds):
@@ -174,6 +178,8 @@ class taskSchedulaManager:
         arguments = eval(msg.function_call['arguments'])
         task = arguments.get("task")
         cur_time = arguments.get("time")
+        customId = kwds.get("customId")
+        orgCode = kwds.get("orgCode")
         assert task, "task name is None"
         assert cur_time, "time is None"
 
@@ -192,8 +198,20 @@ class taskSchedulaManager:
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Change schedule {{{task}}} from {{{task_time_ori}}} to {{{cur_time}}}.")
+        logger.info(f"Change schedule org:{{{orgCode}}} - uid:{{{customId}}} - {task} from {task_time_ori} to {cur_time}.")
         return 200
+
+    def tool_query_schedule(self, schedule, **kwds):
+        """查询用户日程处理逻辑
+        """
+        prompt = ("以下是用户的日程及对应时间,请组织语言,告知用户,请遵循以下几点要求:\n"
+                  "1.可以省略重复的日期信息,但明确具体的时间信息\n"
+                  "2.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
+                  "3.除了要告知用户的日程信息不要输出任何其他内容\n"
+                  "4.请按照时间的先后顺序输出\n")
+        prompt += f"{schedule}\n\n你总结的输出:"
+        content = chat_qwen(prompt, top_p=0.8, temperature=0.7, repetition_penalty=1.1)
+        return content
 
     def get_real_time_schedule(self, **kwds):
         """查询用户实时日程
@@ -250,6 +268,8 @@ class taskSchedulaManager:
         elif msg.function_call['name'] == "cancel_schedule":
             task = self.tool_cancel_schedule(msg, **kwds)
             content = f"已为您取消{task}的提醒"
+        elif msg.function_call['name'] == "query_schedule":
+            content = self.tool_query_schedule(schedule, **kwds)
         return content
 
 if __name__ == "__main__":
