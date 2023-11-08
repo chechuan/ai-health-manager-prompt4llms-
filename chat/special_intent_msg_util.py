@@ -29,8 +29,8 @@ def get_reminder_tips(prompt, history, intentCode, model='Baichuan2-7B-Chat'):
             temperature=0.1, top_p=0.2, max_tokens=500, model=model)
     logger.debug('remind model output: ' + model_output)
     if model_output.startswith('（）'):
-        mo = model_output[2:].strip()
-    return {'end':True, 'message':mo, 'intentCode':intentCode}
+        model_output = model_output[2:].strip()
+    return {'end':True, 'message':model_output, 'intentCode':intentCode}
 
 
 
