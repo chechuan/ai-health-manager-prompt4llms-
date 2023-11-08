@@ -308,13 +308,13 @@ class Chat(object):
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
 
-        if kwargs.get("streaming", True):
-            # 直接返回字符串模式
-            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-            yield out_text
-        else:
-            # 保留完整的历史内容
-            return out_history
+            if kwargs.get("streaming", True):
+                # 直接返回字符串模式
+                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                yield out_text
+            else:
+                # 保留完整的历史内容
+                return out_history
 
 if __name__ == '__main__':
     chat = Chat()
