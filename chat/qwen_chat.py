@@ -160,6 +160,8 @@ class Chat(object):
                     query += f"\nObservation: {msg['content']}"
         # 利用Though防止生成无关信息
         query += "\nThought: "
+        if kwargs.get("verbose"):
+            logger.debug(f"Generate Prompt: \n{query}")
         model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         
         model_output = "\nThought: " + model_output
@@ -320,7 +322,9 @@ if __name__ == '__main__':
     chat = Chat()
     # debug_text = "我最近早上头疼，谁帮我看一下啊"
     # debug_text = "明天下午开会，记得提醒我"
-    debug_text = "我对辣椒过敏"
+    # debug_text = "我对辣椒过敏"
+    # debug_text = "明天早上6点半提醒我做饭"
+    debug_text = "查一下我最近日程"
     # history = [{"role": "0", "content": init_intput}]
     history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
@@ -330,9 +334,9 @@ if __name__ == '__main__':
             '用户个人信息如下：\\n对话内容为：')
     prompt = TOOL_CHOOSE_PROMPT
     intentCode = "default_code"
-    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False, orgCode="sf", customId="007"))
+    output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=True, orgCode="sf", customId="007"))
     while True:
         history.append({"role": "3", "content": output_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=False))
+        output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=True))
