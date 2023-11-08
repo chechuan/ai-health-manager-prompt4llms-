@@ -291,7 +291,7 @@ class Chat(object):
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             input_history = self.compose_input_history(history, external_information, **kwargs)
             out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-            logger.debug(f"Last Generate history: {out_history[-1]}")
+            logger.debug(f"Last history: {out_history[-1]}")
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
         
