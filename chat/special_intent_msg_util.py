@@ -1,5 +1,6 @@
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from src.prompt.model_init import chat_qwen
+from utils.Logger import logger
 
 role_map = {
         '0': 'user',
@@ -22,12 +23,14 @@ def get_userInfo_msg(prompt, history, intentCode):
     return {'end':True, 'message':oo, 'intentCode':intentCode}
 
 
-def get_reminder_tips(prompt, history, intentCode):
-    print('remind prompt: ' + prompt)
+def get_reminder_tips(prompt, history, intentCode, model='Baichuan2-7B-Chat'):
+    logger.debug('remind prompt: ' + prompt)
     model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, 
-            temperature=0.1, top_p=0.2, max_tokens=500, model='Baichuan2-7B-Chat')
-
-    return {'end':True, 'message':model_output, 'intentCode':intentCode}
+            temperature=0.1, top_p=0.2, max_tokens=500, model=model)
+    logger.debug('remind model output: ' + model_output)
+    if model_output.startswith('（）'):
+        mo = model_output[2:].strip()
+    return {'end':True, 'message':mo, 'intentCode':intentCode}
 
 
 

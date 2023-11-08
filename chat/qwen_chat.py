@@ -274,18 +274,23 @@ class Chat(object):
         
         if intentCode in useinfo_intent_code_list:
             yield get_userInfo_msg(sys_prompt, history, intentCode)
-        elif intentCode != 'default_code':
+        elif intentCode in ['default_reminder','broadcast_bp_up','default_clock','schedule_qry_up','care_for','broadcast_bp','sport_remind','medicine_remind','dietary_remind','schedule_qry','meet_remind','measure_bp','schedule_no']:    
             yield get_reminder_tips(sys_prompt, history, intentCode) 
+        else:
+            yield get_reminder_tips(sys_prompt, history, intentCode, model='Qwen-14B-Chat')
+
 
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
         elif intent == "schedule_manager":
             his = self.history_compose(history)
             output_text = self.tsm._run(his, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+            yield {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intent == "other":
+            ext_info_args = baseVarsForPromptEngine()
+            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
             output_text = self.chatter_gaily(history, external_information, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+            yield {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
