@@ -41,38 +41,42 @@ role_map = {
 }
 
 def get_intent(text):
+    """通过关键词解析意图->code
+    """
     if '创建提醒' in text:
-        return 'create_alert'
+        code = 'create_alert'
     elif '饮食' in text and '咨询' in text:
-        return 'food'
+        code = 'food'
     elif '菜谱' in text:
-        return 'recipe_consult'
+        code = 'recipe_consult'
     elif '音乐' in text:
-        return 'play_music'
+        code = 'play_music'
     elif '天气' in text:
-        return 'check_weather'
+        code = 'check_weather'
     elif '辅助诊断' in text:
-        return 'auxiliary_diagnosis'
+        code = 'auxiliary_diagnosis'
     elif '医师' in text:
-        return 'call_doctor'
+        code = 'call_doctor'
     elif '运动师' in text:
-        return 'call_sportMaster'
+        code = 'call_sportMaster'
     elif '心理' in text:
-        return 'call_psychologist'
+        code = 'call_psychologist'
     elif '修改提醒' in text:
-        return 'change_alert'
+        code = 'change_alert'
     elif '取消提醒' in text:
-        return 'cancel_alert'
+        code = 'cancel_alert'
     elif '营养师' in text:
-        return 'call_dietista'
+        code = 'call_dietista'
     elif '健管师' in text:
-        return 'call_health_manager'
+        code = 'call_health_manager'
     elif '其它意图' in text:
-        return 'other'
+        code = 'other'
     elif '日程管理'in text:
-        return 'schedule_manager'
+        code = 'schedule_manager'
     else:
-        return 'other'
+        code = 'other'
+    logger.debug(f'识别出的意图:{text} code:{code}')
+    return code
 
 def get_doc_role(code):
     if code == 'call_dietista':
@@ -145,7 +149,8 @@ class Chat(object):
             return '直接回复用户问题'
 
     def generate(self, query: str = "", history=[], max_tokens=200, **kwargs):
-        """调用模型生成答案,解析"""
+        """调用模型生成答案,解析ReAct生成的结果
+        """
         if not query:
             query = history[0]['content']
             for i in range(len(history[1:])):
@@ -161,7 +166,7 @@ class Chat(object):
         # 利用Though防止生成无关信息
         query += "\nThought: "
         if kwargs.get("verbose"):
-            logger.debug(f"Generate Prompt: \n{query}")
+            logger.debug(f"Generate Prompt - length:{len(query)}\n{query}")
         model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         
         model_output = "\nThought: " + model_output
@@ -263,34 +268,30 @@ class Chat(object):
                        intentCode=None,
                        **kwargs):
         """主要业务流程
-        1. 意图识别
+        1. 处理传入intentCode的特殊逻辑,直接返回
+        2. 使用config.constrant.INTENT_PROMPT进行意图识别
         2. 不同意图进入不同的处理流程
 
         ## 多轮交互流程
-        1. 拼装外部信息
+        1. 定义先验信息变量,拼装对应prompt
         2. 准备模型输入messages
         3. 模型生成结果
         """
-        intent = get_intent(self.cls_intent(history))
-        logger.debug('用户意图是：' + intent)
-        
         if intentCode in useinfo_intent_code_list:
             yield get_userInfo_msg(sys_prompt, history, intentCode)
-        elif intentCode in ['default_reminder','broadcast_bp_up','default_clock','schedule_qry_up','care_for','broadcast_bp','sport_remind','medicine_remind','dietary_remind','schedule_qry','meet_remind','measure_bp','schedule_no']:    
-            yield get_reminder_tips(sys_prompt, history, intentCode) 
         elif intentCode != 'default_code':
-            yield get_reminder_tips(sys_prompt, history, intentCode, model='Qwen-14B-Chat')
+            yield get_reminder_tips(sys_prompt, history, intentCode) 
 
-
+        intent = get_intent(self.cls_intent(history))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
         elif intent == "schedule_manager":
             his = self.history_compose(history)
             output_text = self.tsm._run(his, **kwargs)
-            yield {'end':True, 'message':output_text, 'intentCode':intentCode}
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intent == "other":
-            output_text = self.chatter_gaily(history, **kwargs)
-            yield {'end':True, 'message':output_text, 'intentCode':intentCode}
+            output_text = self.chatter_gaily(history, external_information, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
             ext_info_args = baseVarsForPromptEngine()
             external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
@@ -308,13 +309,13 @@ class Chat(object):
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
 
-            if kwargs.get("streaming", True):
-                # 直接返回字符串模式
-                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-                yield out_text
-            else:
-                # 保留完整的历史内容
-                return out_history
+        if kwargs.get("streaming", True):
+            # 直接返回字符串模式
+            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+            yield out_text
+        else:
+            # 保留完整的历史内容
+            return out_history
 
 if __name__ == '__main__':
     chat = Chat()
@@ -322,15 +323,36 @@ if __name__ == '__main__':
     # debug_text = "明天下午开会，记得提醒我"
     # debug_text = "我对辣椒过敏"
     # debug_text = "明天早上6点半提醒我做饭"
-    debug_text = "查一下我最近日程"
+    # debug_text = "查一下我最近日程"
+    debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
-    history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
+    # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
+    ori_input_param = {
+        'orgCode': 'sf', 
+        'customId': '1104a89793b43b76528', 
+        'history': [
+            {'msgId': '2655508861', 'role': '1', 'content': '你叫什么名字？', 'sendTime': '2023-11-08 09:22:38'}, 
+            {'msgId': '8687772106', 'role': '3', 'content': '我是智能健康管家，您可以叫我小智。', 'sendTime': '2023-11-08 09:22:39'}, 
+            {'msgId': '7139475722', 'role': '1', 'content': '我今天有点肚子疼。', 'sendTime': '2023-11-08 09:22:48'}, 
+            # {'msgId': '5086931766', 'role': '3', 'content': '您好，我是小智，很高兴为您服务。您今天肚子疼，建议您及时就医，以便得到更好的治疗。如果您需要更多健康咨询和管理服务，欢迎随时联系我。期待为您提供更好的服务。', 'sendTime': '2023-11-08 09:22:51'}, 
+            # {'msgId': '9756022981', 'role': '1', 'content': '那我现在肚子疼怎么办啊？你能给我点建议吗？', 'sendTime': '2023-11-08 09:23:14'}, 
+            # {'msgId': '9078524669', 'role': '3', 'content': '这就为您播放《我通灵的那些年》', 'sendTime': '2023-11-08 09:23:15'}, 
+            # {'msgId': '5587694936', 'role': '1', 'content': '不对呀，我是问你肚子疼怎么办？', 'sendTime': '2023-11-08 09:23:22'}, 
+            # {'msgId': '2599541921', 'role': '3', 'content': '如果您现在肚子疼，建议您及时就医，以便得到更好的治疗。如果您需要更多健康咨询和管理服务，欢迎随时联系我。期待为您提供更好的服务。', 'sendTime': '2023-11-08 09:23:24'}, 
+            # {'msgId': '8810390843', 'role': '1', 'content': '你不问问我肚子那块疼吗？', 'sendTime': '2023-11-08 09:23:34'}
+        ], 
+        'prompt': '你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月08日。用户个人信息如下：\\n对话内容为：', 
+        'intentCode': 'default_code'
+        }
+    
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
             '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
             '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'
             '如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月06日。'
             '用户个人信息如下：\\n对话内容为：')
-    prompt = TOOL_CHOOSE_PROMPT
+    # prompt = TOOL_CHOOSE_PROMPT
+    prompt = ori_input_param['prompt']
+    history = ori_input_param['history']
     intentCode = "default_code"
     output_text = next(chat.run_prediction(history, prompt, intentCode, verbose=True, orgCode="sf", customId="007"))
     while True:

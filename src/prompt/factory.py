@@ -17,6 +17,8 @@ from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
 
 
 class baseVarsForPromptEngine:
+    """定义外部信息的变量
+    """
     role: str = "智能健康管家"
     # 环境, options: 居家, 机构, 外出, 开车
     env: Optional[str] = "居家"
