@@ -235,10 +235,10 @@ class taskSchedulaManager:
     def _run(self, messages: List[Dict], **kwds):
         """对话过程以messages形式利用历史信息
         - Args
+        
             messages (List[Dict])
                 历史信息 包括user/assistant/function_call
             kwds (keyword arguments)
-                - 
         
         - return
             output (str) 

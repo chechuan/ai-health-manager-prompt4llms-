@@ -28,7 +28,7 @@ chat = Chat()
 
 def accept_param():
     p = json.loads(request.data.decode("utf-8"))
-    logger.info(f"=============Input Param===========\n{p}\n======================================")
+    logger.info(f"=============Input Param===========\n{p}")
     return p
 
 def check_param(param, key=None):
