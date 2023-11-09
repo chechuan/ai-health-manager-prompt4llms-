@@ -157,17 +157,22 @@ def parse_messages(messages, functions, temp_schedule):
         query = messages[-1].content
         messages = messages[:-1]
 
-    if len(messages) % 2 != 0:
-        raise HTTPException(status_code=400, detail="Invalid request")
+    # if len(messages) % 2 != 0:
+    #     raise HTTPException(status_code=400, detail="Invalid request")
+    msgs = []
+    for i in range(0, len(messages)):
+        if messages[i].role == "user" and messages[i + 1].role == "assistant":
+            msgs.append(messages[i])
+            msgs.append(messages[i + 1])
 
     history = []  # [(Q1, A1), (Q2, A2), ..., (Q_last_turn, A_last_turn)]
-    for i in range(0, len(messages), 2):
+    for i in range(0, len(msgs), 2):
         if messages[i].role == "user" and messages[i + 1].role == "assistant":
             usr_msg = messages[i].content.lstrip("\n").rstrip()
             bot_msg = messages[i + 1].content.lstrip("\n").rstrip()
-            if system and (i == len(messages) - 2):
+            if system and (i == 0):
                 history.append({"role": "system", "content": system})
-                usr_msg = f"Question: {usr_msg}"
+                usr_msg = f"\nQuestion: {usr_msg}"
                 system = ""
             for t in dummy_thought.values():
                 t = t.lstrip("\n")
@@ -176,11 +181,11 @@ def parse_messages(messages, functions, temp_schedule):
             # history.append([usr_msg, bot_msg])
             history.append({"role": "user", "content": usr_msg})
             history.append({"role": "assistant", "content": bot_msg})
-        else:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid request: Expecting exactly one user (or function) role before every assistant role.",
-            )
+        # else:
+        #     raise HTTPException(
+        #         status_code=400,
+        #         detail="Invalid request: Expecting exactly one user (or function) role before every assistant role.",
+        #     )
     if system:
         history = [{"role": "system", "content": system}]
         history.append({"role": "user", "content": f"Question:{query}"})
@@ -252,7 +257,19 @@ def text_complete_last_message(history, stop_words_ids, gen_kwargs):
     print(f"<completion>\n{prompt}\n<!-- *** -->\n{output}\n</completion>")
     return output
 
-
+def compose_history(query, history):
+    # im_start = "<|im_start|>"
+    # im_end = "<|im_end|>"
+    prompt = ""
+    if query:
+        history.append({"role": "user", "content": query})
+    for item in history:
+        if item['role'] == "user" and "Question" not in item['content']:
+            prompt += f"\nObservation: {item['content']}"
+        else:
+            prompt += "\n" + item["content"]
+    return prompt
+    
 def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict]):
     # gen_kwargs = {}
     stop_words = add_extra_stop_words(request.stop)
@@ -262,9 +279,11 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
             stop_words.append("Observation:")
 
     query, history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
+    prompt = compose_history(query, history)
     if not history:
         print(query)
-    response = chat_qwen(query, history, top_p=0.8, temperature=0.7, max_tokens=200)
+    prompt += "\nThought: "
+    response = chat_qwen(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
     # print(response)
     response = trim_stop_words(response, stop_words)
     if request.functions:

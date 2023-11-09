@@ -1,3 +1,12 @@
+# -*- encoding: utf-8 -*-
+'''
+@Time    :   2023-11-09 17:19:15
+@desc    :   XXX
+@Author  :   宋昊阳
+@Contact :   1627635056@qq.com
+'''
+
+
 def _parse_latest_plugin_call(text: str):
     h = text.find('Thought:')
     i = text.find('\nAction:')
@@ -19,6 +28,7 @@ def _parse_latest_plugin_call(text: str):
         if h > 0:
             plugin_thought = text[h + len('Thought:'):l].strip()
             plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            plugin_args = plugin_args.split("\n")[0]
             return plugin_thought, "直接回复用户问题", plugin_args
         else:
             plugin_args = text[l + len('\nFinal Answer:'):].strip()

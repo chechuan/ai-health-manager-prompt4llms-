@@ -120,6 +120,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
         if h > 0:
             plugin_thought = text[h + len('Thought:'):l].strip()
             plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            plugin_args.split("\n")[0]
             return plugin_thought, "直接回复用户问题", plugin_args
         else:
             plugin_args = text[l + len('\nFinal Answer:'):].strip()
@@ -133,11 +134,6 @@ class Chat(object):
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.tsm = taskSchedulaManager(api_config)
-        
-        # self.sys_template_chatter_gaily = 
-    # def __init__(self, tokenizer, model):
-    #     self.tokenizer = tokenizer
-    #     self.model = model
     
     def get_tool_name(self, text):
         if '外部知识' in text:
@@ -167,7 +163,7 @@ class Chat(object):
         # 利用Though防止生成无关信息
         query += "\nThought: "
         model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
-        model_output = "\nThought: " + model_output
+        model_output = "Thought: " + model_output
 
         if kwargs.get("verbose"):
             logger.debug(f"Generate Prompt - length:{len(query)}\n{query}")
@@ -185,6 +181,11 @@ class Chat(object):
             model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
+        out_text = list(out_text)
+        # 特殊处理规则 
+        ## 1. 生成\nEnd.字符
+        out_text[2] = out_text[2].split("\nEnd.")[0]
+
         history.append({
             "role": "assistant", 
             "content": out_text[2], 
@@ -333,17 +334,12 @@ if __name__ == '__main__':
     # debug_text = "我对辣椒过敏"
     # debug_text = "明天早上6点半提醒我做饭"
     # debug_text = "查一下我最近日程"
-    debug_text = "肚子疼"
+    # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param202311091702
-    
-    prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
-            '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'
-            '就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。'
-            '如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月06日。'
-            '用户个人信息如下：\\n对话内容为：')
+    ori_input_param = testParam.param202311091745
     # prompt = TOOL_CHOOSE_PROMPT
+    
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = "default_code"
