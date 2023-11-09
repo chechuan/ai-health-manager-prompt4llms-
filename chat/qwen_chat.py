@@ -22,6 +22,7 @@ from chat.qwen_react_util import *
 from chat.special_intent_msg_util import *
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from config.function_call_config import function_tools
+from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
@@ -165,11 +166,13 @@ class Chat(object):
                     query += f"\nObservation: {msg['content']}"
         # 利用Though防止生成无关信息
         query += "\nThought: "
+        model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = "\nThought: " + model_output
+
         if kwargs.get("verbose"):
             logger.debug(f"Generate Prompt - length:{len(query)}\n{query}")
-        model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
-        
-        model_output = "\nThought: " + model_output
+            logger.debug(f"Model Output - length:{len(model_output)}\n{model_output}")
+
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
             query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
@@ -234,13 +237,14 @@ class Chat(object):
 
     def cls_intent(self, history):
         """意图识别"""
-        st_key, ed_key = "<|im_start|>", "<|im_end|>"
+        # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([f"{i['role']}: {i['content']}" for i in history])
         prompt = INTENT_PROMPT + his_prompt + "\n\n用户的意图是(只输出意图):"
         output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
-        return output_text
+        text = output_text.strip().replace(" ", "")
+        return text
     
     def chatter_gaily(self, history, **kwargs):
         """闲聊
@@ -277,45 +281,49 @@ class Chat(object):
         2. 准备模型输入messages
         3. 模型生成结果
         """
+        finish_flag = False
         if intentCode in useinfo_intent_code_list:
             yield get_userInfo_msg(sys_prompt, history, intentCode)
+            finish_flag = True
         elif intentCode != 'default_code':
             yield get_reminder_tips(sys_prompt, history, intentCode) 
+            finish_flag = True
 
-        intent = get_intent(self.cls_intent(history))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-            yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
-        elif intent == "schedule_manager":
-            his = self.history_compose(history)
-            output_text = self.tsm._run(his, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-        elif intent == "other":
-            output_text = self.chatter_gaily(history, external_information, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-        else:
-            ext_info_args = baseVarsForPromptEngine()
-            external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
-            input_history = self.compose_input_history(history, external_information, **kwargs)
-            out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
-            logger.debug(f"Last history: {out_history[-1]}")
-            tool_name = out_history[-1]['function_call']['name']
-            output_text = out_history[-1]['content']
-        
-            if tool_name == '进一步询问用户的情况':
+        if not finish_flag:
+            intent = get_intent(self.cls_intent(history))
+            if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+                yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+            elif intent == "schedule_manager":
+                his = self.history_compose(history)
+                output_text = self.tsm._run(his, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-            elif tool_name == '直接回复用户问题':
-                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode}
-            elif tool_name == '调用外部知识库':
-                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+            elif intent == "other":
+                output_text = self.chatter_gaily(history, external_information, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-
-        if kwargs.get("streaming", True):
-            # 直接返回字符串模式
-            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-            yield out_text
-        else:
-            # 保留完整的历史内容
-            return out_history
+            else:
+                ext_info_args = baseVarsForPromptEngine()
+                external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
+                input_history = self.compose_input_history(history, external_information, **kwargs)
+                out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
+                logger.debug(f"Last history: {out_history[-1]}")
+                tool_name = out_history[-1]['function_call']['name']
+                output_text = out_history[-1]['content']
+            
+                if tool_name == '进一步询问用户的情况':
+                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                elif tool_name == '直接回复用户问题':
+                    out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode}
+                elif tool_name == '调用外部知识库':
+                    gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+            
+            if kwargs.get("streaming", True):
+                # 直接返回字符串模式
+                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                yield out_text
+            else:
+                # 保留完整的历史内容
+                return out_history
 
 if __name__ == '__main__':
     chat = Chat()
@@ -327,23 +335,7 @@ if __name__ == '__main__':
     debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = {
-        'orgCode': 'sf', 
-        'customId': '1104a89793b43b76528', 
-        'history': [
-            {'msgId': '2655508861', 'role': '1', 'content': '你叫什么名字？', 'sendTime': '2023-11-08 09:22:38'}, 
-            {'msgId': '8687772106', 'role': '3', 'content': '我是智能健康管家，您可以叫我小智。', 'sendTime': '2023-11-08 09:22:39'}, 
-            {'msgId': '7139475722', 'role': '1', 'content': '我今天有点肚子疼。', 'sendTime': '2023-11-08 09:22:48'}, 
-            # {'msgId': '5086931766', 'role': '3', 'content': '您好，我是小智，很高兴为您服务。您今天肚子疼，建议您及时就医，以便得到更好的治疗。如果您需要更多健康咨询和管理服务，欢迎随时联系我。期待为您提供更好的服务。', 'sendTime': '2023-11-08 09:22:51'}, 
-            # {'msgId': '9756022981', 'role': '1', 'content': '那我现在肚子疼怎么办啊？你能给我点建议吗？', 'sendTime': '2023-11-08 09:23:14'}, 
-            # {'msgId': '9078524669', 'role': '3', 'content': '这就为您播放《我通灵的那些年》', 'sendTime': '2023-11-08 09:23:15'}, 
-            # {'msgId': '5587694936', 'role': '1', 'content': '不对呀，我是问你肚子疼怎么办？', 'sendTime': '2023-11-08 09:23:22'}, 
-            # {'msgId': '2599541921', 'role': '3', 'content': '如果您现在肚子疼，建议您及时就医，以便得到更好的治疗。如果您需要更多健康咨询和管理服务，欢迎随时联系我。期待为您提供更好的服务。', 'sendTime': '2023-11-08 09:23:24'}, 
-            # {'msgId': '8810390843', 'role': '1', 'content': '你不问问我肚子那块疼吗？', 'sendTime': '2023-11-08 09:23:34'}
-        ], 
-        'prompt': '你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是2023年11月08日。用户个人信息如下：\\n对话内容为：', 
-        'intentCode': 'default_code'
-        }
+    ori_input_param = testParam.param202311091702
     
     prompt = ('你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；'
             '当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，'

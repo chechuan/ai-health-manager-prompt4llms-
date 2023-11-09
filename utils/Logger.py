@@ -21,9 +21,6 @@ class Logging:
         logger.add(sink=sys.stderr, level=console_level, backtrace=True, diagnose=True)
         hostname = socket.gethostname()
         try:
-            log_dir = Path("./data","logs", appid, hostname)
-            log_dir.mkdir(exist_ok=True, parents=True)
-        except PermissionError as error:
             log_dir = Path("./logs")
             log_dir.mkdir(exist_ok=True, parents=True)
         except Exception as error:

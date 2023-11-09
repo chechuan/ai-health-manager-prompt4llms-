@@ -19,13 +19,14 @@ from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
 class baseVarsForPromptEngine:
     """定义外部信息的变量
     """
-    role: str = "智能健康管家"
     # 环境, options: 居家, 机构, 外出, 开车
     env: Optional[str] = "居家"
     # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
     scene: Optional[str] = "一般用户"
     # 角色, options: 健管师, 医师, 营养师, 运动师, 情志调理师
     role: Optional[str] = "健管师"
+    # 角色任务描述
+    role_desc: Optional[str] = "协助医生工作"
     # 计划, options: 辅助诊断
     plan: Optional[str] = "辅助诊断"
 
