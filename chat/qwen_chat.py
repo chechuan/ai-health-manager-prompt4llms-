@@ -299,7 +299,7 @@ class Chat(object):
                 output_text = self.tsm._run(his, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             elif intent == "other":
-                output_text = self.chatter_gaily(history, external_information, **kwargs)
+                output_text = self.chatter_gaily(history, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             else:
                 ext_info_args = baseVarsForPromptEngine()
