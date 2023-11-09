@@ -178,6 +178,7 @@ class Chat(object):
                     "3. 语义相似的可以合并重新规划语言\n" + \
                     "4. 直接输出结果\n\n输入:\n" + \
                     model_output + "\n输出:\n"
+            logger.debug('generate model input: ' + query)
             model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
@@ -290,7 +291,7 @@ class Chat(object):
             output_text = self.tsm._run(his, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intent == "other":
-            output_text = self.chatter_gaily(history, external_information, **kwargs)
+            output_text = self.chatter_gaily(history, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
             ext_info_args = baseVarsForPromptEngine()
