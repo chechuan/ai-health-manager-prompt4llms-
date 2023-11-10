@@ -1,0 +1,6 @@
+local:
+  ip: 10.39.10.28
+  port: 3306
+  user: root
+  passwd: "12345678"
+  db_name: ai_health_manager_db

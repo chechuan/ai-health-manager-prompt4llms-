@@ -27,6 +27,7 @@ from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from utils.Logger import logger
+from utils.module import MysqlConnector
 
 # role_map = {
 #         '0': '<用户>',
@@ -130,10 +131,13 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
 class Chat(object):
     def __init__(self, env: str ="local"):
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+        
         self.promptEngine = promptEngine()
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.tsm = taskSchedulaManager(api_config)
+        self.mysql_conn = MysqlConnector(**mysql_config)
     
     def get_tool_name(self, text):
         if '外部知识' in text:
@@ -184,7 +188,7 @@ class Chat(object):
         out_text = list(out_text)
         # 特殊处理规则 
         ## 1. 生成\nEnd.字符
-        out_text[2] = out_text[2].split("\nEnd.")[0]
+        out_text[2] = out_text[2].split("\nEnd")[0]
 
         history.append({
             "role": "assistant", 
@@ -242,10 +246,11 @@ class Chat(object):
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        his_prompt = "\n".join([f"{i['role']}: {i['content']}" for i in history])
-        prompt = INTENT_PROMPT + his_prompt + "\n\n用户的意图是(只输出意图):"
-        output_text = chat_qwen(query=prompt, max_tokens=5, top_p=0.5, temperature=0.7)
-        text = output_text.strip().replace(" ", "")
+        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+        intentIdx = generate_text.find("\nIntent: ") + 9
+        text = generate_text[intentIdx:].split("\n")[0]
         return text
     
     def chatter_gaily(self, history, **kwargs):
@@ -337,7 +342,7 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param202311091745
+    ori_input_param = testParam.param_bug96
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
