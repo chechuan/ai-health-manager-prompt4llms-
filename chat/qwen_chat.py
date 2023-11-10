@@ -137,7 +137,7 @@ class Chat(object):
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.tsm = taskSchedulaManager(api_config)
-        self.mysql_conn = MysqlConnector(**mysql_config)
+        # self.mysql_conn = MysqlConnector(**mysql_config)
     
     def get_tool_name(self, text):
         if '外部知识' in text:
