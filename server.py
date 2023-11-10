@@ -7,8 +7,8 @@ from flask import Flask, Response, request, stream_with_context
 from gevent import pywsgi
 
 from chat.qwen_chat import Chat
-from utils.Logger import logger
-from utils.module import NpEncoder, clock
+from src.utils.Logger import logger
+from src.utils.module import NpEncoder, clock
 
 # from transformers import (AutoModel, AutoModelForCausalLM, AutoTokenizer,
 #                           BitsAndBytesConfig)

@@ -13,28 +13,24 @@ from pathlib import Path
 import yaml
 
 sys.path.append('.')
-from typing import Tuple
+
+from typing import Dict
 
 from langchain.prompts import PromptTemplate
 
 from chat.plugin_util import funcCall
 from chat.qwen_react_util import *
-from chat.special_intent_msg_util import *
+from chat.special_intent_msg_util import get_reminder_tips, get_userInfo_msg
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
-from config.function_call_config import function_tools
+# from config.function_call_config import function_tools
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
-from utils.Logger import logger
-from utils.module import MysqlConnector
+from src.utils.Logger import logger
+from src.utils.module import (MysqlConnector, _parse_latest_plugin_call,
+                              get_doc_role, get_intent)
 
-# role_map = {
-#         '0': '<用户>',
-#         '1': '<用户>',
-#         '2': '<医生>',
-#         '3': '<智能健康管家>'
-# }
 role_map = {
         '0': 'user',
         '1': 'user',
@@ -42,91 +38,11 @@ role_map = {
         '3': 'assistant'
 }
 
-def get_intent(text):
-    """通过关键词解析意图->code
-    """
-    if '创建提醒' in text:
-        code = 'create_alert'
-    elif '饮食' in text and '咨询' in text:
-        code = 'food'
-    elif '菜谱' in text:
-        code = 'recipe_consult'
-    elif '音乐' in text:
-        code = 'play_music'
-    elif '天气' in text:
-        code = 'check_weather'
-    elif '辅助诊断' in text:
-        code = 'auxiliary_diagnosis'
-    elif '医师' in text:
-        code = 'call_doctor'
-    elif '运动师' in text:
-        code = 'call_sportMaster'
-    elif '心理' in text:
-        code = 'call_psychologist'
-    elif '修改提醒' in text:
-        code = 'change_alert'
-    elif '取消提醒' in text:
-        code = 'cancel_alert'
-    elif '营养师' in text:
-        code = 'call_dietista'
-    elif '健管师' in text:
-        code = 'call_health_manager'
-    elif '其它意图' in text:
-        code = 'other'
-    elif '日程管理'in text:
-        code = 'schedule_manager'
-    else:
-        code = 'other'
-    logger.debug(f'识别出的意图:{text} code:{code}')
-    return code
-
-def get_doc_role(code):
-    if code == 'call_dietista':
-        return 'ROLE_NUTRITIONIST'
-    elif code == 'call_sportMaster':
-        return 'ROLE_EXERCISE_SPECIALIST'
-    elif code == 'call_psychologist':
-        return 'ROLE_EMOTIONAL_COUNSELOR'
-    elif code == 'call_doctor':
-        return 'ROLE_DOCTOR'
-    elif code == 'call_health_manager':
-        return 'ROLE_HEALTH_SPECIALIST'
-    else:
-        return 'ROLE_HEALTH_SPECIALIST'
-
 useinfo_intent_code_list = [
     'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
     'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
-
-def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
-    h = text.find('Thought:')
-    i = text.find('\nAction:')
-    j = text.find('\nAction Input:')
-    k = text.find('\nObservation:')
-    l = text.find('\nFinal Answer:')
-    if 0 <= i < j:  # If the text has `Action` and `Action input`,
-        if k < j:  # but does not contain `Observation`,
-            # then it is likely that `Observation` is ommited by the LLM,
-            # because the output text may have discarded the stop word.
-            text = text.rstrip() + '\nObservation:'  # Add it back.
-            k = text.rfind('\nObservation:')
-    if 0 <= i < j < k:
-        plugin_thought = text[h + len('Thought:'):i].strip()
-        plugin_name = text[i + len('\nAction:'):j].strip()
-        plugin_args = text[j + len('\nAction Input:'):k].strip()
-        return plugin_thought, plugin_name, plugin_args
-    elif l > 0:
-        if h > 0:
-            plugin_thought = text[h + len('Thought:'):l].strip()
-            plugin_args = text[l + len('\nFinal Answer:'):].strip()
-            plugin_args.split("\n")[0]
-            return plugin_thought, "直接回复用户问题", plugin_args
-        else:
-            plugin_args = text[l + len('\nFinal Answer:'):].strip()
-            return "I know the final answer.", "直接回复用户问题", plugin_args
-    return '', ''
 
 class Chat(object):
     def __init__(self, env: str ="local"):
@@ -138,6 +54,16 @@ class Chat(object):
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.tsm = taskSchedulaManager(api_config)
         # self.mysql_conn = MysqlConnector(**mysql_config)
+        # self.req_prompt_data_from_mysql()
+
+    def req_prompt_data_from_mysql(self) -> Dict:
+        """从mysql中请求prompt meta data
+        """
+        self.pMData = {}
+        self.pMData['character'] = self.mysql_conn.query("select * from ai_prompt_character")
+        self.pMData['event'] = self.mysql_conn.query("select * from ai_prompt_event")
+        self.pMData['tool'] = self.mysql_conn.query("select * from ai_prompt_tool")
+        logger.debug("req prompt meta data from mysql.")
     
     def get_tool_name(self, text):
         if '外部知识' in text:

@@ -7,6 +7,7 @@
 import functools
 import json
 import time
+from typing import Tuple
 from urllib import parse
 
 import numpy as np
@@ -14,7 +15,7 @@ import pandas as pd
 import requests
 from sqlalchemy import MetaData, Table, create_engine
 
-from utils.Logger import logger
+from src.utils.Logger import logger
 
 
 def req_data(url=None, payload=None, headers=None):
@@ -54,6 +55,86 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
+
+def get_intent(text):
+    """通过关键词解析意图->code
+    """
+    if '创建提醒' in text:
+        code = 'create_alert'
+    elif '饮食' in text and '咨询' in text:
+        code = 'food'
+    elif '菜谱' in text:
+        code = 'recipe_consult'
+    elif '音乐' in text:
+        code = 'play_music'
+    elif '天气' in text:
+        code = 'check_weather'
+    elif '辅助诊断' in text:
+        code = 'auxiliary_diagnosis'
+    elif '医师' in text:
+        code = 'call_doctor'
+    elif '运动师' in text:
+        code = 'call_sportMaster'
+    elif '心理' in text:
+        code = 'call_psychologist'
+    elif '修改提醒' in text:
+        code = 'change_alert'
+    elif '取消提醒' in text:
+        code = 'cancel_alert'
+    elif '营养师' in text:
+        code = 'call_dietista'
+    elif '健管师' in text:
+        code = 'call_health_manager'
+    elif '其它意图' in text:
+        code = 'other'
+    elif '日程管理'in text:
+        code = 'schedule_manager'
+    else:
+        code = 'other'
+    logger.debug(f'识别出的意图:{text} code:{code}')
+    return code
+
+def get_doc_role(code):
+    if code == 'call_dietista':
+        return 'ROLE_NUTRITIONIST'
+    elif code == 'call_sportMaster':
+        return 'ROLE_EXERCISE_SPECIALIST'
+    elif code == 'call_psychologist':
+        return 'ROLE_EMOTIONAL_COUNSELOR'
+    elif code == 'call_doctor':
+        return 'ROLE_DOCTOR'
+    elif code == 'call_health_manager':
+        return 'ROLE_HEALTH_SPECIALIST'
+    else:
+        return 'ROLE_HEALTH_SPECIALIST'
+
+def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
+    h = text.find('Thought:')
+    i = text.find('\nAction:')
+    j = text.find('\nAction Input:')
+    k = text.find('\nObservation:')
+    l = text.find('\nFinal Answer:')
+    if 0 <= i < j:  # If the text has `Action` and `Action input`,
+        if k < j:  # but does not contain `Observation`,
+            # then it is likely that `Observation` is ommited by the LLM,
+            # because the output text may have discarded the stop word.
+            text = text.rstrip() + '\nObservation:'  # Add it back.
+            k = text.rfind('\nObservation:')
+    if 0 <= i < j < k:
+        plugin_thought = text[h + len('Thought:'):i].strip()
+        plugin_name = text[i + len('\nAction:'):j].strip()
+        plugin_args = text[j + len('\nAction Input:'):k].strip()
+        return plugin_thought, plugin_name, plugin_args
+    elif l > 0:
+        if h > 0:
+            plugin_thought = text[h + len('Thought:'):l].strip()
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            plugin_args.split("\n")[0]
+            return plugin_thought, "直接回复用户问题", plugin_args
+        else:
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return "I know the final answer.", "直接回复用户问题", plugin_args
+    return '', ''
 
 class MysqlConnector:
     def __init__(self, 

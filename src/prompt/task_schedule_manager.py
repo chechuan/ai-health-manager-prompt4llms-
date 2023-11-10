@@ -24,7 +24,7 @@ from config.constrant_for_task_schedule import (
     task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, chat_qwen
 from src.prompt.qwen_openai_api import create_chat_completion
-from utils.Logger import logger
+from src.utils.Logger import logger
 
 
 def call_qwen(messages, functions=None):
