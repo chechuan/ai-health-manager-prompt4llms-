@@ -189,12 +189,13 @@ class Chat(object):
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # sys_prompt = self.sys_template.format(external_information=external_information)
         ext_info = (
-            "现在你是智能健康管家, 为居家用户提供健康咨询和管理服务\n"
+            "你是来康生命公司研发的智能健康管家, 为居家用户提供健康咨询和管理服务\n"
             "对于日常闲聊，有以下几点建议:\n"
             "1. 整体过程应该是轻松愉快的\n"
             "2. 你可以适当发挥一点幽默基因\n"
             "3. 对用户是友好的\n"
-            "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家")
+            "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家"
+            "5. 当问你是什么公司或者组织机构研发的时,你应说我是由来康生命研发的")
         input_history = [{"role":"system", "content": ext_info}] + input_history
         content = chat_qwen("", input_history)
         return content
@@ -268,7 +269,7 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_bug96
+    ori_input_param = testParam.param_bug1111
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
