@@ -17,8 +17,7 @@ import yaml
 from langchain.prompts import PromptTemplate
 
 sys.path.append(".")
-from config.constrant import (TEMPLATE_TASK_SCHEDULE_MANAGER,
-                              task_schedule_return_demo)
+from config.constrant import task_schedule_return_demo
 from config.constrant_for_task_schedule import (
     task_schedule_parameter_description,
     task_schedule_parameter_description_for_qwen)
@@ -47,14 +46,26 @@ class taskSchedulaManager:
         "intentCode": None, "repeatType": None, "cronDate": None, "fromTime": None, "toTime": None
         }
     def __init__(self, 
-                 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']):
-        """
-        用户输入: {input}
+                 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local'],
+                 prompt_meta_data: Dict[str, Dict] = {}
+                 ):
+        """日程管理模块
+        - Args
+            
+            api_config (Dict, required)
+                api配置, 包含llm, langchain, graph_qa, ai_backend
+            prompt_meta_data (Dict[str, Dict], required)
+                prompt meta data,分立的prompt元数据
         """
         self.api_config = api_config
+        self.prompt_meta_data = prompt_meta_data
+        # prompt = PromptTemplate(
+        #     input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"], 
+        #     template=TEMPLATE_TASK_SCHEDULE_MANAGER
+        # )
         prompt = PromptTemplate(
             input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"], 
-            template=TEMPLATE_TASK_SCHEDULE_MANAGER
+            template=self.prompt_meta_data['tool']['日程管理']['description']
         )
         self.sys_prompt = prompt.format(
             task_schedule_return_demo=task_schedule_return_demo,

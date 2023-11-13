@@ -19,16 +19,25 @@ from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
 class baseVarsForPromptEngine:
     """定义外部信息的变量
     """
-    # 环境, options: 居家, 机构, 外出, 开车
-    env: Optional[str] = "居家"
-    # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
-    scene: Optional[str] = "一般用户"
-    # 角色, options: 健管师, 医师, 营养师, 运动师, 情志调理师
-    role: Optional[str] = "健管师"
-    # 角色任务描述
-    role_desc: Optional[str] = "协助医生工作"
-    # 计划, options: 辅助诊断
-    plan: Optional[str] = "辅助诊断"
+    def __init__(self, 
+                 env: Optional[str] = "居家",
+                 scene: Optional[str] = "一般用户",
+                 role: Optional[str] = "健管师",
+                 role_desc: Optional[str] = "协助医生工作",
+                 plan: Optional[str] = "辅助诊断",
+                 prompt_meta_data: Optional[dict] = {}) -> None:
+        # 环境, options: 居家, 机构, 外出, 开车
+        self.env = env
+        # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
+        self.scene = scene
+        # 角色, options: 健管师, 医师, 营养师, 运动师, 情志调理师
+        self.role = role
+        # 角色任务描述
+        self.role_desc = role_desc
+        # 计划, options: 辅助诊断
+        self.plan = plan
+        # 外置prompt优先 prompt_meta_data
+        self.prompt_meta_data = prompt_meta_data
 
 class promptEngine:
     """组装先验知识到INSTRUCTION_TEMPLATE中
@@ -60,7 +69,11 @@ class promptEngine:
         if bm.env:
             ret = self.__concat(ret, self.tpe_env, bm.env, **kwds)
         if bm.plan: 
-            plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
+            if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
+                plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
+                        args[0].prompt_meta_data['event']['辅助诊断']['process']
+            else:
+                plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
             ret = self.__concat(ret, self.tpe_plan, plan, **kwds)
         return ret
 
