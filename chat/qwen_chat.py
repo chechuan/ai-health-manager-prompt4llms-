@@ -226,7 +226,7 @@ class Chat(object):
         if not finish_flag:
             intent = get_intent(self.cls_intent(history))
             if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                yield {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+                out_text = {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
             elif intent == "schedule_manager":
                 his = self.history_compose(history)
                 output_text = self.tsm._run(his, **kwargs)
