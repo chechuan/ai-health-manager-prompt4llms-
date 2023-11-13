@@ -212,17 +212,17 @@ class taskSchedulaManager:
         logger.info(f"Change schedule org:{{{orgCode}}} - uid:{{{customId}}} - {task} from {task_time_ori} to {cur_time}.")
         return 200
 
-    def tool_query_schedule(self, schedule, **kwds):
+    def tool_query_schedule(self, schedule, mid_vars_item, **kwds):
         """查询用户日程处理逻辑
         """
         prompt = ("以下是用户的日程及对应时间,请组织语言,告知用户,请遵循以下几点要求:\n"
-                  "1.可以省略重复的日期信息,但明确具体的时间信息\n"
-                  "2.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
-                  "3.除了要告知用户的日程信息不要输出任何其他内容\n"
-                  "4.请按照时间的先后顺序输出\n")
+                  "1.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
+                  "2.除了要告知用户的日程信息不要输出任何其他内容\n"
+                  "3.请按照时间的先后顺序输出\n")
         prompt += f"{schedule}\n\n你总结的输出:"
         content = chat_qwen(prompt, top_p=0.8, temperature=0.7, repetition_penalty=1.1)
-        return content
+        mid_vars_item.append({"key":"总结查询到的日程", "input_text": prompt, "output_text": content})
+        return content, mid_vars_item
 
     def get_real_time_schedule(self, **kwds):
         """查询用户实时日程
@@ -262,7 +262,8 @@ class taskSchedulaManager:
         request = ChatCompletionRequest(model="Qwen-14B-Chat", 
                                         functions=task_schedule_parameter_description_for_qwen,
                                         messages=messages,)
-        msg = create_chat_completion(request, schedule).choices[0].message
+        response, mid_vars_item = create_chat_completion(request, schedule)
+        msg = response.choices[0].message
         if kwds.get("verbose"):
             logger.debug(msg.content[msg.content.rfind("Thought:"):])
             if msg.function_call:
@@ -280,8 +281,8 @@ class taskSchedulaManager:
             task = self.tool_cancel_schedule(msg, **kwds)
             content = f"已为您取消{task}的提醒"
         elif msg.function_call['name'] == "query_schedule":
-            content = self.tool_query_schedule(schedule, **kwds)
-        return content
+            content, mid_vars_item = self.tool_query_schedule(schedule, mid_vars_item, **kwds)
+        return content, mid_vars_item
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")

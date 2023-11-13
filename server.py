@@ -56,7 +56,9 @@ def get_chat_reponse():
                                          param.get('prompt',''),
                                          param.get('intentCode','default_code'), 
                                          customId=customId,
-                                         orgCode=orgCode)
+                                         orgCode=orgCode, 
+                                         streaming=param.get('streaming', True)
+                                         )
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(param, head=601, msg=repr(err))
