@@ -22,13 +22,12 @@ from chat.plugin_util import funcCall
 from chat.qwen_react_util import *
 from chat.special_intent_msg_util import get_reminder_tips, get_userInfo_msg
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
-# from config.function_call_config import function_tools
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
-from src.utils.module import (MysqlConnector, _parse_latest_plugin_call,
+from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock,
                               get_doc_role, get_intent)
 
 role_map = {
@@ -44,26 +43,42 @@ useinfo_intent_code_list = [
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
 
-class Chat(object):
+class Chat:
     def __init__(self, env: str ="local"):
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
         mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+
+        self.mysql_conn = MysqlConnector(**mysql_config)
+        self.req_prompt_data_from_mysql()
         
         self.promptEngine = promptEngine()
         self.funcall = funcCall()
-        self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
-        self.tsm = taskSchedulaManager(api_config)
-        # self.mysql_conn = MysqlConnector(**mysql_config)
-        # self.req_prompt_data_from_mysql()
+        # self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
+        self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
+        self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
 
     def req_prompt_data_from_mysql(self) -> Dict:
         """从mysql中请求prompt meta data
         """
-        self.pMData = {}
-        self.pMData['character'] = self.mysql_conn.query("select * from ai_prompt_character")
-        self.pMData['event'] = self.mysql_conn.query("select * from ai_prompt_event")
-        self.pMData['tool'] = self.mysql_conn.query("select * from ai_prompt_tool")
+        def filter_format(obj):
+            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
+            obj_rev = json.loads(obj_str)
+            return obj_rev
+        self.prompt_meta_data = {}
+        prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
+        prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
+        prompt_tool = self.mysql_conn.query("select * from ai_prompt_tool")
+        prompt_character = filter_format(prompt_character)
+        prompt_event = filter_format(prompt_event)
+        prompt_tool = filter_format(prompt_tool)
+        self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+        self.prompt_meta_data['event'] = {i['event']: i for i in prompt_event}
+        self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
         logger.debug("req prompt meta data from mysql.")
+
+    @clock
+    def reload_prompt(self):
+        self.req_prompt_data_from_mysql()
     
     def get_tool_name(self, text):
         if '外部知识' in text:
@@ -173,7 +188,8 @@ class Chat(object):
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
-        prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
@@ -188,14 +204,15 @@ class Chat(object):
         # external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # sys_prompt = self.sys_template.format(external_information=external_information)
-        ext_info = (
-            "你是来康生命公司研发的智能健康管家, 为居家用户提供健康咨询和管理服务\n"
-            "对于日常闲聊，有以下几点建议:\n"
-            "1. 整体过程应该是轻松愉快的\n"
-            "2. 你可以适当发挥一点幽默基因\n"
-            "3. 对用户是友好的\n"
-            "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家"
-            "5. 当问你是什么公司或者组织机构研发的时,你应说我是由来康生命研发的")
+        # ext_info = (
+        #     "你是来康生命公司研发的智能健康管家, 为居家用户提供健康咨询和管理服务\n"
+        #     "对于日常闲聊，有以下几点建议:\n"
+        #     "1. 整体过程应该是轻松愉快的\n"
+        #     "2. 你可以适当发挥一点幽默基因\n"
+        #     "3. 对用户是友好的\n"
+        #     "4. 当问你是谁或叫什么名字时,你应当说我是智能健康管家"
+        #     "5. 当问你是什么公司或者组织机构研发的时,你应说我是由来康生命研发的")
+        ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
         input_history = [{"role":"system", "content": ext_info}] + input_history
         content = chat_qwen("", input_history)
         return content
@@ -235,7 +252,7 @@ class Chat(object):
                 output_text = self.chatter_gaily(history, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             else:
-                ext_info_args = baseVarsForPromptEngine()
+                ext_info_args = baseVarsForPromptEngine(prompt_meta_data=self.prompt_meta_data)
                 external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
                 input_history = self.compose_input_history(history, external_information, **kwargs)
                 out_history = self.generate(history=input_history, verbose=kwargs.get('verbose', False))
@@ -269,7 +286,7 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_bug1111
+    ori_input_param = testParam.param_bug95
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
