@@ -60,10 +60,10 @@ def get_chat_reponse():
                                          streaming=param.get('streaming', True)
                                          )
     except AssertionError as err:
-        logger.error(traceback.format_exc())
+        logger.exception(err)
         result = make_result(head=601, msg=repr(err), items=param)
     except Exception as err:
-        logger.error(err)
+        logger.exception(err)
         logger.error(traceback.format_exc())
         result = make_result(msg=repr(err), items=param)
     finally:
@@ -85,10 +85,10 @@ def _get_chat_complete():
             del out_text['end']
             result = make_result(head=200, msg="success", items={'mid_vars':mid_vars}, **out_text)
     except AssertionError as err:
-        logger.error(traceback.format_exc())
+        logger.exception(err)
         result = make_result(head=601, msg=repr(err), items=param)
     except Exception as err:
-        logger.error(traceback.format_exc())
+        logger.exception(err)
         result = make_result(param, msg=repr(err), items=param)
     finally:
         return json.dumps(result, ensure_ascii=False)
@@ -102,6 +102,7 @@ def _reload_prompt():
         chat.reload_prompt()
         ret = {"head": 200, "success": True, "msg": "restart success"}
     except Exception as err:
+        logger.exception(err)
         ret = {"head": 500, "success": False, "msg": repr(err)}
     finally:
         return ret
