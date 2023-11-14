@@ -25,10 +25,10 @@ def accept_param():
     logger.info(f"=============Input Param===========\n{p}")
     return p
 
-def make_result(head=200, msg=None, body=None, cls=False, **kwargs):
-    if not body and head == 200:
+def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
+    if not items and head == 200:
         head = 600
-    res = {"head":head,"msg":msg,"body":body, **kwargs}
+    res = {"head":head,"msg":msg,"items":items, **kwargs}
     if cls:
         res = json.dumps(res, cls=NpEncoder)
     return res
@@ -61,10 +61,10 @@ def get_chat_reponse():
                                          )
     except AssertionError as err:
         logger.error(traceback.format_exc())
-        result = make_result(head=601, msg=repr(err), body=param)
+        result = make_result(head=601, msg=repr(err), items=param)
     except Exception as err:
         logger.error(traceback.format_exc())
-        result = make_result(msg=repr(err), body=param)
+        result = make_result(msg=repr(err), items=param)
     finally:
         return Response(decorate(result), mimetype='text/event-stream')
     
@@ -81,13 +81,13 @@ def _get_chat_complete():
         if task == 'chat':
             out_text, mid_vars = next(chat.run_prediction(param.get('history',[]), param.get('prompt',''), param.get('intentCode','default_code'), 
                                                           customId=customId, orgCode=orgCode, streaming=False))
-            result = make_result(head=200, msg="success", body={'out_text':out_text, 'mid_vars':mid_vars})
+            result = make_result(head=200, msg="success", items={'out_text':out_text, 'mid_vars':mid_vars})
     except AssertionError as err:
         logger.error(traceback.format_exc())
-        result = make_result(head=601, msg=repr(err), body=param)
+        result = make_result(head=601, msg=repr(err), items=param)
     except Exception as err:
         logger.error(traceback.format_exc())
-        result = make_result(param, msg=repr(err), body=param)
+        result = make_result(param, msg=repr(err), items=param)
     finally:
         return json.dumps(result, ensure_ascii=False)
 
