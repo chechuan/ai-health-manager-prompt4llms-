@@ -233,8 +233,8 @@ class taskSchedulaManager:
 
         url = self.api_config["ai_backend"] + "/alg-api/schedule/query"
         payload = {
-            "orgCode": "sf",
-            "customId": "007"
+            "orgCode": kwds.get("orgCode"),
+            "customId": kwds.get("customId")
         }
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
@@ -257,9 +257,6 @@ class taskSchedulaManager:
                 直接输出的文本
         """
         schedule = self.get_real_time_schedule(**kwds)
-        
-        if len(messages) == 1:
-            logger.debug(f"Init user input: {messages[0]['content']}")
         request = ChatCompletionRequest(model="Qwen-14B-Chat", 
                                         functions=task_schedule_parameter_description_for_qwen,
                                         messages=messages,)

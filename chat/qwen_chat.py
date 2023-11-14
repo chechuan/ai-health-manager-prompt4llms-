@@ -259,6 +259,7 @@ class Chat:
         """
         # 中间变量存储本轮交互所有过程信息
         finish_flag = False
+        logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
             finish_flag = True

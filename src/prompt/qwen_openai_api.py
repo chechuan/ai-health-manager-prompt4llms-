@@ -280,8 +280,6 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
 
     query, history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
     prompt = compose_history(query, history)
-    if not history:
-        print(query)
     prompt += "\nThought: "
     response = chat_qwen(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
     mid_vars_item = [{"key":"日程管理", "input_text": prompt, "output_text": response}]
