@@ -89,6 +89,22 @@ def get_intent(text):
         code = 'other'
     elif '日程管理'in text:
         code = 'schedule_manager'
+    elif '网络' in text:
+        code = 'search_network'
+    elif '首都' in text:
+        code = 'capital'
+    #elif '彩票' in text:
+        #code = 'call_dietista'
+    #elif '营养师' in text:
+        #code = 'call_dietista'
+    #elif '营养师' in text:
+    #    code = 'call_dietista'
+    #elif '营养师' in text:
+    #    code = 'call_dietista'
+    #elif '营养师' in text:
+    #    code = 'call_dietista'
+    #elif '营养师' in text:
+    #    code = 'call_dietista'
     else:
         code = 'other'
     logger.debug(f'识别出的意图:{text} code:{code}')

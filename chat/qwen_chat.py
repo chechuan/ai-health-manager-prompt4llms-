@@ -243,14 +243,16 @@ class Chat:
         if not finish_flag:
             intent = get_intent(self.cls_intent(history))
             if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'end':True,'message':get_doc_role(intent), 'intentCode':'doc_role'}
+                out_text = {'end':True,'message':get_doc_role(intent),
+                        'intentCode':'doc_role', 'usr_query_intent':intent}
             elif intent == "schedule_manager":
                 his = self.history_compose(history)
                 output_text = self.tsm._run(his, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                out_text = {'end':True, 'message':output_text,
+                        'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent == "other":
                 output_text = self.chatter_gaily(history, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             else:
                 ext_info_args = baseVarsForPromptEngine(prompt_meta_data=self.prompt_meta_data)
                 external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
@@ -261,12 +263,12 @@ class Chat:
                 output_text = out_history[-1]['content']
             
                 if tool_name == '进一步询问用户的情况':
-                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
                 elif tool_name == '直接回复用户问题':
-                    out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode}
+                    out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode, 'usr_query_intent':intent}
                 elif tool_name == '调用外部知识库':
                     gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             
             if kwargs.get("streaming", True):
                 # 直接返回字符串模式
