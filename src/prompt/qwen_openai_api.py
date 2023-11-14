@@ -284,6 +284,7 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
         print(query)
     prompt += "\nThought: "
     response = chat_qwen(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
+    mid_vars_item = [{"key":"日程管理", "input_text": prompt, "output_text": response}]
     # print(response)
     response = trim_stop_words(response, stop_words)
     if request.functions:
@@ -296,7 +297,7 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
         )
     return ChatCompletionResponse(
         model=request.model, choices=[choice_data], object="chat.completion"
-    )
+    ), mid_vars_item
 
 
 async def predict(

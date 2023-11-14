@@ -25,10 +25,10 @@ def accept_param():
     logger.info(f"=============Input Param===========\n{p}")
     return p
 
-def make_result(param, head=200, msg=None, items=None, cls=False):
-    if not items and head == 200:
+def make_result(head=200, msg=None, body=None, cls=False, **kwargs):
+    if not body and head == 200:
         head = 600
-    res = {"head":head,"msg":msg,"items":items}
+    res = {"head":head,"msg":msg,"body":body, **kwargs}
     if cls:
         res = json.dumps(res, cls=NpEncoder)
     return res
@@ -56,15 +56,40 @@ def get_chat_reponse():
                                          param.get('prompt',''),
                                          param.get('intentCode','default_code'), 
                                          customId=customId,
-                                         orgCode=orgCode)
+                                         orgCode=orgCode, 
+                                         streaming=param.get('streaming', True)
+                                         )
     except AssertionError as err:
         logger.error(traceback.format_exc())
-        result = make_result(param, head=601, msg=repr(err))
+        result = make_result(head=601, msg=repr(err), body=param)
     except Exception as err:
         logger.error(traceback.format_exc())
-        result = make_result(param, msg=repr(err))
+        result = make_result(msg=repr(err), body=param)
     finally:
         return Response(decorate(result), mimetype='text/event-stream')
+    
+@app.route('/chat/complete', methods=['post'])
+def _get_chat_complete():
+    """demo,主要用于展示返回的中间变量
+    """
+    global chat
+    try:
+        param = accept_param()
+        task = param.get('task', 'chat')
+        customId = param.get('customId', '')
+        orgCode = param.get('orgCode', '')
+        if task == 'chat':
+            out_text, mid_vars = next(chat.run_prediction(param.get('history',[]), param.get('prompt',''), param.get('intentCode','default_code'), 
+                                                          customId=customId, orgCode=orgCode, streaming=False))
+            result = make_result(head=200, msg="success", body={'out_text':out_text, 'mid_vars':mid_vars})
+    except AssertionError as err:
+        logger.error(traceback.format_exc())
+        result = make_result(head=601, msg=repr(err), body=param)
+    except Exception as err:
+        logger.error(traceback.format_exc())
+        result = make_result(param, msg=repr(err), body=param)
+    finally:
+        return json.dumps(result, ensure_ascii=False)
 
 @app.route('/reload_prompt', methods=['get'])
 def _reload_prompt():
