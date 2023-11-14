@@ -6,6 +6,7 @@
 '''
 import functools
 import json
+import sys
 import time
 from typing import Tuple
 from urllib import parse
@@ -17,6 +18,24 @@ from sqlalchemy import MetaData, Table, create_engine
 
 from src.utils.Logger import logger
 
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.critical(exc_value.message, exc_info=(exc_type, exc_value, exc_traceback))
+
+
+def handle_error(func):
+    def __inner(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            exc_type, exc_value, exc_tb = sys.exc_info()
+            handle_exception(exc_type, exc_value, exc_tb)
+        finally:
+            print(e.message)
+    return __inner
 
 def req_data(url=None, payload=None, headers=None):
     '''request.post()请求数据
