@@ -4,3 +4,4 @@ flask_cors
 openai
 langchain
 SQLAlchemy==1.4.50
+json5
