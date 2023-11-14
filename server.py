@@ -63,6 +63,7 @@ def get_chat_reponse():
         logger.error(traceback.format_exc())
         result = make_result(head=601, msg=repr(err), items=param)
     except Exception as err:
+        logger.error(err)
         logger.error(traceback.format_exc())
         result = make_result(msg=repr(err), items=param)
     finally:

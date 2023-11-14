@@ -324,7 +324,7 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_bug202311141641
+    ori_input_param = testParam.param_bug202311141655
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
