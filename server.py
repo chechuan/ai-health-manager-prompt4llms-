@@ -98,9 +98,9 @@ def _reload_prompt():
     global chat
     try:
         chat.reload_prompt()
-        ret = {"code": 200, "success": True, "msg": "restart success"}
+        ret = {"head": 200, "success": True, "msg": "restart success"}
     except Exception as err:
-        ret = {"code": 500, "success": False, "msg": repr(err)}
+        ret = {"head": 500, "success": False, "msg": repr(err)}
     finally:
         return ret
 

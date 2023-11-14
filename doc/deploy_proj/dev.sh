@@ -1,0 +1,1 @@
+nohup python server.py --port 6500 &

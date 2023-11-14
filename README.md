@@ -10,7 +10,13 @@
 - 2023年10月20日14:52:48 update funcCall
 - 2023年10月19日16:51:39 更新dev plan
 
-# 交互流程
+# Deploy
+```sh
+# dev
+nohup python server.py --port 6500 &
+# fat
+python server.py --port 26928
+```
 
 # Plan
 ## v0.1
