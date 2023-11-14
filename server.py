@@ -90,7 +90,7 @@ def create_app():
                 out_text, mid_vars = next(chat.run_prediction(param.get('history',[]), param.get('prompt',''), param.get('intentCode','default_code'), 
                                                             customId=customId, orgCode=orgCode, streaming=False))
                 del out_text['end']
-                result = make_result(head=200, msg="success", items={'mid_vars':mid_vars}, **out_text)
+                result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
@@ -98,7 +98,7 @@ def create_app():
             logger.exception(err)
             result = make_result(param, msg=repr(err), items=param)
         finally:
-            return result
+            return Response(json.dumps(result, ensure_ascii=False), content_type="application/json")
 
     @app.route('/reload_prompt', methods=['get'])
     def _reload_prompt():
