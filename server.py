@@ -81,7 +81,8 @@ def _get_chat_complete():
         if task == 'chat':
             out_text, mid_vars = next(chat.run_prediction(param.get('history',[]), param.get('prompt',''), param.get('intentCode','default_code'), 
                                                           customId=customId, orgCode=orgCode, streaming=False))
-            result = make_result(head=200, msg="success", items={'out_text':out_text, 'mid_vars':mid_vars})
+            del out_text['end']
+            result = make_result(head=200, msg="success", items={'mid_vars':mid_vars}, **out_text)
     except AssertionError as err:
         logger.error(traceback.format_exc())
         result = make_result(head=601, msg=repr(err), items=param)
