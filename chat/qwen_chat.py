@@ -263,7 +263,7 @@ class Chat:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
             finish_flag = True
         elif intentCode != 'default_code':
-            out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars)
+            out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
             finish_flag = True
 
         if not finish_flag:
@@ -323,12 +323,12 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_bug2311140943
+    ori_input_param = testParam.param_bug202311141346
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
-    intentCode = "default_code"
+    intentCode = ori_input_param['intentCode']
     out_text, mid_vars = next(chat.run_prediction(history, prompt, intentCode, verbose=True, orgCode="sf", customId="007"))
     while True:
         history.append({"role": "3", "content": out_text['message']})
