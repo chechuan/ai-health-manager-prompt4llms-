@@ -58,6 +58,7 @@ def create_app():
             task = param.get('task', 'chat')
             customId = param.get('customId', '')
             orgCode = param.get('orgCode', '')
+            userInfo = param.get('promptParam', {}) 
             if task == 'chat':
                 result = chat.run_prediction(param.get('history',[]),
                                             param.get('prompt',''),
@@ -65,6 +66,7 @@ def create_app():
                                             customId=customId,
                                             orgCode=orgCode, 
                                             streaming=param.get('streaming', True)
+                                            userInfo=userInfo
                                             )
         except AssertionError as err:
             logger.exception(err)
