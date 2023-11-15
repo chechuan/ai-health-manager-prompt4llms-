@@ -274,8 +274,7 @@ class Chat:
             if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
                 out_text = {'end':True,'message':get_doc_role(intent),'intentCode':'doc_role', 'usr_query_intent':intent}
             #elif intent in ['food_rec']:
-                #out_text = {'end':True,'message':'',
-                #        'intentCode':intentCode, 'usr_query_intent':intent}
+                #out_text = {'end':True,'message':'', 'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent == "schedule_manager":
                 his = self.history_compose(history)
                 output_text, mid_vars_item = self.tsm._run(his, **kwargs)
