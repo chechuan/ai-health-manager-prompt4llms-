@@ -262,11 +262,11 @@ class taskSchedulaManager:
                                         messages=messages,)
         response, mid_vars_item = create_chat_completion(request, schedule)
         msg = response.choices[0].message
-        if kwds.get("verbose"):
-            logger.debug(msg.content[msg.content.rfind("Thought:"):])
-            if msg.function_call:
-                logger.debug(f"call func: {msg.function_call['name']}")
-                logger.debug(f"arguments: {msg.function_call['arguments']}")
+        # if kwds.get("verbose"):
+        logger.debug("Thought:" + msg.content[msg.content.rfind("Thought:"):])
+        if msg.function_call:
+            logger.debug(f"call func: {msg.function_call['name']}")
+            logger.debug(f"arguments: {msg.function_call['arguments']}")
         if msg.function_call:
             if msg.function_call['name'] == "ask_for_time":
                 content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
