@@ -153,11 +153,11 @@ class taskSchedulaManager:
         """
         arguments = eval(msg.function_call['arguments'])
         task = arguments.get("task")
-        cur_time = arguments.get("time")
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
         assert task, "task name is None"
-        assert cur_time, "time is None"
+        assert customId, "customId is None"
+        assert orgCode, "orgCode is None"
 
         url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
         input_payload = {
@@ -219,7 +219,8 @@ class taskSchedulaManager:
                   "1.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
                   "2.除了要告知用户的日程信息不要输出任何其他内容\n"
                   "3.请按照时间戳的先后顺序输出\n\n")
-        prompt += f"{schedule}\n用户的日程总结如下:"
+        prompt += f"{schedule}\n\n总结查询到的日程:"
+        # prompt += f"{schedule}\n用户的日程总结如下:"
         raw_content = chat_qwen(prompt, top_p=0.8, temperature=0.7, repetition_penalty=1.1, max_tokens=512)
         content = raw_content.strip().replace("\n", "")
         mid_vars_item.append({"key":"总结查询到的日程", "input_text": prompt, "output_text": content})
