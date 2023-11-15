@@ -88,11 +88,12 @@ def create_app():
             orgCode = param.get('orgCode', '')
             if task == 'chat':
                 generator = chat.run_prediction(param.get('history',[]), 
-                                            param.get('prompt',''), 
-                                            param.get('intentCode','default_code'), 
-                                            customId=customId, 
-                                            orgCode=orgCode, 
-                                            streaming=False)
+                                                param.get('prompt',''), 
+                                                param.get('intentCode','default_code'), 
+                                                customId=customId, 
+                                                orgCode=orgCode, 
+                                                mid_vars = [],
+                                                streaming=False)
                 out_text, mid_vars = next(generator)
                 del out_text['end']
                 result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})

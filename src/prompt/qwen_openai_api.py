@@ -124,25 +124,27 @@ def parse_messages(messages, functions, temp_schedule):
             if m_idx == len(_messages) - 1:
                 messages[-1].content += "\nThought:"
         elif role == "assistant":
-            last_msg = messages[-1].content
-            last_msg_has_zh = len(re.findall(r"[\u4e00-\u9fff]+", last_msg)) > 0
+            # last_msg = messages[-1].content
+            # last_msg_has_zh = len(re.findall(r"[\u4e00-\u9fff]+", last_msg)) > 0
             if func_call is None:
                 if functions:
-                    content = dummy_thought["zh" if last_msg_has_zh else "en"] + content
+                    # content = dummy_thought["zh" if last_msg_has_zh else "en"] + content
+                    content = dummy_thought["zh"] + content
             else:
                 f_name, f_args = func_call["name"], func_call["arguments"]
                 if not content:
-                    if last_msg_has_zh:
-                        content = f"Thought: 我可以使用 {f_name} API。"
-                    else:
-                        content = f"Thought: I can use {f_name}."
+                    content = f"Thought: 我可以使用 {f_name} API。"
+                    # if last_msg_has_zh:
+                    #     content = f"Thought: 我可以使用 {f_name} API。"
+                    # else:
+                    #     content = f"Thought: I can use {f_name}."
                 content = f"\n{content}\nAction: {f_name}\nAction Input: {f_args}"
-            if messages[-1].role == "user":
-                messages.append(
-                    ChatMessage(role="assistant", content=content.lstrip("\n").rstrip())
-                )
-            else:
-                messages[-1].content += content
+            # if messages and messages[-1].role == "user":
+            messages.append(
+                ChatMessage(role="assistant", content=content.lstrip("\n").rstrip())
+            )
+            # else:
+            #     messages[-1].content += content
         elif role == "user":
             messages.append(
                 ChatMessage(role="user", content=content.lstrip("\n").rstrip())
