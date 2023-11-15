@@ -90,7 +90,7 @@ def get_intent(text):
         code = 'check_weather'
     elif '辅助诊断' in text:
         code = 'auxiliary_diagnosis'
-    elif '医师' in text:
+    elif '医师' in text or '医生' in text:
         code = 'call_doctor'
     elif '运动师' in text:
         code = 'call_sportMaster'
