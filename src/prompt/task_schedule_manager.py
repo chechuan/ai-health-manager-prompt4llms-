@@ -233,8 +233,8 @@ class taskSchedulaManager:
 
         url = self.api_config["ai_backend"] + "/alg-api/schedule/query"
         payload = {
-            "orgCode": "sf",
-            "customId": "007"
+            "orgCode": kwds.get("orgCode"),
+            "customId": kwds.get("customId")
         }
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
@@ -257,9 +257,6 @@ class taskSchedulaManager:
                 直接输出的文本
         """
         schedule = self.get_real_time_schedule(**kwds)
-        
-        if len(messages) == 1:
-            logger.debug(f"Init user input: {messages[0]['content']}")
         request = ChatCompletionRequest(model="Qwen-14B-Chat", 
                                         functions=task_schedule_parameter_description_for_qwen,
                                         messages=messages,)
@@ -270,19 +267,24 @@ class taskSchedulaManager:
             if msg.function_call:
                 logger.debug(f"call func: {msg.function_call['name']}")
                 logger.debug(f"arguments: {msg.function_call['arguments']}")
-        if msg.function_call['name'] == "ask_for_time":
-            content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
-        elif msg.function_call['name'] == "create_schedule":
-            self.tool_create_schedule(msg, **kwds)
-            content = eval(msg.function_call['arguments'])['ask']
-        elif msg.function_call['name'] == "modify_schedule":
-            self.tool_modify_schedule(msg, schedule, **kwds)
-            content = eval(msg.function_call['arguments'])['ask']
-        elif msg.function_call['name'] == "cancel_schedule":
-            task = self.tool_cancel_schedule(msg, **kwds)
-            content = f"已为您取消{task}的提醒"
-        elif msg.function_call['name'] == "query_schedule":
-            content, mid_vars_item = self.tool_query_schedule(schedule, mid_vars_item, **kwds)
+        if msg.function_call:
+            if msg.function_call['name'] == "ask_for_time":
+                content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
+            elif msg.function_call['name'] == "create_schedule":
+                self.tool_create_schedule(msg, **kwds)
+                content = eval(msg.function_call['arguments'])['ask']
+            elif msg.function_call['name'] == "modify_schedule":
+                self.tool_modify_schedule(msg, schedule, **kwds)
+                content = eval(msg.function_call['arguments'])['ask']
+            elif msg.function_call['name'] == "cancel_schedule":
+                task = self.tool_cancel_schedule(msg, **kwds)
+                content = f"已为您取消{task}的提醒"
+            elif msg.function_call['name'] == "query_schedule":
+                content, mid_vars_item = self.tool_query_schedule(schedule, mid_vars_item, **kwds)
+            else:
+                content = "我不清楚你想做什么,请稍后重试"
+        else:
+            content = "我不清楚你想做什么,请稍后重试"
         return content, mid_vars_item
 
 if __name__ == "__main__":

@@ -259,6 +259,8 @@ class Chat:
         """
         # 中间变量存储本轮交互所有过程信息
         finish_flag = False
+        if history:
+            logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
             finish_flag = True
@@ -287,7 +289,7 @@ class Chat:
                 out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
 
                 # 自动判断话题结束
-                if out_history[-1].get("function_call") and out_history[12]['function_call']['name'] == "结束话题":
+                if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
                     sub_history = [history[-1]]
                     try:
                         out_text, mid_vars = next(self.run_prediction(sub_history, sys_prompt, intentCode, mid_vars, **kwargs))
@@ -315,7 +317,7 @@ class Chat:
             yield out_text
         else:
             # 保留完整的历史内容
-            yield out_text, mid_vars
+            return out_text, mid_vars
 
 if __name__ == '__main__':
     chat = Chat()
@@ -327,7 +329,7 @@ if __name__ == '__main__':
     # debug_text = "肚子疼"
     # history = [{"role": "0", "content": init_intput}]
     # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_bug202311141346
+    ori_input_param = testParam.param_bug116_1
     # prompt = TOOL_CHOOSE_PROMPT
     
     prompt = ori_input_param['prompt']
