@@ -275,14 +275,14 @@ class Chat:
                 out_text = {'end':True,'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'usr_query_intent':intent}
             elif intent in ['food_rec']:
-                if not userInfo.get('askTastePrefer', ''):
+                if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                     out_text = {'end':True,'message':'',
                         'intentCode':'food_rec', 'usr_query_intent':intent}
                 else:
                     output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                     out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent in ['sport_rec']:
-                if not userInfo.get('ask_exercise_habbit_freq', '') or not userInfo.get('ask_exercise_taboo_joint_degree', '') or not userInfo.get('ask_exercise_taboo_xt', ''):
+                if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
                     out_text = {'end':True,'message':'',
                         'intentCode':'sport_rec', 'usr_query_intent':intent}
                 else:
