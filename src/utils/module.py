@@ -78,10 +78,10 @@ class NpEncoder(json.JSONEncoder):
 def get_intent(text):
     """通过关键词解析意图->code
     """
-    if '创建提醒' in text:
-        code = 'create_alert'
-    elif '饮食' in text and '咨询' in text:
-        code = 'food'
+    if '饮食' in text and '咨询' in text:
+        code = 'food_rec'
+    elif '运动咨询' in text:
+        code = 'sport_rec'
     elif '菜谱' in text:
         code = 'recipe_consult'
     elif '音乐' in text:
@@ -90,16 +90,12 @@ def get_intent(text):
         code = 'check_weather'
     elif '辅助诊断' in text:
         code = 'auxiliary_diagnosis'
-    elif '医师' in text:
+    elif '医师' in text or '医生' in text:
         code = 'call_doctor'
     elif '运动师' in text:
         code = 'call_sportMaster'
     elif '心理' in text:
         code = 'call_psychologist'
-    elif '修改提醒' in text:
-        code = 'change_alert'
-    elif '取消提醒' in text:
-        code = 'cancel_alert'
     elif '营养师' in text:
         code = 'call_dietista'
     elif '健管师' in text:
