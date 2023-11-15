@@ -314,7 +314,7 @@ class Chat:
             yield out_text
         else:
             # 保留完整的历史内容
-            return out_text, mid_vars
+            yield out_text, mid_vars
 
 if __name__ == '__main__':
     chat = Chat()

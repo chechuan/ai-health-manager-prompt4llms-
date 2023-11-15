@@ -87,16 +87,13 @@ def create_app():
             customId = param.get('customId', '')
             orgCode = param.get('orgCode', '')
             if task == 'chat':
-                try:
-                    generator = chat.run_prediction(param.get('history',[]), 
-                                                param.get('prompt',''), 
-                                                param.get('intentCode','default_code'), 
-                                                customId=customId, 
-                                                orgCode=orgCode, 
-                                                streaming=False)
-                    next(generator)
-                except StopIteration as err:
-                    out_text, mid_vars = err
+                generator = chat.run_prediction(param.get('history',[]), 
+                                            param.get('prompt',''), 
+                                            param.get('intentCode','default_code'), 
+                                            customId=customId, 
+                                            orgCode=orgCode, 
+                                            streaming=False)
+                out_text, mid_vars = next(generator)
                 del out_text['end']
                 result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})
         except AssertionError as err:
