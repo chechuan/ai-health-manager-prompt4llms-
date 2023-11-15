@@ -92,19 +92,43 @@ def get_intent(text):
     elif '网络' in text:
         code = 'search_network'
     elif '首都' in text:
-        code = 'capital'
-    #elif '彩票' in text:
-        #code = 'call_dietista'
-    #elif '营养师' in text:
-        #code = 'call_dietista'
-    #elif '营养师' in text:
-    #    code = 'call_dietista'
-    #elif '营养师' in text:
-    #    code = 'call_dietista'
-    #elif '营养师' in text:
-    #    code = 'call_dietista'
-    #elif '营养师' in text:
-    #    code = 'call_dietista'
+        code = 'search_capital'
+    elif '彩票' in text:
+        code = 'lottery'
+    elif '解梦' in text:
+        code = 'oneiromancy'
+    elif '计算器' in text:
+        code = 'calculator'
+    elif '国内城市查询' in text:
+        code = 'search_city'
+    elif '省会查询' in text:
+        code = 'provincial_capital_search'
+    elif '翻译' in text:
+        code = 'translate'
+    elif '垃圾' in text:
+        code = 'garbage_sortin'
+    elif '尾号限行' in text:
+        code = 'traffic_restrictions'
+    elif '单位换算' in text:
+        code = 'unit_conversion'
+    elif '汇率' in text:
+        code = 'exchange_rate'
+    elif '时间日期' in text:
+        code = 'date'
+    elif '眼保健操' in text:
+        code = 'eye_exercises'
+    elif '故事' in text:
+        code = 'story'
+    elif '圣经' in text:
+        code = 'bible'
+    elif '戏曲' in text:
+        code = 'opera'
+    elif '评书' in text:
+        code = 'pingshu'
+    elif '有声书' in text:
+        code = 'audio_book'
+    elif '新闻' in text:
+        code = 'news'
     else:
         code = 'other'
     logger.debug(f'识别出的意图:{text} code:{code}')

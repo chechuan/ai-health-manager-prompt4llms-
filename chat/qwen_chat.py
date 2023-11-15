@@ -299,12 +299,15 @@ class Chat:
                     output_text = out_history[-1]['content']
                 
                     if tool_name == '进一步询问用户的情况':
-                        out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                        out_text = {'end':True, 'message':output_text,
+                                'intentCode':intentCode, 'usr_query_intent':intent}
                     elif tool_name == '直接回复用户问题':
-                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 'intentCode':intentCode}
+                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),
+                                    'intentCode':intentCode, 'usr_query_intent':intent}
                     elif tool_name == '调用外部知识库':
                         gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                        out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                        out_text = {'end':True, 'message':output_text,
+                                'intentCode':intentCode, 'usr_query_intent':intent}
             
         if kwargs.get("streaming"):
             # 直接返回字符串模式
