@@ -289,7 +289,7 @@ class testParam:
             {"msgId": "3262279064","role": "3","content": "请问您希望会议的提醒时间是？","sendTime": "2023-11-15 15:47:20"},
             {"msgId": "0580938974","role": "1","content": "下午四点半","sendTime": "2023-11-15 15:47:27"},
             {"msgId": "0392809014","role": "3","content": "提醒您下午四点半有一个会议","sendTime": "2023-11-15 15:47:33"},
-            {"msgId": "3843507675","role": "1","content": "会议取消","sendTime": "2023-11-15 15:47:46"}
+            {"msgId": "3843507675","role": "1","content": "取消下午的会议","sendTime": "2023-11-15 15:47:46"}
         ],
         "promptParam": {
             "currentDate": "2023年11月15日",

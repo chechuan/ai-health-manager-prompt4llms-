@@ -107,6 +107,8 @@ def parse_messages(messages, functions, temp_schedule):
             tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
         )
         system = system.lstrip("\n").rstrip()
+    messages = [ChatMessage(role="system", content=system)] + messages
+    return messages
 
     dummy_thought = {
         "en": "\nThought: I now know the final answer.\nFinal answer: ",
@@ -259,17 +261,16 @@ def text_complete_last_message(history, stop_words_ids, gen_kwargs):
     print(f"<completion>\n{prompt}\n<!-- *** -->\n{output}\n</completion>")
     return output
 
-def compose_history(query, history):
+def compose_history(history):
     # im_start = "<|im_start|>"
     # im_end = "<|im_end|>"
     prompt = ""
-    if query:
-        history.append({"role": "user", "content": query})
-    for item in history:
-        if item['role'] == "user" and "Question" not in item['content']:
-            prompt += f"\nObservation: {item['content']}"
+    for item in history[:-1]:
+        if item.role == "system":
+            prompt += item.content + "\n对话历史如下:"
         else:
-            prompt += "\n" + item["content"]
+            prompt += f"\n{item.role}: {item.content}"
+    prompt += f"\n\nQuestion: {history[-1].content}"
     return prompt
     
 def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict]):
@@ -280,8 +281,8 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
         if "Observation:" not in stop_words:
             stop_words.append("Observation:")
 
-    query, history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
-    prompt = compose_history(query, history)
+    history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
+    prompt = compose_history(history)
     prompt += "\nThought: "
     response = chat_qwen(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
     mid_vars_item = [{"key":"日程管理", "input_text": prompt, "output_text": response}]
