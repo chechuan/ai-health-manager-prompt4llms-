@@ -67,9 +67,17 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     else:
         if query and not isinstance(query, object):
             history += [{"role": "user", "content": query}]
+        msg = ''
+        for i, n in enumerate(list(reversed(history))):
+            msg += n['content']
+            if len(msg) > 1200:
+                h = history[-i+1:]
+                break
+            else:
+                h = history
         completion = openai.ChatCompletion.create(
             model=model,
-            messages=history,
+            messages=h,
             top_k=top_k, 
             top_p=top_p, 
             repetition_penalty=repetition_penalty,
