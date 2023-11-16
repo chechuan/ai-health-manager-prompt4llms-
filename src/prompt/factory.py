@@ -99,10 +99,6 @@ class promptEngine:
             self.prompt_meta_data = prompt_meta_data
         else:
             self.req_prompt_data_from_mysql()
-        self.tpe_env = PromptTemplate(input_variables=["var"], template=TEMPLATE_ENV)
-        self.tpe_plan = PromptTemplate(input_variables=["var"], template=TEMPLATE_PLAN)
-        self.tpe_scene = PromptTemplate(input_variables=["var"], template=TEMPLATE_SENCE)
-        self.tpe_role = PromptTemplate(input_variables=["var"], template=TEMPLATE_ROLE)
 
     def req_prompt_data_from_mysql(self) -> Dict:
         """从mysql中请求prompt meta data
@@ -118,7 +114,7 @@ class promptEngine:
         
         mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
         self.mysql_conn = MysqlConnector(**mysql_config)
-        
+
         self.prompt_meta_data = {}
         prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
         prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
@@ -130,16 +126,6 @@ class promptEngine:
         self.prompt_meta_data['event'] = {i['event']: i for i in prompt_event}
         self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
         logger.debug("req prompt meta data from mysql.")
-        return 
-
-    def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=False, **kwds) -> str:
-        concat_keyword = kwds.get("concat_keyword", ",") + " "
-        if prompt:
-            prompt += concat_keyword
-        prompt += tpe.format(var=var)
-        if verbose:
-            print(prompt)
-        return prompt
     
     def __join_character(self, character: str, **kwds):
         """拼接角色部分的prompt
@@ -188,11 +174,11 @@ class promptEngine:
         if e_item.get('process', None):
             prompt += f"{e_item['process']}\n"
         if e_item.get('constraint'):
-            prompt += f"\n下面是一些注意事项:\n{e_item['constraint']}"
+            prompt += f"\n下面是场景中的一些注意事项:\n{e_item['constraint']}"
         return prompt
 
     def _call(self, *args, **kwds):
-        """拼接知识体系内容
+        """拼接角色事件知识
         """
         prompt = ""
         bm = args[0]

@@ -18,7 +18,7 @@ from typing import Dict, List
 from langchain.prompts import PromptTemplate
 
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from chat.plugin_util import format_out_text, funcCall
+from chat.plugin_util import funcCall
 from chat.qwen_react_util import *
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
@@ -303,13 +303,10 @@ class Chat:
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
                 for item in mid_vars_item:
                     self.update_mid_vars(mid_vars, **item)
-            elif intent == "other":
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            else:
+            elif intent == "auxiliary_diagnosis":
                 ext_info_args = baseVarsForPromptEngine()
-                external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
-                input_history = self.compose_input_history(history, external_information, **kwargs)
+                prompt = self.promptEngine._call(ext_info_args)
+                input_history = self.compose_input_history(history, prompt, **kwargs)
                 out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
 
                 # 自动判断话题结束
@@ -322,15 +319,15 @@ class Chat:
                     output_text = out_history[-1]['content']
                 
                     if tool_name == '进一步询问用户的情况':
-                        out_text = {'end':True, 'message':output_text,
-                                'intentCode':intentCode, 'usr_query_intent':intent}
+                        out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
                     elif tool_name == '直接回复用户问题':
-                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),
-                                    'intentCode':intentCode, 'usr_query_intent':intent}
+                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode, 'usr_query_intent':intent}
                     elif tool_name == '调用外部知识库':
                         gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                        out_text = {'end':True, 'message':output_text,
-                                'intentCode':intentCode, 'usr_query_intent':intent}
+                        out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+            else:
+                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             
         if kwargs.get("streaming"):
             # 直接返回字符串模式
@@ -342,24 +339,25 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    # debug_text = "我最近早上头疼，谁帮我看一下啊"
-    # debug_text = "明天下午开会，记得提醒我"
-    # debug_text = "我对辣椒过敏"
-    # debug_text = "明天早上6点半提醒我做饭"
-    # debug_text = "查一下我最近日程"
-    # debug_text = "肚子疼"
-    # history = [{"role": "0", "content": init_intput}]
-    # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
     ori_input_param = testParam.param_bug116_1
-
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.run_prediction(history=history, sys_prompt=prompt, verbose=True, intentCode=intentCode, customId=customId, orgCode=orgCode))
+    out_text, mid_vars = next(chat.run_prediction(history=history, 
+                                                  sys_prompt=prompt, 
+                                                  verbose=True, 
+                                                  intentCode=intentCode, 
+                                                  customId=customId, 
+                                                  orgCode=orgCode))
     while True:
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.run_prediction(history=history, sys_prompt=prompt, verbose=True, intentCode=intentCode, customId=customId, orgCode=orgCode))
+        out_text, mid_vars = next(chat.run_prediction(history=history, 
+                                                      sys_prompt=prompt, 
+                                                      verbose=True, 
+                                                      intentCode=intentCode, 
+                                                      customId=customId, 
+                                                      orgCode=orgCode))
