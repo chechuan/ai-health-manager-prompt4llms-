@@ -221,7 +221,7 @@ class Chat:
         """
         content = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200)
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
-        if sum([i in content for i in ["询问","提问","转移","未知","结束"]]) != 0:
+        if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             content = self.chatter_gaily(history, mid_vars)
             # his =[{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
             # his = ' '.join([h['role']+':'+h['content'] for h in his])
