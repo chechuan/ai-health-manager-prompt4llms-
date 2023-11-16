@@ -144,6 +144,8 @@ def get_intent(text):
         code = 'audio_book'
     elif '新闻' in text:
         code = 'news'
+    elif 'BMI' in text:
+        code = 'BMI'
     else:
         code = 'other'
     logger.debug(f'识别出的意图:{text} code:{code}')
