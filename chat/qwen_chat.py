@@ -92,8 +92,8 @@ class Chat:
             return '直接回复用户问题'
         else:
             return '直接回复用户问题'
-
-    def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
+    
+    def compose_prompt(self, query: str = "", history=[]):
         """调用模型生成答案,解析ReAct生成的结果
         """
         if not query:
@@ -108,27 +108,31 @@ class Chat:
                     query += f"\nAction Input: {msg['content']}"
                 else:
                     query += f"\nObservation: {msg['content']}"
-        # 利用Though防止生成无关信息
-        query += "\nThought: "
-        model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
-        model_output = "Thought: " + model_output
-        self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复", input_text=query, output_text=model_output, model="Qwen-14B-Chat")
+        return query
 
-        if kwargs.get("verbose"):
-            logger.debug(f"Generate Prompt - length:{len(query)}\n{query}")
-            logger.debug(f"Model Output - length:{len(model_output)}\n{model_output}")
+    def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
+        """调用模型生成答案,解析ReAct生成的结果
+        """
+        prompt = self.compose_prompt(query, history)
+        # 利用Though防止生成无关信息
+        prompt += "\nThought: "
+        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = "Thought: " + model_output
+        self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        logger.debug(f"Generate Prompt - length:{len(prompt)}\n{prompt}")
+        logger.debug(f"Model Output - length:{len(model_output)}\n{model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
-            query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
+            prompt = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
                     "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
                     "2. 不要重复输出相同的内容,否则你将受到非常严重的惩罚\n" + \
                     "3. 语义相似的可以合并重新规划语言\n" + \
                     "4. 直接输出结果\n\n输入:\n" + \
                     model_output + "\n输出:\n"
-            logger.debug('generate model input: ' + query)
-            model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
-            self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复 改写修正", input_text=query, output_text=model_output, model="Qwen-14B-Chat")
+            logger.debug('ReAct regenerate input: ' + prompt)
+            model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
+            self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         out_text = list(out_text)
@@ -145,35 +149,6 @@ class Chat:
                 }
             })
         return history
-
-    def get_qwen_history(self, history):
-        hs = []
-        hcnt = {}
-        for cnt in history:
-            if len(hcnt.keys()) == 2:
-                hs.append(hcnt)
-                hcnt = {}
-            if cnt['role'] == '1' or cnt['role'] == '0':
-                if 'user' in hcnt.keys():
-                    hcnt['bot'] = ''
-                    hs.append(hcnt)
-                    hcnt = {}
-                hcnt['user'] = cnt['content']
-            else:
-                if 'bot' in hcnt.keys():
-                    hcnt['user'] = ''
-                    hs.append(hcnt)
-                    hcnt = {}
-                hcnt['bot'] = cnt['content']
-        if hcnt:
-            if 'user' in hcnt.keys():
-                hcnt['bot'] = ''
-            else:
-                hcnt['user'] = ''
-            hs.append(hcnt)
-            hcnt = {}
-        hs = [(x['user'], x['bot']) for x in hs]
-        return hs
     
     def compose_input_history(self, history, external_information, **kwargs):
         """拼装sys_prompt里
