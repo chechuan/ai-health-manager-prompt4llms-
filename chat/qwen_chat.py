@@ -275,8 +275,7 @@ class Chat:
                 out_text = {'end':True,'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'usr_query_intent':intent}
             elif intent in ['BMI']:
-                if not kwargs.get('userInfo', {}).get('askHeight', '') or not
-                not kwargs.get('userInfo', {}).get('askWeight', ''):
+                if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
                     out_text = {'end':True,'message':'',
                         'intentCode':'BMI', 'usr_query_intent':intent}
                 else:
