@@ -19,7 +19,7 @@ from langchain.prompts import PromptTemplate
 sys.path.append(".")
 from config.constrant import task_schedule_return_demo
 from config.constrant_for_task_schedule import (
-    task_schedule_parameter_description,
+    query_schedule_template, task_schedule_parameter_description,
     task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, chat_qwen
 from src.prompt.qwen_openai_api import create_chat_completion
@@ -211,20 +211,45 @@ class taskSchedulaManager:
         assert resp_js["code"] == 200, resp_js["msg"]
         logger.info(f"Change schedule org:{{{orgCode}}} - uid:{{{customId}}} - {task} from {task_time_ori} to {cur_time}.")
         return 200
+    
+    def compose_today_schedule(self, schedule, **kwds):
+        """组装用户当日日程
+        "您还有5项日程需要完成\n",
+        "事项：血压测量，时间：8:00、20:00\n", 
+        "事项：三餐，时间：7：00、11：00、17：00\n", 
+        "事项：会议14：00，提前15min 提醒时间：14：00\n", 
+        "事项：用药，时间：21：00\n", 
+        "事项：慢走20min，今日完成，时间：21：00\n\n",
+        """
+        prompt = f"用户日程为：\n您还有{len(schedule)}项日程需要完成\n"
+        schedule = list(sorted(schedule, key=lambda item: item['time']))
+        task_dict = {i['task']: "" for i in schedule}
+        for sch in schedule:
+            task_dict[sch['task']] += sch['time'][11:-3]
+        prompt += "\n".join([f"事项：{task_name}，时间：{time}" for task_name, time in task_dict.items()])
+        prompt += "\n\n日程提醒:\n"
+        return prompt
 
     def tool_query_schedule(self, schedule, mid_vars_item, **kwds):
         """查询用户日程处理逻辑
+
+        Note:
+            1. 仅查询当日未完成日程
         """
-        prompt = ("以下是用户的日程及对应时间,请组织语言,告知用户,请遵循以下几点要求:\n"
-                  "1.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
-                  "2.除了要告知用户的日程信息不要输出任何其他内容\n"
-                  "3.请按照时间戳的先后顺序输出\n\n")
-        prompt += f"{schedule}\n\n总结查询到的日程:"
-        # prompt += f"{schedule}\n用户的日程总结如下:"
-        raw_content = chat_qwen(prompt, top_p=0.8, temperature=0.7, repetition_penalty=1.1, max_tokens=512)
-        content = raw_content.strip().replace("\n", "")
-        mid_vars_item.append({"key":"总结查询到的日程", "input_text": prompt, "output_text": content})
-        return content, mid_vars_item
+        # prompt = ("以下是用户的日程及对应时间,请组织语言,告知用户,请遵循以下几点要求:\n"
+        #           "1.尽可能语句通顺,上下文连贯且对话术对用户友好\n"
+        #           "2.除了要告知用户的日程信息不要输出任何其他内容\n"
+        #           "3.请按照时间戳的先后顺序输出\n\n")
+        # prompt += f"{schedule}\n\n总结查询到的日程:"
+        cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
+        today_schedule = [i for i in schedule if i['time'][:10]==cur_time[:10] and i['time'] > cur_time]
+        history = [{"role": "system", "content": prompt}]
+        user_input = self.compose_today_schedule(today_schedule)
+        history.append({"role": "user", "content": user_input})
+        raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7)
+        mid_vars_item.append({"key":"总结查询到的日程", "input_text": history, "output_text": raw_content})
+        return raw_content, mid_vars_item
 
     def get_real_time_schedule(self, **kwds):
         """查询用户实时日程
@@ -233,17 +258,14 @@ class taskSchedulaManager:
         assert kwds.get("customId"), KeyError("customId is required")
 
         url = self.api_config["ai_backend"] + "/alg-api/schedule/query"
-        payload = {
-            "orgCode": kwds.get("orgCode"),
-            "customId": kwds.get("customId")
-        }
+        payload = {"orgCode": kwds.get("orgCode"),"customId": kwds.get("customId")}
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
-        if resp_js['code'] == 200:
-            data = resp_js['data']
-            return [{"task": i['taskName'], "time": i['cronDate']} for i in data]
-        else:
-            return [{"task": "开会", "time": "2023-10-31 17:00:00"}]
+        data = resp_js['data']
+        ret = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
+        set_str = set([json.dumps(i, ensure_ascii=False) for i in ret])
+        ret = [json.loads(i) for i in set_str]
+        return ret
     
     def _run(self, messages: List[Dict], **kwds):
         """对话过程以messages形式利用历史信息
