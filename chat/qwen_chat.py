@@ -274,6 +274,14 @@ class Chat:
             if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
                 out_text = {'end':True,'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'usr_query_intent':intent}
+            elif intent in ['BMI']:
+                if not kwargs.get('userInfo', {}).get('askHeight', '') or not
+                not kwargs.get('userInfo', {}).get('askWeight', ''):
+                    out_text = {'end':True,'message':'',
+                        'intentCode':'BMI', 'usr_query_intent':intent}
+                else:
+                    output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent in ['food_rec']:
                 if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                     out_text = {'end':True,'message':'',
