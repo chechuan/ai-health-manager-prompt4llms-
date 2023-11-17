@@ -140,7 +140,7 @@ class promptEngine:
         assert isinstance(character, str)
         assert self.prompt_meta_data['character'].get(character), "character not found."
         c_item = self.prompt_meta_data['character'][character]
-        prompt = "下面是对于你所扮演的角色的一些定义:\n"
+        prompt = ""
         if c_item.get('name', None):
             prompt += f"请你扮演一个经验丰富的{c_item['name']},"
         if c_item.get('description', None):
@@ -151,7 +151,7 @@ class promptEngine:
         if c_item.get('duty', None):
             prompt += f"以下是对你职责的要求:\n{c_item['duty']}\n\n"
         if c_item.get('constraint', None):
-            prompt += f"下面是一些注意事项:\n{c_item['constraint']}"
+            prompt += f"请注意:\n{c_item['constraint']}\n"
         return prompt
     
     def __join_event(self, event: str, **kwds):
@@ -167,29 +167,41 @@ class promptEngine:
         assert isinstance(event, str)
         assert self.prompt_meta_data['event'].get(event), "event not found."
         e_item = self.prompt_meta_data['event'][event]
-        prompt = "下面是你所处场景的描述:\n"
+        prompt = ""
         if e_item.get('event', None):
             name = e_item['event'].replace('_', '')
             prompt += f"\n对于{name}场景,请你结合以下信息与用户沟通:\n"
         if e_item.get('process', None):
             prompt += f"{e_item['process']}\n"
         if e_item.get('constraint'):
-            prompt += f"\n下面是场景中的一些注意事项:\n{e_item['constraint']}"
+            prompt += f"\n注意事项:\n{e_item['constraint']}"
         return prompt
 
     def _call(self, *args, **kwds):
         """拼接角色事件知识
         """
+        
         sys_prompt = kwds.get("sys_prompt", None)
         if sys_prompt and "角色" in sys_prompt or "医生" in sys_prompt or "患者" in sys_prompt:
             return kwds.get("sys_prompt")
-        prompt = ""
-        bm = args[0]
-        if bm.character:
-            prompt += self.__join_character(bm.character, **kwds)
-        if bm.event:
-            prompt += self.__join_event(bm.event, **kwds)
-        return prompt
+        else:
+            default_prompt = ("请你扮演一个经验丰富的医生助手,帮助医生处理日常诊疗和非诊疗的事务性工作,以下是一些对你的要求:\n"
+                          "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
+                          "2. 得到答案后根据患者症状，推断用户可能患有的疾病，逐步询问患者疾病初诊、鉴别诊断、确诊需要的其他信息, 如家族史、既往史、检查结果等信息\n"
+                          "3. 最终给出初步诊断结果，给出可能性最高的几种诊断，并按照可能性排序\n"
+                          "4. 用户不喜欢擅自帮他做任何决定，所有外部行为必须询问用户进行二次确认\n"
+                          "5. 可以适当忽略与本次对话无关的历史信息,以解决当前问题为主\n"
+                          "6. 请严格按照上述流程返回Action Input的内容，不要自由发挥\n")
+            # 调试阶段未命中给出的辅助诊断的prompt先试用此前给的默认的辅助诊断的prompt保证效果
+            return default_prompt
+            # 调试出稳定的sys_prompt后补充到数据库中,再读取数据拼接
+            prompt = ""
+            bm = args[0]
+            if bm.character:
+                prompt += self.__join_character(bm.character, **kwds)
+            if bm.event:
+                prompt += self.__join_event(bm.event, **kwds)
+            return prompt
 
 
 if __name__ == "__main__":

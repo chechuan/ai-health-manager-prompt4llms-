@@ -246,7 +246,7 @@ class Chat:
         # 自动判断话题结束
         if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
             sub_history = [history[-1]]
-            out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode, mid_vars, **kwargs)
+            out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode=intentCode, mid_vars=mid_vars, **kwargs)
         else:
             logger.debug(f"Last history: {out_history[-1]}")
             tool_name = out_history[-1]['function_call']['name']
@@ -273,6 +273,7 @@ class Chat:
         3. 模型生成结果
         """
         # 中间变量存储本轮交互所有过程信息
+        mid_vars = kwargs.get('mid_vars', [])
         finish_flag = False
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")

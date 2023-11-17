@@ -65,8 +65,7 @@ def create_app():
                                             param.get('intentCode','default_code'), 
                                             customId=customId,
                                             orgCode=orgCode, 
-                                            streaming=param.get('streaming',
-                                                True),
+                                            streaming=param.get('streaming', True),
                                             userInfo=userInfo
                                             )
         except AssertionError as err:
