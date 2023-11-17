@@ -77,6 +77,51 @@ def create_app():
             result = make_result(msg=repr(err), items=param)
         finally:
             return Response(decorate(result), mimetype='text/event-stream')
+    
+    @app.route('/chat_gen', methods=['post'])
+    def get_chat_gen():
+        global chat
+        try:
+            param = accept_param()
+            task = param.get('task', 'chat')
+            customId = param.get('customId', '')
+            orgCode = param.get('orgCode', '')
+            userInfo = param.get('promptParam', {}) 
+            if task == 'chat':
+                result = chat.chat_gen(param.get('history',[]),
+                                            param.get('prompt',''),
+                                            param.get('intentCode','default_code'), 
+                                            customId=customId,
+                                            orgCode=orgCode, 
+                                            streaming=param.get('streaming', True),
+                                            userInfo=userInfo
+                                            )
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+        finally:
+            return Response(decorate(result), mimetype='text/event-stream')
+        
+    @app.route('/intent/query', methods=['post'])
+    def intent_query():
+        global chat
+        try:
+            param = accept_param()
+            if task == 'chat':
+                result = chat.intent_query(param.get('history',[]),streaming=param.get('streaming', True))
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+        finally:
+            return Response(decorate(result), mimetype='text/event-stream')
         
     @app.route('/chat/complete', methods=['post'])
     def _get_chat_complete():

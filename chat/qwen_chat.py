@@ -260,6 +260,80 @@ class Chat:
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
         return out_text, mid_vars
+    
+    def intent_query(self, history, **kwargs):
+        mid_vars = kwargs.get('mid_vars', [])
+        intent = get_intent(self.cls_intent(history, mid_vars))
+        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+                out_text = {'end':True,'message':get_doc_role(intent),
+                        'intentCode':intent, 'processCode':'trans_back'}
+        elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
+            out_text = {'end':True,'message':'',
+                        'intentCode':intent, 'processCode':'aiui'}
+        else:
+            out_text = {'end':True,'message':'',
+                        'intentCode':intent, 'processCode':'alg'}
+        yield out_text
+        
+    def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
+        """
+        ## 多轮交互流程
+        1. 定义先验信息变量,拼装对应prompt
+        2. 准备模型输入messages
+        3. 模型生成结果
+        """
+        mid_vars = kwargs.get('mid_vars', [])
+        if history:
+            logger.debug(f"Last input: {history[-1]['content']}")
+        if intentCode in useinfo_intent_code_list:
+            out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
+        elif intentCode in []:  #到点提示
+            out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
+        elif intentCode in ['BMI']:
+            if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
+                out_text = {'end':True,'message':'','intentCode':'BMI', 'usr_query_intent':intent}
+            else:
+                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+        elif intentCode in ['food_rec']:
+            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
+                out_text = {'end':True,'message':'', 'intentCode':'food_rec', 'usr_query_intent':intent}
+            else:
+                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+        elif intentCode in ['sport_rec']:
+            if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
+                out_text = {'end':True,'message':'', 'intentCode':'sport_rec', 'usr_query_intent':intent}
+            else:
+                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+        elif intentCode == "schedule_manager":
+            his = self.history_compose(history)
+            output_text, mid_vars_item = self.tsm._run(his, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+            for item in mid_vars_item:
+                self.update_mid_vars(mid_vars, **item)
+        elif intentCode == "auxiliary_diagnosis":
+            out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, 
+                                                                intent=intent, 
+                                                                sys_prompt=sys_prompt, 
+                                                                mid_vars=mid_vars, 
+                                                                intentCode=intentCode,
+                                                                **kwargs)
+        else:
+            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+            
+        if kwargs.get("streaming"):
+            # 直接返回字符串模式
+            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+            yield out_text
+        else:
+            # 保留完整的历史内容
+            yield out_text, mid_vars
+        
+        
+        
 
     def run_prediction(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """主要业务流程
