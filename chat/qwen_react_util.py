@@ -9,12 +9,6 @@
 #
 
 import json
-import os
-
-import json5
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers.generation import GenerationConfig
 
 from chat.plugin_util import funcCall
 
@@ -59,33 +53,33 @@ Question: {query}"""
 fun_call = funcCall()
 
 
-def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
-    #chat_history = [(x['user'], x['bot']) for x in history]
+# def llm_with_plugin(history, model, tokenizer, list_of_plugin_info=()):
+#     #chat_history = [(x['user'], x['bot']) for x in history]
 
-    # 需要让模型进行续写的初始文本
-    planning_prompt = build_input_text(history, list_of_plugin_info)
+#     # 需要让模型进行续写的初始文本
+#     planning_prompt = build_input_text(history, list_of_plugin_info)
 
-    text = ''
-    while True:
-        output = text_completion(model, tokenizer, planning_prompt + text, stop_words=['Observation:', 'Observation:\n'])
-        action, action_input, output = parse_latest_plugin_call(output)
-        if action:  # 需要调用插件
-            if action == 'chat_with_user':
-                text += json5.loads(action_input)[list(json5.loads(action_input).keys())[0]]
-                break
-            # action、action_input 分别为需要调用的插件代号、输入参数
-            # observation是插件返回的结果，为字符串
-            observation = call_plugin(action, action_input)
-            output += f'\nObservation: {observation}\nThought:'
-            text += output
-        else:  # 生成结束，并且不再需要调用插件
-            text += output
-            break
+#     text = ''
+#     while True:
+#         output = text_completion(model, tokenizer, planning_prompt + text, stop_words=['Observation:', 'Observation:\n'])
+#         action, action_input, output = parse_latest_plugin_call(output)
+#         if action:  # 需要调用插件
+#             if action == 'chat_with_user':
+#                 text += json5.loads(action_input)[list(json5.loads(action_input).keys())[0]]
+#                 break
+#             # action、action_input 分别为需要调用的插件代号、输入参数
+#             # observation是插件返回的结果，为字符串
+#             observation = call_plugin(action, action_input)
+#             output += f'\nObservation: {observation}\nThought:'
+#             text += output
+#         else:  # 生成结束，并且不再需要调用插件
+#             text += output
+#             break
 
-    new_history = []
-    new_history.extend(history)
-    new_history.append({'user': history[-1][0], 'bot': text})
-    return text, new_history
+#     new_history = []
+#     new_history.extend(history)
+#     new_history.append({'user': history[-1][0], 'bot': text})
+#     return text, new_history
 
 
 # 将对话历史、插件信息聚合成一段初始文本
@@ -135,25 +129,25 @@ def build_input_text(chat_history, list_of_plugin_info) -> str:
     return prompt
 
 
-def text_completion(model, tokenizer, input_text: str, stop_words) -> str:  # 作为一个文本续写模型来使用
-    im_end = '<|im_end|>'
-    if im_end not in stop_words:
-        stop_words = stop_words + [im_end]
-    stop_words_ids = [tokenizer.encode(w) for w in stop_words]
+# def text_completion(model, tokenizer, input_text: str, stop_words) -> str:  # 作为一个文本续写模型来使用
+#     im_end = '<|im_end|>'
+#     if im_end not in stop_words:
+#         stop_words = stop_words + [im_end]
+#     stop_words_ids = [tokenizer.encode(w) for w in stop_words]
 
-    # TODO: 增加流式输出的样例实现
-    input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
-    output = model.generate(input_ids, max_new_tokens=400, stop_words_ids=stop_words_ids)
-    output = output.tolist()[0]
-    output = tokenizer.decode(output, errors="ignore")
-    assert output.startswith(input_text)
-    output = output[len(input_text) :].replace('<|endoftext|>', '').replace(im_end, '')
+#     # TODO: 增加流式输出的样例实现
+#     input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
+#     output = model.generate(input_ids, max_new_tokens=400, stop_words_ids=stop_words_ids)
+#     output = output.tolist()[0]
+#     output = tokenizer.decode(output, errors="ignore")
+#     assert output.startswith(input_text)
+#     output = output[len(input_text) :].replace('<|endoftext|>', '').replace(im_end, '')
 
-    for stop_str in stop_words:
-        idx = output.find(stop_str)
-        if idx != -1:
-            output = output[: idx + len(stop_str)]
-    return output  # 续写 input_text 的结果，不包含 input_text 的内容
+#     for stop_str in stop_words:
+#         idx = output.find(stop_str)
+#         if idx != -1:
+#             output = output[: idx + len(stop_str)]
+#     return output  # 续写 input_text 的结果，不包含 input_text 的内容
 
 
 def parse_latest_plugin_call(text):
@@ -181,28 +175,28 @@ def parse_latest_plugin_call(text):
 #   插件的返回结果，需要是字符串。
 #   即使原本是 JSON 输出，也请 json.dumps(..., ensure_ascii=False) 成字符串。
 #
-def call_plugin(plugin_name: str, plugin_args: str) -> str:
-    #
-    # 请开发者自行完善这部分内容。这里的参考实现仅是 demo 用途，非生产用途。
-    #
-    print('##plugin_name: ' + plugin_name)
-    if plugin_name == 'google_search':
-        # 使用 SerpAPI 需要在这里填入您的 SERPAPI_API_KEY！
-        os.environ["SERPAPI_API_KEY"] = os.getenv("SERPAPI_API_KEY", default='')
-        from langchain import SerpAPIWrapper
+# def call_plugin(plugin_name: str, plugin_args: str) -> str:
+#     #
+#     # 请开发者自行完善这部分内容。这里的参考实现仅是 demo 用途，非生产用途。
+#     #
+#     print('##plugin_name: ' + plugin_name)
+#     if plugin_name == 'google_search':
+#         # 使用 SerpAPI 需要在这里填入您的 SERPAPI_API_KEY！
+#         os.environ["SERPAPI_API_KEY"] = os.getenv("SERPAPI_API_KEY", default='')
+#         from langchain import SerpAPIWrapper
 
-        return SerpAPIWrapper().run(json5.loads(plugin_args)['search_query'])
-    elif plugin_name == 'image_gen':
-        import urllib.parse
+#         return SerpAPIWrapper().run(json5.loads(plugin_args)['search_query'])
+#     elif plugin_name == 'image_gen':
+#         import urllib.parse
 
-        prompt = json5.loads(plugin_args)["prompt"]
-        prompt = urllib.parse.quote(prompt)
-        return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
-    elif plugin_name == 'llm_with_documents"':
-        gen_args = {"name":"llm_with_documents", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
-        return func_call._call(gen_args, verbose=True)
-    elif plugin_name == 'llm_with_search_engine':
-        gen_args = {"name":"llm_with_search_engine", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
-        return func_call._call(gen_args, verbose=True)
+#         prompt = json5.loads(plugin_args)["prompt"]
+#         prompt = urllib.parse.quote(prompt)
+#         return json.dumps({'image_url': f'https://image.pollinations.ai/prompt/{prompt}'}, ensure_ascii=False)
+#     elif plugin_name == 'llm_with_documents"':
+#         gen_args = {"name":"llm_with_documents", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
+#         return func_call._call(gen_args, verbose=True)
+#     elif plugin_name == 'llm_with_search_engine':
+#         gen_args = {"name":"llm_with_search_engine", "arguments": f"{'query': {json5.loads(plugin_args)['query']}}"}
+#         return func_call._call(gen_args, verbose=True)
 
         

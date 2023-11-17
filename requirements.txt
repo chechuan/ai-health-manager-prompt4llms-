@@ -5,3 +5,7 @@ openai
 langchain
 SQLAlchemy==1.4.50
 json5
+loguru
+pandas
+fastapi
+pymysql

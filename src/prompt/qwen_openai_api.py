@@ -5,21 +5,11 @@
 
 import copy
 import json
-import re
 import sys
-import time
 from datetime import datetime
-# from argparse import ArgumentParser
-# from contextlib import asynccontextmanager
-from typing import Dict, List, Literal, Optional, Union
+from typing import Dict, List
 
-import torch
-# import uvicorn
 from fastapi import FastAPI, HTTPException
-
-# from fastapi.middleware.cors import CORSMiddleware
-# from pydantic import BaseModel, Field
-# from sse_starlette.sse import EventSourceResponse
 
 sys.path.append(".")
 from config.constrant_for_task_schedule import REACT_INSTRUCTION, TOOL_DESC
@@ -235,31 +225,31 @@ def parse_response(response):
 
 
 # completion mode, not chat mode
-def text_complete_last_message(history, stop_words_ids, gen_kwargs):
-    im_start = "<|im_start|>"
-    im_end = "<|im_end|>"
-    prompt = f"{im_start}system\nYou are a helpful assistant.{im_end}"
-    for i, (query, response) in enumerate(history):
-        query = query.lstrip("\n").rstrip()
-        response = response.lstrip("\n").rstrip()
-        prompt += f"\n{im_start}user\n{query}{im_end}"
-        prompt += f"\n{im_start}assistant\n{response}{im_end}"
-    prompt = prompt[: -len(im_end)]
+# def text_complete_last_message(history, stop_words_ids, gen_kwargs):
+#     im_start = "<|im_start|>"
+#     im_end = "<|im_end|>"
+#     prompt = f"{im_start}system\nYou are a helpful assistant.{im_end}"
+#     for i, (query, response) in enumerate(history):
+#         query = query.lstrip("\n").rstrip()
+#         response = response.lstrip("\n").rstrip()
+#         prompt += f"\n{im_start}user\n{query}{im_end}"
+#         prompt += f"\n{im_start}assistant\n{response}{im_end}"
+#     prompt = prompt[: -len(im_end)]
 
-    _stop_words_ids = [tokenizer.encode(im_end)]
-    if stop_words_ids:
-        for s in stop_words_ids:
-            _stop_words_ids.append(s)
-    stop_words_ids = _stop_words_ids
+#     _stop_words_ids = [tokenizer.encode(im_end)]
+#     if stop_words_ids:
+#         for s in stop_words_ids:
+#             _stop_words_ids.append(s)
+#     stop_words_ids = _stop_words_ids
 
-    input_ids = torch.tensor([tokenizer.encode(prompt)]).to(model.device)
-    output = model.generate(input_ids, stop_words_ids=stop_words_ids, **gen_kwargs).tolist()[0]
-    output = tokenizer.decode(output, errors="ignore")
-    assert output.startswith(prompt)
-    output = output[len(prompt) :]
-    output = trim_stop_words(output, ["<|endoftext|>", im_end])
-    print(f"<completion>\n{prompt}\n<!-- *** -->\n{output}\n</completion>")
-    return output
+#     input_ids = torch.tensor([tokenizer.encode(prompt)]).to(model.device)
+#     output = model.generate(input_ids, stop_words_ids=stop_words_ids, **gen_kwargs).tolist()[0]
+#     output = tokenizer.decode(output, errors="ignore")
+#     assert output.startswith(prompt)
+#     output = output[len(prompt) :]
+#     output = trim_stop_words(output, ["<|endoftext|>", im_end])
+#     print(f"<completion>\n{prompt}\n<!-- *** -->\n{output}\n</completion>")
+#     return output
 
 def compose_history(history):
     # im_start = "<|im_start|>"
