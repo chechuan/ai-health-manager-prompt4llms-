@@ -5,7 +5,6 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
-import copy
 import json
 import sys
 from pathlib import Path
@@ -51,7 +50,7 @@ class Chat:
         self.mysql_conn = MysqlConnector(**mysql_config)
         self.req_prompt_data_from_mysql()
         
-        self.promptEngine = promptEngine()
+        self.promptEngine = promptEngine(self.prompt_meta_data)
         self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
@@ -60,15 +59,19 @@ class Chat:
     def req_prompt_data_from_mysql(self) -> Dict:
         """从mysql中请求prompt meta data
         """
-        def filter_format(obj):
+        def filter_format(obj, splited=False):
             obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
             obj_rev = json.loads(obj_str)
+            if splited:
+                for obj_rev_item in obj_rev:
+                    if obj_rev_item.get('event'):
+                        obj_rev_item['event'] = obj_rev_item['event'].split("\n")
             return obj_rev
         self.prompt_meta_data = {}
         prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
         prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
         prompt_tool = self.mysql_conn.query("select * from ai_prompt_tool")
-        prompt_character = filter_format(prompt_character)
+        prompt_character = filter_format(prompt_character, splited=True)
         prompt_event = filter_format(prompt_event)
         prompt_tool = filter_format(prompt_tool)
         self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
@@ -89,8 +92,8 @@ class Chat:
             return '直接回复用户问题'
         else:
             return '直接回复用户问题'
-
-    def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
+    
+    def compose_prompt(self, query: str = "", history=[]):
         """调用模型生成答案,解析ReAct生成的结果
         """
         if not query:
@@ -105,27 +108,30 @@ class Chat:
                     query += f"\nAction Input: {msg['content']}"
                 else:
                     query += f"\nObservation: {msg['content']}"
-        # 利用Though防止生成无关信息
-        query += "\nThought: "
-        model_output = chat_qwen(query, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
-        model_output = "Thought: " + model_output
-        self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复", input_text=query, output_text=model_output, model="Qwen-14B-Chat")
+        return query
 
-        if kwargs.get("verbose"):
-            logger.debug(f"Generate Prompt - length:{len(query)}\n{query}")
-            logger.debug(f"Model Output - length:{len(model_output)}\n{model_output}")
+    def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
+        """调用模型生成答案,解析ReAct生成的结果
+        """
+        prompt = self.compose_prompt(query, history)
+        # 利用Though防止生成无关信息
+        prompt += "\nThought: "
+        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = "Thought: " + model_output
+        self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        logger.debug(f"辅助诊断 Gen Output - {model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
-            query = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
+            prompt = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
                     "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
                     "2. 不要重复输出相同的内容,否则你将受到非常严重的惩罚\n" + \
                     "3. 语义相似的可以合并重新规划语言\n" + \
                     "4. 直接输出结果\n\n输入:\n" + \
                     model_output + "\n输出:\n"
-            logger.debug('generate model input: ' + query)
-            model_output = chat_qwen(query, repetition_penalty=1.3, max_tokens=max_tokens)
-            self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复 改写修正", input_text=query, output_text=model_output, model="Qwen-14B-Chat")
+            logger.debug('ReAct regenerate input: ' + prompt)
+            model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
+            self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         out_text = list(out_text)
@@ -136,41 +142,9 @@ class Chat:
         history.append({
             "role": "assistant", 
             "content": out_text[2], 
-            "function_call": {
-                "name": out_text[1],
-                "arguments": out_text[0]
-                }
+            "function_call": {"name": out_text[1],"arguments": out_text[0]}
             })
         return history
-
-    def get_qwen_history(self, history):
-        hs = []
-        hcnt = {}
-        for cnt in history:
-            if len(hcnt.keys()) == 2:
-                hs.append(hcnt)
-                hcnt = {}
-            if cnt['role'] == '1' or cnt['role'] == '0':
-                if 'user' in hcnt.keys():
-                    hcnt['bot'] = ''
-                    hs.append(hcnt)
-                    hcnt = {}
-                hcnt['user'] = cnt['content']
-            else:
-                if 'bot' in hcnt.keys():
-                    hcnt['user'] = ''
-                    hs.append(hcnt)
-                    hcnt = {}
-                hcnt['bot'] = cnt['content']
-        if hcnt:
-            if 'user' in hcnt.keys():
-                hcnt['bot'] = ''
-            else:
-                hcnt['user'] = ''
-            hs.append(hcnt)
-            hcnt = {}
-        hs = [(x['user'], x['bot']) for x in hs]
-        return hs
     
     def compose_input_history(self, history, external_information, **kwargs):
         """拼装sys_prompt里
@@ -242,12 +216,46 @@ class Chat:
             model_output = model_output[2:].strip()
         return {'end':True, 'message':model_output, 'intentCode':intentCode}
 
-    def run_prediction(self, 
-                       history, 
-                       sys_prompt: str = TOOL_CHOOSE_PROMPT, 
-                       intentCode=None,
-                       mid_vars=[],
-                       **kwargs):
+    def __call_run_prediction__(self, *args, **kwargs):
+        # try:
+        #     out_text, mid_vars = next(self.run_prediction(sub_history, sys_prompt, intentCode, mid_vars, **kwargs))
+        # except StopIteration as e:
+        #     ...
+        try:
+            logger.debug("话题结束，重启流程")
+            out_text, mid_vars = next(self.run_prediction(*args, **kwargs))
+        except StopIteration as e:
+            ...
+        finally:
+            return out_text, mid_vars
+    
+    def chat_auxiliary_diagnosis(self, intent="auxiliary_diagnosis", sys_prompt="", mid_vars=[], **kwargs):
+        """辅助诊断子流程
+        """
+        ext_info_args = baseVarsForPromptEngine()
+        prompt = self.promptEngine._call(ext_info_args, sys_prompt=sys_prompt)
+        input_history = self.compose_input_history(history, prompt, **kwargs)
+        out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
+
+        # 自动判断话题结束
+        if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
+            sub_history = [history[-1]]
+            out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode, mid_vars, **kwargs)
+        else:
+            logger.debug(f"Last history: {out_history[-1]}")
+            tool_name = out_history[-1]['function_call']['name']
+            output_text = out_history[-1]['content']
+        
+            if tool_name == '进一步询问用户的情况':
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+            elif tool_name == '直接回复用户问题':
+                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode, 'usr_query_intent':intent}
+            elif tool_name == '调用外部知识库':
+                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+        return out_text, mid_vars
+
+    def run_prediction(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """主要业务流程
         1. 处理传入intentCode的特殊逻辑,直接返回
         2. 使用config.constrant.INTENT_PROMPT进行意图识别
@@ -276,22 +284,19 @@ class Chat:
                         'intentCode':'doc_role', 'usr_query_intent':intent}
             elif intent in ['BMI']:
                 if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
-                    out_text = {'end':True,'message':'',
-                        'intentCode':'BMI', 'usr_query_intent':intent}
+                    out_text = {'end':True,'message':'','intentCode':'BMI', 'usr_query_intent':intent}
                 else:
                     output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                     out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent in ['food_rec']:
                 if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                    out_text = {'end':True,'message':'',
-                        'intentCode':'food_rec', 'usr_query_intent':intent}
+                    out_text = {'end':True,'message':'', 'intentCode':'food_rec', 'usr_query_intent':intent}
                 else:
                     output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                     out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
             elif intent in ['sport_rec']:
                 if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
-                    out_text = {'end':True,'message':'',
-                        'intentCode':'sport_rec', 'usr_query_intent':intent}
+                    out_text = {'end':True,'message':'', 'intentCode':'sport_rec', 'usr_query_intent':intent}
                 else:
                     output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                     out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
@@ -301,37 +306,11 @@ class Chat:
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
                 for item in mid_vars_item:
                     self.update_mid_vars(mid_vars, **item)
-            elif intent == "other":
+            elif intent == "auxiliary_diagnosis":
+                out_text, mid_vars = self.chat_auxiliary_diagnosis(intent=intent, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
+            else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            else:
-                ext_info_args = baseVarsForPromptEngine(prompt_meta_data=self.prompt_meta_data)
-                external_information = self.promptEngine._call(ext_info_args, concat_keyword=",")
-                input_history = self.compose_input_history(history, external_information, **kwargs)
-                out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
-
-                # 自动判断话题结束
-                if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
-                    sub_history = [history[-1]]
-                    try:
-                        out_text, mid_vars = next(self.run_prediction(sub_history, sys_prompt, intentCode, mid_vars, **kwargs))
-                    except StopIteration as e:
-                        ...
-                else:
-                    logger.debug(f"Last history: {out_history[-1]}")
-                    tool_name = out_history[-1]['function_call']['name']
-                    output_text = out_history[-1]['content']
-                
-                    if tool_name == '进一步询问用户的情况':
-                        out_text = {'end':True, 'message':output_text,
-                                'intentCode':intentCode, 'usr_query_intent':intent}
-                    elif tool_name == '直接回复用户问题':
-                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),
-                                    'intentCode':intentCode, 'usr_query_intent':intent}
-                    elif tool_name == '调用外部知识库':
-                        gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                        out_text = {'end':True, 'message':output_text,
-                                'intentCode':intentCode, 'usr_query_intent':intent}
             
         if kwargs.get("streaming"):
             # 直接返回字符串模式
@@ -343,24 +322,25 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    # debug_text = "我最近早上头疼，谁帮我看一下啊"
-    # debug_text = "明天下午开会，记得提醒我"
-    # debug_text = "我对辣椒过敏"
-    # debug_text = "明天早上6点半提醒我做饭"
-    # debug_text = "查一下我最近日程"
-    # debug_text = "肚子疼"
-    # history = [{"role": "0", "content": init_intput}]
-    # history = [{'msgId': '6132829035', 'role': '1', 'content': debug_text, 'sendTime': '2023-11-06 14:40:11'}]
-    ori_input_param = testParam.param_debug202311161408
-
+    ori_input_param = testParam.param_bug116_1
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.run_prediction(history=history, sys_prompt=prompt, verbose=True, intentCode=intentCode, customId=customId, orgCode=orgCode))
+    out_text, mid_vars = next(chat.run_prediction(history=history, 
+                                                  sys_prompt=prompt, 
+                                                  verbose=True, 
+                                                  intentCode=intentCode, 
+                                                  customId=customId, 
+                                                  orgCode=orgCode))
     while True:
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.run_prediction(history=history, sys_prompt=prompt, verbose=True, intentCode=intentCode, customId=customId, orgCode=orgCode))
+        out_text, mid_vars = next(chat.run_prediction(history=history, 
+                                                      sys_prompt=prompt, 
+                                                      verbose=True, 
+                                                      intentCode=intentCode, 
+                                                      customId=customId, 
+                                                      orgCode=orgCode))
