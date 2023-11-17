@@ -229,7 +229,7 @@ class Chat:
         finally:
             return out_text, mid_vars
     
-    def chat_auxiliary_diagnosis(self, intent="auxiliary_diagnosis", sys_prompt="", mid_vars=[], **kwargs):
+    def chat_auxiliary_diagnosis(self, history=[], intent="auxiliary_diagnosis", sys_prompt="", mid_vars=[], **kwargs):
         """辅助诊断子流程
         """
         ext_info_args = baseVarsForPromptEngine()
@@ -307,7 +307,7 @@ class Chat:
                 for item in mid_vars_item:
                     self.update_mid_vars(mid_vars, **item)
             elif intent == "auxiliary_diagnosis":
-                out_text, mid_vars = self.chat_auxiliary_diagnosis(intent=intent, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
+                out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, intent=intent, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
@@ -322,7 +322,7 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    ori_input_param = testParam.param_bug116_1
+    ori_input_param = testParam.param_202311171118
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
