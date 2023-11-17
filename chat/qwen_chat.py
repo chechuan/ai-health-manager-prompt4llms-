@@ -118,9 +118,8 @@ class Chat:
         prompt += "\nThought: "
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
-        self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-        logger.debug(f"Generate Prompt - length:{len(prompt)}\n{prompt}")
-        logger.debug(f"Model Output - length:{len(model_output)}\n{model_output}")
+        self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        logger.debug(f"辅助诊断 Gen Output - {model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
@@ -132,7 +131,7 @@ class Chat:
                     model_output + "\n输出:\n"
             logger.debug('ReAct regenerate input: ' + prompt)
             model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
-            self.update_mid_vars(kwargs.get("mid_vars"), key="ReAct回复 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+            self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         out_text = list(out_text)
@@ -143,10 +142,7 @@ class Chat:
         history.append({
             "role": "assistant", 
             "content": out_text[2], 
-            "function_call": {
-                "name": out_text[1],
-                "arguments": out_text[0]
-                }
+            "function_call": {"name": out_text[1],"arguments": out_text[0]}
             })
         return history
     
@@ -232,7 +228,32 @@ class Chat:
             ...
         finally:
             return out_text, mid_vars
+    
+    def chat_auxiliary_diagnosis(self, intent="auxiliary_diagnosis", sys_prompt="", mid_vars=[], **kwargs):
+        """辅助诊断子流程
+        """
+        ext_info_args = baseVarsForPromptEngine()
+        prompt = self.promptEngine._call(ext_info_args, sys_prompt=sys_prompt)
+        input_history = self.compose_input_history(history, prompt, **kwargs)
+        out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
+
+        # 自动判断话题结束
+        if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
+            sub_history = [history[-1]]
+            out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode, mid_vars, **kwargs)
+        else:
+            logger.debug(f"Last history: {out_history[-1]}")
+            tool_name = out_history[-1]['function_call']['name']
+            output_text = out_history[-1]['content']
         
+            if tool_name == '进一步询问用户的情况':
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+            elif tool_name == '直接回复用户问题':
+                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode, 'usr_query_intent':intent}
+            elif tool_name == '调用外部知识库':
+                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+        return out_text, mid_vars
 
     def run_prediction(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """主要业务流程
@@ -286,27 +307,7 @@ class Chat:
                 for item in mid_vars_item:
                     self.update_mid_vars(mid_vars, **item)
             elif intent == "auxiliary_diagnosis":
-                ext_info_args = baseVarsForPromptEngine()
-                prompt = self.promptEngine._call(ext_info_args)
-                input_history = self.compose_input_history(history, prompt, **kwargs)
-                out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
-
-                # 自动判断话题结束
-                if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
-                    sub_history = [history[-1]]
-                    out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode, mid_vars, **kwargs)
-                else:
-                    logger.debug(f"Last history: {out_history[-1]}")
-                    tool_name = out_history[-1]['function_call']['name']
-                    output_text = out_history[-1]['content']
-                
-                    if tool_name == '进一步询问用户的情况':
-                        out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
-                    elif tool_name == '直接回复用户问题':
-                        out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode, 'usr_query_intent':intent}
-                    elif tool_name == '调用外部知识库':
-                        gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                        out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text, mid_vars = self.chat_auxiliary_diagnosis(intent=intent, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}

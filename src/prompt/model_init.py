@@ -13,7 +13,7 @@ import openai
 import yaml
 from pydantic import BaseModel, Field
 
-from src.prompt.qwen_generation_utils import make_context
+from src.utils.Logger import logger
 
 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
 openai.api_base = api_config['llm'] + "/v1"
@@ -53,6 +53,7 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
     model = kwargs.get("model", "Qwen-14B-Chat")
     do_sample = kwargs.get("do_sample", True)
 
+    t_st = time.time()
     if not history:
         completion = openai.Completion.create(
             model=model,
@@ -78,6 +79,12 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
             do_sample=do_sample
         )
         ret = completion['choices'][0]['message']['content'].strip()
+    time_cost = round(time.time() - t_st, 1)
+    logger.info(f"Gen counts," + 
+                f"prompt_tokens:{completion['usage']['prompt_tokens']}," + 
+                f"completion_tokens:{completion['usage']['completion_tokens']}," + 
+                f"total_tokens:{completion['usage']['total_tokens']},"
+                f"cost: {time_cost}s")
     return ret
 
 #def truncat_history(history):

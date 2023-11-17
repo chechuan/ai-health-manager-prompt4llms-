@@ -24,6 +24,7 @@ TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 
 
 TOOL_CHOOSE_PROMPT = """你是智能健康管家，可以根据用户的对话内容，从工具列表中选择对应工具完成用户的任务。
+{external_information}
 
 现提供以下工具:
 - 调用外部知识库: 允许你在自身能力无法结局当前问题时调用外部知识库获取更专业的知识解决问题，提供帮助
@@ -41,8 +42,6 @@ Observation: 工具返回的内容
 Action: 前置话题可以终结了,调用结束话题工具
 Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容
 
-# 参考背景信息
-{external_information}
 Begins!
 """
 

@@ -180,6 +180,8 @@ class promptEngine:
     def _call(self, *args, **kwds):
         """拼接角色事件知识
         """
+        if kwds.get("sys_prompt"):
+            return kwds.get("sys_prompt")
         prompt = ""
         bm = args[0]
         if bm.character:
