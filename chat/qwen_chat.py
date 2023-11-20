@@ -300,6 +300,7 @@ class Chat:
         3. 模型生成结果
         """
         mid_vars = kwargs.get('mid_vars', [])
+        intent = get_intent(self.cls_intent(history, mid_vars))
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
