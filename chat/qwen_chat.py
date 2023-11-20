@@ -93,29 +93,46 @@ class Chat:
         else:
             return '直接回复用户问题'
     
+    # def compose_prompt(self, query: str = "", history=[]):
+    #     """调用模型生成答案,解析ReAct生成的结果
+    #     """
+    #     if not query:
+    #         query = history[0]['content']
+    #         for i in range(len(history[1:])):
+    #             i += 1
+    #             msg = history[i]
+    #             if i == 1 and msg['role'] == "user":
+    #                 query += f"\nQuestion: {msg['content']}"
+    #             elif msg['role'] == "assistant":
+    #                 query += f"\nAction: 进一步询问用户的情况"
+    #                 query += f"\nAction Input: {msg['content']}"
+    #             else:
+    #                 query += f"\nObservation: {msg['content']}"
+    #     return query
+
     def compose_prompt(self, query: str = "", history=[]):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        if not query:
-            query = history[0]['content']
-            for i in range(len(history[1:])):
-                i += 1
-                msg = history[i]
-                if i == 1 and msg['role'] == "user":
-                    query += f"\nQuestion: {msg['content']}"
-                elif msg['role'] == "assistant":
-                    query += f"\nAction: 进一步询问用户的情况"
-                    query += f"\nAction Input: {msg['content']}"
+        prompt = ""
+        h_l = len(history)
+        for midx in range(h_l):
+            msg = history[midx]
+            if  msg['role'] == "system":
+                prompt += msg['content']
+                prompt += "\n\n历史记录如下:\n"
+            else:
+                if midx != h_l-1:
+                    prompt += f"{msg['role']}: {msg['content']}\n"
                 else:
-                    query += f"\nObservation: {msg['content']}"
-        return query
+                    prompt += f"\nQuestion: {msg['content']}\n"
+        return prompt    
 
     def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
         prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
-        prompt += "\nThought: "
+        prompt += "Thought: "
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -408,7 +425,7 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    ori_input_param = testParam.param_202311171118
+    ori_input_param = testParam.param_bug_med_20231120_1402
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
