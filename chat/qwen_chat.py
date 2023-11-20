@@ -265,15 +265,15 @@ class Chat:
         mid_vars = kwargs.get('mid_vars', [])
         intent = get_intent(self.cls_intent(history, mid_vars))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'end':True,'message':get_doc_role(intent),
+                out_text = {'message':get_doc_role(intent),
                         'intentCode':intent, 'processCode':'trans_back'}
         elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
-            out_text = {'end':True,'message':'',
+            out_text = {'message':'',
                         'intentCode':intent, 'processCode':'aiui'}
         else:
-            out_text = {'end':True,'message':'',
+            out_text = {'message':'',
                         'intentCode':intent, 'processCode':'alg'}
-        yield out_text
+        return out_text
         
     def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """

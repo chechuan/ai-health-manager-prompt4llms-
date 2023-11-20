@@ -111,8 +111,7 @@ def create_app():
         global chat
         try:
             param = accept_param()
-            if task == 'chat':
-                result = chat.intent_query(param.get('history',[]),streaming=param.get('streaming', True))
+            result = chat.intent_query(param.get('history',[]))
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
@@ -121,7 +120,9 @@ def create_app():
             logger.error(traceback.format_exc())
             result = make_result(msg=repr(err), items=param)
         finally:
-            return Response(decorate(result), mimetype='text/event-stream')
+            #return Response(decorate(result), mimetype='text/event-stream')
+            return Response(json.dumps(result, ensure_ascii=False),
+                    content_type='application/json')
         
     @app.route('/chat/complete', methods=['post'])
     def _get_chat_complete():
