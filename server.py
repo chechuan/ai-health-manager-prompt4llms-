@@ -140,7 +140,8 @@ def create_app():
                                                 customId=customId, 
                                                 orgCode=orgCode, 
                                                 mid_vars = [],
-                                                streaming=False)
+                                                streaming=False,
+                                                use_sys_prompt=True)
                 out_text, mid_vars = next(generator)
                 del out_text['end']
                 result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})

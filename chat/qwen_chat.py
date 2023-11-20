@@ -256,7 +256,7 @@ class Chat:
         """辅助诊断子流程
         """
         ext_info_args = baseVarsForPromptEngine()
-        prompt = self.promptEngine._call(ext_info_args, sys_prompt=sys_prompt)
+        prompt = self.promptEngine._call(ext_info_args, sys_prompt=sys_prompt, **kwargs)
         input_history = self.compose_input_history(history, prompt, **kwargs)
         out_history = self.chat_react(history=input_history, verbose=kwargs.get('verbose', False), mid_vars=mid_vars)
 
@@ -349,9 +349,6 @@ class Chat:
         else:
             # 保留完整的历史内容
             yield out_text, mid_vars
-        
-        
-        
 
     def run_prediction(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """主要业务流程
@@ -426,7 +423,7 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    ori_input_param = testParam.param_bug_med_20231120_1402
+    ori_input_param = testParam.param_bug_test_20231120_1719
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']

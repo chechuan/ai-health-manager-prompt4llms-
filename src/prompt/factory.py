@@ -182,8 +182,8 @@ class promptEngine:
         """
         
         sys_prompt = kwds.get("sys_prompt", None)
-        if sys_prompt and "角色" in sys_prompt or "医生" in sys_prompt or "患者" in sys_prompt:
-            return kwds.get("sys_prompt")
+        if kwds.get('use_sys_prompt') and sys_prompt:
+            return sys_prompt
         else:
             default_prompt = ("请你扮演一个经验丰富的医生助手,帮助医生处理日常诊疗和非诊疗的事务性工作,以下是一些对你的要求:\n"
                           "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
