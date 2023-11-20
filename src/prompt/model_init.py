@@ -19,7 +19,16 @@ api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=
 openai.api_base = api_config['llm'] + "/v1"
 openai.api_key = "EMPTY"
 
-def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
+def chat_qwen(query: str = "", 
+              history: List[Dict] = [], 
+              temperature=0.5,
+              top_k=0,
+              top_p=0.5,
+              repetition_penalty=1.1,
+              max_tokens=512,
+              model="Qwen-14B-Chat",
+              do_sample=True,
+              **kwargs):
     """chat with qwen api which is serve at http://10.228.67.99:26921
     
     List options
@@ -45,14 +54,6 @@ def chat_qwen(query: str = "", history: List[Dict] = [], **kwargs):
         do_sample (bool, optional, defaults to True)
             Whether or not to use sampling ; use greedy decoding otherwise.
     """
-    top_k = kwargs.get("top_k", 0)
-    top_p = kwargs.get("top_p", 0.5)
-    repetition_penalty = kwargs.get("repetition_penalty", 1.1)
-    temperature = kwargs.get("temperature", 0.5)
-    max_tokens = kwargs.get("max_tokens", 512)
-    model = kwargs.get("model", "Qwen-14B-Chat")
-    do_sample = kwargs.get("do_sample", True)
-
     t_st = time.time()
     if not history:
         completion = openai.Completion.create(
