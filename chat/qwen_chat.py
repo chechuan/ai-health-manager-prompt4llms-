@@ -97,23 +97,6 @@ class Chat:
             return '直接回复用户问题'
         else:
             return '直接回复用户问题'
-    
-    # def compose_prompt(self, query: str = "", history=[]):
-    #     """调用模型生成答案,解析ReAct生成的结果
-    #     """
-    #     if not query:
-    #         query = history[0]['content']
-    #         for i in range(len(history[1:])):
-    #             i += 1
-    #             msg = history[i]
-    #             if i == 1 and msg['role'] == "user":
-    #                 query += f"\nQuestion: {msg['content']}"
-    #             elif msg['role'] == "assistant":
-    #                 query += f"\nAction: 进一步询问用户的情况"
-    #                 query += f"\nAction Input: {msg['content']}"
-    #             else:
-    #                 query += f"\nObservation: {msg['content']}"
-    #     return query
 
     def compose_prompt(self, query: str = "", history=[]):
         """调用模型生成答案,解析ReAct生成的结果
@@ -243,14 +226,7 @@ class Chat:
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             content = self.chatter_gaily(history, mid_vars)
-            # his =[{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-            # his = ' '.join([h['role']+':'+h['content'] for h in his])
-            # query = default_prompt + his + ' user:'
-            # # print('输入为：' + oo)
-            # oo = chat_qwen(query, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200)
-            # self.update_mid_vars(mid_vars, key="获取用户信息 02", input_text=query, output_text=oo, model="Qwen-14B-Chat")
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
-        
         return {'end':True, 'message':content, 'intentCode':intentCode}
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
@@ -263,13 +239,10 @@ class Chat:
         return {'end':True, 'message':model_output, 'intentCode':intentCode}
 
     def __call_run_prediction__(self, *args, **kwargs):
-        # try:
-        #     out_text, mid_vars = next(self.run_prediction(sub_history, sys_prompt, intentCode, mid_vars, **kwargs))
-        # except StopIteration as e:
-        #     ...
         try:
-            logger.debug("话题结束，重启流程")
-            out_text, mid_vars = next(self.run_prediction(*args, **kwargs))
+            remid_content = "话题结束，重启流程"
+            logger.debug(f"{remid_content}")
+            out_text, mid_vars = next(self.chat_gen(*args, **kwargs))
         except StopIteration as e:
             ...
         finally:
@@ -296,6 +269,9 @@ class Chat:
             logger.debug(f"Last history: {out_history[-1]}")
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
+            thought = out_history[-1]['function_call']['arguments']
+            # yield {'end': False, 'message': tool_name, "type": "Tool"}
+            # yield {'end': False, 'message': thought, "type": "Thought"}
         
             if tool_name == '进一步询问用户的情况':
                 out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
@@ -305,21 +281,29 @@ class Chat:
                 # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
                 out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
+            else:
+                logger.exception(out_history)
         return out_text, mid_vars
     
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
         intent = get_intent(self.cls_intent(history, mid_vars))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'message':get_doc_role(intent),
-                        'intentCode':intent, 'processCode':'trans_back'}
+                out_text = {'message':get_doc_role(intent), 'intentCode':intent, 'processCode':'trans_back'}
         elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
-            out_text = {'message':'',
-                        'intentCode':intent, 'processCode':'aiui'}
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui'}
         else:
-            out_text = {'message':'',
-                        'intentCode':intent, 'processCode':'alg'}
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg'}
         return out_text
+    
+    def fetch_intent_code(self):
+        """返回所有的intentCode"""
+        intent_code_map = {
+            "get_userInfo_msg": useinfo_intent_code_list,
+            "get_reminder_tips": tips_intent_code_list,
+            "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'auxiliary_diagnosis', "other"]
+        }
+        return intent_code_map
         
     def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """
@@ -327,8 +311,17 @@ class Chat:
         1. 定义先验信息变量,拼装对应prompt
         2. 准备模型输入messages
         3. 模型生成结果
+
+        - Args
+            
+            history (List[Dict[str, str]]) required 
+                对话历史信息
+            mid_vars (List[Dict])
+                中间变量
+            intentCode (str)
+                意图编码,直接根据传入的intentCode进入对应的处理子流程
         """
-        logger.debug('chat_gen输入的intentCode为: ' + intentCode)
+        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")
     
@@ -336,7 +329,7 @@ class Chat:
         
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-        elif intentCode in tips_intent_code_list:  #到点提示
+        elif intentCode in tips_intent_code_list: 
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
@@ -351,7 +344,9 @@ class Chat:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['sport_rec']:
-            if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
+            if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') 
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') 
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', '')):
                 out_text = {'end':True,'message':'', 'intentCode':'sport_rec'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
@@ -380,77 +375,6 @@ class Chat:
             # 保留完整的历史内容
             yield out_text, mid_vars
 
-    def run_prediction(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
-        """主要业务流程
-        1. 处理传入intentCode的特殊逻辑,直接返回
-        2. 使用config.constrant.INTENT_PROMPT进行意图识别
-        2. 不同意图进入不同的处理流程
-
-        ## 多轮交互流程
-        1. 定义先验信息变量,拼装对应prompt
-        2. 准备模型输入messages
-        3. 模型生成结果
-        """
-        # 中间变量存储本轮交互所有过程信息
-        mid_vars = kwargs.get('mid_vars', [])
-        finish_flag = False
-        if history:
-            logger.debug(f"Last input: {history[-1]['content']}")
-        if intentCode in useinfo_intent_code_list:
-            out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-            finish_flag = True
-        elif intentCode != 'default_code':
-            out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
-            finish_flag = True
-
-        if not finish_flag:
-            intent = get_intent(self.cls_intent(history, mid_vars))
-            if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'end':True,'message':get_doc_role(intent),
-                        'intentCode':'doc_role', 'usr_query_intent':intent}
-            elif intent in ['BMI']:
-                if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
-                    out_text = {'end':True,'message':'','intentCode':'BMI', 'usr_query_intent':intent}
-                else:
-                    output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            elif intent in ['food_rec']:
-                if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                    out_text = {'end':True,'message':'', 'intentCode':'food_rec', 'usr_query_intent':intent}
-                else:
-                    output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            elif intent in ['sport_rec']:
-                if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
-                    out_text = {'end':True,'message':'', 'intentCode':'sport_rec', 'usr_query_intent':intent}
-                else:
-                    output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                    out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            elif intent == "schedule_manager":
-                his = self.history_compose(history)
-                output_text, mid_vars_item = self.tsm._run(his, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-                for item in mid_vars_item:
-                    self.update_mid_vars(mid_vars, **item)
-            elif intent == "auxiliary_diagnosis":
-                out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, 
-                                                                   intent=intent, 
-                                                                   sys_prompt=sys_prompt, 
-                                                                   mid_vars=mid_vars, 
-                                                                   intentCode=intentCode,
-                                                                   **kwargs)
-            else:
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
-            
-        if kwargs.get("streaming"):
-            # 直接返回字符串模式
-            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-            yield out_text
-        else:
-            # 保留完整的历史内容
-            yield out_text, mid_vars
-
 if __name__ == '__main__':
     chat = Chat()
     ori_input_param = testParam.param_bug_schedular_202311201817
@@ -459,17 +383,17 @@ if __name__ == '__main__':
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.run_prediction(history=history, 
-                                                  sys_prompt=prompt, 
-                                                  verbose=True, 
-                                                  intentCode=intentCode, 
-                                                  customId=customId, 
-                                                  orgCode=orgCode))
+    out_text, mid_vars = next(chat.chat_gen(history=history, 
+                                            sys_prompt=prompt, 
+                                            verbose=True, 
+                                            intentCode=intentCode, 
+                                            customId=customId, 
+                                            orgCode=orgCode))
     while True:
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.run_prediction(history=history, 
+        out_text, mid_vars = next(chat.chat_gen(history=history, 
                                                       sys_prompt=prompt, 
                                                       verbose=True, 
                                                       intentCode=intentCode, 
