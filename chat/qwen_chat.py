@@ -181,6 +181,22 @@ class Chat:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, **kwargs})
         return mid_vars
+    
+    def get_parent_intent_name(self, text):
+        if '五师' in text:
+            return '呼叫五师'
+        elif '音频' in text:
+            return '音频播放'
+        elif '生活' in text:
+            return '生活工具查询'
+        elif '辅助诊断':
+            return '辅助诊断'
+        elif '饮食咨询':
+            return '饮食咨询'
+        elif '运动咨询':
+            return '运动咨询'
+        else:
+            return '其它'
 
     def cls_intent(self, history, mid_vars):
         """意图识别
@@ -194,6 +210,13 @@ class Chat:
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
+        parant_intent = self.get_parent_intent_name(text)
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
+            sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+            prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+            intentIdx = generate_text.find("\nIntent: ") + 9
+            text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
     
