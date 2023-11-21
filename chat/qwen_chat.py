@@ -270,20 +270,41 @@ class Chat:
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
             thought = out_history[-1]['function_call']['arguments']
-            # yield {'end': False, 'message': tool_name, "type": "Tool"}
-            # yield {'end': False, 'message': thought, "type": "Thought"}
+            yield {'end': False, 'message': tool_name, "type": "Tool"}, mid_vars
+            yield {'end': False, 'message': thought, "type": "Thought"}, mid_vars
         
             if tool_name == '进一步询问用户的情况':
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
+                out_text = {
+                    'end':True, 
+                    'message':output_text,
+                    'intentCode':intentCode,
+                    'type': 'Result'
+                }
             elif tool_name == '直接回复用户问题':
-                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode}
+                out_text = {
+                    'end':True, 
+                    'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),
+                    'intentCode':intentCode,
+                    'type': 'Result'
+                }
             elif tool_name == '调用外部知识库':
                 # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
+                out_text = {
+                    'end':True, 
+                    'message':output_text,
+                    'intentCode':intentCode, 
+                    "type": "Result"
+                }
             else:
+                out_text = {
+                    'end':True, 
+                    'message':output_text,
+                    'intentCode':intentCode, 
+                    "type": "Result"
+                }
                 logger.exception(out_history)
-        return out_text, mid_vars
+        yield out_text, mid_vars
     
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
@@ -304,7 +325,24 @@ class Chat:
             "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'auxiliary_diagnosis', "other"]
         }
         return intent_code_map
-        
+    
+    def yield_result(self, *args, **kwargs):
+        """处理最终的输出
+        """
+        _iterable = self.chat_gen(*args, **kwargs)
+        while True:
+            try:
+                out_text, mid_vars = next(_iterable)
+                if kwargs.get("streaming"):
+                    # 直接返回字符串模式
+                    logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                    yield out_text
+                else:
+                    # 保留完整的历史内容
+                    yield out_text, mid_vars
+            except StopIteration as err:
+                break
+
     def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """
         ## 多轮交互流程
@@ -358,22 +396,17 @@ class Chat:
             for item in mid_vars_item:
                 self.update_mid_vars(mid_vars, **item)
         elif intentCode == "auxiliary_diagnosis":
-            out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, 
-                                                                intentCode=intentCode, 
-                                                                sys_prompt=sys_prompt, 
-                                                                mid_vars=mid_vars, 
-                                                                **kwargs)
+            _iterable = self.chat_auxiliary_diagnosis(history=history, intentCode=intentCode, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
+            while True:
+                out_text, mid_vars = next(_iterable)
+                if not out_text.get('end', False):
+                    yield out_text, mid_vars
+                else:
+                    break
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-            
-        if kwargs.get("streaming"):
-            # 直接返回字符串模式
-            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-            yield out_text
-        else:
-            # 保留完整的历史内容
-            yield out_text, mid_vars
+        yield out_text, mid_vars
 
 if __name__ == '__main__':
     chat = Chat()

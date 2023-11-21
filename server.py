@@ -127,19 +127,29 @@ def create_app():
     def _chat_complete():
         """demo,主要用于展示返回的中间变量
         """
+        def format_sse(data: str, event=None) -> str:
+            msg = 'data: {}\n\n'.format(data)
+            if event is not None:
+                msg = 'event: {}\n{}'.format(event, msg)
+            return msg    
+
+        def decorate(generator):
+            try:
+                for out_text, mid_vars in generator:
+                    # del out_text['end']
+                    item={'mid_vars':mid_vars, **out_text}
+                    yield format_sse(json.dumps(item, ensure_ascii=False), 'delta')
+            except Exception as err:
+                logger.exception(err)
         global chat
         try:
             param = accept_param()
             task = param.get('task', 'chat')
             if task == 'chat':
-                generator = chat.chat_gen(sys_prompt=param.get('prompt'),
-                                          mid_vars = [],
-                                          streaming=False,
-                                          use_sys_prompt=True,
-                                          **param)
-                out_text, mid_vars = next(generator)
-                del out_text['end']
-                result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})
+                result = chat.yield_result(sys_prompt=param.get('prompt'), mid_vars = [], streaming=False, use_sys_prompt=True, **param)
+                # out_text, mid_vars = next(generator)
+                # del out_text['end']
+                # result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
@@ -147,13 +157,15 @@ def create_app():
             logger.exception(err)
             result = make_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(json.dumps(result, ensure_ascii=False), content_type="application/json")
+            return Response(decorate(result), mimetype='text/event-stream')
+            # return Response(json.dumps(result, ensure_ascii=False), content_type="application/json")
         
     @app.route('/test_generator', methods=['get'])
     def _test_generator():
         """测试生成器
         """
         def func():
+
             yield json.dumps({"end": False, "num": "1"})
             yield json.dumps({"end": False, "num": "2"})
         generator = func()
