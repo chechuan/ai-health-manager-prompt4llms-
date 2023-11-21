@@ -277,10 +277,9 @@ class Chat:
     
     def chat_auxiliary_diagnosis(self, 
                                  history=[], 
-                                 intent="auxiliary_diagnosis", 
+                                 intentCode="auxiliary_diagnosis", 
                                  sys_prompt="", 
                                  mid_vars=[], 
-                                 intentCode="",
                                  **kwargs):
         """辅助诊断子流程
         """
@@ -299,12 +298,13 @@ class Chat:
             output_text = out_history[-1]['content']
         
             if tool_name == '进一步询问用户的情况':
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
             elif tool_name == '直接回复用户问题':
-                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode}
             elif tool_name == '调用外部知识库':
+                # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
         return out_text, mid_vars
     
     def intent_query(self, history, **kwargs):
@@ -329,9 +329,11 @@ class Chat:
         3. 模型生成结果
         """
         logger.debug('chat_gen输入的intentCode为: ' + intentCode)
-        mid_vars = kwargs.get('mid_vars', [])
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")
+    
+        mid_vars = kwargs.get('mid_vars', [])
+        
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
         elif intentCode in tips_intent_code_list:  #到点提示
@@ -362,10 +364,9 @@ class Chat:
                 self.update_mid_vars(mid_vars, **item)
         elif intentCode == "auxiliary_diagnosis":
             out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, 
-                                                                intent=intent, 
+                                                                intentCode=intentCode, 
                                                                 sys_prompt=sys_prompt, 
                                                                 mid_vars=mid_vars, 
-                                                                intentCode=intentCode,
                                                                 **kwargs)
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
