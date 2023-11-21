@@ -42,6 +42,11 @@ useinfo_intent_code_list = [
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
 
+tips_intent_code_list = ['dietary_eva', 'schedule_no', 'measure_bp',
+        'meet_remind', 'medicine_remind', 'dietary_remind', 'sport_remind',
+        'broadcast_bp', 'care_for', 'schedule_qry_up', 'default_clock',
+        'default_reminder', 'broadcast_bp_up']
+
 class Chat:
     def __init__(self, env: str ="local"):
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
@@ -181,6 +186,22 @@ class Chat:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, **kwargs})
         return mid_vars
+    
+    def get_parent_intent_name(self, text):
+        if '五师' in text:
+            return '呼叫五师'
+        elif '音频' in text:
+            return '音频播放'
+        elif '生活' in text:
+            return '生活工具查询'
+        elif '辅助诊断':
+            return '辅助诊断'
+        elif '饮食咨询':
+            return '饮食咨询'
+        elif '运动咨询':
+            return '运动咨询'
+        else:
+            return '其它'
 
     def cls_intent(self, history, mid_vars):
         """意图识别
@@ -194,6 +215,13 @@ class Chat:
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
+        parant_intent = self.get_parent_intent_name(text)
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
+            sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+            prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+            intentIdx = generate_text.find("\nIntent: ") + 9
+            text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
     
@@ -210,6 +238,7 @@ class Chat:
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
         """
+        logger.debug('信息提取prompt为：' + prompt)
         content = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200)
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
@@ -299,13 +328,14 @@ class Chat:
         2. 准备模型输入messages
         3. 模型生成结果
         """
+        logger.debug('chat_gen输入的intentCode为: ' + intentCode)
         mid_vars = kwargs.get('mid_vars', [])
         intent = get_intent(self.cls_intent(history, mid_vars))
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-        elif intentCode in []:  #到点提示
+        elif intentCode in tips_intent_code_list:  #到点提示
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
