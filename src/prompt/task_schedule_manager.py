@@ -21,10 +21,10 @@ from config.constrant import task_schedule_return_demo
 from config.constrant_for_task_schedule import (
     query_schedule_template, task_schedule_parameter_description,
     task_schedule_parameter_description_for_qwen)
-from src.prompt.model_init import ChatCompletionRequest, chat_qwen
+from src.prompt.model_init import ChatCompletionRequest, ChatMessage, chat_qwen
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
-
+from src.utils.module import make_meta_ret
 
 def call_qwen(messages, functions=None):
     model_name = "Qwen-14B-Chat"
@@ -279,17 +279,25 @@ class taskSchedulaManager:
             output (str) 
                 直接输出的文本
         """
+        intentCode = kwds.get("intentCode")
         schedule = self.get_real_time_schedule(**kwds)
         request = ChatCompletionRequest(model="Qwen-14B-Chat", 
                                         functions=task_schedule_parameter_description_for_qwen,
                                         messages=messages,)
-        response, mid_vars_item = create_chat_completion(request, schedule)
-        msg = response.choices[0].message
-        # if kwds.get("verbose"):
-        logger.debug("Thought:" + msg.content)
+        if not intentCode == 'schedule_qry_up':
+            response, mid_vars_item = create_chat_completion(request, schedule)
+            msg = response.choices[0].message
+            # if kwds.get("verbose"):
+            logger.debug("Thought:" + msg.content)
+        else:
+            mid_vars_item = [{"key":"日程管理", "input_text": intentCode, "output_text": "日程查询"}]
+            msg = ChatMessage(role="assistant", content="", function_call={"name": "query_schedule", "arguments": ""})
         if msg.function_call:
             logger.debug(f"call func: {msg.function_call['name']}")
-            logger.debug(f"arguments: {msg.function_call['arguments']}")
+            yield make_meta_ret(end=False, msg=msg.function_call['name'], code=intentCode, type="Tool"), mid_vars_item
+            if msg.function_call['arguments']:
+                logger.debug(f"arguments: {msg.function_call['arguments']}")
+                yield make_meta_ret(end=False, msg=msg.function_call['name'], code=intentCode, type="Thought"), mid_vars_item
         if msg.function_call:
             if msg.function_call['name'] == "ask_for_time":
                 content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content
@@ -306,9 +314,7 @@ class taskSchedulaManager:
                 content, mid_vars_item = self.tool_query_schedule(schedule, mid_vars_item, **kwds)
             else:
                 content = "我不清楚你想做什么,请稍后重试"
-        else:
-            content = "我不清楚你想做什么,请稍后重试"
-        return content, mid_vars_item
+        yield make_meta_ret(end=True, msg=content, code=intentCode, type="Result"), mid_vars_item
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")

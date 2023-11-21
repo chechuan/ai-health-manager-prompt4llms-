@@ -18,6 +18,8 @@ from sqlalchemy import MetaData, Table, create_engine
 
 from src.utils.Logger import logger
 
+def make_meta_ret(end=True, msg="", code=None,type="Result",**kwargs):
+    return {'end':end, 'message':msg,'intentCode':code,'type': type,**kwargs}
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
