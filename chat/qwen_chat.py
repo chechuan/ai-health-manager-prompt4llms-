@@ -286,15 +286,15 @@ class Chat:
             yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
         
             if tool_name == '进一步询问用户的情况':
-                out_text = make_meta_ret(msg=output_text, code=intentCode, msg=output_text)
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
                 out_text = make_meta_ret(msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
             elif tool_name == '调用外部知识库':
                 # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = make_meta_ret(msg=output_text, code=intentCode, msg=output_text)
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
             else:
-                out_text = make_meta_ret(msg=output_text, code=intentCode, msg=output_text)
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
                 logger.exception(out_history)
         yield out_text, mid_vars
     
