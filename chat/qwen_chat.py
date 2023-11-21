@@ -330,7 +330,6 @@ class Chat:
         """
         logger.debug('chat_gen输入的intentCode为: ' + intentCode)
         mid_vars = kwargs.get('mid_vars', [])
-        intent = get_intent(self.cls_intent(history, mid_vars))
         if history:
             logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
@@ -339,26 +338,26 @@ class Chat:
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
-                out_text = {'end':True,'message':'','intentCode':'BMI', 'usr_query_intent':intent}
+                out_text = {'end':True,'message':'','intentCode':'BMI'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                out_text = {'end':True,'message':'', 'intentCode':'food_rec', 'usr_query_intent':intent}
+                out_text = {'end':True,'message':'', 'intentCode':'food_rec'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['sport_rec']:
             if not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', ''):
-                out_text = {'end':True,'message':'', 'intentCode':'sport_rec', 'usr_query_intent':intent}
+                out_text = {'end':True,'message':'', 'intentCode':'sport_rec'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode == "schedule_manager":
             his = self.history_compose(history)
             output_text, mid_vars_item = self.tsm._run(his, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             for item in mid_vars_item:
                 self.update_mid_vars(mid_vars, **item)
         elif intentCode == "auxiliary_diagnosis":
@@ -370,7 +369,7 @@ class Chat:
                                                                 **kwargs)
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode, 'usr_query_intent':intent}
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
             
         if kwargs.get("streaming"):
             # 直接返回字符串模式
