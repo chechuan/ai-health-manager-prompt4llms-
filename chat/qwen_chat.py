@@ -196,9 +196,9 @@ class Chat:
             return '生活工具查询'
         elif '辅助诊断':
             return '辅助诊断'
-        elif '饮食咨询':
+        elif '饮食':
             return '饮食咨询'
-        elif '运动咨询':
+        elif '运动':
             return '运动咨询'
         else:
             return '其它'
