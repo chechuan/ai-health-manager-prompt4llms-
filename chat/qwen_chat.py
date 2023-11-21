@@ -322,6 +322,7 @@ class Chat:
         2. 准备模型输入messages
         3. 模型生成结果
         """
+        logger.debug('chat_gen输入的intentCode为: ' + intentCode)
         mid_vars = kwargs.get('mid_vars', [])
         intent = get_intent(self.cls_intent(history, mid_vars))
         if history:
