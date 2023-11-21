@@ -42,6 +42,11 @@ useinfo_intent_code_list = [
     'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
 ]
 
+tips_intent_code_list = ['dietary_eva', 'schedule_no', 'measure_bp',
+        'meet_remind', 'medicine_remind', 'dietary_remind', 'sport_remind',
+        'broadcast_bp', 'care_for', 'schedule_qry_up', 'default_clock',
+        'default_reminder', 'broadcast_bp_up']
+
 class Chat:
     def __init__(self, env: str ="local"):
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
@@ -233,6 +238,7 @@ class Chat:
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
         """
+        logger.debug('信息提取prompt为：' + prompt)
         content = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200)
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
@@ -329,7 +335,7 @@ class Chat:
             logger.debug(f"Last input: {history[-1]['content']}")
         if intentCode in useinfo_intent_code_list:
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-        elif intentCode in []:  #到点提示
+        elif intentCode in tips_intent_code_list:  #到点提示
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
