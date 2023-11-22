@@ -186,6 +186,23 @@ class Chat:
         else:
             return '其它'
 
+    def cls_intent_verify(self, history, mid_vars, input_prompt)
+        """意图识别
+        """
+        # st_key, ed_key = "<|im_start|>", "<|im_end|>"
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        prompt = input_prompt + "\n\n" + his_prompt + "\nThought: "
+        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                temperature=0.7, do_sample=False)
+        intentIdx = generate_text.find("\nIntent: ") + 9
+        text = generate_text[intentIdx:].split("\n")[0]
+        parant_intent = self.get_parent_intent_name(text)
+        self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
+        return text
+
     def cls_intent(self, history, mid_vars):
         """意图识别
         """
@@ -195,14 +212,16 @@ class Chat:
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
-        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                temperature=0.7, do_sample=False)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
         if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
-            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                    temperature=0.7, do_sample=False)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
@@ -287,13 +306,23 @@ class Chat:
     
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
-        intent = get_intent(self.cls_intent(history, mid_vars))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'message':get_doc_role(intent), 'intentCode':intent, 'processCode':'trans_back'}
-        elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui'}
+        task = kwargs.get('task', '')
+        input_prompt = kwargs.get('prompt', [])
+        if task == 'verify' and input_prompt:
+            intent, desc = get_intent(self.cls_intent(history, mid_vars,
+                input_prompt))
         else:
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg'}
+            intent, desc = get_intent(self.cls_intent(history, mid_vars,
+                input_prompt))
+        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+                out_text = {'message':get_doc_role(intent),
+                        'intentCode':intent, 'processCode':'trans_back',
+                        'intentDesc':desc}
+        elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
+            out_text = {'message':'', 'intentCode':intent,
+                    'processCode':'aiui', 'intentDesc':desc}
+        else:
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         return out_text
     
     def fetch_intent_code(self):
