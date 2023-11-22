@@ -44,37 +44,24 @@ def decorate(generator):
     except Exception as err:
         logger.exception(err)
 
+def format_sse_chat_complete(data: str, event=None) -> str:
+    msg = 'data: {}\n\n'.format(data)
+    if event is not None:
+        msg = 'event: {}\n{}'.format(event, msg)
+    return msg    
+
+def decorate_chat_complete(generator):
+    try:
+        for out_text, mid_vars in generator:
+            # del out_text['end']
+            item={'mid_vars':mid_vars, **out_text}
+            yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
+    except Exception as err:
+        logger.exception(err)
+
 def create_app():
     app = Flask(__name__)
     global chat
-
-    # @app.route('/chat', methods=['post'])
-    # def get_chat_reponse():
-    #     global chat
-    #     try:
-    #         param = accept_param()
-    #         task = param.get('task', 'chat')
-    #         customId = param.get('customId', '')
-    #         orgCode = param.get('orgCode', '')
-    #         userInfo = param.get('promptParam', {}) 
-    #         if task == 'chat':
-    #             result = chat.run_prediction(param.get('history',[]),
-    #                                         param.get('prompt',''),
-    #                                         param.get('intentCode','default_code'), 
-    #                                         customId=customId,
-    #                                         orgCode=orgCode, 
-    #                                         streaming=param.get('streaming', True),
-    #                                         userInfo=userInfo
-    #                                         )
-    #     except AssertionError as err:
-    #         logger.exception(err)
-    #         result = make_result(head=601, msg=repr(err), items=param)
-    #     except Exception as err:
-    #         logger.exception(err)
-    #         logger.error(traceback.format_exc())
-    #         result = make_result(msg=repr(err), items=param)
-    #     finally:
-    #         return Response(decorate(result), mimetype='text/event-stream')
     
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
@@ -82,18 +69,19 @@ def create_app():
         try:
             param = accept_param()
             task = param.get('task', 'chat')
-            customId = param.get('customId', '')
-            orgCode = param.get('orgCode', '')
-            userInfo = param.get('promptParam', {}) 
             if task == 'chat':
-                result = chat.chat_gen(param.get('history',[]),
-                                            param.get('prompt',''),
-                                            param.get('intentCode','default_code'), 
-                                            customId=customId,
-                                            orgCode=orgCode, 
-                                            streaming=param.get('streaming', True),
-                                            userInfo=userInfo
-                                            )
+                result = chat.yield_result(sys_prompt=param.get('prompt'), 
+                                           return_mid_vars=False, 
+                                           use_sys_prompt=False, 
+                                           **param)
+                # result = chat.chat_gen(param.get('history',[]),
+                #                         param.get('prompt',''),
+                #                         param.get('intentCode','default_code'), 
+                #                         customId=customId,
+                #                         orgCode=orgCode, 
+                #                         streaming=param.get('streaming', True),
+                #                         userInfo=userInfo
+                #                         )
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
@@ -103,7 +91,29 @@ def create_app():
             result = make_result(msg=repr(err), items=param)
         finally:
             return Response(decorate(result), mimetype='text/event-stream')
-        
+    
+    @app.route('/chat/complete', methods=['post'])
+    def _chat_complete_stream_midvars():
+        """demo,主要用于展示返回的中间变量
+        """
+        global chat
+        try:
+            param = accept_param()
+            task = param.get('task', 'chat')
+            if task == 'chat':
+                result = chat.yield_result(sys_prompt=param.get('prompt'), 
+                                           mid_vars=[], 
+                                           ret_mid=True, 
+                                           use_sys_prompt=True, 
+                                           **param)
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+        except Exception as err:
+            logger.exception(err)
+            result = make_result(head=600, msg=repr(err), items=param)
+        finally:
+            return Response(decorate_chat_complete(result), mimetype='text/event-stream')
+
     @app.route('/intent/query', methods=['post'])
     def intent_query():
         global chat
@@ -122,54 +132,6 @@ def create_app():
             #return Response(decorate(result), mimetype='text/event-stream')
             return Response(json.dumps(result, ensure_ascii=False),
                     content_type='application/json')
-        
-    @app.route('/chat/complete', methods=['post'])
-    def _chat_complete():
-        """demo,主要用于展示返回的中间变量
-        """
-        def format_sse(data: str, event=None) -> str:
-            msg = 'data: {}\n\n'.format(data)
-            if event is not None:
-                msg = 'event: {}\n{}'.format(event, msg)
-            return msg    
-
-        def decorate(generator):
-            try:
-                for out_text, mid_vars in generator:
-                    # del out_text['end']
-                    item={'mid_vars':mid_vars, **out_text}
-                    yield format_sse(json.dumps(item, ensure_ascii=False), 'delta')
-            except Exception as err:
-                logger.exception(err)
-        global chat
-        try:
-            param = accept_param()
-            task = param.get('task', 'chat')
-            if task == 'chat':
-                result = chat.yield_result(sys_prompt=param.get('prompt'), mid_vars = [], streaming=False, use_sys_prompt=True, **param)
-                # out_text, mid_vars = next(generator)
-                # del out_text['end']
-                # result = make_result(head=200, msg="success", items={'mid_vars':mid_vars, **out_text})
-        except AssertionError as err:
-            logger.exception(err)
-            result = make_result(head=601, msg=repr(err), items=param)
-        except Exception as err:
-            logger.exception(err)
-            result = make_result(head=600, msg=repr(err), items=param)
-        finally:
-            return Response(decorate(result), mimetype='text/event-stream')
-            # return Response(json.dumps(result, ensure_ascii=False), content_type="application/json")
-        
-    @app.route('/test_generator', methods=['get'])
-    def _test_generator():
-        """测试生成器
-        """
-        def func():
-
-            yield json.dumps({"end": False, "num": "1"})
-            yield json.dumps({"end": False, "num": "2"})
-        generator = func()
-        return Response(decorate(generator), mimetype='text/event-stream')
 
     @app.route('/reload_prompt', methods=['get'])
     def _reload_prompt():
@@ -202,6 +164,7 @@ def create_app():
     return app
 
 def server_forever(args):
+
     global app
     # app.run(host=args.ip, port=args.port, debug=True)
     server = pywsgi.WSGIServer((args.ip, args.port), app)

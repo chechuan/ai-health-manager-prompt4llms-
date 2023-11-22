@@ -72,7 +72,6 @@ class Chat:
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
 
-
     def req_prompt_data_from_mysql(self) -> Dict:
         """从mysql中请求prompt meta data
         """
@@ -325,12 +324,12 @@ class Chat:
         while True:
             try:
                 out_text, mid_vars = next(_iterable)
-                if kwargs.get("streaming"):
-                    # 直接返回字符串模式
+                if not out_text.get("type"):
+                    out_text['type'] = "Result"
+                if not kwargs.get("ret_mid"):
                     logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
                     yield out_text
                 else:
-                    # 保留完整的历史内容
                     yield out_text, mid_vars
             except StopIteration as err:
                 break
