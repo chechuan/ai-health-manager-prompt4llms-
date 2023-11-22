@@ -1,0 +1,34 @@
+[
+    {
+        "name_for_human": "知识查询",
+        "name_for_model": "searchKnowledge",
+        "description_for_model": "知识查询工具可以通过查询外部知识库获取专业的关键词相关内容",
+        "parameters": [
+            {
+                "name": "query",
+                "description": "用户的问题",
+                "required": true,
+                "schema": {"type": "str"}
+            }
+        ]
+    },
+    {
+        "name_for_human": "询问用户",
+        "name_for_model": "AskHumanTool",
+        "description_for_model": "询问用户工具用于在当前信息不完整或者需要进一步了解用户情况时,向用户询问",
+        "parameters": [
+            {
+                "name": "query",
+                "description": "要询问用户的问题",
+                "required": true,
+                "schema": {"type": "string"}
+            }
+        ]
+    },
+    {
+        "name_for_human": "话题终结",
+        "name_for_model": "shutDownConv",
+        "description_for_model": "当前用户问题与所描述场景不符,应当使用话题终结工具rollout",
+        "parameters": []
+    }
+]

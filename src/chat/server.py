@@ -5,7 +5,8 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
-
+import sys
+sys.path.append('.')
 import argparse
 import json
 import traceback
@@ -13,9 +14,9 @@ import traceback
 from flask import Flask, Response, request
 from gevent import pywsgi
 
-from chat.qwen_chat import Chat
+from src.chat.pipeline import Conv
 from src.utils.Logger import logger
-from src.utils.module import NpEncoder, clock
+from src.utils.module import NpEncoder
 
 
 def accept_param():
@@ -70,7 +71,7 @@ def create_app():
             param = accept_param()
             task = param.get('task', 'chat')
             if task == 'chat':
-                result = chat.yield_result(sys_prompt=param.get('prompt'), 
+                result = chat.general_yield_result(sys_prompt=param.get('prompt'), 
                                            return_mid_vars=False, 
                                            use_sys_prompt=False, 
                                            **param)
@@ -100,10 +101,10 @@ def create_app():
         try:
             param = accept_param()
             result = chat.general_yield_result(sys_prompt=param.get('prompt'), 
-                                        mid_vars=[], 
-                                        ret_mid=True, 
-                                        use_sys_prompt=True, 
-                                        **param)
+                                                mid_vars=[], 
+                                                ret_mid=True, 
+                                                use_sys_prompt=True, 
+                                                **param)
         except Exception as err:
             logger.exception(err)
             result = make_result(head=600, msg=repr(err), items=param)
@@ -174,6 +175,6 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=6500, help='port')
     args = parser.parse_args()
 
-    chat = Chat(args.env)
+    chat = Conv(args.env)
     app = create_app()
     server_forever(args)

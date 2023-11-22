@@ -33,8 +33,8 @@ TOOL_CHOOSE_PROMPT = """{external_information}
 请遵循以下格式回复:
 Question: 用户的问题
 Thought: 可以适当忽略历史记录中的无关信息,思考针对当前问题应该做什么
-Action: 选择的解决用户当前问题的工具
-Action Input: 对应Action的输入,通常为query,若已满足诊断条件,对Question的总体分析及诊断结果
+Action: 选择解决用户当前问题的工具, should be one of {{tools_name_text}}
+Action Input: 对应Action的输入,若已满足诊断条件,对患者问题的总体分析及诊断结果,格式为一串文本
 Observation: 工具返回的内容
 ...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
 Action: 前置话题可以终结了,调用结束话题工具
