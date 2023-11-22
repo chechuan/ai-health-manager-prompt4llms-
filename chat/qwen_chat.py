@@ -186,7 +186,7 @@ class Chat:
         else:
             return '其它'
 
-    def cls_intent_verify(self, history, mid_vars, input_prompt)
+    def cls_intent_verify(self, history, mid_vars, input_prompt):
         """意图识别
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
