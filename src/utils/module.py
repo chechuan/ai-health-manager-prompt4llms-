@@ -180,6 +180,9 @@ def get_intent(text):
     elif 'BMI' in text:
         code = 'BMI'
         desc = 'BMI'
+    elif '画面' in text:
+        code = 'open_page'
+        desc = '打开功能画面'
     else:
         code = 'other'
         desc = '其它意图'

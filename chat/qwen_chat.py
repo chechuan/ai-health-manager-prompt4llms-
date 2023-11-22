@@ -217,7 +217,7 @@ class Chat:
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
             generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
