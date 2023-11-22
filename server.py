@@ -106,8 +106,6 @@ def create_app():
                                            ret_mid=True, 
                                            use_sys_prompt=True, 
                                            **param)
-            logger.exception(err)
-            result = make_result(head=601, msg=repr(err), items=param)
         except Exception as err:
             logger.exception(err)
             result = make_result(head=600, msg=repr(err), items=param)

@@ -18,7 +18,6 @@ from typing import Dict, List
 from langchain.prompts import PromptTemplate
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from chat.plugin_util import funcCall
-from chat.qwen_react_util import *
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
