@@ -109,8 +109,8 @@ def create_app():
         global chat
         try:
             param = accept_param()
-            item = chat.intent_query(param.get('history',[]), param.get('task',
-                ''), param.get('prompt', ''))
+            item = chat.intent_query(param.get('history',[]), task=param.get('task',
+                ''), prompt=param.get('prompt', ''))
             result = make_result(items=item)
         except AssertionError as err:
             logger.exception(err)
