@@ -341,9 +341,9 @@ class Chat:
                         'intentDesc':desc}
         elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        elif intent in ['open_web_daily_monitor']:
-            out_text = {'message':'', 'intentCode':intent,
-                    'processCode':'trans_back', 'intentDesc':desc}
+        #elif intent in ['open_web_daily_monitor']:
+        #    out_text = {'message':'', 'intentCode':intent,
+        #            'processCode':'trans_back', 'intentDesc':desc}
         elif intent in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                 out_text = {'message':'', 'intentCode':intent,
