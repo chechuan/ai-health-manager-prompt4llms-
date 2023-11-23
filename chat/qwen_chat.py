@@ -327,7 +327,7 @@ class Chat:
                     'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
-        logger.debug('意图识别输出：' + json.dump(out_text, ensure_ascii=False))
+        logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
         return out_text
     
     def fetch_intent_code(self):
