@@ -324,6 +324,22 @@ class Chat:
         elif intent in ['open_web_daily_monitor']:
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['food_rec']:
+            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
+                out_text = {'message':'', 'intentCode':intent,
+                     'processCode':'trans_back', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':'food_rec',
+                        'processCode':'alg', 'intentDesc':desc}
+        elif intent in ['sport_rec']:
+            if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '')
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '')
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', '')):
+                out_text = {'message':'', 'intentCode':intent,
+                     'processCode':'trans_back', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':intent,
+                        'processCode':'alg', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
