@@ -424,7 +424,8 @@ class Chat:
                 out_text = {'end':True,'message':'', 'intentCode':'food_rec'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                out_text = {'end':True, 'message':output_text,
+                        'intentCode':'other'}
         elif intentCode in ['sport_rec']:
             if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') 
                 or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') 
