@@ -465,11 +465,22 @@ class Chat:
                     break
         elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(history, mid_vars, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+            msg = '' if self.get_pageName_code(output_text) != 'other' else output_text
+            out_text = {'end':True, 'message':msg, 'intentCode':intentCode}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         yield out_text, mid_vars
+
+    def get_pageName_code(self, text):
+        if 'bloodPressure' in text:
+            return 'bloodPressure'
+        elif 'add-blood-pressure' in text:
+            return 'add-blood-pressure'
+        elif 'record-list3' in text:
+            return 'record-list3'
+        else:
+            'other'
 
 if __name__ == '__main__':
     chat = Chat()
