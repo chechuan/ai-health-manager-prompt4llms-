@@ -78,7 +78,7 @@ class NpEncoder(json.JSONEncoder):
 def get_intent(text):
     """通过关键词解析意图->code
     """
-    if '饮食' in text and '营养' in text:
+    if '饮食' in text:
         code = 'food_rec'
         desc = '饮食营养'
     elif '运动咨询' in text:
