@@ -186,6 +186,12 @@ def get_intent(text):
     elif '画面' in text:
         code = 'open_web_daily_monitor'
         desc = '打开功能画面'
+    elif '音频' in text:
+        code = 'audio'
+        desc = '音频播放'
+    elif '五师' in text:
+        code = 'wushi'
+        desc = '呼叫五师'
     else:
         code = 'other'
         desc = '其它意图'

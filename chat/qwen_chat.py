@@ -199,7 +199,6 @@ class Chat:
                 temperature=0.7, do_sample=False)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
-        parant_intent = self.get_parent_intent_name(text)
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
 
