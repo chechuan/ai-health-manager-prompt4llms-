@@ -247,6 +247,16 @@ class Chat:
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
+
+    def open_page(self, history, mid_vars, **kwargs):
+        """组装mysql中打开页面对应的prompt
+        """
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process']
+        input_history = [{"role":"system", "content": ext_info}] + input_history
+        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        return content
     
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
@@ -331,9 +341,9 @@ class Chat:
                         'intentDesc':desc}
         elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        elif intent in ['open_web_daily_monitor']:
-            out_text = {'message':'', 'intentCode':intent,
-                    'processCode':'trans_back', 'intentDesc':desc}
+        #elif intent in ['open_web_daily_monitor']:
+        #    out_text = {'message':'', 'intentCode':intent,
+        #            'processCode':'trans_back', 'intentDesc':desc}
         elif intent in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                 out_text = {'message':'', 'intentCode':intent,
@@ -453,6 +463,9 @@ class Chat:
                     yield out_text, mid_vars
                 else:
                     break
+        elif intenCode == "open_web_daily_monitor":
+            output_text = self.open_page(history, mid_vars, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
