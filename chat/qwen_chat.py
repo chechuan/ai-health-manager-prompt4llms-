@@ -212,6 +212,7 @@ class Chat:
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
+        logger.debug('父意图是：' + self.prompt_meta_data['tool']['意图识别']['description'])
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
         intentIdx = generate_text.find("\nIntent: ") + 9
@@ -219,6 +220,7 @@ class Chat:
         parant_intent = self.get_parent_intent_name(text)
         if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+            logger.info('子意图是：' + self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt))
             prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
             generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                     temperature=0.7, do_sample=False)
