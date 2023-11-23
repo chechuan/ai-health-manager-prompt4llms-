@@ -16,15 +16,14 @@ sys.path.append('.')
 from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
-
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from chat.plugin_util import funcCall
-from chat.qwen_react_util import *
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
+from src.utils.module import make_meta_ret
 from src.utils.Logger import logger
 from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock,
                               get_doc_role, get_intent)
@@ -35,17 +34,6 @@ role_map = {
         '2': 'doctor',
         '3': 'assistant'
 }
-
-useinfo_intent_code_list = [
-    'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
-    'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
-    'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
-]
-
-tips_intent_code_list = ['dietary_eva', 'schedule_no', 'measure_bp',
-        'meet_remind', 'medicine_remind', 'dietary_remind', 'sport_remind',
-        'broadcast_bp', 'care_for', 'schedule_qry_up', 'default_clock',
-        'default_reminder', 'broadcast_bp_up']
 
 class Chat:
     def __init__(self, env: str ="local"):
@@ -60,6 +48,28 @@ class Chat:
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
         self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
+        self.__initalize_intent_map__()
+    
+    def __initalize_intent_map__(self):
+        """初始化各类意图map
+        """
+        schedule_manager = ["schedule_qry_up", "schedule_manager"]
+        tips_intent_code_list = [
+            'dietary_eva', 'schedule_no', 'measure_bp',
+            'meet_remind', 'medicine_remind', 'dietary_remind', 'sport_remind',
+            'broadcast_bp', 'care_for', 'default_clock',
+            'default_reminder', 'broadcast_bp_up'
+        ]
+        useinfo_intent_code_list = [
+            'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
+            'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
+            'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
+        ]
+        self.intent_map = {
+            'schedule': {i:1 for i in schedule_manager},
+            'tips': {i:1 for i in tips_intent_code_list},
+            'userinfo': {i:1 for i in useinfo_intent_code_list}
+        }
 
     def req_prompt_data_from_mysql(self) -> Dict:
         """从mysql中请求prompt meta data
@@ -290,20 +300,21 @@ class Chat:
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
             thought = out_history[-1]['function_call']['arguments']
-            # yield {'end': False, 'message': tool_name, "type": "Tool"}
-            # yield {'end': False, 'message': thought, "type": "Thought"}
+            yield make_meta_ret(end=False, msg=tool_name, type="Tool", code=intentCode), mid_vars
+            yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
         
             if tool_name == '进一步询问用户的情况':
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
-                out_text = {'end':True, 'message':output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),'intentCode':intentCode}
+                out_text = make_meta_ret(msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
             elif tool_name == '调用外部知识库':
                 # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = {'end':True, 'message':output_text,'intentCode':intentCode}
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
             else:
+                out_text = make_meta_ret(msg=output_text, code=intentCode)
                 logger.exception(out_history)
-        return out_text, mid_vars
+        yield out_text, mid_vars
     
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
@@ -347,12 +358,31 @@ class Chat:
     def fetch_intent_code(self):
         """返回所有的intentCode"""
         intent_code_map = {
-            "get_userInfo_msg": useinfo_intent_code_list,
-            "get_reminder_tips": tips_intent_code_list,
-            "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'auxiliary_diagnosis', "other"]
+            "get_userInfo_msg": list(self.intent_map['userinfo'].keys()),
+            "get_reminder_tips": list(self.intent_map['tips'].keys()),
+            "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'schedule_qry_up', 'auxiliary_diagnosis', "other"]
         }
         return intent_code_map
-        
+    
+    def yield_result(self, *args, **kwargs):
+        """处理最终的输出
+        """
+        _iterable = self.chat_gen(*args, **kwargs)
+        while True:
+            try:
+                out_text, mid_vars = next(_iterable)
+                if not out_text.get("type"):
+                    out_text['type'] = "Result"
+                if not kwargs.get("ret_mid"):
+                    logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                    yield out_text
+                else:
+                    yield out_text, mid_vars
+            except StopIteration as err:
+                break
+            except Exception as err:
+                logger.exception(err)
+
     def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
         """
         ## 多轮交互流程
@@ -368,6 +398,10 @@ class Chat:
                 中间变量
             intentCode (str)
                 意图编码,直接根据传入的intentCode进入对应的处理子流程
+
+        - Return
+            out_text (Dict[str, str])
+                返回的输出结果
         """
         logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
         if history:
@@ -375,9 +409,9 @@ class Chat:
     
         mid_vars = kwargs.get('mid_vars', [])
         
-        if intentCode in useinfo_intent_code_list:
+        if self.intent_map['userinfo'].get(intentCode):
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-        elif intentCode in tips_intent_code_list: 
+        elif self.intent_map['tips'].get(intentCode): 
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
@@ -399,29 +433,29 @@ class Chat:
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-        elif intentCode == "schedule_manager":
+        elif self.intent_map['schedule'].get(intentCode):
             his = self.history_compose(history)
-            output_text, mid_vars_item = self.tsm._run(his, **kwargs)
-            out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-            for item in mid_vars_item:
-                self.update_mid_vars(mid_vars, **item)
+            _iterable = self.tsm._run(his, intentCode=intentCode, **kwargs)
+            while True:
+                out_text, mid_vars_item = next(_iterable)
+                if not out_text.get('end', False):
+                    yield out_text, mid_vars
+                else:
+                    for item in mid_vars_item:
+                        self.update_mid_vars(mid_vars, **item)
+                    break
         elif intentCode == "auxiliary_diagnosis":
-            out_text, mid_vars = self.chat_auxiliary_diagnosis(history=history, 
-                                                                intentCode=intentCode, 
-                                                                sys_prompt=sys_prompt, 
-                                                                mid_vars=mid_vars, 
-                                                                **kwargs)
+            _iterable = self.chat_auxiliary_diagnosis(history=history, intentCode=intentCode, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
+            while True:
+                out_text, mid_vars = next(_iterable)
+                if not out_text.get('end', False):
+                    yield out_text, mid_vars
+                else:
+                    break
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
-            
-        if kwargs.get("streaming"):
-            # 直接返回字符串模式
-            logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-            yield out_text
-        else:
-            # 保留完整的历史内容
-            yield out_text, mid_vars
+        yield out_text, mid_vars
 
 if __name__ == '__main__':
     chat = Chat()

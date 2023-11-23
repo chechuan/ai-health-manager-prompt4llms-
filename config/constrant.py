@@ -27,14 +27,14 @@ TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 # - 调用外部知识库: 允许你在自身能力无法结局当前问题时调用外部知识库获取更专业的知识解决问题，提供帮助
 # - 直接回复用户问题: 问题过于简单，且无信息缺失，结合历史给出诊断结果
 # - 结束话题: 当前用户问题不属于辅助诊断场景
-
+# Action的输入,通常为一个query,表示要查询或者询问的内容,一次只问一个问题,询问太多会引起用户厌烦
 TOOL_CHOOSE_PROMPT = """{external_information}
 
 请遵循以下格式回复:
 Question: 用户的问题
 Thought: 可以适当忽略历史记录中的无关信息,思考针对当前问题应该做什么
 Action: 选择的解决用户当前问题的工具
-Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容,一次只问一个问题,询问太多会引起用户厌烦
+Action Input: 对应Action的输入,通常为query,若已满足诊断条件,对Question的总体分析及诊断结果
 Observation: 工具返回的内容
 ...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
 Action: 前置话题可以终结了,调用结束话题工具
