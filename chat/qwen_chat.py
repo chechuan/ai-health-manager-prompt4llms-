@@ -320,6 +320,9 @@ class Chat:
         elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'aiui', 'intentDesc':desc}
+        if intent in ['open_web_daily_monitor']:
+            out_text = {'message':'', 'intentCode':intent,
+                    'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         return out_text
