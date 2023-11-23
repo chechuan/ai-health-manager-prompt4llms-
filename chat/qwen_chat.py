@@ -211,8 +211,8 @@ class Chat:
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
-        logger.debug('父意图是：' + self.prompt_meta_data['tool']['意图识别']['description'])
+        prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + his_prompt + "\nThought: "
+        logger.debug('父意图是：' + self.prompt_meta_data['tool']['父意图']['description'])
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
         intentIdx = generate_text.find("\nIntent: ") + 9
