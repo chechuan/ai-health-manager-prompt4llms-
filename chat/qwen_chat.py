@@ -463,7 +463,7 @@ class Chat:
                     yield out_text, mid_vars
                 else:
                     break
-        elif intenCode == "open_web_daily_monitor":
+        elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         else:
