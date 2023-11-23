@@ -102,7 +102,7 @@ def get_intent(text):
     elif '运动师' in text:
         code = 'call_sportMaster'
         desc = '呼叫医师'
-    elif '心理' in text:
+    elif '心理' in text or '情志' in text:
         code = 'call_psychologist'
         desc = '呼叫情志师'
     elif '营养师' in text:
