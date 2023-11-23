@@ -311,7 +311,7 @@ class Chat:
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
         if task == 'verify' and input_prompt:
-            intent, desc = get_intent_verify(self.cls_intent(history, mid_vars,
+            intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars))
