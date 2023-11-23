@@ -81,6 +81,9 @@ def get_intent(text):
     if '饮食' in text:
         code = 'food_rec'
         desc = '饮食营养'
+    elif '医疗' in text:
+        code = 'med_health'
+        desc = '医疗健康'
     elif '运动咨询' in text:
         code = 'sport_rec'
         desc = '运动咨询'
