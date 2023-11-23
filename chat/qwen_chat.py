@@ -341,9 +341,9 @@ class Chat:
                         'intentDesc':desc}
         elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        #elif intent in ['open_web_daily_monitor']:
-        #    out_text = {'message':'', 'intentCode':intent,
-        #            'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['open_web_daily_monitor']:
+            out_text = {'message':'', 'intentCode':intent,
+                    'processCode':'trans_back', 'intentDesc':desc}
         elif intent in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                 out_text = {'message':'', 'intentCode':intent,
@@ -467,7 +467,7 @@ class Chat:
             output_text = self.open_page(history, mid_vars, **kwargs)
             logger.debug('打开页面模型输出：'  + output_text)
             msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
-            out_text = {'end':True, 'message':msg, 'intentCode':intentCode}
+            out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
@@ -481,7 +481,7 @@ class Chat:
         elif 'record-list3' in text:
             return 'record-list3'
         else:
-            'other'
+            return 'other'
 
 if __name__ == '__main__':
     chat = Chat()
