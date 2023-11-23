@@ -177,11 +177,11 @@ class Chat:
             return '音频播放'
         elif '生活' in text:
             return '生活工具查询'
-        elif '辅助诊断':
-            return '辅助诊断'
-        elif '饮食':
+        elif '医疗' in text:
+            return '医疗健康'
+        elif '饮食' in text:
             return '饮食咨询'
-        elif '运动':
+        elif '运动' in text:
             return '运动咨询'
         else:
             return '其它'
