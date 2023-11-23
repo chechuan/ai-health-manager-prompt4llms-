@@ -317,7 +317,7 @@ class Chat:
             intent, desc = get_intent(self.cls_intent(history, mid_vars))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
                 out_text = {'message':get_doc_role(intent),
-                        'intentCode':intent, 'processCode':'trans_back',
+                        'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
         elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
             out_text = {'message':'', 'intentCode':intent,
