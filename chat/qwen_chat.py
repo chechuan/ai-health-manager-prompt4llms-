@@ -315,12 +315,11 @@ class Chat:
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'message':get_doc_role(intent),
+            out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
-            out_text = {'message':'', 'intentCode':intent,
-                    'processCode':'aiui', 'intentDesc':desc}
         elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
         elif intent in ['open_web_daily_monitor']:
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
