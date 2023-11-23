@@ -28,7 +28,14 @@
     {
         "name_for_human": "话题终结",
         "name_for_model": "shutDownConv",
-        "description_for_model": "当前用户问题与所描述场景不符,应当使用话题终结工具rollout",
-        "parameters": []
+        "description_for_model": "当前用户问题与所描述场景不符,应当使用话题终结工具终结话题",
+        "parameters": [
+            {
+                "name": "shutdown",
+                "description": "终结的标志",
+                "required": true,
+                "schema": {"type": "bool"}
+            }
+        ]
     }
 ]

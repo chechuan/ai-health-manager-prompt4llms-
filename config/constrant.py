@@ -170,6 +170,27 @@ Begins!
 class ParamServer:
     @property
     def llm_with_documents(cls):
+        {
+            "query": "你好",
+            "knowledge_base_name": "samples",
+            "top_k": 3,
+            "score_threshold": 1,
+            "history": [
+                {
+                    "role": "user",
+                    "content": "我们来玩成语接龙，我先来，生龙活虎"
+                },
+                {
+                    "role": "assistant",
+                    "content": "虎头虎脑"
+                }
+            ],
+            "stream": False,
+            "model_name": "chatglm2-6b-32k",
+            "temperature": 0.7,
+            "max_tokens": 0,
+            "prompt_name": "default"
+            }
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
@@ -178,7 +199,8 @@ class ParamServer:
             "score_threshold": 0.6,
             "stream": False,
             "temperature": 0.7,
-            "top_k": 3
+            "top_k": 3,
+            "prompt_name": "default"
         }
     
     @property

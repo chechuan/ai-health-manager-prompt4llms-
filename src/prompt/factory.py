@@ -20,69 +20,69 @@ from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
 from src.utils.Logger import logger
 from src.utils.module import MysqlConnector
 
-# class baseVarsForPromptEngine:
-#     """定义外部信息的变量
-#     """
-#     def __init__(self, 
-#                  env: Optional[str] = "居家",
-#                  scene: Optional[str] = "一般用户",
-#                  role: Optional[str] = "健管师",
-#                  role_desc: Optional[str] = "协助医生工作",
-#                  plan: Optional[str] = "辅助诊断",
-#                  prompt_meta_data: Optional[dict] = {}) -> None:
-#         # 环境, options: 居家, 机构, 外出, 开车
-#         self.env = env
-#         # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
-#         self.scene = scene
-#         # 角色, options: 健管师, 医师, 营养师, 运动师, 情志调理师
-#         self.role = role
-#         # 角色任务描述
-#         self.role_desc = role_desc
-#         # 计划, options: 辅助诊断
-#         self.plan = plan
-#         # 外置prompt优先 prompt_meta_data
-#         self.prompt_meta_data = prompt_meta_data
-
-# class promptEngine:
-#     """组装先验知识到INSTRUCTION_TEMPLATE中
-#     """
-#     def __init__(self, prompt_meta_data):
-#         self.prompt_meta_data = prompt_meta_data
-#         self.tpe_env = PromptTemplate(input_variables=["var"], template=TEMPLATE_ENV)
-#         self.tpe_plan = PromptTemplate(input_variables=["var"], template=TEMPLATE_PLAN)
-#         self.tpe_scene = PromptTemplate(input_variables=["var"], template=TEMPLATE_SENCE)
-#         self.tpe_role = PromptTemplate(input_variables=["var"], template=TEMPLATE_ROLE)
-
-#     def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=False, **kwds) -> str:
-#         concat_keyword = kwds.get("concat_keyword", ",") + " "
-#         if prompt:
-#             prompt += concat_keyword
-#         prompt += tpe.format(var=var)
-#         if verbose:
-#             print(prompt)
-#         return prompt
-
-#     def _call(self, *args, **kwds):
-#         """拼接知识体系内容
-#         """
-#         prompt = ""
-#         bm = args[0]
-#         if bm.role:
-#             prompt = self.__concat(prompt, self.tpe_role, bm.role, **kwds)
-#         if bm.scene:
-#             prompt = self.__concat(prompt, self.tpe_scene, bm.scene, **kwds)
-#         if bm.env:
-#             prompt = self.__concat(prompt, self.tpe_env, bm.env, **kwds)
-#         if bm.plan: 
-#             if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
-#                 plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
-#                         args[0].prompt_meta_data['event']['辅助诊断']['process']
-#             else:
-#                 plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
-#             prompt = self.__concat(prompt, self.tpe_plan, plan, **kwds)
-#         return prompt
+class baseVarsForPromptEngine:
+    """定义外部信息的变量
+    """
+    def __init__(self, 
+                 env: Optional[str] = "居家",
+                 scene: Optional[str] = "一般用户",
+                 role: Optional[str] = "健管师",
+                 role_desc: Optional[str] = "协助医生工作",
+                 plan: Optional[str] = "辅助诊断",
+                 prompt_meta_data: Optional[dict] = {}) -> None:
+        # 环境, options: 居家, 机构, 外出, 开车
+        self.env = env
+        # 场景, options: 一般用户, 专业工作人员, 为患者服务的工作人员
+        self.scene = scene
+        # 角色, options: 健管师, 医师, 营养师, 运动师, 情志调理师
+        self.role = role
+        # 角色任务描述
+        self.role_desc = role_desc
+        # 计划, options: 辅助诊断
+        self.plan = plan
+        # 外置prompt优先 prompt_meta_data
+        self.prompt_meta_data = prompt_meta_data
 
 class promptEngine:
+    """组装先验知识到INSTRUCTION_TEMPLATE中
+    """
+    def __init__(self, prompt_meta_data):
+        self.prompt_meta_data = prompt_meta_data
+        self.tpe_env = PromptTemplate(input_variables=["var"], template=TEMPLATE_ENV)
+        self.tpe_plan = PromptTemplate(input_variables=["var"], template=TEMPLATE_PLAN)
+        self.tpe_scene = PromptTemplate(input_variables=["var"], template=TEMPLATE_SENCE)
+        self.tpe_role = PromptTemplate(input_variables=["var"], template=TEMPLATE_ROLE)
+
+    def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=False, **kwds) -> str:
+        concat_keyword = kwds.get("concat_keyword", ",") + " "
+        if prompt:
+            prompt += concat_keyword
+        prompt += tpe.format(var=var)
+        if verbose:
+            print(prompt)
+        return prompt
+
+    def _call(self, *args, **kwds):
+        """拼接知识体系内容
+        """
+        prompt = ""
+        bm = args[0]
+        if bm.role:
+            prompt = self.__concat(prompt, self.tpe_role, bm.role, **kwds)
+        if bm.scene:
+            prompt = self.__concat(prompt, self.tpe_scene, bm.scene, **kwds)
+        if bm.env:
+            prompt = self.__concat(prompt, self.tpe_env, bm.env, **kwds)
+        if bm.plan: 
+            if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
+                plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
+                        args[0].prompt_meta_data['event']['辅助诊断']['process']
+            else:
+                plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
+            prompt = self.__concat(prompt, self.tpe_plan, plan, **kwds)
+        return prompt
+
+class cusPromptEngine:
     """组装先验知识到INSTRUCTION_TEMPLATE中
     """
     def __init__(self, prompt_meta_data=None):
@@ -164,10 +164,10 @@ class promptEngine:
         """拼接角色事件知识
         """
         sys_prompt = kwds.get("sys_prompt", None)
-        intent_code = kwds.get("intentCode")
+        intent_code = kwds.get("intentCode", "chatter_gaily")
         assert self.prompt_meta_data['event'].get(intent_code), f"not support current enevt {intent_code}"
         if kwds.get('use_sys_prompt') and sys_prompt:
-            return sys_prompt
+            pass
         else:
             # default_prompt = ("请你扮演一个经验丰富的医生助手,帮助医生处理日常诊疗和非诊疗的事务性工作,以下是一些对你的要求:\n"
             #               "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
@@ -182,14 +182,20 @@ class promptEngine:
             #               "- 直接回复用户问题: 问题过于简单,且无信息缺失,结合历史信息给出诊断分析或建议,不允许为空\n"
             #               "- 结束话题: 当前用户问题不属于辅助诊断场景\n"
             #               )
-            prompt = ""
+            sys_prompt = ""
             event = self.prompt_meta_data['event'][intent_code]
             character = event['character'] if event.get('character') else None
             if character:
-                prompt += self.__join_character(character, **kwds) + "\n\n"
+                sys_prompt += self.__join_character(character, **kwds) + "\n\n"
             if event:
-                prompt += self.__join_event(event, **kwds)
-            return prompt
+                sys_prompt += self.__join_event(event, **kwds)
+        functions = []
+        tools = self.prompt_meta_data['event'][intent_code]['tool_in_use']
+        if tools:
+            function_names = tools.split("\n")
+            all_funcsets = self.prompt_meta_data['tool']
+            functions = [all_funcsets[name] for name in function_names if all_funcsets.get(name)]
+        return sys_prompt, functions
 
 
 if __name__ == "__main__":

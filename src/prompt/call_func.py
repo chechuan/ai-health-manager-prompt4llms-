@@ -15,7 +15,9 @@ from requests import Session
 
 sys.path.append(str(Path.cwd()))
 
-from config.constrant import PLAN_MAP, ParamServer
+from config.constrant import ParamServer
+from src.utils.Logger import logger
+from src.utils.module import req_prompt_data_from_mysql
 
 
 class funcCall:
@@ -24,35 +26,24 @@ class funcCall:
     api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
     param_server: object = ParamServer()
 
-    def __init__(self) -> None:
-        self.funcmap: Dict[AnyStr, ] = {
-            "chat_with_user": self.call_chat_with_user,
-            "get_plan": self.call_get_plan,
-            "llm_with_graph": self.call_llm_with_graph,
-            "llm_with_documents": self.call_llm_with_documents,
-            "llm_with_search_engine": self.call_llm_with_search_engine
-        }
-    
-    def call_get_plan(self, *args, **kwargs) -> AnyStr:
-        """
-        """
-        plan_key = args[0]['query']
-        ret = PLAN_MAP.get(plan_key)
-        return ret
+    def __init__(self, prompt_meta_data=None, env="local"):
+        self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
+        self.funcmap = {}
+        self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
+        self.register_func("searchKnowledge", self.call_search_knowledge)
 
-    def call_chat_with_user(self, *args, **kwargs) -> AnyStr:
+    def register_func(self, func_name: AnyStr, func_call: Any) -> None:
         """
         """
-        query = args[0]['query']
-        user_input = input(f"Question:{query}\nUser: ")
-        return user_input
+        self.funcmap[func_name] = func_call
+        logger.info(f"register {func_name} success")
 
-    def call_llm_with_documents(self, *args, **kwargs) -> AnyStr:
+    def call_search_knowledge(self, *args, **kwargs) -> AnyStr:
         """
         """
         called_method = "/chat/knowledge_base_chat"
         payload = self.param_server.llm_with_documents
-        payload['query'] = args[0]['query']
+        payload['query'] = args[0]
         response = self.session.post(self.api_config['langchain']+called_method,
                                      json=payload,
                                      headers=self.headers)
@@ -92,17 +83,16 @@ class funcCall:
         ret = res_js['result']
         return ret
 
-    def _call(self, kwargs, verbose=False):
+    def _call(self, verbose=False, **kwargs):
         """"""
-        assert kwargs.get("name")
-        assert kwargs.get("arguments")
-        assert isinstance(eval(kwargs["arguments"]), dict)
-        func_name = kwargs.get("name")
-        arguments = eval(kwargs.get("arguments"))
+        function_call = kwargs['function_call']
+        func_name = function_call["name"]
+        arguments = function_call["arguments"]
+        assert self.funcmap.get(func_name) is not None, "Unregistered function name"
         ret = self.funcmap[func_name](arguments, verbose=verbose)
         return ret
 
 if __name__ == "__main__":
     funcall = funcCall()
-    gen_args = {"name":"llm_with_graph", "arguments": "{'query': '继发性高血压的病因有哪些'}"}
-    funcall._call(gen_args, verbose=True)
+    function_call = {'name': 'searchKnowledge', 'arguments': '后脑勺持续一个月的头疼'}
+    funcall._call(function_call=function_call, verbose=True)

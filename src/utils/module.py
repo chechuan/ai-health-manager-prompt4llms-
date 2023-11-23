@@ -8,6 +8,7 @@ import functools
 import json
 import sys
 import time
+import yaml
 from typing import Tuple
 from urllib import parse
 
@@ -15,8 +16,9 @@ import numpy as np
 import pandas as pd
 import requests
 from sqlalchemy import MetaData, Table, create_engine
-
+from typing import Dict
 from src.utils.Logger import logger
+from pathlib import Path
 
 def make_meta_ret(end=True, msg="", code=None,type="Result",**kwargs):
     return {'end':end, 'message':msg,'intentCode':code,'type': type,**kwargs}
@@ -277,3 +279,36 @@ class MysqlConnector:
         finally:
             self.engine.dispose()
         return res
+
+def req_prompt_data_from_mysql(env) -> Dict:
+    """从mysql中请求prompt meta data
+    """
+    def filter_format(obj, splited=False):
+        obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
+        obj_rev = json.loads(obj_str)
+        if splited:
+            for obj_rev_item in obj_rev:
+                if obj_rev_item.get('event'):
+                    obj_rev_item['event'] = obj_rev_item['event'].split("\n")
+        return obj_rev
+    mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+    mysql_conn = MysqlConnector(**mysql_config)
+    prompt_meta_data = {}
+    prompt_character = mysql_conn.query("select * from ai_prompt_character")
+    prompt_event = mysql_conn.query("select * from ai_prompt_event")
+    prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+    prompt_character = filter_format(prompt_character, splited=True)
+    prompt_event = filter_format(prompt_event)
+    prompt_tool = filter_format(prompt_tool)
+    prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+    prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
+    prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
+    prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
+    for name, func in prompt_meta_data['tool'].items():
+        try:
+            func['params'] = json.loads(func['params']) if func['params'] else func['params']
+        except Exception as e:
+            ...
+    del mysql_conn
+    logger.debug("req prompt meta data from mysql.")
+    return prompt_meta_data

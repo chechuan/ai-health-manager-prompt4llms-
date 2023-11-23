@@ -111,10 +111,10 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     tools_text = []
     for plugin_info in list_of_plugin_info:
         tool = TOOL_DESC.format(
-            name_for_model=plugin_info["name_for_model"],
-            name_for_human=plugin_info["name_for_human"],
-            description_for_model=plugin_info["description_for_model"],
-            parameters=json.dumps(plugin_info["parameters"], ensure_ascii=False),
+            name_for_model=plugin_info["code"],
+            name_for_human=plugin_info["name"],
+            description_for_model=plugin_info["description"],
+            parameters=json.dumps(plugin_info["params"], ensure_ascii=False),
         )
         if plugin_info.get('args_format', 'json') == 'json':
             tool += " Format the arguments as a JSON object."
@@ -126,18 +126,24 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     tools_text = '\n\n'.join(tools_text)
 
     # 候选插件的代号
-    tools_name_text = ', '.join([plugin_info["name_for_model"] for plugin_info in list_of_plugin_info])
+    tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info])
     sys_prompt = sys_prompt.replace("{tools_name_text}", tools_name_text)
-    prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=sys_prompt)
-    for item in chat_history:
-        if item['role'] == "user":
-            prompt_react += f"Question: {item['content']}\n"
-        elif item['role'] == 'function_call':
+    prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=sys_prompt) + "\n\n"
+
+    h_len = len(chat_history)
+    for h_idx in range(h_len):
+        item = chat_history[h_idx]
+        if item.get('function_call'):
+            prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
+            prompt_react += f"Action Input: {item['function_call']['arguments']}\n"
+        elif item['role'] == "user" and h_idx -1 > 0 and chat_history[h_idx-1].get("function_call"):
             prompt_react += f"Observation: {item['content']}\n"
+        elif item['role'] == "user":
+            prompt_react += f"Question: {item['content']}\n"
         elif item['role'] == "assistant":
             prompt_react += "Thought: 我会作答了\n"
-            prompt_react += ""
+            prompt_react += f"Observation: {item['content']}\n"
     return prompt_react
     im_start = '<|im_start|>'
     im_end = '<|im_end|>'
@@ -163,25 +169,25 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     return prompt
 
 
-def text_completion(input_text: str, stop_words) -> str:  # 作为一个文本续写模型来使用
-    im_end = '<|im_end|>'
-    if im_end not in stop_words:
-        stop_words = stop_words + [im_end]
-    stop_words_ids = [tokenizer.encode(w) for w in stop_words]
+# def text_completion(input_text: str, stop_words) -> str:  # 作为一个文本续写模型来使用
+#     im_end = '<|im_end|>'
+#     if im_end not in stop_words:
+#         stop_words = stop_words + [im_end]
+#     stop_words_ids = [tokenizer.encode(w) for w in stop_words]
 
-    # TODO: 增加流式输出的样例实现
-    input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
-    output = model.generate(input_ids, stop_words_ids=stop_words_ids)
-    output = output.tolist()[0]
-    output = tokenizer.decode(output, errors="ignore")
-    assert output.startswith(input_text)
-    output = output[len(input_text) :].replace('<|endoftext|>', '').replace(im_end, '')
+#     # TODO: 增加流式输出的样例实现
+#     input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
+#     output = model.generate(input_ids, stop_words_ids=stop_words_ids)
+#     output = output.tolist()[0]
+#     output = tokenizer.decode(output, errors="ignore")
+#     assert output.startswith(input_text)
+#     output = output[len(input_text) :].replace('<|endoftext|>', '').replace(im_end, '')
 
-    for stop_str in stop_words:
-        idx = output.find(stop_str)
-        if idx != -1:
-            output = output[: idx + len(stop_str)]
-    return output  # 续写 input_text 的结果，不包含 input_text 的内容
+#     for stop_str in stop_words:
+#         idx = output.find(stop_str)
+#         if idx != -1:
+#             output = output[: idx + len(stop_str)]
+#     return output  # 续写 input_text 的结果，不包含 input_text 的内容
 
 
 def parse_latest_plugin_call(text):

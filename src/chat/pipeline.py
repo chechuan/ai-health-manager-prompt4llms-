@@ -17,17 +17,18 @@ from typing import Dict, List
 from requests import Session
 from langchain.prompts import PromptTemplate
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from chat.plugin_util import funcCall
+from src.prompt.call_func import funcCall
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
-from src.prompt.factory import promptEngine
+from src.prompt.factory import cusPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.module import make_meta_ret
 from src.utils.Logger import logger
-from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock,
-                              get_doc_role, get_intent)
-from src.prompt.react_demo import llm_with_plugin
+from src.utils.module import (_parse_latest_plugin_call, clock,
+                              get_doc_role, get_intent, 
+                              req_prompt_data_from_mysql)
+from src.prompt.react_demo import build_input_text
 
 role_map = {
         '0': 'user',
@@ -38,14 +39,11 @@ role_map = {
 
 class Conv:
     def __init__(self, env: str ="local"):
+        self.env = env
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
-        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
-
-        self.mysql_conn = MysqlConnector(**mysql_config)
-        self.req_prompt_data_from_mysql()
-        
-        self.promptEngine = promptEngine(self.prompt_meta_data)
-        self.funcall = funcCall()
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
+        self.promptEngine = cusPromptEngine(self.prompt_meta_data)
+        self.funcall = funcCall(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
         self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
@@ -73,70 +71,37 @@ class Conv:
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
 
-    def req_prompt_data_from_mysql(self) -> Dict:
-        """从mysql中请求prompt meta data
-        """
-        def filter_format(obj, splited=False):
-            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
-            obj_rev = json.loads(obj_str)
-            if splited:
-                for obj_rev_item in obj_rev:
-                    if obj_rev_item.get('event'):
-                        obj_rev_item['event'] = obj_rev_item['event'].split("\n")
-            return obj_rev
-        self.prompt_meta_data = {}
-        prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
-        prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
-        prompt_tool = self.mysql_conn.query("select * from ai_prompt_tool")
-        prompt_character = filter_format(prompt_character, splited=True)
-        prompt_event = filter_format(prompt_event)
-        prompt_tool = filter_format(prompt_tool)
-        self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-        self.prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
-        self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
-        logger.debug("req prompt meta data from mysql.")
-
     @clock
     def reload_prompt(self):
-        self.req_prompt_data_from_mysql()
-    
-    def get_tool_name(self, text):
-        if '外部知识' in text:
-            return '调用外部知识库'
-        elif '询问用户' in text:
-            return '进一步询问用户的情况'
-        elif '直接回复' in text:
-            return '直接回复用户问题'
-        else:
-            return '直接回复用户问题'
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
 
-    def compose_prompt(self, query: str = "", history=[]):
-        """调用模型生成答案,解析ReAct生成的结果
-        """
-        prompt = ""
-        h_l = len(history)
-        for midx in range(h_l):
-            msg = history[midx]
-            if  msg['role'] == "system":
-                prompt += msg['content']
-            elif msg['role'] == "user" and msg.get('function_call'):
-                prompt += f"Thought: 我可以使用 {msg['function_call']['name']} 工具"
-                prompt += f"Action: {msg['function_call']['name']}"
-                prompt += f"Action Input: {msg['function_call']['arguments']}"
-                prompt += f"Observation: {msg['content']}"
-            else:
-                if midx != h_l-1:
-                    prompt += f"{msg['role']}: {msg['content']}\n"
-                else:
-                    prompt += f"\nQuestion: {msg['content']}\n"
-        return prompt    
+    # def compose_prompt(self, query: str = "", history=[]):
+    #     """调用模型生成答案,解析ReAct生成的结果
+    #     """
+    #     prompt = ""
+    #     h_l = len(history)
+    #     for midx in range(h_l):
+    #         msg = history[midx]
+    #         if  msg['role'] == "system":
+    #             prompt += msg['content']
+    #         elif msg['role'] == "user" and msg.get('function_call'):
+    #             prompt += f"Thought: 我可以使用 {msg['function_call']['name']} 工具"
+    #             prompt += f"Action: {msg['function_call']['name']}"
+    #             prompt += f"Action Input: {msg['function_call']['arguments']}"
+    #             prompt += f"Observation: {msg['content']}"
+    #         else:
+    #             if midx != h_l-1:
+    #                 prompt += f"{msg['role']}: {msg['content']}\n"
+    #             else:
+    #                 prompt += f"\nQuestion: {msg['content']}\n"
+    #     return prompt    
 
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        sys_prompt, history = self.compose_input_history(**kwargs)
-        funcions = json.load(open("/home/tico/workspace/ai-health-manager-prompt4llms/config/demo_tools.json", "r"))
-        prompt = llm_with_plugin(sys_prompt, history, list_of_plugin_info=funcions)
+        sys_prompt, history, functions = self.compose_input_history(**kwargs)
+        prompt = build_input_text(sys_prompt, history, functions)
+        # prompt = llm_with_plugin(sys_prompt, history, list_of_plugin_info=funcions)
         # prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
         prompt += "Thought: "
@@ -168,7 +133,7 @@ class Conv:
             ...
         history.append({
             "role": "assistant", 
-            "content": "Thought: " + out_text[0], 
+            "content": out_text[0], 
             "function_call": {"name": out_text[1],"arguments": out_text[2]}
             })
         return history
@@ -177,17 +142,16 @@ class Conv:
         """拼装sys_prompt里
         """
         history = kwargs.get("history")
-        sys_prompt = self.promptEngine._call(**kwargs)
         qprompt = kwargs.get("qprompt")
-        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+
+        sys_prompt, functions = self.promptEngine._call(**kwargs)
+        history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in history]
+
         if not qprompt:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
-            sys_prompt = qprompt +"\n"+ sys_prompt
-        return sys_prompt, input_history
-
-    def history_compose(self, history):
-        return [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            sys_prompt = sys_prompt + "\n\n" + qprompt
+        return sys_prompt, history, functions
     
     def update_mid_vars(self, mid_vars, **kwargs):
         """更新中间变量
@@ -264,16 +228,6 @@ class Conv:
             model_output = model_output[2:].strip()
         return {'end':True, 'message':model_output, 'intentCode':intentCode}
 
-    def __call_run_prediction__(self, *args, **kwargs):
-        try:
-            remid_content = "话题结束，重启流程"
-            logger.debug(f"{remid_content}")
-            out_text, mid_vars = next(self.chat_gen(*args, **kwargs))
-        except StopIteration as e:
-            ...
-        finally:
-            return out_text, mid_vars
-   
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
         intent = get_intent(self.cls_intent(history, mid_vars))
@@ -313,6 +267,21 @@ class Conv:
             except Exception as err:
                 logger.exception(err)
 
+    def __log_init(self, **kwargs):
+        """初始打印日志
+        """
+        intentCode = kwargs.get('intentCode')
+        history = kwargs.get('history')
+        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
+        if history:
+            logger.debug(f"Last input: {history[-1]['content']}")
+    
+    def parse_last_history(self, history):
+        tool = history[-1]['function_call']['name']
+        content = history[-1]['function_call']['arguments']
+        thought = history[-1]['content']
+        return tool, content, thought
+
     def pipeline(self, mid_vars=[], **kwargs):
         """
         ## 多轮交互流程
@@ -333,42 +302,19 @@ class Conv:
             out_text (Dict[str, str])
                 返回的输出结果
         """
+        self.__log_init(**kwargs)
         intentCode = kwargs.get('intentCode')
-        sys_prompt = kwargs.get('sys_prompt')
-        history = kwargs.get('history')
-        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
-        if history:
-            logger.debug(f"Last input: {history[-1]['content']}")
-
         mid_vars = kwargs.get('mid_vars', [])
         out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-
-        # 自动判断话题结束
-        if out_history[-1].get("function_call") and out_history[-1]['function_call']['name'] == "结束话题":
-            sub_history = [history[-1]]
-            out_text, mid_vars = self.__call_run_prediction__(sub_history, sys_prompt, intentCode=intentCode, mid_vars=mid_vars, **kwargs)
-        else:
-            logger.debug(f"Last history: {out_history[-1]}")
-            tool_name = out_history[-1]['function_call']['name']
-            output_text = out_history[-1]['function_call']['arguments']
-            thought = out_history[-1]['content']
-            yield make_meta_ret(end=False, msg=tool_name, type="Tool", code=intentCode), mid_vars
+        while True:
+            tool, content, thought = self.parse_last_history(out_history)
+            yield make_meta_ret(end=False, msg=tool, type="Tool", code=intentCode), mid_vars
             yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
-        
-            # if tool_name == '进一步询问用户的情况':
-            #     out_text = make_meta_ret(msg=output_text, code=intentCode)
-            # elif tool_name == '直接回复用户问题':
-            #     out_text = make_meta_ret(msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
-            # elif tool_name == '调用外部知识库':
-            #     # TODO 调用外部知识库逻辑待定
-            #     from src.pkgs.knowledge.call_chatchat import chatChatApi
-            #     gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-            #     out_text = make_meta_ret(msg=output_text, code=intentCode)
-            # else:
-            out_text = make_meta_ret(msg=output_text, code=intentCode)
-            #     logger.exception(out_history)
-            # output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-            # out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+            if self.prompt_meta_data['rollout_tool'].get(tool):
+                break
+            history = self.funcall._call(function_call=out_history[-1]['function_call'])
+            out_history = self.chat_react(mid_vars=mid_vars, **kwargs, history=history)
+        out_text = make_meta_ret(msg=content, code=intentCode)
         yield out_text, mid_vars
 
 if __name__ == '__main__':
@@ -390,8 +336,8 @@ if __name__ == '__main__':
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
         out_text, mid_vars = next(chat.chat_gen(history=history, 
-                                                      sys_prompt=prompt, 
-                                                      verbose=True, 
-                                                      intentCode=intentCode, 
-                                                      customId=customId, 
-                                                      orgCode=orgCode))
+                                                sys_prompt=prompt, 
+                                                verbose=True, 
+                                                intentCode=intentCode, 
+                                                customId=customId, 
+                                                orgCode=orgCode))

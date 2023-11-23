@@ -17,7 +17,6 @@ from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from chat.plugin_util import funcCall
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
@@ -44,7 +43,6 @@ class Chat:
         self.req_prompt_data_from_mysql()
         
         self.promptEngine = promptEngine(self.prompt_meta_data)
-        self.funcall = funcCall()
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
         self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
