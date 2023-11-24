@@ -109,6 +109,8 @@ class Conv:
         print(prompt)
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
+        logger.debug("ReAct Generate:")
+        print(model_output)
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
 
         out_text = _parse_latest_plugin_call(model_output)
