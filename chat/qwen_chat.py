@@ -208,6 +208,7 @@ class Chat:
         prompt = input_prompt + "\n\n" + his_prompt + "\nThought: "
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
+        logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
@@ -363,9 +364,9 @@ class Chat:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
         elif intent in ['sport_rec']:
-            if (not kwargs.get('userInfo', {}).get('askExerciseHabbit', '')
+            if not kwargs.get('userInfo', {}).get('askExerciseHabbit', '')
                 or not kwargs.get('userInfo', {}).get('askExerciseTabooJointDegree', '')
-                or not kwargs.get('userInfo', {}).get('askExerciseTabooXt', '')):
+                or not kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
                 out_text = {'message':'', 'intentCode':intent,
                      'processCode':'trans_back', 'intentDesc':desc}
             else:
@@ -474,8 +475,7 @@ class Chat:
         elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(history, mid_vars, **kwargs)
             logger.debug('打开页面模型输出：'  + output_text)
-            msg = '稍等片刻，页面即将打开' if
-            self.get_pageName_code(output_text) != 'other' else output_text
+            msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
