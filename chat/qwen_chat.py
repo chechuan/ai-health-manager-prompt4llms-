@@ -485,7 +485,7 @@ class Chat:
 
 if __name__ == '__main__':
     chat = Chat()
-    ori_input_param = testParam.param_bug_schedular_202311201817
+    ori_input_param = testParam.param_bug_20231124_1018
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
