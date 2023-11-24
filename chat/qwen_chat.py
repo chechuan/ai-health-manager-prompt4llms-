@@ -425,6 +425,8 @@ class Chat:
         mid_vars = kwargs.get('mid_vars', [])
         
         if self.intent_map['userinfo'].get(intentCode):
+            logger.debug('进入信息提取页面：')
+            logger.debug(sys_prompt)
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
         elif self.intent_map['tips'].get(intentCode): 
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
