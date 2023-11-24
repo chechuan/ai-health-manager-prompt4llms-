@@ -59,7 +59,7 @@ def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
             if ret_mid:
                 item['mid_vars'] = yield_item['mid_vars']
             if ret_his:
-                item['history'] = yield_item['history']
+                item['backend_history'] = yield_item['history']
             yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
     except Exception as err:
         logger.exception(err)
