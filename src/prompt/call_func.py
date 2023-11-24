@@ -30,27 +30,47 @@ class funcCall:
         self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
-        self.register_func("searchKnowledge", self.call_search_knowledge)
+        self.register_func("searchKnowledge", self.call_search_knowledge, "/chat/knowledge_base_chat")
 
-    def register_func(self, func_name: AnyStr, func_call: Any) -> None:
+    def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr) -> None:
         """
         """
-        self.funcmap[func_name] = func_call
+        self.funcmap[func_name] = {"func": func_call, "method": method}
         logger.info(f"register {func_name} success")
 
-    def call_search_knowledge(self, *args, **kwargs) -> AnyStr:
+    def call_search_knowledge(self, 
+                              *args, 
+                              knowledge_base_name="内科学",
+                              local_doc_url=False,
+                              model_name="Qwen-14B-Chat",
+                              stream=False, 
+                              score_threshold=0.5,
+                              temperature=0.7,
+                              top_k=3,
+                              top_p=0.8,
+                              prompt_name="default",
+                              **kwargs) -> AnyStr:
         """
         """
-        called_method = "/chat/knowledge_base_chat"
-        payload = self.param_server.llm_with_documents
+        called_method = self.funcmap['searchKnowledge']['method']
+        payload = {}
+        payload["knowledge_base_name"] = knowledge_base_name
+        payload["local_doc_url"] = local_doc_url
+        payload["model_name"] = model_name
+        payload["score_threshold"] = score_threshold
+        payload["stream"] = stream
+        payload["temperature"] = temperature
+        payload["top_k"] = top_k
+        payload["top_p"] = top_p
+        payload["prompt_name"] = prompt_name
+
         payload['query'] = args[0]
-        response = self.session.post(self.api_config['langchain']+called_method,
-                                     json=payload,
-                                     headers=self.headers)
-        res_js = eval(response.text)
+        url = self.api_config['langchain']+called_method
+        response = self.session.post(url, json=payload, headers=self.headers)
+        msg = eval(response.text)
         if kwargs.get("verbose"):
-            print(res_js)
-        ret = res_js['answer']
+            print(msg)
+        ret = msg['answer']
         return ret
 
     def call_llm_with_search_engine(self, *args, **kwargs) -> AnyStr:
@@ -89,7 +109,7 @@ class funcCall:
         func_name = function_call["name"]
         arguments = function_call["arguments"]
         assert self.funcmap.get(func_name) is not None, "Unregistered function name"
-        ret = self.funcmap[func_name](arguments, verbose=verbose)
+        ret = self.funcmap[func_name]['func'](arguments, verbose=verbose)
         return ret
 
 if __name__ == "__main__":

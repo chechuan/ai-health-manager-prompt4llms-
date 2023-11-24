@@ -172,19 +172,10 @@ class ParamServer:
     def llm_with_documents(cls):
         {
             "query": "你好",
-            "knowledge_base_name": "samples",
+            "knowledge_base_name": "高血压",
             "top_k": 3,
             "score_threshold": 1,
-            "history": [
-                {
-                    "role": "user",
-                    "content": "我们来玩成语接龙，我先来，生龙活虎"
-                },
-                {
-                    "role": "assistant",
-                    "content": "虎头虎脑"
-                }
-            ],
+            "history": [],
             "stream": False,
             "model_name": "chatglm2-6b-32k",
             "temperature": 0.7,
