@@ -474,11 +474,11 @@ class Chat:
         yield out_text, mid_vars
 
     def get_pageName_code(self, text):
-        if 'bloodPressure-trend-chart' in text:
+        if 'bloodPressure-trend-chart' in text and 'pagename' in text:
             return 'bloodPressure-trend-chart'
-        elif 'add-blood-pressure' in text:
+        elif 'add-blood-pressure' in text and 'pagename' in text:
             return 'add-blood-pressure'
-        elif 'record-list3' in text:
+        elif 'record-list3' in text and 'pagename' in text:
             return 'record-list3'
         else:
             return 'open_web_daily_monitor'
