@@ -222,20 +222,20 @@ def get_doc_role(code):
     else:
         return 'ROLE_HEALTH_SPECIALIST'
 
-def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
-    h = text.find('Thought:')
+def _parse_latest_plugin_call(text: str):
+    h = text.find('\nThought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')
-    k = text.find('\nObservation:')
+    k = len(text[:j]) + text[j:].find('\nThought:')
     l = text.find('\nFinal Answer:')
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,
             # because the output text may have discarded the stop word.
-            text = text.rstrip() + '\nObservation:'  # Add it back.
-            k = text.rfind('\nObservation:')
+            text = text.rstrip() + '\nThought:'  # Add it back.
+            k = text.rfind('\nThought:')
     if 0 <= i < j < k:
-        plugin_thought = text[h + len('Thought:'):i].strip()
+        plugin_thought = text[h + len('\nThought:'):i].strip()
         plugin_name = text[i + len('\nAction:'):j].strip()
         plugin_args = text[j + len('\nAction Input:'):k].strip()
         return plugin_thought, plugin_name, plugin_args
