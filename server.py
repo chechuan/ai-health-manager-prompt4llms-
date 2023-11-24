@@ -21,6 +21,9 @@ from src.utils.module import NpEncoder, clock
 
 def accept_param():
     p = json.loads(request.data.decode("utf-8"))
+    backend_history = p.get('backend_history', [])
+    if isinstance(backend_history, str):
+        p['backend_history'] = json.loads(backend_history)
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
