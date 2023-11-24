@@ -17,7 +17,7 @@ from typing import Dict, List
 from requests import Session
 from langchain.prompts import PromptTemplate
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from src.prompt.call_func import funcCall
+from src.pkgs.knowledge.call_chatchat import funcCall
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import cusPromptEngine
@@ -312,8 +312,8 @@ class Conv:
             yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
-            history = self.funcall._call(function_call=out_history[-1]['function_call'])
-            out_history = self.chat_react(mid_vars=mid_vars, **kwargs, history=history)
+            kwargs['history'] = self.funcall._call(out_history=out_history)
+            out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         out_text = make_meta_ret(msg=content, code=intentCode)
         yield out_text, mid_vars
 

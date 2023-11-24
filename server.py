@@ -21,7 +21,8 @@ from src.utils.module import NpEncoder, clock
 
 def accept_param():
     p = json.loads(request.data.decode("utf-8"))
-    logger.info(f"=============Input Param===========\n{p}")
+    pstr = json.dumps(p, ensure_ascii=False)
+    logger.info(f"Input Param: {pstr}")
     return p
 
 def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
