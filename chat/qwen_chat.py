@@ -201,6 +201,7 @@ class Chat:
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        history = history[-3:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
@@ -217,6 +218,7 @@ class Chat:
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        history = history[-3:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
