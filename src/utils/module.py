@@ -185,7 +185,7 @@ def get_intent(text):
     elif 'BMI' in text:
         code = 'BMI'
         desc = 'BMI'
-    elif '画面' in text:
+    elif '页面' in text:
         code = 'open_web_daily_monitor'
         desc = '页面'
     elif '万年历' in text:
