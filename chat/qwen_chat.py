@@ -441,22 +441,14 @@ class Chat:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['food_rec']:
-            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                out_text = {'end':True,'message':'', 'intentCode':'food_rec'}
-            else:
-                logger.debug('进入饮食推荐的闲聊...')
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                logger.debug('医师推荐闲聊的模型输出：' + output_text)
-                out_text = {'end':True, 'message':output_text,
+            logger.debug('进入饮食推荐的闲聊...')
+            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            logger.debug('医师推荐闲聊的模型输出：' + output_text)
+            out_text = {'end':True, 'message':output_text,
                         'intentCode':'other'}
         elif intentCode in ['sport_rec']:
-            if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') 
-                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') 
-                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', '')):
-                out_text = {'end':True,'message':'', 'intentCode':'sport_rec'}
-            else:
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text,
+            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            out_text = {'end':True, 'message':output_text,
                         'intentCode':'other'}
         elif self.intent_map['schedule'].get(intentCode):
             his = self.history_compose(history)
