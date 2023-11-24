@@ -232,7 +232,7 @@ class Chat:
         if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
-                history = history[:-1]
+                history = history[-1:]
             his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
             prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
