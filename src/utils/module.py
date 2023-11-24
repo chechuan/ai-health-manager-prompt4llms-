@@ -82,78 +82,131 @@ class NpEncoder(json.JSONEncoder):
 def get_intent(text):
     """通过关键词解析意图->code
     """
-    if '饮食' in text and '咨询' in text:
+    if '饮食' in text:
         code = 'food_rec'
+        desc = '饮食营养'
+    elif '医疗' in text:
+        code = 'med_health'
+        desc = '医疗健康'
     elif '运动咨询' in text:
         code = 'sport_rec'
+        desc = '运动咨询'
     elif '菜谱' in text:
-        code = 'recipe_consult'
+        code = 'cookbook'
+        desc = '菜谱'
     elif '音乐' in text:
-        code = 'play_music'
+        code = 'musicX'
+        desc = '音乐播放'
     elif '天气' in text:
-        code = 'check_weather'
+        code = 'weather'
+        desc = '天气查询'
     elif '辅助诊断' in text:
         code = 'auxiliary_diagnosis'
+        desc = '辅助诊断'
     elif '医师' in text or '医生' in text:
         code = 'call_doctor'
+        desc = '呼叫医师'
     elif '运动师' in text:
         code = 'call_sportMaster'
-    elif '心理' in text:
+        desc = '呼叫医师'
+    elif '心理' in text or '情志' in text:
         code = 'call_psychologist'
+        desc = '呼叫情志师'
     elif '营养师' in text:
         code = 'call_dietista'
+        desc = '呼叫营养师'
     elif '健管师' in text:
         code = 'call_health_manager'
-    elif '其它意图' in text:
+        desc = '呼叫健管师'
+    elif '其它' in text:
         code = 'other'
+        desc = '其它意图'
     elif '日程管理'in text:
         code = 'schedule_manager'
+        desc = '日程管理'
     elif '网络' in text:
-        code = 'search_network'
+        code = 'websearch'
+        desc = '网络搜索'
     elif '首都' in text:
-        code = 'search_capital'
+        code = 'KLLI3.captialInfo'
+        desc = '首都查询'
     elif '彩票' in text:
         code = 'lottery'
+        desc = '彩票'
     elif '解梦' in text:
-        code = 'oneiromancy'
+        code = 'dream'
+        desc = '周公解梦'
     elif '计算器' in text:
-        code = 'calculator'
+        code = 'AIUI.calc'
+        desc = '计算器'
     elif '国内城市查询' in text:
-        code = 'search_city'
+        code = 'LEIQIAO.cityOfPro'
+        desc = '国内城市查询'
     elif '省会查询' in text:
-        code = 'provincial_capital_search'
+        code = 'ZUOMX.queryCapital'
+        desc = '省会查询'
     elif '翻译' in text:
-        code = 'translate'
+        code = 'translation'
+        desc = '翻译'
     elif '垃圾' in text:
-        code = 'garbage_sortin'
+        code = 'garbageClassifyPro'
+        desc = '垃圾分类'
     elif '尾号限行' in text:
-        code = 'traffic_restrictions'
+        code = 'carNumber'
+        desc = '尾号限行'
     elif '单位换算' in text:
-        code = 'unit_conversion'
+        code = 'AIUI.unitConversion'
+        desc = '单位换算'
     elif '汇率' in text:
-        code = 'exchange_rate'
+        code = 'AIUI.forexPro'
+        desc = '汇率'
     elif '时间日期' in text:
-        code = 'date'
+        code = 'datetimePro'
+        desc = '时间日期'
     elif '眼保健操' in text:
-        code = 'eye_exercises'
+        code = 'AIUI.ocularGym'
+        desc = '眼保健操'
     elif '故事' in text:
         code = 'story'
+        desc = '故事'
     elif '圣经' in text:
-        code = 'bible'
+        code = 'AIUI.Bible'
+        desc = '圣经'
     elif '戏曲' in text:
-        code = 'opera'
+        code = 'drama'
+        desc = '戏曲'
     elif '评书' in text:
-        code = 'pingshu'
+        code = 'storyTelling'
+        desc = '评书'
     elif '有声书' in text:
-        code = 'audio_book'
+        code = 'AIUI.audioBook'
+        desc = '有声书'
     elif '新闻' in text:
         code = 'news'
+        desc = '新闻'
     elif 'BMI' in text:
         code = 'BMI'
+        desc = 'BMI'
+    elif '画面' in text:
+        code = 'open_web_daily_monitor'
+        desc = '打开功能画面'
+    elif '万年历' in text:
+        code = 'calendar'
+        desc = '万年历'
+    elif '音频' in text:
+        code = 'audio'
+        desc = '音频播放'
+    elif '笑话' in text:
+        code = 'joke'
+        desc = '笑话'
+    elif '五师' in text:
+        code = 'wushi'
+        desc = '呼叫五师'
     else:
         code = 'other'
+        desc = '其它意图'
     logger.debug(f'识别出的意图:{text} code:{code}')
-    return code
+    return code, desc
 
 def get_doc_role(code):
     if code == 'call_dietista':

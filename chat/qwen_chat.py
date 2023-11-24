@@ -185,14 +185,30 @@ class Chat:
             return '音频播放'
         elif '生活' in text:
             return '生活工具查询'
-        elif '辅助诊断':
-            return '辅助诊断'
-        elif '饮食':
+        elif '医疗' in text:
+            return '医疗健康'
+        elif '饮食' in text:
             return '饮食咨询'
-        elif '运动':
+        elif '运动' in text:
             return '运动咨询'
         else:
             return '其它'
+
+    def cls_intent_verify(self, history, mid_vars, input_prompt):
+        """意图识别
+        """
+        # st_key, ed_key = "<|im_start|>", "<|im_end|>"
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        prompt = input_prompt + "\n\n" + his_prompt + "\nThought: "
+        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                temperature=0.7, do_sample=False)
+        intentIdx = generate_text.find("\nIntent: ") + 9
+        text = generate_text[intentIdx:].split("\n")[0]
+        self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
+        return text
 
     def cls_intent(self, history, mid_vars):
         """意图识别
@@ -202,15 +218,19 @@ class Chat:
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
-        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+        prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + his_prompt + "\nThought: "
+        logger.debug('父意图是：' + self.prompt_meta_data['tool']['父意图']['description'])
+        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                temperature=0.7, do_sample=False)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+            logger.info('子意图是：' + self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt))
             prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
-            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+                    temperature=0.7, do_sample=False)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
@@ -224,6 +244,16 @@ class Chat:
         input_history = [{"role":"system", "content": ext_info}] + input_history
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        return content
+
+    def open_page(self, history, mid_vars, **kwargs):
+        """组装mysql中打开页面对应的prompt
+        """
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process']
+        input_history = [{"role":"system", "content": ext_info}] + input_history
+        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
     
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
@@ -296,13 +326,41 @@ class Chat:
     
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
-        intent = get_intent(self.cls_intent(history, mid_vars))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'message':get_doc_role(intent), 'intentCode':intent, 'processCode':'trans_back'}
-        elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui'}
+        task = kwargs.get('task', '')
+        input_prompt = kwargs.get('prompt', [])
+        if task == 'verify' and input_prompt:
+            intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
+                input_prompt))
         else:
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg'}
+            intent, desc = get_intent(self.cls_intent(history, mid_vars))
+        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+            out_text = {'message':get_doc_role(intent),
+                        'intentCode':'doc_role', 'processCode':'trans_back',
+                        'intentDesc':desc}
+        elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
+        #elif intent in ['open_web_daily_monitor']:
+        #    out_text = {'message':'', 'intentCode':intent,
+        #            'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['food_rec']:
+            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
+                out_text = {'message':'', 'intentCode':intent,
+                     'processCode':'trans_back', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':'food_rec',
+                        'processCode':'alg', 'intentDesc':desc}
+        elif intent in ['sport_rec']:
+            if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '')
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '')
+                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', '')):
+                out_text = {'message':'', 'intentCode':intent,
+                     'processCode':'trans_back', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':intent,
+                        'processCode':'alg', 'intentDesc':desc}
+        else:
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
+        logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
         return out_text
     
     def fetch_intent_code(self):
@@ -374,7 +432,8 @@ class Chat:
                 out_text = {'end':True,'message':'', 'intentCode':'food_rec'}
             else:
                 output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-                out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+                out_text = {'end':True, 'message':output_text,
+                        'intentCode':'other'}
         elif intentCode in ['sport_rec']:
             if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '') 
                 or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '') 
@@ -402,14 +461,29 @@ class Chat:
                     yield out_text, mid_vars
                 else:
                     break
+        elif intentCode == "open_web_daily_monitor":
+            output_text = self.open_page(history, mid_vars, **kwargs)
+            logger.debug('打开页面模型输出：'  + output_text)
+            msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
+            out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         yield out_text, mid_vars
 
+    def get_pageName_code(self, text):
+        if 'bloodPressure' in text:
+            return 'bloodPressure'
+        elif 'add-blood-pressure' in text:
+            return 'add-blood-pressure'
+        elif 'record-list3' in text:
+            return 'record-list3'
+        else:
+            return 'other'
+
 if __name__ == '__main__':
     chat = Chat()
-    ori_input_param = testParam.param_bug_schedular_202311201817
+    ori_input_param = testParam.param_bug_20231124_1018
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
