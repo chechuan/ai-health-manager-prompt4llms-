@@ -466,8 +466,7 @@ class Chat:
         elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(history, mid_vars, **kwargs)
             logger.debug('打开页面模型输出：'  + output_text)
-            msg = '稍等片刻，页面即将打开' if
-            self.get_pageName_code(output_text) != 'open_web_daily_monitor' else output_text
+            msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'open_web_daily_monitor' else output_text
             out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
