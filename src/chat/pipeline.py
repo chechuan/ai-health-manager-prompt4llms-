@@ -108,7 +108,6 @@ class Conv:
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-        logger.debug(f"辅助诊断 Gen Output - {model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
@@ -145,7 +144,6 @@ class Conv:
         qprompt = kwargs.get("qprompt")
 
         sys_prompt, functions = self.promptEngine._call(**kwargs)
-        history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in history]
 
         if not qprompt:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
@@ -251,17 +249,15 @@ class Conv:
     def general_yield_result(self, *args, **kwargs):
         """处理最终的输出
         """
+        if kwargs.get("history"):
+            kwargs['history'] = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
         _iterable = self.pipeline(*args, **kwargs)
         while True:
             try:
-                out_text, mid_vars = next(_iterable)
-                if not out_text.get("type"):
-                    out_text['type'] = "Result"
-                if not kwargs.get("ret_mid"):
-                    logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
-                    yield out_text
-                else:
-                    yield out_text, mid_vars
+                yield_item = next(_iterable)
+                if not yield_item['data'].get("type"):
+                    yield_item['data']['type'] = "Result"
+                yield yield_item
             except StopIteration as err:
                 break
             except Exception as err:
@@ -272,9 +268,9 @@ class Conv:
         """
         intentCode = kwargs.get('intentCode')
         history = kwargs.get('history')
-        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
+        logger.info(f'intentCode: {intentCode}')
         if history:
-            logger.debug(f"Last input: {history[-1]['content']}")
+            logger.info(f"Input: {history[-1]['content']}")
     
     def parse_last_history(self, history):
         tool = history[-1]['function_call']['name']
@@ -308,14 +304,20 @@ class Conv:
         out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
-            yield make_meta_ret(end=False, msg=tool, type="Tool", code=intentCode), mid_vars
-            yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
+            logger.debug(f"Action: {tool}")
+            logger.debug(f"Thought: {thought}")
+            logger.debug(f"Action Input: {content}")
+            ret_tool = make_meta_ret(end=False, msg=tool, type="Tool", code=intentCode)
+            ret_thought = make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode)
+            yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
+            yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
             kwargs['history'] = self.funcall._call(out_history=out_history)
+            logger.debug(f"Observation: {kwargs['history'][-1]['content']}")
             out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-        out_text = make_meta_ret(msg=content, code=intentCode)
-        yield out_text, mid_vars
+        ret_result = make_meta_ret(msg=content, code=intentCode)
+        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
     chat = Conv()

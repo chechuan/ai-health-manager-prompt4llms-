@@ -52,11 +52,14 @@ def format_sse_chat_complete(data: str, event=None) -> str:
         msg = 'event: {}\n{}'.format(event, msg)
     return msg    
 
-def decorate_chat_complete(generator):
+def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
     try:
-        for out_text, mid_vars in generator:
-            # del out_text['end']
-            item={'mid_vars':mid_vars, **out_text}
+        for yield_item in generator:
+            item = {**yield_item['data']}
+            if ret_mid:
+                item['mid_vars'] = yield_item['mid_vars']
+            if ret_his:
+                item['history'] = yield_item['history']
             yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
     except Exception as err:
         logger.exception(err)
@@ -76,14 +79,6 @@ def create_app():
                                            return_mid_vars=False, 
                                            use_sys_prompt=False, 
                                            **param)
-                # result = chat.chat_gen(param.get('history',[]),
-                #                         param.get('prompt',''),
-                #                         param.get('intentCode','default_code'), 
-                #                         customId=customId,
-                #                         orgCode=orgCode, 
-                #                         streaming=param.get('streaming', True),
-                #                         userInfo=userInfo
-                #                         )
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
@@ -103,15 +98,16 @@ def create_app():
         try:
             param = accept_param()
             result = conv.general_yield_result(sys_prompt=param.get('prompt'), 
-                                        mid_vars=[], 
-                                        ret_mid=True, 
-                                        use_sys_prompt=True, 
-                                        **param)
+                                               mid_vars=[], 
+                                               use_sys_prompt=True, 
+                                               **param)
         except Exception as err:
             logger.exception(err)
             result = make_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(decorate_chat_complete(result), mimetype='text/event-stream')
+            return Response(decorate_chat_complete(result, 
+                                                   ret_mid=True,
+                                                   ret_his=True), mimetype='text/event-stream')
 
     @app.route('/intent/query', methods=['post'])
     def intent_query():
