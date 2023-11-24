@@ -313,16 +313,24 @@ class Conv:
             logger.debug(f"Action: {tool}")
             logger.debug(f"Thought: {thought}")
             logger.debug(f"Action Input: {content}")
-            ret_tool = make_meta_ret(end=False, msg=tool, type="Tool", code=intentCode)
-            ret_thought = make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode)
+            ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
+            ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
             yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
             yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
+            
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
+            
             kwargs['history'] = self.funcall._call(out_history=out_history)
-            logger.debug(f"Observation: {kwargs['history'][-1]['content']}")
+            
+            call_content = kwargs['history'][-1]['content']
+            ret_function_call = make_meta_ret(msg=call_content, type="Observation", code=intentCode)
+            logger.debug(f"Observation: {call_content}")
+            yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
+            
             out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-        ret_result = make_meta_ret(msg=content, code=intentCode)
+        
+        ret_result = make_meta_ret(end=True, msg=content, code=intentCode)
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':

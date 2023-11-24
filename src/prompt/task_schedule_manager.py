@@ -294,10 +294,10 @@ class taskSchedulaManager:
             msg = ChatMessage(role="assistant", content="", function_call={"name": "query_schedule", "arguments": ""})
         if msg.function_call:
             logger.debug(f"call func: {msg.function_call['name']}")
-            yield make_meta_ret(end=False, msg=msg.function_call['name'], code=intentCode, type="Tool"), mid_vars_item
+            yield make_meta_ret(msg=msg.function_call['name'], code=intentCode, type="Tool"), mid_vars_item
             if msg.function_call['arguments']:
                 logger.debug(f"arguments: {msg.function_call['arguments']}")
-                yield make_meta_ret(end=False, msg=msg.content, code=intentCode, type="Thought"), mid_vars_item
+                yield make_meta_ret(msg=msg.content, code=intentCode, type="Thought"), mid_vars_item
         if msg.function_call:
             if msg.function_call['name'] == "ask_for_time":
                 content = eval(msg.function_call['arguments'])['ask'] if msg.function_call else msg.content

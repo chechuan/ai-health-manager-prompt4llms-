@@ -308,19 +308,19 @@ class Chat:
             tool_name = out_history[-1]['function_call']['name']
             output_text = out_history[-1]['content']
             thought = out_history[-1]['function_call']['arguments']
-            yield make_meta_ret(end=False, msg=tool_name, type="Tool", code=intentCode), mid_vars
-            yield make_meta_ret(end=False, msg=thought, type="Thought", code=intentCode), mid_vars
+            yield make_meta_ret(msg=tool_name, type="Tool", code=intentCode), mid_vars
+            yield make_meta_ret(msg=thought, type="Thought", code=intentCode), mid_vars
         
             if tool_name == '进一步询问用户的情况':
-                out_text = make_meta_ret(msg=output_text, code=intentCode)
+                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
-                out_text = make_meta_ret(msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
+                out_text = make_meta_ret(end=True, msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
             elif tool_name == '调用外部知识库':
                 # TODO 调用外部知识库逻辑待定
                 gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = make_meta_ret(msg=output_text, code=intentCode)
+                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
             else:
-                out_text = make_meta_ret(msg=output_text, code=intentCode)
+                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
                 # logger.exception(out_history)
         yield out_text, mid_vars
     

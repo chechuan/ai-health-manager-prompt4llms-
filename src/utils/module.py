@@ -20,7 +20,7 @@ from typing import Dict
 from src.utils.Logger import logger
 from pathlib import Path
 
-def make_meta_ret(end=True, msg="", code=None,type="Result",**kwargs):
+def make_meta_ret(end=False, msg="", code=None,type="Result",**kwargs):
     return {'end':end, 'message':msg,'intentCode':code,'type': type,**kwargs}
 
 def handle_exception(exc_type, exc_value, exc_traceback):
