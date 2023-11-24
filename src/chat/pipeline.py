@@ -251,7 +251,7 @@ class Conv:
         """
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
-            kwargs['history'] = kwargs['backend_history'] + [history[-1]]
+            kwargs['history'] = kwargs.get('backend_history', []) + [history[-1]]
         _iterable = self.pipeline(*args, **kwargs)
         while True:
             try:
