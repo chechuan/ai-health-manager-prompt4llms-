@@ -321,7 +321,11 @@ class Conv:
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
             
-            kwargs['history'] = self.funcall._call(out_history=out_history)
+            try:
+                kwargs['history'] = self.funcall._call(out_history=out_history)
+            except AssertionError as err:
+                logger.error(err)
+                kwargs['history'] = self.funcall._call(out_history=out_history)
             
             call_content = kwargs['history'][-1]['content']
             ret_function_call = make_meta_ret(msg=call_content, type="Observation", code=intentCode)
