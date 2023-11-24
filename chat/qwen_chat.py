@@ -321,7 +321,7 @@ class Chat:
                 out_text = make_meta_ret(msg=output_text, code=intentCode)
             else:
                 out_text = make_meta_ret(msg=output_text, code=intentCode)
-                logger.exception(out_history)
+                # logger.exception(out_history)
         yield out_text, mid_vars
     
     def intent_query(self, history, **kwargs):
