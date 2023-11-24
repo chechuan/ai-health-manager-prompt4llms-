@@ -36,7 +36,7 @@ class funcCall:
         """
         """
         self.funcmap[func_name] = {"func": func_call, "method": method}
-        logger.info(f"register {func_name} success")
+        logger.success(f"register {func_name} success")
 
     def call_search_knowledge(self, 
                               *args, 

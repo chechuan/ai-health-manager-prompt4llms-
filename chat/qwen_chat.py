@@ -90,7 +90,7 @@ class Chat:
         self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
         self.prompt_meta_data['event'] = {i['event']: i for i in prompt_event}
         self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
-        logger.debug("req prompt meta data from mysql.")
+        logger.success("req prompt meta data from mysql.")
 
     @clock
     def reload_prompt(self):
