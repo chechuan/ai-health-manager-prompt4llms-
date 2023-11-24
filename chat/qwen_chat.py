@@ -269,7 +269,7 @@ class Chat:
         logger.debug('信息提取prompt为：' + prompt)
         model_output = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8,
                 max_tokens=200, do_sample=False)
-        logger.debug('信息提取模型输出：' + content)
+        logger.debug('信息提取模型输出：' + model_output)
         content = model_output.split('\n')[0].split('。')[0]
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
