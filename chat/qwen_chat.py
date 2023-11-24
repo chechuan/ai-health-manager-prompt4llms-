@@ -257,6 +257,7 @@ class Chat:
         """组装mysql中打开页面对应的prompt
         """
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        input_history = input_history[-1:]
         ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process']
         input_history = [{"role":"system", "content": ext_info}] + input_history
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
