@@ -218,7 +218,7 @@ class Chat:
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        history = history[-1:]
+        history = history[-3:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
@@ -276,6 +276,7 @@ class Chat:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(history, mid_vars)
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
+        content = content if content else '未知'
         return {'end':True, 'message':content, 'intentCode':intentCode}
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
