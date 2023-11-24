@@ -362,9 +362,9 @@ class Chat:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
         elif intent in ['sport_rec']:
-            if (not kwargs.get('userInfo', {}).get('ask_exercise_habbit_freq', '')
-                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_joint_degree', '')
-                or not kwargs.get('userInfo', {}).get('ask_exercise_taboo_xt', '')):
+            if (not kwargs.get('userInfo', {}).get('askExerciseHabbit', '')
+                or not kwargs.get('userInfo', {}).get('askExerciseTabooJointDegree', '')
+                or not kwargs.get('userInfo', {}).get('askExerciseTabooXt', '')):
                 out_text = {'message':'', 'intentCode':intent,
                      'processCode':'trans_back', 'intentDesc':desc}
             else:
