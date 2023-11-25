@@ -223,9 +223,7 @@ class Chat:
         h = history[-3:-1]
         hh = history[-1:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        if '血压趋势图' in history[-1]['content'] or '血压录入' in
-        history[-1]['content'] or '血压历史' in history[-1]['content'] or
-        '历史血压' in history[-1]['content']:
+        if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
             return '打开页面'
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:-1]])
         h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-1:]])
