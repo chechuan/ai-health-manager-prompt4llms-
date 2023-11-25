@@ -201,7 +201,7 @@ class Chat:
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        history = history[-3:]
+        history = history[-1:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
@@ -219,14 +219,22 @@ class Chat:
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        history = history[-3:]
+        his = history[-3:]
+        h = history[-3:-1]
+        hh = history[-1:]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        if '血压趋势图' in history[-1]['content'] or '血压录入' in
+        history[-1]['content'] or '血压历史' in history[-1]['content'] or
+        '历史血压' in history[-1]['content']:
+            return '打开页面'
+        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:-1]])
+        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-1:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + his_prompt + "\nThought: "
+        prompt = self.prompt_meta_data['tool']['父意图']['description'].format(his_prompt) + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
+        logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
@@ -258,9 +266,24 @@ class Chat:
         """组装mysql中打开页面对应的prompt
         """
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        input_history = input_history[-1:]
-        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process']
-        input_history = [{"role":"system", "content": ext_info}] + input_history
+        input_history = input_history[-3:]
+        if '血压趋势图' in history[-1]['content']:
+            return 'pagename:"bloodPressure-trend-chart"'
+        elif '血压录入' in history[-1]['content']:
+            return 'pagename:"add-blood-pressure"'
+        elif '血压历史页面' in history[-1]['content'] or '历史血压页面' in history[-1]['content']:
+            return 'pagename:"record-list3"'
+
+        hp = [h['role'] + ' ' + h['content'] for h in input_history]
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'].format('\n'.join(hp))
+        last_h = [h['role'] + ' ' + h['content'] for h in input_history[-1:]]
+        hi = ''
+        if len(input_history) > 1:
+            hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录：' + '\n' + '\n'.join([h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
+        hi += f'Question:{input_history[-1]["content"]}\nThought:'
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'] + '\n' + hi
+        input_history = [{"role":"system", "content": ext_info}]
+        logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
@@ -364,14 +387,12 @@ class Chat:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
         elif intent in ['sport_rec']:
-            if not kwargs.get('userInfo', {}).get('askExerciseHabbit', '')
-                or not kwargs.get('userInfo', {}).get('askExerciseTabooJointDegree', '')
-                or not kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
-                out_text = {'message':'', 'intentCode':intent,
-                     'processCode':'trans_back', 'intentDesc':desc}
+            if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+                out_text = {'message':'',
+                        'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
             else:
                 out_text = {'message':'', 'intentCode':intent,
-                        'processCode':'alg', 'intentDesc':desc}
+                        'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
