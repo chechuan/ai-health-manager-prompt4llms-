@@ -80,9 +80,9 @@ task_schedule_parameter_description_for_qwen = [
         "name_for_model": "modify_schedule",
         "description_for_model": "修改日程是一个帮助用户修改当前日程的工具，可使用本工具修改对应日程时间. Format the arguments as a JSON object.",
         "parameters": [
+            # {"name": "ask", "descripton": "告知用户日程修改完成和提醒时间", "required": True, "schema": {"type": "string"}},
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
             {"name": "time", "description": "当前用户希望日程提醒的时间", "required": True, "schema": {"type": "string","format": "yyyy-MM-dd HH:mm:ss"}},
-            {"name": "ask", "descripton": "告知用户日程修改完成及修改后的提醒时间", "required": True, "schema": {"type": "string"}}
         ]
     },
     {

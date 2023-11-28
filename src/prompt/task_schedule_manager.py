@@ -267,6 +267,13 @@ class taskSchedulaManager:
         ret = [json.loads(i) for i in set_str]
         return ret
     
+    def generate_modify_content(self, msg, **kwds):
+        func_args = eval(msg.function_call['arguments'])
+        task = func_args['task']
+        changed_time = func_args['time'][11:]
+        content = f"{task}提醒时间修改为{changed_time}"
+        return content
+    
     def _run(self, messages: List[Dict], **kwds):
         """对话过程以messages形式利用历史信息
         - Args
@@ -306,7 +313,8 @@ class taskSchedulaManager:
                 content = eval(msg.function_call['arguments'])['ask']
             elif msg.function_call['name'] == "modify_schedule":
                 self.tool_modify_schedule(msg, schedule, **kwds)
-                content = eval(msg.function_call['arguments'])['ask']
+                content = self.generate_modify_content(msg, **kwds)
+                # content = eval(msg.function_call['arguments'])['ask']
             elif msg.function_call['name'] == "cancel_schedule":
                 task = self.tool_cancel_schedule(msg, **kwds)
                 content = f"已为您取消{task}的提醒"
