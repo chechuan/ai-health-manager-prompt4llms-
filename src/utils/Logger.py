@@ -25,9 +25,8 @@ class Logging:
             log_dir.mkdir(exist_ok=True, parents=True)
         except Exception as error:
             logger.exception(error)
-
-        today = datetime.strftime(datetime.now(), "%Y-%m-%d")
-        log_path = log_dir.joinpath(f"{appid}-{today}.log")
+            
+        log_path = log_dir.joinpath(f"{appid}.log")
         log_path.touch(exist_ok=True)
         
         format = "[{time:YYYY-MM-DD HH:mm:ss.SSS}] [{level}] [{process}] {module}:{name}:{line} {message}"
