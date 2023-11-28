@@ -36,7 +36,7 @@ class Logging:
             format=format, 
             level=file_level, 
             encoding="utf-8", 
-            rotation="50 MB", 
+            rotation="00:00", 
             retention="10 days", 
             compression="gz",
             backtrace=True, 
