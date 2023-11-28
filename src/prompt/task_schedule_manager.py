@@ -135,7 +135,7 @@ class taskSchedulaManager:
         resp_js = json.loads(response)
 
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Create schedule org:{{{orgCode}}} - uid:{{{customId}}} - {cur_time} {task}")
+        logger.info(f"Create schedule org: {orgCode} - uid: {customId} - {cur_time} {task}")
         return 200
     
     def tool_cancel_schedule(self, msg, **kwds):
@@ -209,7 +209,7 @@ class taskSchedulaManager:
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Change schedule org:{{{orgCode}}} - uid:{{{customId}}} - {task} from {task_time_ori} to {cur_time}.")
+        logger.info(f"Change schedule org:{orgCode} - uid:{customId} - {task} from {task_time_ori} to {cur_time}.")
         return 200
     
     def compose_today_schedule(self, schedule, **kwds):
