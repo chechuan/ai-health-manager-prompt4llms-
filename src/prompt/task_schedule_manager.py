@@ -159,7 +159,7 @@ class taskSchedulaManager:
         assert customId, "customId is None"
         assert orgCode, "orgCode is None"
         assert len(schedule) != 0, "no schedule can be canceled"
-        cronDate = [i for i in schedule if i['task'] == task][0]['cronDate']
+        cronDate = [i for i in schedule if i['task'] == task][0]['time']
 
         url = self.api_config['ai_backend'] + "/alg-api/schedule/manage"
         input_payload = {
