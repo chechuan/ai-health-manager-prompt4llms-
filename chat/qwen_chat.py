@@ -131,10 +131,11 @@ class Chat:
         prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
         prompt += "Thought: "
+        logger.debug(f"辅助诊断 Input:\n{prompt}")
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-        logger.debug(f"辅助诊断 Gen Output - {model_output}")
+        logger.debug(f"辅助诊断 Gen Output:\n{model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:

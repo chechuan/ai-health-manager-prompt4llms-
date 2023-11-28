@@ -224,7 +224,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     h = text.find('Thought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')
-    k = text.find('\nObservation:')
+    k = text.find('\nObservation:') if text.find('\nObservation:') > 0 else j + len('\nAction Input:') + text[j + len('\nAction Input:'):].find("\n")
     l = text.find('\nFinal Answer:')
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
