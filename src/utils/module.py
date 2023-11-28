@@ -226,7 +226,10 @@ def _parse_latest_plugin_call(text: str):
     h = text.find('\nThought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')
-    k = len(text[:j]) + text[j:].find('\nThought:')
+    k1 = text.find('\nObservation:')
+    k2 = len(text[:j]) + text[j:].find('\nThought:')
+
+    k = k1 if k1 and k1 > 0 else k2
     l = text.find('\nFinal Answer:')
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,

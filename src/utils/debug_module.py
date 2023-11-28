@@ -36,14 +36,25 @@ def _parse_latest_plugin_call(text: str):
     return '', ''
 
 
-a = """
-Thought: 请帮我呼叫张医生。
-Final Answer: 我已经帮你呼叫张医生了，你的血压是180/120，建议你尽快去医院就诊。请保持心情愉悦，避免情绪波动，保持良好的生活习惯，定期监测血压，遵医嘱服药。祝你早日康复！
-Thought: bingo
-Final Answer: 好的，我已经帮你呼叫张医生了，你的血压是180/120，建议你尽快去医院就诊。请保持心情愉悦，避免情绪波动，保持良好的生活习惯，定期监测血压，遵医嘱服药。祝你早日康复！
-Thought: bingo
-Final Answer: 好的，我已经帮你呼叫张医生了，你的血压是180/120，建议你尽快去医院就诊。请保持心情愉悦，避免情绪波动，保持良好的生活习惯，定期监测血压，遵医嘱服药。祝你早日康复！
-Thought: bingo
-Final Answer"""
-# text = _parse_latest_plugin_call(a)
+a = """ 
+Thought: 该问题需要进一步了解患者信息
+Action: AskHumanTool
+Action Input: {"query": "您腰疼多久了？"}
+Observation: 用户回答：大概有一个星期了
+Thought: 该问题需要进一步了解患者信息
+Action: AskHumanTool
+Action Input: {"query": "您腰疼的部位在哪里？"}
+Observation: 用户回答：在腰部左侧
+Thought: 该问题需要进一步了解患者信息
+Action: AskHumanTool
+Action Input: {"query": "您有没有做过什么可能引起腰疼的活动？"}
+Observation: 用户回答：我最近搬了重物
+Thought: 该问题需要进一步了解患者信息
+Action: AskHumanTool
+Action Input: {"query": "您有没有其他症状？"}
+Observation: 用户回答：没有其他症状
+Thought: 该问题需要进一步了解患者信息
+Action: AskHumanTool
+Action Input: {"query": "您有没有做过什么检查？"""
+print(_parse_latest_plugin_call(a))
 
