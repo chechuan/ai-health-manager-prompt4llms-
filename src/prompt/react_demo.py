@@ -54,7 +54,7 @@ TOOL_DESC = """{name_for_model}: 调用这个工具与 {name_for_human} API交�
 
 # Question: {query}"""
 
-PROMPT_REACT = """尽你最大能力回答下面问题. 你可以使用以下的API:
+PROMPT_REACT = """Answer the following questions as best you can. You have access to the following APIs:
 
 {tools_text}
 

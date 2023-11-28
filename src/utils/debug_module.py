@@ -45,5 +45,5 @@ Thought: bingo
 Final Answer: 好的，我已经帮你呼叫张医生了，你的血压是180/120，建议你尽快去医院就诊。请保持心情愉悦，避免情绪波动，保持良好的生活习惯，定期监测血压，遵医嘱服药。祝你早日康复！
 Thought: bingo
 Final Answer"""
-text = _parse_latest_plugin_call(a)
-...
+# text = _parse_latest_plugin_call(a)
+
