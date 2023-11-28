@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from loguru import logger
+from datetime import datetime
 
 logger.remove()
 
@@ -19,14 +20,14 @@ class Logging:
         :param file_level: 保存文件日志logger级别
         """
         logger.add(sink=sys.stderr, level=console_level, backtrace=True, diagnose=True)
-        hostname = socket.gethostname()
         try:
             log_dir = Path("./logs")
             log_dir.mkdir(exist_ok=True, parents=True)
         except Exception as error:
             logger.exception(error)
-        
-        log_path = log_dir.joinpath(f"{appid}.log")
+
+        today = datetime.strftime(datetime.now(), "%Y-%m-%d")
+        log_path = log_dir.joinpath(f"{appid}-{today}.log")
         log_path.touch(exist_ok=True)
         
         format = "[{time:YYYY-MM-DD HH:mm:ss.SSS}] [{level}] [{process}] {module}:{name}:{line} {message}"
@@ -44,7 +45,7 @@ class Logging:
         
         self.logger = logger
 
-logger = Logging(appid="aimp-algo-health-manager-model").logger
+logger = Logging(appid="ai-health-manager-prompt4llms").logger
 
 if __name__ == "__main__":
     logger.trace("log level trace.")
