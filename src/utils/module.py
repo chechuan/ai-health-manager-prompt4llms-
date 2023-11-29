@@ -118,7 +118,7 @@ def get_intent(text):
         desc = '呼叫健管师'
     elif '其它' in text:
         code = 'other'
-        desc = '其它意图'
+        desc = '日常对话'
     elif '日程管理'in text:
         code = 'schedule_manager'
         desc = '日程管理'
@@ -202,7 +202,7 @@ def get_intent(text):
         desc = '呼叫五师'
     else:
         code = 'other'
-        desc = '其它意图'
+        desc = '日常对话'
     logger.debug(f'识别出的意图:{text} code:{code}')
     return code, desc
 
