@@ -126,7 +126,7 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     tools_text = '\n\n'.join(tools_text)
 
     # 候选插件的代号
-    tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info])
+    tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info if plugin_info.get("code")])
     sys_prompt = sys_prompt.replace("{tools_name_text}", tools_name_text)
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=sys_prompt) + "\n\n"
 

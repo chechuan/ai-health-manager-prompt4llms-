@@ -38,7 +38,7 @@ def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
 def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
     if not items and head == 200:
         head = 600
-    res = {"head":head,"msg":msg,"items":items, **kwargs}
+    res = {"head":head,"message":msg,"items":items, **kwargs, "end":True}
     if cls:
         res = json.dumps(res, cls=NpEncoder)
     yield res
@@ -83,7 +83,7 @@ def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
                 break
     except Exception as err:
         logger.exception(err)
-        item = make_result(head=600, msg=repr(err))
+        item = make_result(head=600, message=repr(err), end=True)
         yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
 
 def create_app():
