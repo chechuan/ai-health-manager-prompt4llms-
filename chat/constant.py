@@ -4,7 +4,7 @@ EXT_USRINFO_TRANSFER_INTENTCODE = 'transfor_qa'
 
 intentCode_desc_map = {
     'food_rec':'饮食营养',
-    'med_health','医疗健康',
+    'med_health':'医疗健康',
     'sport_rec':'运动咨询',
     'cookbook':'菜谱',
     'musicX':'音乐播放',
