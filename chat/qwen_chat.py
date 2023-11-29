@@ -16,7 +16,7 @@ sys.path.append('.')
 from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
+from chat.constant import *
 from chat.plugin_util import funcCall
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
@@ -447,6 +447,8 @@ class Chat:
             logger.debug(f"Last input: {history[-1]['content']}")
     
         mid_vars = kwargs.get('mid_vars', [])
+
+        desc = intentCode_desc_map.get(intentCode, '日程提醒')
         
         if self.intent_map['userinfo'].get(intentCode):
             logger.debug('进入信息提取页面：')
@@ -497,6 +499,7 @@ class Chat:
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+        out_text['intentDesc'] = desc
         yield out_text, mid_vars
 
     def get_pageName_code(self, text):
