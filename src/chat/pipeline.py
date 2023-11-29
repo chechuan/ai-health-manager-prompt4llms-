@@ -105,7 +105,7 @@ class Conv:
         # prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
         prompt += "Thought: "
-        logger.debug(f"ReAct Prompt: {prompt}")
+        logger.debug(f"ReAct Prompt:\n{prompt}")
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")

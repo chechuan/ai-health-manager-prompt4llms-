@@ -194,7 +194,10 @@ class cusPromptEngine:
         if tools:
             function_names = tools.split("\n")
             all_funcsets = self.prompt_meta_data['tool']
-            functions = [all_funcsets[name] for name in function_names if all_funcsets.get(name)]
+            if not kwds.get("tool_in_use"):
+                functions = [all_funcsets[name] for name in function_names if all_funcsets.get(name)]
+            else:
+                functions = [all_funcsets[name] for name in kwds['tool_in_use'] if all_funcsets.get(name)]
         return sys_prompt, functions
 
 
