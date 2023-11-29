@@ -18,14 +18,14 @@ from requests import Session
 from langchain.prompts import PromptTemplate
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from src.pkgs.knowledge.call_chatchat import funcCall
-from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
+from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import cusPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.module import make_meta_ret
 from src.utils.Logger import logger
-from src.utils.module import (_parse_latest_plugin_call, clock,
+from src.utils.module import (parse_latest_plugin_call, clock,
                               get_doc_role, get_intent, 
                               req_prompt_data_from_mysql)
 from src.prompt.react_demo import build_input_text
@@ -111,7 +111,7 @@ class Conv:
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
 
-        out_text = _parse_latest_plugin_call(model_output)
+        out_text = parse_latest_plugin_call(model_output)
         if not out_text[1]:
             prompt = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
                     "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
@@ -263,8 +263,8 @@ class Conv:
                 yield yield_item
             except StopIteration as err:
                 break
-            except Exception as err:
-                logger.exception(err)
+            # except Exception as err:
+            #     logger.exception(err)
 
     def __log_init(self, **kwargs):
         """初始打印日志

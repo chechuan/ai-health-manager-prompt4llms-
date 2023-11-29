@@ -187,9 +187,9 @@ def get_intent(text):
     elif 'BMI' in text:
         code = 'BMI'
         desc = 'BMI'
-    elif '画面' in text:
+    elif '页面' in text or '打开' in text:
         code = 'open_web_daily_monitor'
-        desc = '打开功能画面'
+        desc = '页面'
     elif '万年历' in text:
         code = 'calendar'
         desc = '万年历'
@@ -222,7 +222,35 @@ def get_doc_role(code):
     else:
         return 'ROLE_HEALTH_SPECIALIST'
 
-def _parse_latest_plugin_call(text: str):
+def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
+    h = text.find('Thought:')
+    i = text.find('\nAction:')
+    j = text.find('\nAction Input:')
+    k = text.find('\nObservation:') if text.find('\nObservation:') > 0 else j + len('\nAction Input:') + text[j + len('\nAction Input:'):].find("\n")
+    l = text.find('\nFinal Answer:')
+    if 0 <= i < j:  # If the text has `Action` and `Action input`,
+        if k < j:  # but does not contain `Observation`,
+            # then it is likely that `Observation` is ommited by the LLM,
+            # because the output text may have discarded the stop word.
+            text = text.rstrip() + '\nObservation:'  # Add it back.
+            k = text.rfind('\nObservation:')
+    if 0 <= i < j < k:
+        plugin_thought = text[h + len('Thought:'):i].strip()
+        plugin_name = text[i + len('\nAction:'):j].strip()
+        plugin_args = text[j + len('\nAction Input:'):k].strip()
+        return plugin_thought, plugin_name, plugin_args
+    elif l > 0:
+        if h > 0:
+            plugin_thought = text[h + len('Thought:'):l].strip()
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            plugin_args.split("\n")[0]
+            return plugin_thought, "直接回复用户问题", plugin_args
+        else:
+            plugin_args = text[l + len('\nFinal Answer:'):].strip()
+            return "I know the final answer.", "直接回复用户问题", plugin_args
+    return '', ''
+
+def parse_latest_plugin_call(text: str):
     h = text.find('\nThought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')

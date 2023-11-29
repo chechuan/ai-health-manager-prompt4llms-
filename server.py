@@ -35,6 +35,14 @@ def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
         res = json.dumps(res, cls=NpEncoder)
     return res
 
+def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
+    if not items and head == 200:
+        head = 600
+    res = {"head":head,"msg":msg,"items":items, **kwargs}
+    if cls:
+        res = json.dumps(res, cls=NpEncoder)
+    yield res
+
 def format_sse(data: str, event=None) -> str:
     msg = 'data: {}\n\n'.format(data)
     if event is not None:
@@ -56,7 +64,9 @@ def format_sse_chat_complete(data: str, event=None) -> str:
 
 def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
     try:
-        for yield_item in generator:
+        while True:
+            yield_item = next(generator)
+        # for yield_item in generator:
             item = {**yield_item['data']}
             if ret_mid:
                 if item['end'] is True:
@@ -69,8 +79,12 @@ def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
                 else:
                     item['backend_history'] = []
             yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
+            if yield_item['data']['end'] == True:
+                break
     except Exception as err:
         logger.exception(err)
+        item = make_result(head=600, msg=repr(err))
+        yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), 'delta')
 
 def create_app():
     app = Flask(__name__)
@@ -89,11 +103,11 @@ def create_app():
                                            **param)
         except AssertionError as err:
             logger.exception(err)
-            result = make_result(head=601, msg=repr(err), items=param)
+            result = yield_result(head=601, msg=repr(err), items=param)
         except Exception as err:
             logger.exception(err)
             logger.error(traceback.format_exc())
-            result = make_result(msg=repr(err), items=param)
+            result = yield_result(msg=repr(err), items=param)
         finally:
             return Response(decorate(result), mimetype='text/event-stream')
 
@@ -105,17 +119,16 @@ def create_app():
         global conv
         try:
             param = accept_param()
-            result = conv.general_yield_result(sys_prompt=param.get('prompt'), 
+            generator = conv.general_yield_result(sys_prompt=param.get('prompt'), 
                                                mid_vars=[], 
                                                use_sys_prompt=True, 
                                                **param)
+            result = decorate_chat_complete(generator, ret_mid=True,ret_his=True)
         except Exception as err:
             logger.exception(err)
-            result = make_result(head=600, msg=repr(err), items=param)
+            result = yield_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(decorate_chat_complete(result, 
-                                                   ret_mid=True,
-                                                   ret_his=True), mimetype='text/event-stream')
+            return Response(result, mimetype='text/event-stream')
 
     @app.route('/intent/query', methods=['post'])
     def intent_query():

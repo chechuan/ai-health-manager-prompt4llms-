@@ -42,18 +42,18 @@ Begin!
 # {"name": "cron", "description": "在Linux和Unix系统中定期执行任务的时间调度器", "required": True, "schema": {"type": "string[int]"}}, 
 task_schedule_parameter_description = [
     {"name": "task", "description": "任务名称", "required": True, "schema": {"type": "string"}}, 
-    {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
-    {"name": "ask", "description": "当日程信息不全时,通过此字段进一步询问;当输入信息完整,当前任务已完成时,输出: 已为你执行日程操作", "required": True, "schema": {"type":"string"}}
+    {"name": "remind_time", "description": "提醒时间", "required": True, "schema": {"type": "string","format": "yyyy-MM-dd HH:mm:ss"}}, 
+    {"name": "ask", "description": "当日程信息不全时,进一步询问;当输入信息完整,当前任务已完成时,输出: 已为你执行日程操作", "required": True, "schema": {"type":"string"}}
 ]
 
 task_schedule_parameter_description_for_qwen = [
     {
         "name_for_human": "创建日程",
         "name_for_model": "create_schedule",
-        "description_for_model": "一个用于创建日程的工具,如果没有提供日程的时间,先使用ask_for_time工具询问日程时间. Format the arguments as a JSON object.",
+        "description_for_model": "一个用于创建日程的工具,提取日程名称(不含时间信息)和提醒的时间用来创建日程. Format the arguments as a JSON object.",
         "parameters": [
-            {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
-            {"name": "time", "description": "日程的时间", "required": True, "schema": {"type": "string","format": "timestamp"}}, 
+            {"name": "task","description": "简洁的日程名称,名称中不要有时间的描述","required": True,"schema": {"type": "string"}},
+            {"name": "time", "description": "提醒的时间", "required": True, "schema": {"type": "string","format": "yyyy-MM-dd HH:mm:ss"}}, 
             {"name": "ask","description": "告知用户日程创建完成及具体的提醒时间","required": True,"schema": {"type": "string"}}
         ]
     },
@@ -80,9 +80,9 @@ task_schedule_parameter_description_for_qwen = [
         "name_for_model": "modify_schedule",
         "description_for_model": "修改日程是一个帮助用户修改当前日程的工具，可使用本工具修改对应日程时间. Format the arguments as a JSON object.",
         "parameters": [
+            # {"name": "ask", "descripton": "告知用户日程修改完成和提醒时间", "required": True, "schema": {"type": "string"}},
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}},
-            {"name": "time", "description": "当前用户希望日程提醒的时间", "required": True, "schema": {"type": "string","format": "timestamp"}},
-            {"name": "ask", "descripton": "告知用户日程修改成功", "required": True, "schema": {"type": "string"}}
+            {"name": "time", "description": "当前用户希望日程提醒的时间", "required": True, "schema": {"type": "string","format": "yyyy-MM-dd HH:mm:ss"}},
         ]
     },
     {
