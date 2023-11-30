@@ -77,7 +77,7 @@ def llm_with_plugin(sys_prompt:str, history, list_of_plugin_info=()):
 
 
 # 将对话历史、插件信息聚合成一段初始文本
-def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
+def build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs) -> str:
     # 候选插件的详细信息
     tools_text = []
     for plugin_info in list_of_plugin_info:
@@ -98,9 +98,12 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
 
     # 候选插件的代号
     tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info if plugin_info.get("code")])
-    sys_prompt = sys_prompt.replace("{tools_name_text}", tools_name_text)
-    sys_prompt = sys_prompt.replace("{current_time}", curr_time())
-    prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=sys_prompt) + "\n\n"
+    _sys_prompt = _sys_prompt.replace("{tools_name_text}", tools_name_text)
+    if "{current_time}" in _sys_prompt:
+        _sys_prompt = _sys_prompt.replace("{current_time}", curr_time())
+    if "{current_schedule}" in _sys_prompt:
+        _sys_prompt = _sys_prompt.replace("{current_schedule}", kwargs['current_schedule'])
+    prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
 
     h_len = len(chat_history)
     for h_idx in range(h_len):
@@ -120,7 +123,7 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     im_start = '<|im_start|>'
     im_end = '<|im_end|>'
     # prompt = f'{im_start}system\nYou are a helpful assistant.{im_end}'
-    prompt = f'{im_start}system\n{sys_prompt}{im_end}'
+    prompt = f'{im_start}system\n{_sys_prompt}{im_end}'
     for i, (query, response) in enumerate(chat_history):
         if list_of_plugin_info:  # 如果有候选插件
             # 倒数第一轮或倒数第二轮对话填入详细的插件信息，但具体什么位置填可以自行判断

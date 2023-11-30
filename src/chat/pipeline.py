@@ -99,8 +99,8 @@ class Conv:
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        sys_prompt, history, functions = self.compose_input_history(**kwargs)
-        prompt = build_input_text(sys_prompt, history, functions)
+        _sys_prompt, chat_history, list_of_plugin_info = self.compose_input_history(**kwargs)
+        prompt = build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs)
         # prompt = llm_with_plugin(sys_prompt, history, list_of_plugin_info=funcions)
         # prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
@@ -125,12 +125,12 @@ class Conv:
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         out_text = list(out_text)
-        history.append({
+        chat_history.append({
             "role": "assistant", 
             "content": out_text[0], 
             "function_call": {"name": out_text[1],"arguments": out_text[2]}
             })
-        return history
+        return chat_history
     
     def compose_input_history(self, **kwargs):
         """拼装sys_prompt里
@@ -246,6 +246,9 @@ class Conv:
         """
         if kwargs.get("intentCode") == "schedule_qry_up" and not kwargs.get("history"):
             kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
+        if kwargs.get("intentCode") == "schedule_manager":
+            current_schedule = self.funcall.call_get_schedule(*args, **kwargs)
+            kwargs['current_schedule'] = "\n".join([f"task: {i['task']}, time: {i['time']}" for i in current_schedule])
         return args, kwargs
 
     def general_yield_result(self, *args, **kwargs):
