@@ -1,1 +1,3 @@
-python server.py --port 6500
+python src/server.py \
+    --env dev \
+    --port 6500

@@ -13,22 +13,8 @@ import os
 
 import json5
 import torch
-# from transformers import AutoModelForCausalLM, AutoTokenizer
-# from transformers.generation import GenerationConfig
 
-# for _ in range(10):  # 网络不稳定，多试几次
-#     try:
-#         name = 'Qwen/Qwen-7B-Chat'
-#         tokenizer = AutoTokenizer.from_pretrained(name, trust_remote_code=True)
-#         generation_config = GenerationConfig.from_pretrained(name, trust_remote_code=True)
-#         model = AutoModelForCausalLM.from_pretrained(
-#             name, device_map="auto", trust_remote_code=True
-#         ).eval()
-#         model.generation_config = generation_config
-#         model.generation_config.top_k = 1
-#         break
-#     except Exception as e:
-#         print(e)
+from src.utils.module import curr_time
 
 # 将一个插件的关键信息拼接成一段文本的模版。
 # TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_human} API. What is the {name_for_human} API useful for? {description_for_model} Parameters: {parameters}"""
@@ -61,21 +47,6 @@ PROMPT_REACT = """Answer the following questions as best you can. You have acces
 {sys_prompt}
 """
 
-
-#
-# 本示例代码的入口函数。
-#
-# 输入：
-#   prompt: 用户的最新一个问题。
-#   history: 用户与模型的对话历史，是一个 list，
-#       list 中的每个元素为 {"user": "用户输入", "bot": "模型输出"} 的一轮对话。
-#       最新的一轮对话放 list 末尾。不包含最新一个问题。
-#   list_of_plugin_info: 候选插件列表，是一个 list，list 中的每个元素为一个插件的关键信息。
-#       比如 list_of_plugin_info = [plugin_info_0, plugin_info_1, plugin_info_2]，
-#       其中 plugin_info_0, plugin_info_1, plugin_info_2 这几个样例见本文档前文。
-#
-# 输出：
-#   模型对用户最新一个问题的回答。
 #
 def llm_with_plugin(sys_prompt:str, history, list_of_plugin_info=()):
     # chat_history = [(x['user'], x['bot']) for x in history] + [(prompt, '')]
@@ -128,6 +99,7 @@ def build_input_text(sys_prompt, chat_history, list_of_plugin_info) -> str:
     # 候选插件的代号
     tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info if plugin_info.get("code")])
     sys_prompt = sys_prompt.replace("{tools_name_text}", tools_name_text)
+    sys_prompt = sys_prompt.replace("{current_time}", curr_time())
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=sys_prompt) + "\n\n"
 
     h_len = len(chat_history)

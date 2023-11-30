@@ -6,19 +6,22 @@
 '''
 import functools
 import json
+import re
 import sys
 import time
-import yaml
-from typing import Tuple
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Tuple
 from urllib import parse
 
 import numpy as np
 import pandas as pd
 import requests
+import yaml
 from sqlalchemy import MetaData, Table, create_engine
-from typing import Dict
+
 from src.utils.Logger import logger
-from pathlib import Path
+
 
 def make_meta_ret(end=False, msg="", code=None,type="Result",**kwargs):
     return {'end':end, 'message':msg,'intentCode':code,'type': type,**kwargs}
@@ -388,6 +391,7 @@ def req_prompt_data_from_mysql(env) -> Dict:
     prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
     prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
     prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
+    prompt_meta_data['complete_rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
     for name, func in prompt_meta_data['tool'].items():
         try:
             func['params'] = json.loads(func['params']) if func['params'] else func['params']
@@ -396,3 +400,6 @@ def req_prompt_data_from_mysql(env) -> Dict:
     del mysql_conn
     logger.debug("req prompt meta data from mysql.")
     return prompt_meta_data
+
+def curr_time():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")

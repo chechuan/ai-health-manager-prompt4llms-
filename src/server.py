@@ -8,8 +8,11 @@
 
 import argparse
 import json
+import sys
 import traceback
+from pathlib import Path
 
+sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from flask import Flask, Response, request
 from gevent import pywsgi
 
@@ -181,9 +184,7 @@ def create_app():
     return app
 
 def server_forever(args):
-
     global app
-    # app.run(host=args.ip, port=args.port, debug=True)
     server = pywsgi.WSGIServer((args.ip, args.port), app)
     logger.success(f"serve at {args.ip}:{args.port}")
     server.serve_forever()

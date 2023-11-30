@@ -15,10 +15,10 @@ import yaml
 from langchain.prompts.prompt import PromptTemplate
 from typing_extensions import Dict
 
-from config.constrant import (PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN,
-                              TEMPLATE_ROLE, TEMPLATE_SENCE)
+from config.constrant import PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN, TEMPLATE_ROLE, TEMPLATE_SENCE
 from src.utils.Logger import logger
 from src.utils.module import MysqlConnector
+
 
 class baseVarsForPromptEngine:
     """定义外部信息的变量
@@ -153,6 +153,8 @@ class cusPromptEngine:
         """
         lst_prompt = []
         prompt = ""
+        if e_item.get('description', None):
+            lst_prompt.append(e_item['description'])
         if e_item.get('process', None):
             lst_prompt.append(e_item['process'])
         if e_item.get('constraint'):

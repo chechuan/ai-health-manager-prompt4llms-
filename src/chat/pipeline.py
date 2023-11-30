@@ -13,22 +13,22 @@ import yaml
 
 sys.path.append('.')
 
-from typing import Dict, List
-from requests import Session
+from typing import Any, Dict, List
+
 from langchain.prompts import PromptTemplate
+from requests import Session
+
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from src.pkgs.knowledge.call_chatchat import funcCall
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
+from src.pkgs.knowledge.call_chatchat import funcCall
 from src.prompt.factory import cusPromptEngine
 from src.prompt.model_init import chat_qwen
-from src.prompt.task_schedule_manager import taskSchedulaManager
-from src.utils.module import make_meta_ret
-from src.utils.Logger import logger
-from src.utils.module import (parse_latest_plugin_call, clock,
-                              get_doc_role, get_intent, 
-                              req_prompt_data_from_mysql)
 from src.prompt.react_demo import build_input_text
+from src.prompt.task_schedule_manager import taskSchedulaManager
+from src.utils.Logger import logger
+from src.utils.module import (clock, get_doc_role, get_intent, make_meta_ret,
+                              parse_latest_plugin_call, req_prompt_data_from_mysql)
 
 role_map = {
         '0': 'user',
@@ -109,7 +109,7 @@ class Conv:
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
-        self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
 
         out_text = parse_latest_plugin_call(model_output)
         if not out_text[1]:
@@ -125,13 +125,6 @@ class Conv:
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
         out_text = list(out_text)
-        # 特殊处理规则 
-        ## 1. 生成\nEnd.字符
-        out_text[2] = out_text[2].split("\nEnd")[0]
-        try:
-            out_text[2] = eval(out_text[2])['query']
-        except:
-            ...
         history.append({
             "role": "assistant", 
             "content": out_text[0], 
@@ -153,11 +146,11 @@ class Conv:
             sys_prompt = sys_prompt + "\n\n" + qprompt
         return sys_prompt, history, functions
     
-    def update_mid_vars(self, mid_vars, **kwargs):
+    def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
         """
         lth = len(mid_vars) + 1
-        mid_vars.append({"id": lth, **kwargs})
+        mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
     
     def get_parent_intent_name(self, text):
@@ -248,9 +241,17 @@ class Conv:
         }
         return intent_code_map
     
+    def pre_fill_param(self, *args, **kwargs):
+        """结合业务逻辑，预构建输入
+        """
+        if kwargs.get("intentCode") == "schedule_qry_up" and not kwargs.get("history"):
+            kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
+        return args, kwargs
+
     def general_yield_result(self, *args, **kwargs):
         """处理最终的输出
         """
+        args, kwargs = self.pre_fill_param(*args, **kwargs)
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
             kwargs['history'] = kwargs['backend_history'] + [history[-1]]
@@ -263,8 +264,6 @@ class Conv:
                 yield yield_item
             except StopIteration as err:
                 break
-            # except Exception as err:
-            #     logger.exception(err)
 
     def __log_init(self, **kwargs):
         """初始打印日志
@@ -319,17 +318,21 @@ class Conv:
                 break
             
             try:
-                kwargs['history'] = self.funcall._call(out_history=out_history)
+                kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             except AssertionError as err:
                 logger.error(err)
-                kwargs['history'] = self.funcall._call(out_history=out_history)
+                kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             
-            call_content = kwargs['history'][-1]['content']
-            ret_function_call = make_meta_ret(msg=call_content, type="Observation", code=intentCode)
-            logger.debug(f"Observation: {call_content}")
-            yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
-            
-            out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+            if self.prompt_meta_data['complete_rollout_tool'].get(tool):
+                # 工具执行完成后输出
+                content = kwargs['history'][-1]['content']
+                break
+            else:
+                # function_call的结果, self_rag
+                content = kwargs['history'][-1]['content']
+                ret_function_call = make_meta_ret(msg=content, type="Observation", code=intentCode)
+                yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
+                out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         
         ret_result = make_meta_ret(end=True, msg=content, code=intentCode)
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
