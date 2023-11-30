@@ -223,13 +223,12 @@ class Chat:
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
             return '打开页面'
-        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:-1]])
-        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-1:]])
+        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
-            prompt = kwargs.get('intentPrompt').format(his_prompt) + "\n\n" + h_p + "\nThought: "
+            prompt = kwargs.get('intentPrompt') + "\n\n" + h_p + "\nThought: "
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(his_prompt) + "\n\n" + h_p + "\nThought: "
+            prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
@@ -241,11 +240,11 @@ class Chat:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
-            his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+                h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
             if kwargs.get('subIntentPrompt', ''):
-                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             else:
-                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                     temperature=0.7, do_sample=False)
