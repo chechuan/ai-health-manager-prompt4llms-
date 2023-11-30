@@ -214,7 +214,7 @@ class Chat:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
 
-    def cls_intent(self, history, mid_vars):
+    def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
@@ -225,7 +225,10 @@ class Chat:
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:-1]])
         h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-1:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['父意图']['description'].format(his_prompt) + "\n\n" + h_p + "\nThought: "
+        if kwargs.get('intentPrompt', ''):
+            prompt = kwargs.get('intentPrompt').format(his_prompt) + "\n\n" + h_p + "\nThought: "
+        else:
+            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(his_prompt) + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
@@ -238,7 +241,10 @@ class Chat:
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
             his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
-            prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+            if kwargs.get('subIntentPrompt', ''):
+                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+            else:
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                     temperature=0.7, do_sample=False)
