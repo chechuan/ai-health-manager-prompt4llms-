@@ -371,7 +371,7 @@ class Chat:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))
         else:
-            intent, desc = get_intent(self.cls_intent(history, mid_vars))
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
