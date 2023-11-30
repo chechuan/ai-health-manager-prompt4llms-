@@ -139,7 +139,10 @@ def create_app():
         try:
             param = accept_param()
             item = chat.intent_query(param.get('history',[]), task=param.get('task',
-                ''), prompt=param.get('prompt', ''), userInfo=param.get('promptParam', ''))
+                ''), prompt=param.get('prompt', ''),
+                userInfo=param.get('promptParam', ''),
+                intentPrompt=param.get('intentPrompt', ''),
+                subIntentPrompt=param.get('subIntentPrmopt', ''))
             result = make_result(items=item)
         except AssertionError as err:
             logger.exception(err)

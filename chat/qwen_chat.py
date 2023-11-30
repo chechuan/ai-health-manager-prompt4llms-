@@ -16,16 +16,17 @@ sys.path.append('.')
 from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
+
+from chat.constant import *
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
-from src.utils.module import make_meta_ret
 from src.utils.Logger import logger
-from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock,
-                              get_doc_role, get_intent)
+from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock, get_doc_role,
+                              get_intent, make_meta_ret)
 
 role_map = {
         '0': 'user',
@@ -213,7 +214,7 @@ class Chat:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
 
-    def cls_intent(self, history, mid_vars):
+    def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
@@ -221,10 +222,12 @@ class Chat:
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
             return '打开页面'
-        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:-1]])
-        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-1:]])
+        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['父意图']['description'].format(his_prompt) + "\n\n" + h_p + "\nThought: "
+        if kwargs.get('intentPrompt', ''):
+            prompt = kwargs.get('intentPrompt') + "\n\n" + h_p + "\nThought: "
+        else:
+            prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
@@ -236,8 +239,11 @@ class Chat:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
-            his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
-            prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
+                h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+            if kwargs.get('subIntentPrompt', ''):
+                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
+            else:
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
                     temperature=0.7, do_sample=False)
@@ -363,7 +369,7 @@ class Chat:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))
         else:
-            intent, desc = get_intent(self.cls_intent(history, mid_vars))
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
         if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
@@ -445,6 +451,8 @@ class Chat:
             logger.debug(f"Last input: {history[-1]['content']}")
     
         mid_vars = kwargs.get('mid_vars', [])
+
+        desc = intentCode_desc_map.get(intentCode, '日程提醒')
         
         if self.intent_map['userinfo'].get(intentCode):
             logger.debug('进入信息提取页面：')
@@ -495,6 +503,7 @@ class Chat:
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+        out_text['intentDesc'] = desc
         yield out_text, mid_vars
 
     def get_pageName_code(self, text):
