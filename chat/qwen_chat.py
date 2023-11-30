@@ -16,7 +16,7 @@ sys.path.append('.')
 from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
+from chat.constant import *
 from chat.plugin_util import funcCall
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
@@ -131,10 +131,11 @@ class Chat:
         prompt = self.compose_prompt(query, history)
         # 利用Though防止生成无关信息
         prompt += "Thought: "
+        logger.debug(f"辅助诊断 Input:\n{prompt}")
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "Thought: " + model_output
         self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-        logger.debug(f"辅助诊断 Gen Output - {model_output}")
+        logger.debug(f"辅助诊断 Gen Output:\n{model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
         if not out_text[1]:
@@ -452,6 +453,8 @@ class Chat:
             logger.debug(f"Last input: {history[-1]['content']}")
     
         mid_vars = kwargs.get('mid_vars', [])
+
+        desc = intentCode_desc_map.get(intentCode, '日程提醒')
         
         if self.intent_map['userinfo'].get(intentCode):
             logger.debug('进入信息提取页面：')
@@ -502,6 +505,7 @@ class Chat:
         else:
             output_text = self.chatter_gaily(history, mid_vars, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
+        out_text['intentDesc'] = desc
         yield out_text, mid_vars
 
     def get_pageName_code(self, text):
