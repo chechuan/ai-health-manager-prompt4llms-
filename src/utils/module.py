@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import AnyStr, Dict, Tuple
 from urllib import parse
 
 import numpy as np
@@ -367,7 +367,7 @@ class MysqlConnector:
             self.engine.dispose()
         return res
 
-def req_prompt_data_from_mysql(env) -> Dict:
+def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
     """从mysql中请求prompt meta data
     """
     def filter_format(obj, splited=False):
@@ -391,7 +391,7 @@ def req_prompt_data_from_mysql(env) -> Dict:
     prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
     prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
     prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
-    prompt_meta_data['complete_rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
+    prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
     for name, func in prompt_meta_data['tool'].items():
         try:
             func['params'] = json.loads(func['params']) if func['params'] else func['params']

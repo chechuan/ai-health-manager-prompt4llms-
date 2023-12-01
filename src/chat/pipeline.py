@@ -71,39 +71,14 @@ class Conv:
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
 
-    @clock
     def reload_prompt(self):
         self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
-
-    # def compose_prompt(self, query: str = "", history=[]):
-    #     """调用模型生成答案,解析ReAct生成的结果
-    #     """
-    #     prompt = ""
-    #     h_l = len(history)
-    #     for midx in range(h_l):
-    #         msg = history[midx]
-    #         if  msg['role'] == "system":
-    #             prompt += msg['content']
-    #         elif msg['role'] == "user" and msg.get('function_call'):
-    #             prompt += f"Thought: 我可以使用 {msg['function_call']['name']} 工具"
-    #             prompt += f"Action: {msg['function_call']['name']}"
-    #             prompt += f"Action Input: {msg['function_call']['arguments']}"
-    #             prompt += f"Observation: {msg['content']}"
-    #         else:
-    #             if midx != h_l-1:
-    #                 prompt += f"{msg['role']}: {msg['content']}\n"
-    #             else:
-    #                 prompt += f"\nQuestion: {msg['content']}\n"
-    #     return prompt    
 
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
         _sys_prompt, chat_history, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs)
-        # prompt = llm_with_plugin(sys_prompt, history, list_of_plugin_info=funcions)
-        # prompt = self.compose_prompt(query, history)
-        # 利用Though防止生成无关信息
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
         model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
@@ -200,26 +175,6 @@ class Conv:
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
-    
-    def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
-        """获取用户信息
-        """
-        logger.debug('信息提取prompt为：' + prompt)
-        content = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200)
-        self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
-        if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
-            content = self.chatter_gaily(history, mid_vars)
-            intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
-        return {'end':True, 'message':content, 'intentCode':intentCode}
-
-    def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
-        logger.debug('remind prompt: ' + prompt)
-        model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
-        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
-        logger.debug('remind model output: ' + model_output)
-        if model_output.startswith('（）'):
-            model_output = model_output[2:].strip()
-        return {'end':True, 'message':model_output, 'intentCode':intentCode}
 
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
@@ -283,6 +238,89 @@ class Conv:
         thought = history[-1]['content']
         return tool, content, thought
 
+    def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
+        """获取用户信息
+        """
+        logger.debug('信息提取prompt为：' + prompt)
+        model_output = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200, do_sample=False)
+        content = model_output.split('。')[0][:20]
+        self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
+        if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
+            logger.debug('信息提取流程结束...')
+            content = self.chatter_gaily(history, mid_vars)
+            intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
+        content = content if content else '未知'
+        return content
+
+    def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
+        logger.debug('remind prompt: ' + prompt)
+        model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
+        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
+        logger.debug('remind model output: ' + model_output)
+        if model_output.startswith('（）'):
+            model_output = model_output[2:].strip()
+        return model_output
+    
+    def open_page(self, history, mid_vars, **kwargs):
+        """组装mysql中打开页面对应的prompt
+        """
+        input_history = input_history[-3:]
+        if '血压趋势图' in history[-1]['content']:
+            return 'pagename:"bloodPressure-trend-chart"'
+        elif '血压录入' in history[-1]['content']:
+            return 'pagename:"add-blood-pressure"'
+        elif '血压历史页面' in history[-1]['content'] or '历史血压页面' in history[-1]['content']:
+            return 'pagename:"record-list3"'
+
+        hp = [h['role'] + ' ' + h['content'] for h in input_history]
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'].format('\n'.join(hp))
+        last_h = [h['role'] + ' ' + h['content'] for h in input_history[-1:]]
+        hi = ''
+        if len(input_history) > 1:
+            hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录：' + '\n' + '\n'.join([h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
+        hi += f'Question:{input_history[-1]["content"]}\nThought:'
+        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'] + '\n' + hi
+        input_history = [{"role":"system", "content": ext_info}]
+        logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
+        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        return content
+
+    def get_pageName_code(self, text):
+        if 'bloodPressure-trend-chart' in text and 'pagename' in text:
+            return 'bloodPressure-trend-chart'
+        elif 'add-blood-pressure' in text and 'pagename' in text:
+            return 'add-blood-pressure'
+        elif 'record-list3' in text and 'pagename' in text:
+            return 'record-list3'
+        else:
+            return 'other'
+    
+    def complete(self, mid_vars: List[object], **kwargs):
+        """only prompt模式的生成及相关逻辑
+        """
+        assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        prompt = kwargs['prompt']
+        chat_history = kwargs['history']
+        intentCode = kwargs['intentCode']
+        if self.intent_map['userinfo'].get(intentCode):
+            content = self.get_userInfo_msg(prompt, history, intentCode, mid_vars)
+        elif self.intent_map['tips'].get(intentCode): 
+            content = self.get_reminder_tips(prompt, history, intentCode, mid_vars=mid_vars)
+        elif intentCode == "open_web_daily_monitor":
+            output_text = self.open_page(history, mid_vars, **kwargs)
+            logger.debug('打开页面模型输出：'  + output_text)
+            content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
+            intentCode = self.get_pageName_code(output_text)
+        else:
+            content = self.chatter_gaily(history, mid_vars, **kwargs)
+        chat_history.append({
+            "role": "assistant", 
+            "content": "当前回复模式为only_prompt,根据prompt直接生成回复", 
+            "function_call": {"name": "convComplete", "arguments": content}
+        })
+        return chat_history, intentCode
+    
     def pipeline(self, mid_vars=[], **kwargs):
         """
         ## 多轮交互流程
@@ -306,7 +344,11 @@ class Conv:
         self.__log_init(**kwargs)
         intentCode = kwargs.get('intentCode')
         mid_vars = kwargs.get('mid_vars', [])
-        out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+        assert self.prompt_meta_data['event'].get(intentCode), f"Not support current event {intentCode}."
+        if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
+            out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+        else:
+            out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
             logger.debug(f"Action: {tool}")
@@ -326,7 +368,7 @@ class Conv:
                 logger.error(err)
                 kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             
-            if self.prompt_meta_data['complete_rollout_tool'].get(tool):
+            if self.prompt_meta_data['rollout_tool_after_complete'].get(tool):
                 # 工具执行完成后输出
                 content = kwargs['history'][-1]['content']
                 break
