@@ -114,7 +114,7 @@ def build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs) -
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
-            # prompt_react += f"Action Input: {item['function_call']['arguments']}\n"
+            prompt_react += f"Action Input: {item['function_call']['arguments']}\n"
         elif item['role'] == "user" and h_idx -1 > 0 and chat_history[h_idx-1].get("function_call"):
             prompt_react += f"Observation: {item['content']}\n"
         elif item['role'] == "user":
