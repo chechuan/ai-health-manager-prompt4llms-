@@ -256,6 +256,7 @@ class Conv:
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(history, mid_vars)
+            self.update_mid_vars(mid_vars, key="获取用户信息 02", input_text=history, output_text=content, model="Qwen-14B-Chat")
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
         content = content if content else '未知'
         return content
@@ -263,7 +264,7 @@ class Conv:
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
         model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
-        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
+        self.update_mid_vars(mid_vars, key="获取提醒信息", input_text=prompt, output_text=model_output, model=model)
         logger.debug('remind model output: ' + model_output)
         if model_output.startswith('（）'):
             model_output = model_output[2:].strip()
@@ -289,9 +290,9 @@ class Conv:
         hi += f'Question:{input_history[-1]["content"]}\nThought:'
         ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
-        logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
+        logger.debug('打开页面模型输入：' + json.dumps(input_history, ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=input_history, output_text=content)
         return content
 
     def get_pageName_code(self, text):
@@ -317,7 +318,6 @@ class Conv:
             content = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
         elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(chat_history, mid_vars, **kwargs)
-            logger.debug('打开页面模型输出：'  + output_text)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
         else:

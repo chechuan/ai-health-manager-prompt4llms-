@@ -65,18 +65,18 @@ def format_sse_chat_complete(data: str, event=None) -> str:
         msg = 'event: {}\n{}'.format(event, msg)
     return msg    
 
-def decorate_chat_complete(generator, ret_mid=False, ret_his=False):
+def decorate_chat_complete(generator, return_mid_vars=False, return_backend_history=False):
     try:
         while True:
             yield_item = next(generator)
         # for yield_item in generator:
             item = {**yield_item['data']}
-            if ret_mid:
+            if return_mid_vars:
                 if item['end'] is True:
                     item['mid_vars'] = yield_item['mid_vars']
                 else:
                     item['mid_vars'] = []
-            if ret_his:
+            if return_backend_history:
                 if item['end'] is True:
                     item['backend_history'] = yield_item['history']
                 else:
@@ -126,7 +126,10 @@ def create_app():
                                                mid_vars=[], 
                                                use_sys_prompt=True, 
                                                **param)
-            result = decorate_chat_complete(generator, ret_mid=True,ret_his=True)
+            result = decorate_chat_complete(generator, 
+                                            return_mid_vars=True,
+                                            return_backend_history=True
+                                            )
         except Exception as err:
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
