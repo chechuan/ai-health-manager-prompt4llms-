@@ -304,16 +304,16 @@ class Conv:
         chat_history = kwargs['history']
         intentCode = kwargs['intentCode']
         if self.intent_map['userinfo'].get(intentCode):
-            content = self.get_userInfo_msg(prompt, history, intentCode, mid_vars)
+            content = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
         elif self.intent_map['tips'].get(intentCode): 
-            content = self.get_reminder_tips(prompt, history, intentCode, mid_vars=mid_vars)
+            content = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
         elif intentCode == "open_web_daily_monitor":
-            output_text = self.open_page(history, mid_vars, **kwargs)
+            output_text = self.open_page(chat_history, mid_vars, **kwargs)
             logger.debug('打开页面模型输出：'  + output_text)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
         else:
-            content = self.chatter_gaily(history, mid_vars, **kwargs)
+            content = self.chatter_gaily(chat_history, mid_vars, **kwargs)
         chat_history.append({
             "role": "assistant", 
             "content": "当前回复模式为only_prompt,根据prompt直接生成回复", 
