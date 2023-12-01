@@ -53,8 +53,15 @@ class promptEngine:
         self.tpe_scene = PromptTemplate(input_variables=["var"], template=TEMPLATE_SENCE)
         self.tpe_role = PromptTemplate(input_variables=["var"], template=TEMPLATE_ROLE)
 
-    def __concat(self, prompt: str, tpe: PromptTemplate, var: str, verbose: bool=False, **kwds) -> str:
-        concat_keyword = kwds.get("concat_keyword", ",") + " "
+    def __concat(self, 
+                 prompt: str, 
+                 tpe: PromptTemplate, 
+                 var: str, 
+                 verbose: bool=False, 
+                #  **kwds
+                 ) -> str:
+        concat_keyword = ","
+        # concat_keyword = kwds.get("concat_keyword", ",") + " "
         if prompt:
             prompt += concat_keyword
         prompt += tpe.format(var=var)
@@ -68,18 +75,18 @@ class promptEngine:
         prompt = ""
         bm = args[0]
         if bm.role:
-            prompt = self.__concat(prompt, self.tpe_role, bm.role, **kwds)
+            prompt = self.__concat(prompt, self.tpe_role, bm.role)
         if bm.scene:
-            prompt = self.__concat(prompt, self.tpe_scene, bm.scene, **kwds)
+            prompt = self.__concat(prompt, self.tpe_scene, bm.scene)
         if bm.env:
-            prompt = self.__concat(prompt, self.tpe_env, bm.env, **kwds)
+            prompt = self.__concat(prompt, self.tpe_env, bm.env)
         if bm.plan: 
             if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
                 plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
                         args[0].prompt_meta_data['event']['辅助诊断']['process']
             else:
                 plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
-            prompt = self.__concat(prompt, self.tpe_plan, plan, **kwds)
+            prompt = self.__concat(prompt, self.tpe_plan, plan)
         return prompt
 
 class customPromptEngine:
