@@ -172,6 +172,7 @@ class Conv:
         """
         ext_info = self.prompt_meta_data['event']['chatter_gaily']['description'] + "\n" + self.prompt_meta_data['event']['chatter_gaily']['process']
         input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
+        input_history = [i for i in input_history if not i.get('function_call')]
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         if kwargs.get("return_his"):
