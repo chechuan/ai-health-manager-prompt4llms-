@@ -18,7 +18,7 @@ from typing import Any, Dict, List
 from langchain.prompts import PromptTemplate
 from requests import Session
 
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
+from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.pkgs.knowledge.call_chatchat import funcCall
@@ -378,8 +378,9 @@ class Conv:
                 ret_function_call = make_meta_ret(msg=content, type="Observation", code=intentCode)
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-        
-        ret_result = make_meta_ret(end=True, msg=content, code=intentCode)
+
+        ret_result = make_meta_ret(end=True, msg=content, code=intentCode, 
+                                   intentDesc=intentCode_desc_map.get(intentCode, '日程提醒'))
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
