@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 '''
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -166,15 +167,22 @@ class Conv:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
     
-    def chatter_gaily(self, history, mid_vars, **kwargs):
+    def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
-        input_history = [{"role":"system", "content": ext_info}] + input_history
+        ext_info = self.prompt_meta_data['event']['chatter_gaily']['description'] + "\n" + self.prompt_meta_data['event']['chatter_gaily']['process']
+        input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
-        return content
+        if kwargs.get("return_his"):
+            input_history.append({
+                "role": "assistant", 
+                "content": "闲聊或未配置事件的意图", 
+                "function_call": {"name": "convComplete", "arguments": content}
+            })
+            return input_history
+        else:
+            return content
 
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
@@ -313,13 +321,26 @@ class Conv:
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
         else:
-            content = self.chatter_gaily(chat_history, mid_vars, **kwargs)
+            content = self.chatter_gaily(mid_vars, **kwargs)
         chat_history.append({
             "role": "assistant", 
             "content": "当前回复模式为only_prompt,根据prompt直接生成回复", 
             "function_call": {"name": "convComplete", "arguments": content}
         })
         return chat_history, intentCode
+    
+    def interact_first(self, mid_vars, **kwargs):
+        """首次交互
+        """
+        intentCode = kwargs.get('intentCode')
+        if self.prompt_meta_data['event'].get(intentCode):
+            if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
+                out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+            elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
+                out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+        else:
+            out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
+        return out_history
     
     def pipeline(self, mid_vars=[], **kwargs):
         """
@@ -344,11 +365,8 @@ class Conv:
         self.__log_init(**kwargs)
         intentCode = kwargs.get('intentCode')
         mid_vars = kwargs.get('mid_vars', [])
-        assert self.prompt_meta_data['event'].get(intentCode), f"Not support current event {intentCode}."
-        if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
-            out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
-        else:
-            out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+
+        out_history = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
             logger.debug(f"Action: {tool}")
