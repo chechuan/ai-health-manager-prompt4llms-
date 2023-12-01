@@ -23,7 +23,7 @@ from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, inten
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.pkgs.knowledge.call_chatchat import funcCall
-from src.prompt.factory import cusPromptEngine
+from src.prompt.factory import customPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text
 from src.prompt.task_schedule_manager import taskSchedulaManager
@@ -43,7 +43,7 @@ class Conv:
         self.env = env
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
         self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
-        self.promptEngine = cusPromptEngine(self.prompt_meta_data)
+        self.promptEngine = customPromptEngine(self.prompt_meta_data)
         self.funcall = funcCall(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])

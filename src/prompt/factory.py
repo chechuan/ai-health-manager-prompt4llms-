@@ -82,7 +82,7 @@ class promptEngine:
             prompt = self.__concat(prompt, self.tpe_plan, plan, **kwds)
         return prompt
 
-class cusPromptEngine:
+class customPromptEngine:
     """组装先验知识到INSTRUCTION_TEMPLATE中
     """
     def __init__(self, prompt_meta_data=None):
@@ -171,19 +171,6 @@ class cusPromptEngine:
         if kwds.get('use_sys_prompt') and sys_prompt:
             pass
         else:
-            # default_prompt = ("请你扮演一个经验丰富的医生助手,帮助医生处理日常诊疗和非诊疗的事务性工作,以下是一些对你的要求:\n"
-            #               "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
-            #               "2. 得到答案后根据患者症状，推断用户可能患有的疾病，逐步询问患者疾病初诊、鉴别诊断、确诊需要的其他信息, 如家族史、既往史、检查结果等信息\n"
-            #               "3. 最终给出初步诊断结果，给出可能性最高的几种诊断，并按照可能性排序\n"
-            #               "4. 用户不喜欢擅自帮他做任何决定，所有外部行为必须询问用户进行二次确认\n"
-            #               "5. 可以适当忽略与本次对话无关的历史信息,以解决当前问题为主\n"
-            #               "6. 请严格按照上述流程返回Action Input的内容，不要自由发挥\n\n"
-            #               "现提供以下工具,请你根据用户的对话内容,从工具列表中选择对应工具完成用户的任务:\n"
-            #               "- 进一步询问用户的情况: 当前用户提供的信息不足，需要进一步询问用户相关信息以提供更全面，具体的帮助\n"
-            #               "- 调用外部知识库: 允许你在自身能力无法结局当前问题时调用外部知识库获取更专业的知识解决问题，提供帮助\n"
-            #               "- 直接回复用户问题: 问题过于简单,且无信息缺失,结合历史信息给出诊断分析或建议,不允许为空\n"
-            #               "- 结束话题: 当前用户问题不属于辅助诊断场景\n"
-            #               )
             sys_prompt = ""
             event = self.prompt_meta_data['event'][intent_code]
             character = event['character'] if event.get('character') else None

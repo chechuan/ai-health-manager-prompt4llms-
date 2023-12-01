@@ -93,26 +93,45 @@ def create_app():
     app = Flask(__name__)
     global chat
     
+    # @app.route('/chat_gen', methods=['post'])
+    # def get_chat_gen():
+    #     global chat
+    #     try:
+    #         param = accept_param()
+    #         task = param.get('task', 'chat')
+    #         if task == 'chat':
+    #             result = chat.yield_result(sys_prompt=param.get('prompt'), 
+    #                                        return_mid_vars=False, 
+    #                                        use_sys_prompt=False, 
+    #                                        **param)
+    #     except AssertionError as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=601, msg=repr(err), items=param)
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         logger.error(traceback.format_exc())
+    #         result = yield_result(msg=repr(err), items=param)
+    #     finally:
+    #         return Response(decorate(result), mimetype='text/event-stream')
+
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
         global chat
         try:
             param = accept_param()
-            task = param.get('task', 'chat')
-            if task == 'chat':
-                result = chat.yield_result(sys_prompt=param.get('prompt'), 
-                                           return_mid_vars=False, 
-                                           use_sys_prompt=False, 
-                                           **param)
-        except AssertionError as err:
-            logger.exception(err)
-            result = yield_result(head=601, msg=repr(err), items=param)
+            generator = conv.general_yield_result(sys_prompt=param.get('prompt'), 
+                                                  mid_vars=[], 
+                                                  use_sys_prompt=False, 
+                                                  **param)
+            result = decorate_chat_complete(generator, 
+                                            return_mid_vars=True,
+                                            return_backend_history=True
+                                            )
         except Exception as err:
             logger.exception(err)
-            logger.error(traceback.format_exc())
-            result = yield_result(msg=repr(err), items=param)
+            result = yield_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(decorate(result), mimetype='text/event-stream')
+            return Response(result, mimetype='text/event-stream')
 
     @app.route('/chat/complete', methods=['post'])
     def _chat_complete_stream_midvars():
@@ -123,11 +142,11 @@ def create_app():
         try:
             param = accept_param()
             generator = conv.general_yield_result(sys_prompt=param.get('prompt'), 
-                                               mid_vars=[], 
-                                               use_sys_prompt=True, 
-                                               **param)
+                                                  mid_vars=[], 
+                                                  use_sys_prompt=True, 
+                                                  **param)
             result = decorate_chat_complete(generator, 
-                                            return_mid_vars=True,
+                                            return_mid_vars=False,
                                             return_backend_history=True
                                             )
         except Exception as err:
