@@ -338,6 +338,8 @@ class Conv:
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+            else:
+                out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
         else:
             out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
         return out_history
