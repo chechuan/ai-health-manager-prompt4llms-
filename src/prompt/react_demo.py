@@ -106,12 +106,15 @@ def build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs) -
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
 
     h_len = len(chat_history)
+    if h_len > 5:
+        chat_history = chat_history[-6:]
+    h_len = len(chat_history)
     for h_idx in range(h_len):
         item = chat_history[h_idx]
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
-            prompt_react += f"Action Input: {item['function_call']['arguments']}\n"
+            # prompt_react += f"Action Input: {item['function_call']['arguments']}\n"
         elif item['role'] == "user" and h_idx -1 > 0 and chat_history[h_idx-1].get("function_call"):
             prompt_react += f"Observation: {item['content']}\n"
         elif item['role'] == "user":

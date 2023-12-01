@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from sympy import EX
 
 sys.path.append('.')
 
@@ -82,7 +83,7 @@ class Conv:
         prompt = build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.8, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -100,6 +101,11 @@ class Conv:
             self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
+        try:
+            gen_args = json.loads(out_text[2])
+            out_text[2] = gen_args['query']
+        except Exception as e:
+            ...
         out_text = list(out_text)
         chat_history.append({
             "role": "assistant", 
