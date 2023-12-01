@@ -79,11 +79,11 @@ class Conv:
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        _sys_prompt, chat_history, list_of_plugin_info = self.compose_input_history(**kwargs)
-        prompt = build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs)
+        _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
+        prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.8, max_tokens=max_tokens)
+        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat")
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -101,23 +101,23 @@ class Conv:
             self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
+        out_text = list(out_text)
         try:
             gen_args = json.loads(out_text[2])
             out_text[2] = gen_args['query']
         except Exception as e:
             ...
-        out_text = list(out_text)
-        chat_history.append({
+        kwargs['history'].append({
+            "intentCode": kwargs['intentCode'],
             "role": "assistant", 
             "content": out_text[0], 
             "function_call": {"name": out_text[1],"arguments": out_text[2]}
             })
-        return chat_history
+        return kwargs['history']
     
     def compose_input_history(self, **kwargs):
         """拼装sys_prompt里
         """
-        history = kwargs.get("history")
         qprompt = kwargs.get("qprompt")
 
         sys_prompt, functions = self.promptEngine._call(**kwargs)
@@ -126,7 +126,7 @@ class Conv:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
-        return sys_prompt, history, functions
+        return sys_prompt, functions
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
@@ -228,6 +228,7 @@ class Conv:
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
             kwargs['history'] = kwargs['backend_history'] + [history[-1]]
+            kwargs['history'][-1]['intentCode'] = kwargs['intentCode']
         _iterable = self.pipeline(*args, **kwargs)
         while True:
             try:

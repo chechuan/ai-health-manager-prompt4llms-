@@ -77,8 +77,10 @@ def llm_with_plugin(sys_prompt:str, history, list_of_plugin_info=()):
 
 
 # 将对话历史、插件信息聚合成一段初始文本
-def build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs) -> str:
+def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     # 候选插件的详细信息
+    chat_history = kwargs['history']
+    intent_code = kwargs["intentCode"]
     tools_text = []
     for plugin_info in list_of_plugin_info:
         tool = TOOL_DESC.format(
@@ -106,11 +108,10 @@ def build_input_text(_sys_prompt, chat_history, list_of_plugin_info, **kwargs) -
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
 
     h_len = len(chat_history)
-    if h_len > 5:
-        chat_history = chat_history[-6:]
-    h_len = len(chat_history)
     for h_idx in range(h_len):
         item = chat_history[h_idx]
+        if item.get('intentCode') != intent_code:
+            continue
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
