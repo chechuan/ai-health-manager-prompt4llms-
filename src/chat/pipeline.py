@@ -235,7 +235,7 @@ class Conv:
                 yield_item = next(_iterable)
                 if not yield_item['data'].get("type"):
                     yield_item['data']['type'] = "Result"
-                logger.debug('输出为：' + json.dumps(out_text, ensure_ascii=False))
+                # logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
                 yield yield_item
             except StopIteration as err:
                 break
@@ -253,6 +253,9 @@ class Conv:
         tool = history[-1]['function_call']['name']
         content = history[-1]['function_call']['arguments']
         thought = history[-1]['content']
+        logger.debug(f"Action: {tool}")
+        logger.debug(f"Thought: {thought}")
+        logger.debug(f"Action Input: {content}")
         return tool, content, thought
 
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
@@ -380,9 +383,6 @@ class Conv:
         out_history = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
-            logger.debug(f"Action: {tool}")
-            logger.debug(f"Thought: {thought}")
-            logger.debug(f"Action Input: {content}")
             ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
             ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
             yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}

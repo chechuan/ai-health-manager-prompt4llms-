@@ -278,12 +278,13 @@ class funcCall:
         self.update_mid_vars(kwargs['mid_vars'], key=f"查询用户日程", input_text=args[0], output_text=msg, model=model_name)
         return ret
 
-    def call_llm_with_search_engine(self, *args, **kwargs) -> AnyStr:
+    def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """调用搜索引擎
         """
         called_method = "/chat/search_engine_chat"
         payload = self.param_server.llm_with_search_engine
-        payload['query'] = args[0]['query']
+        payload['query'] = args[0]
+        payload['model_name'] = model_name
         response = self.session.post(self.api_config['langchain']+called_method,
                                      json=payload,
                                      headers=self.headers)
