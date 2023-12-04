@@ -23,7 +23,7 @@ from requests import Session
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
-from src.pkgs.knowledge.call_chatchat import funcCall
+from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text

@@ -12,3 +12,4 @@ pymysql
 cchardet
 chardet
 typing-extensions==4.8.0
+beautifulsoup4
