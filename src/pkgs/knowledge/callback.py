@@ -273,7 +273,10 @@ class funcCall:
         使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
         query = args[0]
-        search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), session=self.session))
+        search_result = asyncio.run(search_engine_chat(query, 
+                                                       top_k=kwargs.get("top_k", 3), 
+                                                       max_length=500,
+                                                       session=self.session))
 
         template = get_template("search_engine_chat")
         if search_result:

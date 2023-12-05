@@ -11,11 +11,11 @@ import re
 import sys
 from pathlib import Path
 
-from numpy import tile
+from sympy import EX
 
 sys.path.append(str(Path.cwd().absolute()))
 from datetime import datetime
-from typing import Dict, List
+from typing import AnyStr, Dict, List, Optional
 
 import requests
 from aiohttp import ClientSession
@@ -32,28 +32,69 @@ def get_template(key: str) -> str:
     assert PROMPT_TEMPLATES.get(key), f"{key} not in PROMPT_TEMPLATES"
     return PROMPT_TEMPLATES[key]
 
+def parse_diff_pages(url: str, _html: str) -> (str, str):
+    """解析不同的域名
+    """
+    if 'www.zhihu.com' in url:
+        soup = BeautifulSoup(_html, 'html.parser')
+        title = soup.find('h1', class_='QuestionHeader-title').text
+        for span in soup.select('span'):
+            if span.get('class') and "RichText" in span['class']:
+                text = "\n".join([p.text for p in span.find_all('p')])
+    elif 'zhuanlan.zhihu.com' in url:
+        soup = BeautifulSoup(_html, 'html.parser')
+        title = soup.find('h1', class_='Post-Title').text
+        for div in soup.select('div'):
+            if div.get('class') and "RichText" in div['class']:
+                text = "\n".join([p.text for p in div.find_all('p')])
+    elif 'health.baidu.com' in url:
+        html = etree.HTML(_html)
+        title = html.xpath("//p[contains(@class, 'hc-line-clamp2')]/text()")[0]
+        p_str_list = html.xpath("//div[contains(@class, 'index_textContent ')]//p//text()")
+        text = "\n".join(p_str_list)
+    elif 'm.baidu.com' in url:
+        html = etree.HTML(_html)
+        _data = html.xpath("//script[@id='__NEXT_DATA__']//text()")[0]
+        data = json.loads(_data)
+        title = data['props']['pageProps']['commonData']['title']
+        text = data['props']['pageProps']['contentData']['content'][0]
+    elif 'youlai.cn' in url:
+        html = etree.HTML(_html)
+        title = html.xpath('//*[@class="v_title"]/text()')[0]
+        text = html.xpath('//*[@class="text"]/text()')[0].strip()
+    else:
+        title, text = None, None
+    return title, text
+
 async def parse_detail_page(d_url):
     try:
         async with ClientSession() as session:
-            async with session.get(d_url) as response:
-                res_text = await response.text()
+            headers = {
+                "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0"
+            }
+            async with session.get(d_url, headers=headers) as response:
+                _html = await response.text()
     except Exception as e:
         return None, None
-    json_data = re.findall('type="application/json">(.*?)</script>', res_text, re.S)
-    data = json.loads(json_data[0])
-    tags_str = data['props']['pageProps']['contentData']['content'][0]
-    title = data['props']['pageProps']['commonData']['title']
-    soup = BeautifulSoup(tags_str, 'html.parser')
-    text = ""
-    for p in soup.find_all('p'):
-        text += p.text
-    return title, text
+    
+    try:
+        title, text = parse_diff_pages(d_url, _html)
+        return title, text
+    except TypeError as terr:
+        logger.debug(f"error to parse {d_url}")
+        return None, None
+    except Exception as err:
+        logger.error(f"解析网页出错: {err}")
+        logger.error(f"parse err url {d_url}")
+        return None, None 
 
 async def search_engine_chat(query: str,
                              top_k: int = 3,
                              session = requests.Session(),
+                             backup_nums = 5,
+                             max_length = 500,
                              **kwargs) -> str:
-    url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k+5}&tn=baidurt"
+    url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k + backup_nums}&tn=baidurt"
     response = session.get(url)
     res = etree.HTML(response.text)
     detail_urls = res.xpath('//h3[@class="t"]/a/@href')
@@ -70,10 +111,15 @@ async def search_engine_chat(query: str,
         if title and i < 3:
             content += f"title: {title}\n{text}\n"
             i += 1
+    content = content.replace("<img(.*?)>", "")
+    content = content.replace("</p><p>", "\n").replace("<br>", "\n").replace("<br/>", "\n")
+    content = content.replace("<p>", "").replace("</p>", "").replace("<span >", "").replace("</span>", "")
+    content = content[:max_length]
     return content
 
 
 if __name__ == '__main__':
-    query = '早上起来头疼怎么回事'
+    query = '人为什么会陷入虚无主义'
+    # query = '早起头疼是什么原因'
     text = asyncio.run(search_engine_chat(query))
     print(text)
