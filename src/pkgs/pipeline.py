@@ -47,7 +47,6 @@ class Conv:
         self.promptEngine = customPromptEngine(self.prompt_meta_data)
         self.funcall = funcCall(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
-        # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
         self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
         self.__initalize_intent_map__()
         self.session = Session()

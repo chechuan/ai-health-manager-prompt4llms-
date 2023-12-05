@@ -8,6 +8,7 @@
 
 import asyncio
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -36,7 +37,7 @@ class funcCall:
         self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
-        self.register_func("searchKnowledge",   self.call_search_knowledge,         "/chat/knowledge_base_chat")
+        self.register_func("searchKB",   self.call_search_knowledge,         "/chat/knowledge_base_chat")
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
@@ -238,10 +239,23 @@ class funcCall:
                               **kwargs) -> AnyStr:
         """使用默认参数调用知识库
         """
-        called_method = self.funcmap['searchKnowledge']['method']
+        def decorate_search_prompt(query: str) -> str:
+            """优化要查询的query"""
+            prompt = (
+                "You are a powerful assistant, capable of understanding requirements and responding accordingly."
+                "# 要求\n"
+                "1. 提取其中关键信息并作出解释\n"
+                "2. 针对问题给出相关的有用的信息\n"
+                "3. 组装成一段话,要求语义连贯,适当简洁\n"
+            )
+            his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
+            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
+            return content
+
+        called_method = self.funcmap['searchKB']['method']
         query = args[0]
         payload = {}
-        payload['query'] = query
+        payload['query'] = decorate_search_prompt(query)
         payload["knowledge_base_name"] = knowledge_base_name    # 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
@@ -325,5 +339,5 @@ class funcCall:
 
 if __name__ == "__main__":
     funcall = funcCall()
-    function_call = {'name': 'searchEngine', 'arguments': '后脑勺持续一个月的头疼'}
+    function_call = {'name': 'searchKB', 'arguments': '后脑勺持续一个月的头疼'}
     funcall._call(out_history=[{"function_call":function_call}], verbose=True)
