@@ -37,13 +37,14 @@ class funcCall:
         self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
-        self.register_func("searchKB",   self.call_search_knowledge,         "/chat/knowledge_base_chat")
+        self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
         self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
+        self.register_func("askAPI",            self.call_external_api,             "")
         logger.success(f"register finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
@@ -249,13 +250,13 @@ class funcCall:
                 "3. 组装成一段话,要求语义连贯,适当简洁\n"
             )
             his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
-            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
+            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-14B-Chat")
             return content
 
         called_method = self.funcmap['searchKB']['method']
         query = args[0]
         payload = {}
-        payload['query'] = decorate_search_prompt(query)
+        payload['query'] = query + decorate_search_prompt(query)
         payload["knowledge_base_name"] = knowledge_base_name    # 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
@@ -324,6 +325,19 @@ class funcCall:
         res_js = eval(response.text)
         ret = res_js['result']
         return ret
+    
+    def call_external_api(self, *args, **kwargs):
+        """
+        """
+        param_desc = self.prompt_meta_data['tool']['调用接口']['params']
+        task = json.loads(args[0])['task']
+        candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
+        assert task in candidate_task, f"Generate task: {task} not in the candidate_task {candidate_task}"
+        payload = {}
+        # TODO 接入综合饮食推荐接口
+        ...
+
+
 
     def _call(self, **kwargs):
         """"""
