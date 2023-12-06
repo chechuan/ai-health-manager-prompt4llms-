@@ -145,7 +145,10 @@ class funcCall:
         assert orgCode, "orgCode is None"
         assert len(schedule) != 0, "no schedule can be canceled"
         
-        cronDate = [i for i in schedule if i['task'] == task][0]['time']
+        try:
+            cronDate = [i for i in schedule if i['task'] == task][0]['time']
+        except Exception as e:
+            return f"日程取消失败,目标操作日程 `{task}` not in current schedule {schedule}"
 
         func_item = self.funcmap['cancel_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -179,7 +182,11 @@ class funcCall:
         assert task, "task name is None"
         assert cur_time, "time is None"
 
-        task_time_ori = [i for i in schedule if i['task']==arguments['task']][0]['time']
+        try:
+            task_time_ori = [i for i in schedule if i['task']==task][0]['time']
+        except Exception as err:
+            logger.exception(err)
+            return f"日程修改失败, 目标操作日程 `{task}` not in current schedule {schedule}"
 
         func_item = self.funcmap['modify_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -285,7 +292,7 @@ class funcCall:
                                  output_text=msg, 
                                  model=model_name)
         else:   # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            content = self.call_llm_with_search_engine(query)
+            content = self.call_llm_with_search_engine(query, **kwargs)
         return content
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
