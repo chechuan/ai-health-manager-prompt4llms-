@@ -452,7 +452,7 @@ class Chat:
     
         mid_vars = kwargs.get('mid_vars', [])
 
-        desc = intentCode_desc_map.get(intentCode, '日程提醒')
+        desc = intentCode_desc_map.get(intentCode, '日常对话')
         
         if self.intent_map['userinfo'].get(intentCode):
             logger.debug('进入信息提取页面：')
