@@ -7,8 +7,9 @@
 '''
 
 import asyncio
+import copy
 import json
-import re
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +22,7 @@ sys.path.append(str(Path.cwd()))
 
 from config.constrant import ParamServer
 from config.constrant_for_task_schedule import query_schedule_template
-from src.pkgs.knowledge.utils import get_template, search_engine_chat
+from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
 from src.utils.Logger import logger
 from src.utils.module import req_prompt_data_from_mysql
@@ -35,16 +36,21 @@ class funcCall:
 
     def __init__(self, prompt_meta_data=None, env="local"):
         self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
+        self.register_for_all()
+        self.ext_api_factory = extApiFactory(self)
+
+    def register_for_all(self):
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
         self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
+        self.register_func("searchDB",          self.call_search_database)
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
         self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
-        self.register_func("askAPI",            self.call_external_api,             "")
+        self.register_func("askAPI",            self.call_external_api)
         logger.success(f"register finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
@@ -326,18 +332,21 @@ class funcCall:
         ret = res_js['result']
         return ret
     
+    def call_search_database(self, *args, **kwargs) -> AnyStr:
+        """调用查询数据库接口
+        """
+        return "暂不支持查询db"
+
     def call_external_api(self, *args, **kwargs):
+        """调用外部api
         """
-        """
+        task: str = check_task(args[0])
         param_desc = self.prompt_meta_data['tool']['调用接口']['params']
-        task = json.loads(args[0])['task']
+
         candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
         assert task in candidate_task, f"Generate task: {task} not in the candidate_task {candidate_task}"
-        payload = {}
-        # TODO 接入综合饮食推荐接口
-        ...
-
-
+        content = self.ext_api_factory._call(*args, **kwargs, task=task, func_cls=self)
+        return content
 
     def _call(self, **kwargs):
         """"""
@@ -351,7 +360,111 @@ class funcCall:
         logger.debug(f"Observation: {content}")
         return history
 
+
+class extApiFactory:
+    def __init__(self, *args, **kwargs) -> None:
+        self.api_config = args[0].api_config
+        self.session = args[0].session
+
+    @staticmethod
+    def __extract_user_message__(*args, **kwargs) -> dict:
+        """提取格式化用户信息"""
+        return {}
+    
+    @staticmethod
+    def __diet_compose_nutr__(body: Dict) -> AnyStr:
+        """拼接饮食 营养元素部分内容"""
+        nutr_target = body['nutr_target']
+        nutr_extra = body['nutr_target_extra']
+        
+        nutr_sum = copy.deepcopy(nutr_target)
+        nutr_sum = {k: round(v + nutr_extra.get(k, 0), 1) for k, v in nutr_sum.items()}
+        
+        content = "推荐您今日四大营养素摄入量:"
+        content += (
+            f"碳水{nutr_sum['heat']}千焦,"
+            f"蛋白{nutr_sum['protein']}g,"
+            f"脂肪{nutr_sum['fat']}g,"
+            f"碳水{nutr_sum['carbonWater']}g. "
+        )
+        heat_rec = [round(i * nutr_target['heat'], 1) for i in [0.3, 0.4, 0.3]]
+        content += (
+            f"建议您早餐热量摄入{heat_rec[0]}千焦,"
+            f"午餐热量摄入{heat_rec[1]}千焦,"
+            f"晚餐热量摄入{heat_rec[2]}千焦. "
+        )
+        content += "各类膳食建议摄入量:"
+        content += ",".join([f"{item['name']}: {round(item['value'], 1)}克" for item in body['food_component_weight'] if item['name'] !="烹调油"])
+        return content
+    
+    @staticmethod
+    def __diet_compose_recipes__(body: Dict) -> AnyStr:
+        """拼接饮食 食谱部分内容"""
+        component_map = {i['tag']: i['component'] for i in body['food_component_list']}
+        content = ""
+        meal_order_map = {'food_time_morning': '早餐', 'food_time_noon':'午餐', 'food_time_night': '晚餐', 'food_time_extra':'加餐'}
+        tag_map = {
+            '主食': 'recipe_type_zs', 
+            '豆鱼蛋肉': 'recipe_type_zc', 
+            '蔬菜类': 'recipe_type_sc',
+            '奶类': 'food_type_nai',
+            '水果类': 'food_type_shuiguo' ,
+            '坚果': 'food_type_jianguozhongzi'
+        }
+        for code, tag in meal_order_map.items():
+            component = component_map[code]
+            content += f"{tag}:\n"
+            for i in component:
+                if i['name'] == '烹调油':
+                    continue
+                tag_code = tag_map[i['name']]
+                detail_recipes = ",".join([i['rname'] for i in random.sample(body['recipe_rec_detail'][code][tag_code], 3)])
+                content += f"{i['name']}{i['unit']},例: {detail_recipes}\n"
+        logger.info(content)
+        return content
+
+    def __call_diet_v5_compoent_list__(self, *args, **kwargs):
+        """调用三剂处方api
+        """
+        payload = {
+            "baseInfoExtra": {"height": 173,"weight": 65},
+            "baseInfoList": {
+                "age": "20",
+                "physicalActivity": "轻",
+                "physiologicalStage": "",
+                "religiousBelief": "汉族",
+                "sex": "女"
+            },
+            "limitRecipesNums": 6,
+            "is_ommon":"1"
+        }
+        url = self.api_config['algo_rec'] + "/component_list"
+        headers = {'content-type': "application/json"}
+        ret = self.session.post(url, json=payload, headers=headers).json()
+        if ret['head'] == 200:
+            content = ""
+            content += extApiFactory.__diet_compose_nutr__(ret['body'])
+            content += extApiFactory.__diet_compose_recipes__(ret['body'])
+            
+        else:
+            logger.error(f"调用三济处方接口失败, 返回信息：{json.dumps(ret, ensure_ascii=False)}")
+            content = "调用三济处方接口失败"
+        return content
+
+    def _call(self, *args, **kwargs) -> dict:
+        """处理调用外部api逻辑
+        """
+        # TODO 接入综合饮食推荐接口
+        task = kwargs['task']
+        if task == "三济饮食处方":
+            user_msg = extApiFactory.__extract_user_message__(*args, **kwargs)
+            content = self.__call_diet_v5_compoent_list__(*args, **kwargs, user_msg=user_msg)
+        else:
+            content = ""
+        return content
+
 if __name__ == "__main__":
     funcall = funcCall()
-    function_call = {'name': 'searchKB', 'arguments': '后脑勺持续一个月的头疼'}
+    # function_call = {'name': 'searchKB', 'arguments': '后脑勺持续一个月的头疼'}
+    function_call = {'name': 'askAPI', 'arguments': '{"task":"三济饮食处方"}'}
     funcall._call(out_history=[{"function_call":function_call}], verbose=True)

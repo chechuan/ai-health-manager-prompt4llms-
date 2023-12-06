@@ -1,0 +1,68 @@
+POST /chat/complete HTTP/1.1
+Content-Type: application/json
+Host: 0.0.0.0:6500
+
+{
+    "orgCode": "sf",
+    "customId": "007",
+    "prompt": "你将扮演一个AI营养师助手，帮助真人营养师为健康或慢病用户出具营养处方，请帮助用户做出三济饮食处方的推荐。",
+    "qprompt": "请遵循以下格式回复:\nQuestion: 用户的问题\nThought: 可以适当忽略历史记录中的无关信息,思考针对当前问题应该做什么\nAction: 选择的解决用户当前问题的工具\nAction Input: 对应Action的输入,通常为query,若已满足诊断条件,对Question的总体分析及诊断结果\nObservation: 工具返回的内容\n...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)\nAction: 前置话题可以终结了,调用结束话题工具\nAction Input: Action的输入,通常为一个query,表示要查询或者询问的内容\n\nBegins!",
+    "tool_in_use": [
+        "询问用户",
+        "查知识库",
+        "调用接口",
+        "查询数据库"
+    ],
+    "intentCode": "auxiliary_diagnosis",
+    "history": [
+        {
+            "msgId": "4005745518",
+            "role": "1",
+            "content": "帮我出个食谱",
+            "sendTime": "2023-12-05 14:13:45"
+        },
+        {
+            "msgId": "2117171406",
+            "role": "3",
+            "content": "AssertionError('Unregistered function {askHuman}, 请重试')",
+            "sendTime": "2023-12-05 14:13:49"
+        },
+        {
+            "msgId": "4379336406",
+            "role": "1",
+            "content": "年龄：60岁；身高：160；体重：200斤；性别：男；体重状态：肥胖；现患疾病：高血压；口味偏好：清淡；饮食习惯：无；民族：汉族；营养管理目标：减脂；口味偏好-能否吃辣：可以吃辣",
+            "sendTime": "2023-12-05 14:15:15"
+        }
+    ],
+    "promptParam": {
+        "currentDate": "2023年12月05日",
+        "askExerciseTabooXt": "",
+        "askSix": "",
+        "askExerciseHabbit": "",
+        "askName": "",
+        "askFamilyHistory": "",
+        "askGoalManage": "",
+        "askMmolDrug": "",
+        "askFoodAlergy": "",
+        "askAge": "",
+        "askDisease": "",
+        "askHeight": "",
+        "askExerciseTabooDegree": "",
+        "askLaborIntensity": "",
+        "askNation": "",
+        "askWeight": "",
+        "askTastePrefer": ""
+    },
+    "backend_history": []
+}
+
+
+
+# 1.首先使用工具searchDB，查询用户标签，获得：年龄、身高、体重、性别、体重状态、现患疾病、口味偏好、饮食习惯、民族、营养管理目标、口味偏好-能否吃辣\n
+# 2.如果没有查询到上述信息，你需要使用工具askHuman，询问用户得知上述信息。\n
+# 3.根据上面已经得知的信息，使用工具askAPI，调用三济饮食处方接口，获得该用户的推荐摄入热量值。\n
+# 4.使用工具searchKB，查询知识，获得符合用户画像的饮食原则、食谱计算方法\n
+# 5.使用工具searchDB，查询食谱和食材的营养数据，结合上面获得的饮食原则、食谱计算方法、推荐摄入热量、用户画像标签等信息为用户出具一日食谱\n
+# 6.食谱应该包含早、中、晚正餐，以及加餐的时间指导、推荐的食物、推荐食物的质量指导，部分食物尽量将质量换算成常见的单位数量，例如200克苹果换算成1个苹果。\n
+# 7.输出结果格式为：\n早餐：时间\n食物名称：食物质量或常见质量单位\n上午加餐：时间\n食物名称：食物质量或常见质量单位\n午餐：时间\n食物名称：食物质量或常见质量单位\n下午加餐：时间\n食物名称：食物质量或常见质量单位\n晚餐：时间\n食物名称：食物质量或常见质量单位\n晚上加餐：时间\n食物名称：食物质量或常见质量单位\n
+# 8.输出举例：\n早餐：6：30-8：30\n全麦面包2片，鸡蛋1个，苹果1个，牛奶200ml\n午餐：11：30-12：30\n杂粮饭200g，西红柿炒鸡蛋150g，炒油麦菜100g\n下午加餐：15：00\n坚果10g\n晚餐：18：00-19：00\n小米粥150g，水煮虾50g，凉拌黄瓜100g\n

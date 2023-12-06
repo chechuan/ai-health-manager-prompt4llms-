@@ -11,11 +11,8 @@ import re
 import sys
 from pathlib import Path
 
-from sympy import EX
-
 sys.path.append(str(Path.cwd().absolute()))
-from datetime import datetime
-from typing import AnyStr, Dict, List, Optional
+from typing import Any, AnyStr, Dict, List, Optional
 
 import requests
 from aiohttp import ClientSession
@@ -26,6 +23,20 @@ from src.pkgs.knowledge.config.prompt_config import PROMPT_TEMPLATES
 from src.utils.Logger import logger
 
 
+def check_task(task: Any) -> str or None:
+    if type(task) is str:
+        try:
+            task = json.loads(task)['task']   
+        except Exception as err:
+            logger.exception(err)
+            task = None
+    elif type(task) is dict:
+        task = task['task']
+    else:
+        task = None
+        raise Exception(f"Unknown task type {task}")
+    return task
+            
 def get_template(key: str) -> str:
     """根据关键字取templates
     """
@@ -116,8 +127,7 @@ async def search_engine_chat(query: str,
     content = content.replace("<p>", "").replace("</p>", "").replace("<span >", "").replace("</span>", "")
     content = content[:max_length]
     return content
-
-
+    
 if __name__ == '__main__':
     query = '人为什么会陷入虚无主义'
     # query = '早起头疼是什么原因'

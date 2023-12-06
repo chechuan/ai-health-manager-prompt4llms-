@@ -407,8 +407,11 @@ class Conv:
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-        ret_result = make_meta_ret(end=True, msg=content, code=intentCode, 
-                                   intentDesc=intentCode_desc_map.get(intentCode, '日程提醒'))
+        ret_result = make_meta_ret(end=True, 
+                                   msg=content, 
+                                   code=intentCode, 
+                                   init_intent=self.prompt_meta_data['init_intent'].get(intentCode, False),
+                                   intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':

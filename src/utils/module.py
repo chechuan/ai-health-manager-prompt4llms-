@@ -23,8 +23,8 @@ from sqlalchemy import MetaData, Table, create_engine
 from src.utils.Logger import logger
 
 
-def make_meta_ret(end=False, msg="", code=None,type="Result",**kwargs):
-    return {'end':end, 'message':msg, 'intentCode':code,'type': type, **kwargs}
+def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
+    return {'end':end, 'message':msg, 'intentCode':code,'type': type, 'init_intent': init_intent, **kwargs}
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -390,6 +390,7 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
     prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
     prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
     prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
+    prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
     prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
     prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
     for name, func in prompt_meta_data['tool'].items():
