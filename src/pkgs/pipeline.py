@@ -23,7 +23,7 @@ from requests import Session
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
-from src.pkgs.knowledge.call_chatchat import funcCall
+from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text
@@ -47,7 +47,6 @@ class Conv:
         self.promptEngine = customPromptEngine(self.prompt_meta_data)
         self.funcall = funcCall(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
-        # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
         self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
         self.__initalize_intent_map__()
         self.session = Session()
@@ -235,6 +234,7 @@ class Conv:
                 yield_item = next(_iterable)
                 if not yield_item['data'].get("type"):
                     yield_item['data']['type'] = "Result"
+                # logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
                 yield yield_item
             except StopIteration as err:
                 break
@@ -252,6 +252,9 @@ class Conv:
         tool = history[-1]['function_call']['name']
         content = history[-1]['function_call']['arguments']
         thought = history[-1]['content']
+        logger.debug(f"Action: {tool}")
+        logger.debug(f"Thought: {thought}")
+        logger.debug(f"Action Input: {content}")
         return tool, content, thought
 
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
@@ -379,9 +382,6 @@ class Conv:
         out_history = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
-            logger.debug(f"Action: {tool}")
-            logger.debug(f"Thought: {thought}")
-            logger.debug(f"Action Input: {content}")
             ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
             ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
             yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
@@ -407,8 +407,11 @@ class Conv:
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-        ret_result = make_meta_ret(end=True, msg=content, code=intentCode, 
-                                   intentDesc=intentCode_desc_map.get(intentCode, '日程提醒'))
+        ret_result = make_meta_ret(end=True, 
+                                   msg=content, 
+                                   code=intentCode, 
+                                   init_intent=self.prompt_meta_data['init_intent'].get(intentCode, False),
+                                   intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':

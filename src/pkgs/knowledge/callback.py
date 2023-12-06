@@ -6,25 +6,26 @@
 @Contact :   1627635056@qq.com
 '''
 
+import asyncio
+import copy
 import json
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AnyStr, Dict, List, Optional
+from typing import Any, AnyStr, Dict
 
 import yaml
 from requests import Session
-from sympy import EX
 
 sys.path.append(str(Path.cwd()))
 
 from config.constrant import ParamServer
-from config.constrant_for_task_schedule import (query_schedule_template,
-                                                task_schedule_parameter_description,
-                                                task_schedule_parameter_description_for_qwen)
+from config.constrant_for_task_schedule import query_schedule_template
+from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import clock, make_meta_ret, req_prompt_data_from_mysql
+from src.utils.module import req_prompt_data_from_mysql
 
 
 class funcCall:
@@ -35,21 +36,28 @@ class funcCall:
 
     def __init__(self, prompt_meta_data=None, env="local"):
         self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
+        self.register_for_all()
+        self.ext_api_factory = extApiFactory(self)
+
+    def register_for_all(self):
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
-        self.register_func("searchKnowledge",   self.call_search_knowledge,         "/chat/knowledge_base_chat")
-        self.register_func("searchEngine",      self.call_llm_with_search_engine,   "/chat/search_engine_chat")
+        self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
+        self.register_func("searchDB",          self.call_search_database)
+        self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
         self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
+        self.register_func("askAPI",            self.call_external_api)
+        logger.success(f"register finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
         """注册called func funcmap
         """
         self.funcmap[func_name] = {"func": func_call, "method": method}
-        logger.success(f"register {func_name}.")
+        logger.success(f"register tool {func_name}.")
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
@@ -125,16 +133,6 @@ class funcCall:
 
     def call_schedule_cancel(self, *args, **kwds):
         """取消日程
-        orgCode     String	组织编码
-        customId    String	客户id
-        taskName	String	任务内容
-        taskType	String	任务类型（reminder/clock）
-        taskDesc	String	任务备注
-        intentCode	String	意图编码 `CREATE`新建提醒 `CHANGE`更改提醒 `CANCEL`取消提醒
-        repeatType	String	提醒的频率 `EVERYDAY`每天 `W3`每周三 `M3`每月三号
-        cronDate	Date	执行时间
-        fromTime	Date	变更原始时间
-        toTime	    Date	变更目的时间
         """
         msg = ChatMessage(**kwds['out_history'][-1])
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
@@ -147,7 +145,11 @@ class funcCall:
         assert orgCode, "orgCode is None"
         assert len(schedule) != 0, "no schedule can be canceled"
         
-        cronDate = [i for i in schedule if i['task'] == task][0]['time']
+        try:
+            cronDate = [i for i in schedule if i['task'] == task][0]['time']
+        except Exception as err:
+            logger.exception(err)
+            return f"日程取消失败,目标操作日程 `{task}` not in current schedule {schedule}"
 
         func_item = self.funcmap['cancel_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -170,16 +172,6 @@ class funcCall:
 
     def call_schedule_modify(self, *args, **kwds):
         """修改日程时间， 当前算法后端逻辑应该是根据task和from time查询 都改为toTime
-        orgCode     String	组织编码
-        customId    String	客户id
-        taskName	String	任务内容
-        taskType	String	任务类型（reminder/clock）
-        taskDesc	String	任务备注
-        intentCode	String	意图编码 `CREATE`新建提醒 `CHANGE`更改提醒 `CANCEL`取消提醒
-        repeatType	String	提醒的频率 `EVERYDAY`每天 `W3`每周三 `M3`每月三号
-        cronDate	Date	执行时间
-        fromTime	Date	变更原始时间
-        toTime	    Date	变更目的时间
         """
         msg = ChatMessage(**kwds['out_history'][-1])
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
@@ -191,7 +183,11 @@ class funcCall:
         assert task, "task name is None"
         assert cur_time, "time is None"
 
-        task_time_ori = [i for i in schedule if i['task']==arguments['task']][0]['time']
+        try:
+            task_time_ori = [i for i in schedule if i['task']==task][0]['time']
+        except Exception as err:
+            logger.exception(err)
+            return f"日程修改失败, 目标操作日程 `{task}` not in current schedule {schedule}"
 
         func_item = self.funcmap['modify_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -258,9 +254,24 @@ class funcCall:
                               **kwargs) -> AnyStr:
         """使用默认参数调用知识库
         """
-        called_method = self.funcmap['searchKnowledge']['method']
+        def decorate_search_prompt(query: str) -> str:
+            """优化要查询的query"""
+            prompt = (
+                "You are a powerful assistant, capable of understanding requirements and responding accordingly."
+                "# 要求\n"
+                "1. 提取其中关键信息并作出解释\n"
+                "2. 针对问题给出相关的有用的信息\n"
+                "3. 组装成一段话,要求语义连贯,适当简洁\n"
+            )
+            his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
+            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-14B-Chat")
+            return content
+
+        called_method = self.funcmap['searchKB']['method']
+        query = args[0]
         payload = {}
-        payload["knowledge_base_name"] = knowledge_base_name
+        payload['query'] = query + decorate_search_prompt(query)
+        payload["knowledge_base_name"] = knowledge_base_name    # 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
         payload["score_threshold"] = score_threshold
@@ -269,27 +280,52 @@ class funcCall:
         payload["top_k"] = top_k
         payload["top_p"] = top_p
         payload["prompt_name"] = prompt_name
-
-        payload['query'] = args[0]
+        
         url = self.api_config['langchain']+called_method
         response = self.session.post(url, json=payload, headers=self.headers)
         msg = eval(response.text)
-        ret = msg['answer']
-        self.update_mid_vars(kwargs['mid_vars'], key=f"查询用户日程", input_text=args[0], output_text=msg, model=model_name)
-        return ret
+        
+        if "未找到相关文档" not in msg['docs'][0]:
+            content = msg['answer']
+            self.update_mid_vars(kwargs['mid_vars'], 
+                                 key=f"查询知识库", 
+                                 input_text=query, 
+                                 output_text=msg, 
+                                 model=model_name)
+        else:   # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
+            content = self.call_llm_with_search_engine(query, **kwargs)
+        return content
 
-    def call_llm_with_search_engine(self, *args, **kwargs) -> AnyStr:
-        """调用搜索引擎
+    def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
+        """llm + 搜索引擎
+        
+        使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
-        called_method = "/chat/search_engine_chat"
-        payload = self.param_server.llm_with_search_engine
-        payload['query'] = args[0]['query']
-        response = self.session.post(self.api_config['langchain']+called_method,
-                                     json=payload,
-                                     headers=self.headers)
-        res_js = eval(response.text)
-        ret = res_js['answer']
-        return ret
+        query = args[0]
+        search_result = asyncio.run(search_engine_chat(query, 
+                                                       top_k=kwargs.get("top_k", 3), 
+                                                       max_length=500,
+                                                       session=self.session))
+
+        template = get_template("search_engine_chat")
+        if search_result:
+            template = template["search"].strip().replace("{{ context }}", "\n"+search_result+"\n")
+            self.update_mid_vars(kwargs['mid_vars'], 
+                                 key=f"查询搜索引擎", 
+                                 input_text=query, 
+                                 output_text=search_result, 
+                                 model="baidu crawler")
+        else:
+            template = template["Empty"]
+        prompt = template.replace("{{ question }}", search_result)
+
+        content = chat_qwen(prompt, model_name=model_name, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(kwargs['mid_vars'], 
+                             key=f"搜索引擎 -> LLM", 
+                             input_text=prompt, 
+                             output_text=content, 
+                             model=model_name)
+        return content
     
     def call_llm_with_graph(self, *args, **kwargs) -> AnyStr:
         """
@@ -303,6 +339,22 @@ class funcCall:
         res_js = eval(response.text)
         ret = res_js['result']
         return ret
+    
+    def call_search_database(self, *args, **kwargs) -> AnyStr:
+        """调用查询数据库接口
+        """
+        return "暂不支持查询db"
+
+    def call_external_api(self, *args, **kwargs):
+        """调用外部api
+        """
+        task: str = check_task(args[0])
+        param_desc = self.prompt_meta_data['tool']['调用接口']['params']
+
+        candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
+        assert task in candidate_task, f"Generate task: {task} not in the candidate_task {candidate_task}"
+        content = self.ext_api_factory._call(*args, **kwargs, task=task, func_cls=self)
+        return content
 
     def _call(self, **kwargs):
         """"""
@@ -316,7 +368,111 @@ class funcCall:
         logger.debug(f"Observation: {content}")
         return history
 
+
+class extApiFactory:
+    def __init__(self, *args, **kwargs) -> None:
+        self.api_config = args[0].api_config
+        self.session = args[0].session
+
+    @staticmethod
+    def __extract_user_message__(*args, **kwargs) -> dict:
+        """提取格式化用户信息"""
+        return {}
+    
+    @staticmethod
+    def __diet_compose_nutr__(body: Dict) -> AnyStr:
+        """拼接饮食 营养元素部分内容"""
+        nutr_target = body['nutr_target']
+        nutr_extra = body['nutr_target_extra']
+        
+        nutr_sum = copy.deepcopy(nutr_target)
+        nutr_sum = {k: round(v + nutr_extra.get(k, 0), 1) for k, v in nutr_sum.items()}
+        
+        content = "推荐您今日四大营养素摄入量:"
+        content += (
+            f"碳水{nutr_sum['heat']}千焦,"
+            f"蛋白{nutr_sum['protein']}g,"
+            f"脂肪{nutr_sum['fat']}g,"
+            f"碳水{nutr_sum['carbonWater']}g. "
+        )
+        heat_rec = [round(i * nutr_target['heat'], 1) for i in [0.3, 0.4, 0.3]]
+        content += (
+            f"建议您早餐热量摄入{heat_rec[0]}千焦,"
+            f"午餐热量摄入{heat_rec[1]}千焦,"
+            f"晚餐热量摄入{heat_rec[2]}千焦. "
+        )
+        content += "各类膳食建议摄入量:"
+        content += ",".join([f"{item['name']}: {round(item['value'], 1)}克" for item in body['food_component_weight'] if item['name'] !="烹调油"])
+        return content
+    
+    @staticmethod
+    def __diet_compose_recipes__(body: Dict) -> AnyStr:
+        """拼接饮食 食谱部分内容"""
+        component_map = {i['tag']: i['component'] for i in body['food_component_list']}
+        content = ""
+        meal_order_map = {'food_time_morning': '早餐', 'food_time_noon':'午餐', 'food_time_night': '晚餐', 'food_time_extra':'加餐'}
+        tag_map = {
+            '主食': 'recipe_type_zs', 
+            '豆鱼蛋肉': 'recipe_type_zc', 
+            '蔬菜类': 'recipe_type_sc',
+            '奶类': 'food_type_nai',
+            '水果类': 'food_type_shuiguo' ,
+            '坚果': 'food_type_jianguozhongzi'
+        }
+        for code, tag in meal_order_map.items():
+            component = component_map[code]
+            content += f"{tag}:\n"
+            for i in component:
+                if i['name'] == '烹调油':
+                    continue
+                tag_code = tag_map[i['name']]
+                detail_recipes = ",".join([i['rname'] for i in random.sample(body['recipe_rec_detail'][code][tag_code], 3)])
+                content += f"{i['name']}{i['unit']},例: {detail_recipes}\n"
+        logger.info(content)
+        return content
+
+    def __call_diet_v5_compoent_list__(self, *args, **kwargs):
+        """调用三剂处方api
+        """
+        payload = {
+            "baseInfoExtra": {"height": 173,"weight": 65},
+            "baseInfoList": {
+                "age": "20",
+                "physicalActivity": "轻",
+                "physiologicalStage": "",
+                "religiousBelief": "汉族",
+                "sex": "女"
+            },
+            "limitRecipesNums": 6,
+            "is_ommon":"1"
+        }
+        url = self.api_config['algo_rec'] + "/component_list"
+        headers = {'content-type': "application/json"}
+        ret = self.session.post(url, json=payload, headers=headers).json()
+        if ret['head'] == 200:
+            content = ""
+            content += extApiFactory.__diet_compose_nutr__(ret['body'])
+            content += extApiFactory.__diet_compose_recipes__(ret['body'])
+            
+        else:
+            logger.error(f"调用三济处方接口失败, 返回信息：{json.dumps(ret, ensure_ascii=False)}")
+            content = "调用三济处方接口失败"
+        return content
+
+    def _call(self, *args, **kwargs) -> dict:
+        """处理调用外部api逻辑
+        """
+        # TODO 接入综合饮食推荐接口
+        task = kwargs['task']
+        if task == "三济饮食处方":
+            user_msg = extApiFactory.__extract_user_message__(*args, **kwargs)
+            content = self.__call_diet_v5_compoent_list__(*args, **kwargs, user_msg=user_msg)
+        else:
+            content = ""
+        return content
+
 if __name__ == "__main__":
     funcall = funcCall()
-    function_call = {'name': 'searchKnowledge', 'arguments': '后脑勺持续一个月的头疼'}
-    funcall._call(function_call=function_call, verbose=True)
+    # function_call = {'name': 'searchKB', 'arguments': '后脑勺持续一个月的头疼'}
+    function_call = {'name': 'askAPI', 'arguments': '{"task":"三济饮食处方"}'}
+    funcall._call(out_history=[{"function_call":function_call}], verbose=True)

@@ -17,7 +17,7 @@ from flask import Flask, Response, request
 from gevent import pywsgi
 
 from chat.qwen_chat import Chat
-from src.chat.pipeline import Conv
+from src.pkgs.pipeline import Conv
 from src.utils.Logger import logger
 from src.utils.module import NpEncoder, clock
 
