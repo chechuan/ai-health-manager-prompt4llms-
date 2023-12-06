@@ -147,7 +147,8 @@ class funcCall:
         
         try:
             cronDate = [i for i in schedule if i['task'] == task][0]['time']
-        except Exception as e:
+        except Exception as err:
+            logger.exception(err)
             return f"日程取消失败,目标操作日程 `{task}` not in current schedule {schedule}"
 
         func_item = self.funcmap['cancel_schedule']
