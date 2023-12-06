@@ -221,7 +221,7 @@ class Chat:
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
-            return '打开页面'
+            return '打开功能页面'
         h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
@@ -452,7 +452,12 @@ class Chat:
     
         mid_vars = kwargs.get('mid_vars', [])
 
-        desc = intentCode_desc_map.get(intentCode, '日常对话')
+        if self.intent_map['tips'].get(intentCode):
+            desc = '日程提醒'
+        elif self.intent_map['userinfo'].get(intentCode):
+            desc = '智能标签'
+        else:
+            desc = intentCode_desc_map.get(intentCode, '日常对话')
         
         if self.intent_map['userinfo'].get(intentCode):
             logger.debug('进入信息提取页面：')
