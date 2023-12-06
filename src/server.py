@@ -147,7 +147,7 @@ def create_app():
                                                   use_sys_prompt=True, 
                                                   **param)
             result = decorate_chat_complete(generator, 
-                                            return_mid_vars=False,
+                                            return_mid_vars=True,
                                             return_backend_history=True
                                             )
         except Exception as err:
