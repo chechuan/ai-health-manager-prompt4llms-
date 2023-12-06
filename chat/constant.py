@@ -11,7 +11,7 @@ intentCode_desc_map = {
     'weather':'天气查询',
     'auxiliary_diagnosis': '辅助诊断',
     'call_doctor':'呼叫医师',
-    'call_sportMaster':'呼叫医师',
+    'call_sportMaster':'呼叫运动师',
     'call_psychologist':'呼叫情志师',
     'call_dietista':'呼叫营养师',
     'call_health_manager':'呼叫健管师',
