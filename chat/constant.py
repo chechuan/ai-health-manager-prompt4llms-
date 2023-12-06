@@ -3,7 +3,7 @@ default_prompt = '你作为家庭智能健康管家，需要解答用户问题�
 EXT_USRINFO_TRANSFER_INTENTCODE = 'transfor_qa'
 
 intentCode_desc_map = {
-    'schedule_qry_up':'日程管理'
+    'schedule_qry_up':'日程管理',
     'food_rec':'饮食处方咨询',
     'food_nutri':'饮食营养',
     'nutri_known':'营养知识咨询',
