@@ -190,7 +190,7 @@ class Chat:
         elif '医疗' in text:
             return '医疗健康'
         elif '饮食' in text:
-            return '饮食咨询'
+            return '饮食营养'
         elif '运动' in text:
             return '运动咨询'
         else:
@@ -235,7 +235,7 @@ class Chat:
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康']:
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
