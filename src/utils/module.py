@@ -85,8 +85,8 @@ class NpEncoder(json.JSONEncoder):
 def get_intent(text):
     """通过关键词解析意图->code
     """
-    if '饮食' in text:
-        code = 'food_rec'
+    if '饮食营养' in text:
+        code = 'food_nutri'
         desc = '饮食营养'
     elif '医疗' in text:
         code = 'med_health'
@@ -106,6 +106,18 @@ def get_intent(text):
     elif '辅助诊断' in text:
         code = 'auxiliary_diagnosis'
         desc = '辅助诊断'
+    elif '用药' in text:
+        code = 'drug'
+        desc = '用药咨询'
+    elif '营养知识' in text:
+        code = 'nutri_known'
+        desc = '营养知识咨询'
+    elif '饮食处方' in text:
+        code = 'food_rec'
+        desc = '饮食处方推荐'
+    elif '饮食评价' in text:
+        code = 'food_eval'
+        desc = '饮食评价'
     elif '医师' in text or '医生' in text:
         code = 'call_doctor'
         desc = '呼叫医师'
@@ -121,9 +133,6 @@ def get_intent(text):
     elif '健管师' in text:
         code = 'call_health_manager'
         desc = '呼叫健管师'
-    elif '其它' in text:
-        code = 'other'
-        desc = '日常对话'
     elif '日程管理'in text:
         code = 'schedule_manager'
         desc = '日程管理'
@@ -192,7 +201,7 @@ def get_intent(text):
         desc = 'BMI'
     elif '页面' in text or '打开' in text:
         code = 'open_web_daily_monitor'
-        desc = '页面'
+        desc = '打开功能页面'
     elif '万年历' in text:
         code = 'calendar'
         desc = '万年历'
@@ -205,6 +214,12 @@ def get_intent(text):
     elif '五师' in text:
         code = 'wushi'
         desc = '呼叫五师'
+    elif '呼叫其他' in text:
+        code = 'call_other'
+        desc = '呼叫其他'
+    elif '营养其他' in text:
+        code = 'nutri_other'
+        desc = '营养其他'
     else:
         code = 'other'
         desc = '日常对话'
