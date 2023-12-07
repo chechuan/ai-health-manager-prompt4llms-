@@ -27,9 +27,8 @@ from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine
 from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text
-from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
-from src.utils.module import (clock, get_doc_role, get_intent, make_meta_ret,
+from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
                               parse_latest_plugin_call, req_prompt_data_from_mysql)
 
 role_map = {
@@ -40,14 +39,13 @@ role_map = {
 }
 
 class Conv:
-    def __init__(self, env: str ="local"):
-        self.env = env
-        api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
+    def __init__(self, global_share_resource: initAllResource) -> None:
+        self.global_share_resource = global_share_resource
+        self.env = global_share_resource.args.env
+        self.prompt_meta_data = global_share_resource.prompt_meta_data
         self.promptEngine = customPromptEngine(self.prompt_meta_data)
         self.funcall = funcCall(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
-        self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
         self.__initalize_intent_map__()
         self.session = Session()
     
@@ -73,7 +71,7 @@ class Conv:
         }
 
     def reload_prompt(self):
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.env)
+        self.global_share_resource.reload_prompt(self.env)
 
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
@@ -410,7 +408,7 @@ class Conv:
         ret_result = make_meta_ret(end=True, 
                                    msg=content, 
                                    code=intentCode, 
-                                   init_intent=self.prompt_meta_data['init_intent'].get(intentCode, False),
+                                   init_intent=self.prompt_meta_data['init_intent'].get(tool, False),
                                    intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 

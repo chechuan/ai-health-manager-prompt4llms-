@@ -1,8 +1,8 @@
 local:
-  ip: 10.39.10.28
+  ip: localhost
   port: 3306
   user: root
-  passwd: "12345678"
+  passwd: "qwe123"
   db_name: ai_health_manager_db
 dev:
   ip: 10.39.10.28

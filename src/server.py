@@ -15,11 +15,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from flask import Flask, Response, request
 from gevent import pywsgi
+from requests import Session
 
 from chat.qwen_chat import Chat
 from src.pkgs.pipeline import Conv
 from src.utils.Logger import logger
-from src.utils.module import NpEncoder, clock
+from src.utils.module import NpEncoder, clock, initAllResource
 
 
 def accept_param():
@@ -92,7 +93,6 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
 
 def create_app():
     app = Flask(__name__)
-    global chat
     
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
@@ -209,6 +209,21 @@ def create_app():
         
     return app
 
+def prepare_for_all():
+    global chat
+    global conv
+    global args
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
+    parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
+    parser.add_argument('--port', type=int, default=6500, help='port')
+    args = parser.parse_args()
+
+    global_share_resource = initAllResource(args)
+    chat = Chat(global_share_resource)
+    conv = Conv(global_share_resource)
+
 def server_forever(args):
     global app
     server = pywsgi.WSGIServer((args.ip, args.port), app)
@@ -216,13 +231,6 @@ def server_forever(args):
     server.serve_forever()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
-    parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
-    parser.add_argument('--port', type=int, default=6500, help='port')
-    args = parser.parse_args()
-
-    chat = Chat(args.env)
-    conv = Conv(args.env)
+    prepare_for_all()
     app = create_app()
     server_forever(args)

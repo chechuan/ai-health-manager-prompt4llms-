@@ -28,7 +28,7 @@ class baseVarsForPromptEngine:
                  scene: Optional[str] = "一般用户",
                  role: Optional[str] = "健管师",
                  role_desc: Optional[str] = "协助医生工作",
-                 plan: Optional[str] = "辅助诊断",
+                 plan: Optional[str] = "_auxiliary_diagnosis",
                  prompt_meta_data: Optional[dict] = {}) -> None:
         # 环境, options: 居家, 机构, 外出, 开车
         self.env = env
@@ -74,18 +74,20 @@ class promptEngine:
         """
         prompt = ""
         bm = args[0]
-        if bm.role:
-            prompt = self.__concat(prompt, self.tpe_role, bm.role)
-        if bm.scene:
-            prompt = self.__concat(prompt, self.tpe_scene, bm.scene)
-        if bm.env:
-            prompt = self.__concat(prompt, self.tpe_env, bm.env)
-        if bm.plan: 
-            if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
-                plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
-                        args[0].prompt_meta_data['event']['辅助诊断']['process']
-            else:
-                plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
+        role, scene, env, plan = bm.role, bm.scene, bm.env, bm.plan
+        if role: prompt = self.__concat(prompt, self.tpe_role, bm.role)
+        if scene: prompt = self.__concat(prompt, self.tpe_scene, bm.scene)
+        if env: prompt = self.__concat(prompt, self.tpe_env, bm.env)
+        if (
+            plan 
+            and self.prompt_meta_data 
+            and self.prompt_meta_data.get("event") 
+            and self.prompt_meta_data["event"].get(plan)
+        ):
+            prompt += self.prompt_meta_data["event"][plan]['description'] + "\n"
+            prompt += self.prompt_meta_data['event'][plan]['process']
+        else:
+            plan = PLAN_MAP.get(plan, f"当前意图{plan}未定义对应处理")
             prompt = self.__concat(prompt, self.tpe_plan, plan)
         return prompt
 

@@ -6,7 +6,6 @@
 '''
 import functools
 import json
-import re
 import sys
 import time
 from datetime import datetime
@@ -367,6 +366,7 @@ class MysqlConnector:
             self.engine.dispose()
         return res
 
+@clock
 def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
     """从mysql中请求prompt meta data
     """
@@ -399,8 +399,18 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
         except Exception as e:
             ...
     del mysql_conn
-    logger.debug("req prompt meta data from mysql.")
     return prompt_meta_data
 
 def curr_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+class initAllResource:
+    def __init__(self, args) -> None:
+        """初始化公共资源
+        """
+        self.session = requests.Session()
+        self.args = args
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.args.env)
+    
+    def reload_prompt(self):
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.args.env)
