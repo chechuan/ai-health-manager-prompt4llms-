@@ -38,8 +38,9 @@ role_map = {
         '3': 'assistant'
 }
 
-class Conv:
+class Chat_v2:
     def __init__(self, global_share_resource: initAllResource) -> None:
+        global_share_resource.chat_v2 = self
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env
         self.prompt_meta_data = global_share_resource.prompt_meta_data

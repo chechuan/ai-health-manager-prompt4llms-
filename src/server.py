@@ -18,7 +18,7 @@ from gevent import pywsgi
 from requests import Session
 
 from chat.qwen_chat import Chat
-from src.pkgs.pipeline import Conv
+from src.pkgs.pipeline import Chat_v2
 from src.utils.Logger import logger
 from src.utils.module import NpEncoder, clock, initAllResource
 
@@ -96,7 +96,6 @@ def create_app():
     
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
-        global chat
         try:
             param = accept_param()
             task = param.get('task', 'chat')
@@ -138,11 +137,9 @@ def create_app():
     def _chat_complete_stream_midvars():
         """demo,主要用于展示返回的中间变量
         """
-        # global chat
-        global conv
         try:
             param = accept_param()
-            generator = conv.general_yield_result(sys_prompt=param.get('prompt'), 
+            generator = chat_v2.general_yield_result(sys_prompt=param.get('prompt'), 
                                                   mid_vars=[], 
                                                   use_sys_prompt=True, 
                                                   **param)
@@ -211,7 +208,7 @@ def create_app():
 
 def prepare_for_all():
     global chat
-    global conv
+    global chat_v2
     global args
     
     parser = argparse.ArgumentParser()
@@ -221,9 +218,10 @@ def prepare_for_all():
     args = parser.parse_args()
 
     global_share_resource = initAllResource(args)
+    
     chat = Chat(global_share_resource)
-    conv = Conv(global_share_resource)
-
+    chat_v2 = Chat_v2(global_share_resource)
+    
 def server_forever(args):
     global app
     server = pywsgi.WSGIServer((args.ip, args.port), app)

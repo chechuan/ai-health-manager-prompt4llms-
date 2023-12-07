@@ -37,6 +37,7 @@ role_map = {
 
 class Chat:
     def __init__(self, global_share_resource: initAllResource) -> None:
+        global_share_resource.chat = self
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env
         api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[self.env]
@@ -346,11 +347,15 @@ class Chat:
             if tool_name == '进一步询问用户的情况':
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
-                out_text = make_meta_ret(end=True, msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
+                out_text = make_meta_ret(end=True, 
+                                         msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 
+                                         code=intentCode,
+                                         init_intent=True)
             elif tool_name == '调用外部知识库':
-                # TODO 调用外部知识库逻辑待定
-                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
+                output_text = self.global_share_resource.chat_v2.funcall.call_search_knowledge(output_text)
+                out_text = make_meta_ret(end=False, msg=output_text, code=intentCode)
+            elif tool_name == '结束话题':
+                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode, init_intent=True)
             else:
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
                 # logger.exception(out_history)
