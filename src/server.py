@@ -103,6 +103,7 @@ def create_app():
                 result = chat.yield_result(sys_prompt=param.get('prompt'), 
                                            return_mid_vars=False, 
                                            use_sys_prompt=False, 
+                                           mid_vars=[],
                                            **param)
         except AssertionError as err:
             logger.exception(err)

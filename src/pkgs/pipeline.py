@@ -29,7 +29,7 @@ from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
 from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
-                              parse_latest_plugin_call, req_prompt_data_from_mysql)
+                              parse_latest_plugin_call)
 
 role_map = {
         '0': 'user',
@@ -414,7 +414,7 @@ class Chat_v2:
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
-    chat = Conv()
+    chat = Chat_v2()
     ori_input_param = testParam.param_bug_schedular_202311201817
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']

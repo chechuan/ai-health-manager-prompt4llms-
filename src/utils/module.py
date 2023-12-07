@@ -378,7 +378,9 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
                 if obj_rev_item.get('event'):
                     obj_rev_item['event'] = obj_rev_item['event'].split("\n")
         return obj_rev
+    
     mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+    prompt_version = yaml.load(open(Path("config","prompt_version.yaml"), "r"),Loader=yaml.FullLoader)[env]
     mysql_conn = MysqlConnector(**mysql_config)
     prompt_meta_data = {}
     prompt_character = mysql_conn.query("select * from ai_prompt_character")
@@ -387,6 +389,8 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
     prompt_character = filter_format(prompt_character, splited=True)
     prompt_event = filter_format(prompt_event)
     prompt_tool = filter_format(prompt_tool)
+    
+    # TODO 优先使用指定的version 否则使用latest
     prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
     prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
     prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}

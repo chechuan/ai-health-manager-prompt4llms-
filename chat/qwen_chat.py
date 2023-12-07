@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import yaml
+from sympy import content
 
 sys.path.append('.')
 
@@ -244,14 +245,17 @@ class Chat:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
     
-    def chatter_gaily(self, history, mid_vars, **kwargs):
+    def chatter_gaily(self, *args, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
-        input_history = [{"role":"system", "content": ext_info}] + input_history
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
+        kwargs['history'] = history
+        backend_history = self.global_share_resource.chat_v2.chat_react(*args, **kwargs)
+        content = backend_history[-1]['content']
+        # ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
+        # input_history = [{"role":"system", "content": ext_info}] + input_history
+        # content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        # self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
 
     def open_page(self, history, mid_vars, **kwargs):
@@ -428,7 +432,18 @@ class Chat:
             except Exception as err:
                 logger.exception(err)
 
-    def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
+    def __init_log__(self, *args, **kwargs):
+        history = kwargs.get('history', [])
+        mid_vars = kwargs['mid_vars']
+        sys_prompt = kwargs.get('sys_prompt', '')
+        intentCode = kwargs.get('intentCode', 'chatter_gaily')
+
+        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
+        if history:
+            logger.debug(f"Last input: {history[-1]['content']}")
+        return history, mid_vars, intentCode, sys_prompt
+
+    def chat_gen(self, *args, **kwargs):
         """
         ## 多轮交互流程
         1. 定义先验信息变量,拼装对应prompt
@@ -448,11 +463,8 @@ class Chat:
             out_text (Dict[str, str])
                 返回的输出结果
         """
-        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
-        if history:
-            logger.debug(f"Last input: {history[-1]['content']}")
-    
-        mid_vars = kwargs.get('mid_vars', [])
+        
+        history, mid_vars, intentCode, sys_prompt = self.__init_log__(*args, **kwargs)
 
         if self.intent_map['tips'].get(intentCode):
             desc = '日程提醒'
@@ -504,7 +516,7 @@ class Chat:
             msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            output_text = self.chatter_gaily(*args, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         out_text['intentDesc'] = desc
         yield out_text, mid_vars

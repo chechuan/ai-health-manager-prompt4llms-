@@ -111,7 +111,7 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     for h_idx in range(h_len):
         item = chat_history[h_idx]
         if item.get('intentCode') != intent_code:
-            continue
+            item['intentCode'] = "chatter_gaily"
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
