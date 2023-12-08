@@ -10,7 +10,10 @@
             "request": "launch",
             "program": "src/server.py",
             "console": "integratedTerminal",
-            "justMyCode": true
+            "justMyCode": true,
+            "args": [
+                "--env", "local"
+            ]
         },
         {
             "name": "Python: 当前文件",

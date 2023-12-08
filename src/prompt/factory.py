@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Optional
 
 sys.path.append('.')
-import yaml
+import argparse
+
 from langchain.prompts.prompt import PromptTemplate
 from typing_extensions import Dict
 
 from config.constrant import PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN, TEMPLATE_ROLE, TEMPLATE_SENCE
 from src.utils.Logger import logger
-from src.utils.module import MysqlConnector
+from src.utils.module import initAllResource
 
 
 class baseVarsForPromptEngine:
@@ -28,7 +29,7 @@ class baseVarsForPromptEngine:
                  scene: Optional[str] = "一般用户",
                  role: Optional[str] = "健管师",
                  role_desc: Optional[str] = "协助医生工作",
-                 plan: Optional[str] = "辅助诊断",
+                 plan: Optional[str] = "_auxiliary_diagnosis",
                  prompt_meta_data: Optional[dict] = {}) -> None:
         # 环境, options: 居家, 机构, 外出, 开车
         self.env = env
@@ -74,18 +75,20 @@ class promptEngine:
         """
         prompt = ""
         bm = args[0]
-        if bm.role:
-            prompt = self.__concat(prompt, self.tpe_role, bm.role)
-        if bm.scene:
-            prompt = self.__concat(prompt, self.tpe_scene, bm.scene)
-        if bm.env:
-            prompt = self.__concat(prompt, self.tpe_env, bm.env)
-        if bm.plan: 
-            if bm.prompt_meta_data and bm.prompt_meta_data.get("event") and bm.prompt_meta_data["event"].get(bm.plan):
-                plan = bm.prompt_meta_data["event"][bm.plan]['description']+"\n"+\
-                        args[0].prompt_meta_data['event']['辅助诊断']['process']
-            else:
-                plan = PLAN_MAP.get(bm.plan, f"当前意图{bm.plan}无对应流程")
+        role, scene, env, plan = bm.role, bm.scene, bm.env, bm.plan
+        if role: prompt = self.__concat(prompt, self.tpe_role, bm.role)
+        if scene: prompt = self.__concat(prompt, self.tpe_scene, bm.scene)
+        if env: prompt = self.__concat(prompt, self.tpe_env, bm.env)
+        if (
+            plan 
+            and self.prompt_meta_data 
+            and self.prompt_meta_data.get("event") 
+            and self.prompt_meta_data["event"].get(plan)
+        ):
+            prompt += self.prompt_meta_data["event"][plan]['description'] + "\n"
+            prompt += self.prompt_meta_data['event'][plan]['process']
+        else:
+            plan = PLAN_MAP.get(plan, f"当前意图{plan}未定义对应处理")
             prompt = self.__concat(prompt, self.tpe_plan, plan)
         return prompt
 
@@ -96,34 +99,12 @@ class customPromptEngine:
         if prompt_meta_data:
             self.prompt_meta_data = prompt_meta_data
         else:
-            self.req_prompt_data_from_mysql()
-
-    def req_prompt_data_from_mysql(self) -> Dict:
-        """从mysql中请求prompt meta data
-        """
-        def filter_format(obj, splited=False):
-            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
-            obj_rev = json.loads(obj_str)
-            if splited:
-                for obj_rev_item in obj_rev:
-                    if obj_rev_item.get('event'):
-                        obj_rev_item['event'] = obj_rev_item['event'].split("\n")
-            return obj_rev
-        
-        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
-        self.mysql_conn = MysqlConnector(**mysql_config)
-
-        self.prompt_meta_data = {}
-        prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
-        prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
-        prompt_tool = self.mysql_conn.query("select * from ai_prompt_tool")
-        prompt_character = filter_format(prompt_character, splited=True)
-        prompt_event = filter_format(prompt_event)
-        prompt_tool = filter_format(prompt_tool)
-        self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-        self.prompt_meta_data['event'] = {i['event']: i for i in prompt_event}
-        self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
-        logger.debug("req prompt meta data from mysql.")
+            parser = argparse.ArgumentParser()
+            parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
+            parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
+            parser.add_argument('--port', type=int, default=6500, help='port')
+            args = parser.parse_args()
+            self.prompt_meta_data = initAllResource(args).prompt_meta_data
     
     def __join_character(self, character: str, **kwds):
         """拼接角色部分的prompt
@@ -174,7 +155,9 @@ class customPromptEngine:
         """
         sys_prompt = kwds.get("sys_prompt", None)
         intent_code = kwds.get("intentCode", "chatter_gaily")
-        assert self.prompt_meta_data['event'].get(intent_code), f"not support current enevt {intent_code}"
+        if not self.prompt_meta_data['event'].get(intent_code):
+            logger.exception(f"not support current enevt {intent_code}, change to chatter_gaily")
+            intent_code = "chatter_gaily"
         if kwds.get('use_sys_prompt') and sys_prompt:
             pass
         else:

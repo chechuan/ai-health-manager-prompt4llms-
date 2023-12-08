@@ -26,7 +26,7 @@ from src.prompt.model_init import chat_qwen
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
 from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock, get_doc_role,
-                              get_intent, make_meta_ret)
+                              get_intent, initAllResource, make_meta_ret)
 
 role_map = {
         '0': 'user',
@@ -36,12 +36,15 @@ role_map = {
 }
 
 class Chat:
-    def __init__(self, env: str ="local"):
-        api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
-        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
+    def __init__(self, global_share_resource: initAllResource) -> None:
+        global_share_resource.chat = self
+        self.global_share_resource = global_share_resource
+        self.env = global_share_resource.args.env
+        api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[self.env]
+        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[self.env]
 
         self.mysql_conn = MysqlConnector(**mysql_config)
-        self.req_prompt_data_from_mysql()
+        self.prompt_meta_data = global_share_resource.prompt_meta_data
         
         self.promptEngine = promptEngine(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
@@ -70,32 +73,9 @@ class Chat:
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
 
-    def req_prompt_data_from_mysql(self) -> Dict:
-        """从mysql中请求prompt meta data
-        """
-        def filter_format(obj, splited=False):
-            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
-            obj_rev = json.loads(obj_str)
-            if splited:
-                for obj_rev_item in obj_rev:
-                    if obj_rev_item.get('event'):
-                        obj_rev_item['event'] = obj_rev_item['event'].split("\n")
-            return obj_rev
-        self.prompt_meta_data = {}
-        prompt_character = self.mysql_conn.query("select * from ai_prompt_character")
-        prompt_event = self.mysql_conn.query("select * from ai_prompt_event")
-        prompt_tool = self.mysql_conn.query("select * from ai_prompt_tool")
-        prompt_character = filter_format(prompt_character, splited=True)
-        prompt_event = filter_format(prompt_event)
-        prompt_tool = filter_format(prompt_tool)
-        self.prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-        self.prompt_meta_data['event'] = {i['event']: i for i in prompt_event}
-        self.prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
-        logger.success("req prompt meta data from mysql.")
-
     @clock
     def reload_prompt(self):
-        self.req_prompt_data_from_mysql()
+        self.global_share_resource.reload_prompt(self.env)
     
     def get_tool_name(self, text):
         if '外部知识' in text:
@@ -131,9 +111,13 @@ class Chat:
         # 利用Though防止生成无关信息
         prompt += "Thought: "
         logger.debug(f"辅助诊断 Input:\n{prompt}")
-        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
-        self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        self.update_mid_vars(kwargs.get("mid_vars"), 
+                             key="辅助诊断", 
+                             input_text=prompt, 
+                             output_text=model_output, 
+                             model="Qwen-14B-Chat")
         logger.debug(f"辅助诊断 Gen Output:\n{model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
@@ -144,11 +128,19 @@ class Chat:
                     "3. 语义相似的可以合并重新规划语言\n" + \
                     "4. 直接输出结果\n\n输入:\n" + \
                     model_output + "\n输出:\n"
+            
             logger.debug('ReAct regenerate input: ' + prompt)
             model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
-            self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+            
+            self.update_mid_vars(kwargs.get("mid_vars"), 
+                                 key="辅助诊断 改写修正", 
+                                 input_text=prompt, 
+                                 output_text=model_output, 
+                                 model="Qwen-14B-Chat")
+            
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
+            
         out_text = list(out_text)
         # 特殊处理规则 
         ## 1. 生成\nEnd.字符
@@ -252,17 +244,22 @@ class Chat:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
     
-    def chatter_gaily(self, history, mid_vars, **kwargs):
+    def chatter_gaily(self, *args, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
-        input_history = [{"role":"system", "content": ext_info}] + input_history
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
+        if len(history) > 8:    # 每次history理论上为奇数个, 例: if len == 9 从第二轮的问题开始
+            history = history[-7:]
+        kwargs['history'] = history
+        backend_history = self.global_share_resource.chat_v2.chat_react(*args, **kwargs)
+        content = backend_history[-1]['content']
+        # ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
+        # input_history = [{"role":"system", "content": ext_info}] + input_history
+        # content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        # self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
 
-    def open_page(self, history, mid_vars, **kwargs):
+    def open_page(self, history, mid_vars):
         """组装mysql中打开页面对应的prompt
         """
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
@@ -291,9 +288,13 @@ class Chat:
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
         """
-        logger.debug('信息提取prompt为：' + prompt)
-        model_output = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8,
-                max_tokens=200, do_sample=False)
+        logger.debug(f'信息提取prompt:\n{prompt}')
+        model_output = chat_qwen(prompt, 
+                                 verbose=False, 
+                                 temperature=0.7, 
+                                 top_p=0.8,
+                                 max_tokens=200, 
+                                 do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
         content = model_output.split('。')[0][:20]
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
@@ -351,11 +352,15 @@ class Chat:
             if tool_name == '进一步询问用户的情况':
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
-                out_text = make_meta_ret(end=True, msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), code=intentCode)
+                out_text = make_meta_ret(end=True, 
+                                         msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 
+                                         code=intentCode,
+                                         init_intent=True)
             elif tool_name == '调用外部知识库':
-                # TODO 调用外部知识库逻辑待定
-                gen_args = {"name":"llm_with_documents", "arguments": json.dumps({"query": output_text})}
-                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
+                output_text = self.global_share_resource.chat_v2.funcall.call_search_knowledge(output_text)
+                out_text = make_meta_ret(end=False, msg=output_text, code=intentCode)
+            elif tool_name == '结束话题':
+                out_text = make_meta_ret(end=True, msg=output_text, code=intentCode, init_intent=True)
             else:
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
                 # logger.exception(out_history)
@@ -414,6 +419,8 @@ class Chat:
         while True:
             try:
                 out_text, mid_vars = next(_iterable)
+                if not out_text.get("init_intent"):
+                    out_text['init_intent'] = False
                 if not out_text.get("type"):
                     out_text['type'] = "Result"
                 if not kwargs.get("ret_mid"):
@@ -426,7 +433,18 @@ class Chat:
             except Exception as err:
                 logger.exception(err)
 
-    def chat_gen(self, history, sys_prompt, intentCode=None, mid_vars=[],**kwargs):
+    def __init_log__(self, *args, **kwargs):
+        history = kwargs.get('history', [])
+        mid_vars = kwargs['mid_vars']
+        sys_prompt = kwargs.get('sys_prompt', '')
+        intentCode = kwargs.get('intentCode', 'chatter_gaily')
+
+        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
+        if history:
+            logger.debug(f"Last input: {history[-1]['content']}")
+        return history, mid_vars, intentCode, sys_prompt
+
+    def chat_gen(self, *args, **kwargs):
         """
         ## 多轮交互流程
         1. 定义先验信息变量,拼装对应prompt
@@ -446,11 +464,8 @@ class Chat:
             out_text (Dict[str, str])
                 返回的输出结果
         """
-        logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
-        if history:
-            logger.debug(f"Last input: {history[-1]['content']}")
-    
-        mid_vars = kwargs.get('mid_vars', [])
+        
+        history, mid_vars, intentCode, sys_prompt = self.__init_log__(*args, **kwargs)
 
         if self.intent_map['tips'].get(intentCode):
             desc = '日程提醒'
@@ -460,8 +475,6 @@ class Chat:
             desc = intentCode_desc_map.get(intentCode, '日常对话')
         
         if self.intent_map['userinfo'].get(intentCode):
-            logger.debug('进入信息提取页面：')
-            logger.debug(sys_prompt)
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
         elif self.intent_map['tips'].get(intentCode): 
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
@@ -469,21 +482,19 @@ class Chat:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
                 out_text = {'end':True,'message':'','intentCode':'BMI'}
             else:
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                output_text = self.chatter_gaily(*args, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['food_rec']:
             logger.debug('进入饮食推荐的闲聊...')
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            output_text = self.chatter_gaily(*args, **kwargs)
             logger.debug('医师推荐闲聊的模型输出：' + output_text)
-            out_text = {'end':True, 'message':output_text,
-                        'intentCode':'other'}
+            out_text = {'end':True, 'message':output_text, 'intentCode':'other'}
         elif intentCode in ['sport_rec']:
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
-            out_text = {'end':True, 'message':output_text,
-                        'intentCode':'other'}
+            output_text = self.chatter_gaily(*args, **kwargs)
+            out_text = {'end':True, 'message':output_text, 'intentCode':'other'}
         elif self.intent_map['schedule'].get(intentCode):
-            his = self.history_compose(history)
-            _iterable = self.tsm._run(his, intentCode=intentCode, **kwargs)
+            messages = self.history_compose(history)
+            _iterable = self.tsm._run(messages, **kwargs)
             while True:
                 out_text, mid_vars_item = next(_iterable)
                 if not out_text.get('end', False):
@@ -501,12 +512,12 @@ class Chat:
                 else:
                     break
         elif intentCode == "open_web_daily_monitor":
-            output_text = self.open_page(history, mid_vars, **kwargs)
+            output_text = self.open_page(history, mid_vars)
             logger.debug('打开页面模型输出：'  + output_text)
             msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
         else:
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            output_text = self.chatter_gaily(*args, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         out_text['intentDesc'] = desc
         yield out_text, mid_vars

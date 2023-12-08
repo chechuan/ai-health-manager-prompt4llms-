@@ -7,6 +7,7 @@
 '''
 
 from datetime import datetime
+from re import T
 
 t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
 t_claim_str = f"现在的时间是{t}\n"
@@ -93,6 +94,103 @@ task_schedule_parameter_description_for_qwen = [
             {"name": "task","description": "日程名称","required": True,"schema": {"type": "string"}}
         ]
     },
+]
+
+_tspdfq = [
+    {
+        "name_for_human": "创建日程",
+        "name_for_model": "create_schedule",
+        "description_for_model": "一个用于创建日程的工具,提取日程名称(不含时间信息)和提醒的时间用来创建日程. Format the arguments as a JSON object.",
+        "parameters": [
+            {
+                "name": "task",
+                "schema": {
+                    "type": "string"
+                },
+                "required": True,
+                "description": "日程名,尽量简洁,只包含事件,不包含日期,时间信息"
+            },
+            {
+                "name": "time",
+                "schema": {
+                    "type": "string",
+                    "format": "yyyy-MM-ddHH:mm:ss"
+                },
+                "required": True,
+                "description": "提醒的时间"
+            },
+            {
+                "name": "ask",
+                "schema": {
+                    "type": "string"
+                },
+                "required": True,
+                "description": "告知用户日程创建完成及具体的提醒时间"
+            }
+        ]
+    },
+    {
+        "name_for_human": "取消日程",
+        "name_for_model": "cancel_schedule",
+        "description_for_model": "取消日程是已给帮助用户取消当前日程的工具. Format the arguments as a JSON object.",
+        "parameters": [
+            {
+                "name": "task",
+                "schema": {
+                    "type": "string"
+                },
+                "required": True,
+                "description": "日程名称"
+            },
+            {
+                "name": "ask",
+                "schema": {
+                    "type": "string"
+                },
+                "required": True,
+                "description": "告知用户日程已取消"
+            }
+        ]
+    },
+    {
+        "name_for_human": "修改日程",
+        "name_for_model": "modify_schedule",
+        "description_for_model": "修改日程是一个帮助用户修改当前日程的工具，可使用本工具修改对应日程时间. Format the arguments as a JSON object.",
+        "parameters": [
+            {
+                "name": "task",
+                "schema": {
+                    "type": "string"
+                },
+                "required": True,
+                "description": "日程名称"
+            },
+            {
+                "name": "time",
+                "schema": {
+                    "type": "string",
+                    "format": "yyyy-MM-dd HH:mm:ss"
+                },
+                "required": True,
+                "description": "当前用户希望日程提醒的时间"
+            }
+        ]
+    },
+    {
+        "name_for_human": "查询日程",
+        "name_for_model": "query_schedule",
+        "description_for_model": "查询日程是一个帮助用户查询特定的日程信息的工具. Format the arguments as a JSON object.",
+        "parameters": [
+            {
+                "name": "task",
+                "schema": {
+                    "type": "string"
+                },
+                "required": False,
+                "description": "日程名称"
+            }
+        ]
+    }
 ]
 
 query_schedule_template = (

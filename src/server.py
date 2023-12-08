@@ -15,11 +15,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from flask import Flask, Response, request
 from gevent import pywsgi
+from requests import Session
 
 from chat.qwen_chat import Chat
-from src.pkgs.pipeline import Conv
+from src.pkgs.pipeline import Chat_v2
 from src.utils.Logger import logger
-from src.utils.module import NpEncoder, clock
+from src.utils.module import NpEncoder, clock, initAllResource
 
 
 def accept_param():
@@ -92,11 +93,9 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
 
 def create_app():
     app = Flask(__name__)
-    global chat
     
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
-        global chat
         try:
             param = accept_param()
             task = param.get('task', 'chat')
@@ -104,6 +103,7 @@ def create_app():
                 result = chat.yield_result(sys_prompt=param.get('prompt'), 
                                            return_mid_vars=False, 
                                            use_sys_prompt=False, 
+                                           mid_vars=[],
                                            **param)
         except AssertionError as err:
             logger.exception(err)
@@ -138,16 +138,14 @@ def create_app():
     def _chat_complete_stream_midvars():
         """demo,主要用于展示返回的中间变量
         """
-        # global chat
-        global conv
         try:
             param = accept_param()
-            generator = conv.general_yield_result(sys_prompt=param.get('prompt'), 
+            generator = chat_v2.general_yield_result(sys_prompt=param.get('prompt'), 
                                                   mid_vars=[], 
                                                   use_sys_prompt=True, 
                                                   **param)
             result = decorate_chat_complete(generator, 
-                                            return_mid_vars=False,
+                                            return_mid_vars=True,
                                             return_backend_history=True
                                             )
         except Exception as err:
@@ -209,6 +207,22 @@ def create_app():
         
     return app
 
+def prepare_for_all():
+    global chat
+    global chat_v2
+    global args
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
+    parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
+    parser.add_argument('--port', type=int, default=6500, help='port')
+    args = parser.parse_args()
+
+    global_share_resource = initAllResource(args)
+    
+    chat = Chat(global_share_resource)
+    chat_v2 = Chat_v2(global_share_resource)
+    
 def server_forever(args):
     global app
     server = pywsgi.WSGIServer((args.ip, args.port), app)
@@ -216,13 +230,6 @@ def server_forever(args):
     server.serve_forever()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
-    parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
-    parser.add_argument('--port', type=int, default=6500, help='port')
-    args = parser.parse_args()
-
-    chat = Chat(args.env)
-    conv = Conv(args.env)
+    prepare_for_all()
     app = create_app()
     server_forever(args)
