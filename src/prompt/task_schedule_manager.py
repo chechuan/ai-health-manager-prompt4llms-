@@ -18,7 +18,7 @@ from langchain.prompts import PromptTemplate
 
 sys.path.append(".")
 from config.constrant import task_schedule_return_demo
-from config.constrant_for_task_schedule import (query_schedule_template,
+from config.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
                                                 task_schedule_parameter_description,
                                                 task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, ChatMessage, chat_qwen
@@ -264,11 +264,11 @@ class taskSchedulaManager:
         url = self.api_config["ai_backend"] + "/alg-api/schedule/query"
         payload = {"orgCode": kwds.get("orgCode"),"customId": kwds.get("customId")}
         response = self.session.post(url, json=payload, headers=self.headers).text
-        resp_js = json.loads(response)
-        data = resp_js['data']
+        data = json.loads(response)['data']
         ret = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
         set_str = set([json.dumps(i, ensure_ascii=False) for i in ret])
         ret = [json.loads(i) for i in set_str]
+        logger.debug(f"Realtime schedule: {ret}")
         return ret
     
     def generate_modify_content(self, msg, **kwds):
@@ -293,23 +293,21 @@ class taskSchedulaManager:
         intentCode = kwds.get("intentCode")
         schedule = self.get_real_time_schedule(**kwds)
         request = ChatCompletionRequest(model="Qwen-14B-Chat", 
-                                        functions=task_schedule_parameter_description_for_qwen,
-                                        messages=messages,)
+                                        # functions=task_schedule_parameter_description_for_qwen,
+                                        functions=_tspdfq,
+                                        messages=messages)
         if not intentCode == 'schedule_qry_up':
-            response, mid_vars_item = create_chat_completion(request, schedule)
-            msg = response.choices[0].message
-            # if kwds.get("verbose"):
+            msg, mid_vars_item = create_chat_completion(request, schedule)
             logger.debug("Thought:" + msg.content)
         else:
             mid_vars_item = [{"key":"日程管理", "input_text": intentCode, "output_text": "日程查询"}]
             msg = ChatMessage(role="assistant", content="", function_call={"name": "query_schedule", "arguments": ""})
         if msg.function_call:
             tool_name, tool_args = msg.function_call['name'], msg.function_call['arguments']
-            logger.debug(f"call func: {tool_name}")
             yield make_meta_ret(msg=tool_name, code=intentCode, type="Tool"), mid_vars_item
-            if tool_args:
-                logger.debug(f"arguments: {tool_args}")
+            if tool_args: 
                 yield make_meta_ret(msg=msg.content, code=intentCode, type="Thought"), mid_vars_item
+
         if msg.function_call:
             if tool_name == "ask_for_time":
                 content = eval(tool_args)['ask'] if msg.function_call else msg.content

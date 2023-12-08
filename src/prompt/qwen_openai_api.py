@@ -13,12 +13,10 @@ from fastapi import FastAPI, HTTPException
 
 sys.path.append(".")
 from config.constrant_for_task_schedule import REACT_INSTRUCTION, TOOL_DESC
-from src.prompt.model_init import (ChatCompletionRequest,
-                                   ChatCompletionResponse,
-                                   ChatCompletionResponseChoice,
-                                   ChatCompletionResponseStreamChoice,
-                                   ChatMessage, DeltaMessage, ModelCard,
-                                   ModelList, chat_qwen)
+from src.prompt.model_init import (ChatCompletionRequest, ChatCompletionResponse,
+                                   ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice,
+                                   ChatMessage, DeltaMessage, ModelCard, ModelList, chat_qwen)
+from src.utils.Logger import logger
 
 
 # To work around that unpleasant leading-\n tokenization issue!
@@ -274,7 +272,9 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
     history = parse_messages(request.messages, request.functions, temp_schedule=schedule)
     prompt = compose_history(history)
     prompt += "\nThought: "
+    logger.debug(f"日程管理ReAct:\n{prompt}")
     response = chat_qwen(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
+    logger.debug(f"日程管理Generate:\n{response}")
     mid_vars_item = [{"key":"日程管理", "input_text": prompt, "output_text": response}]
     # print(response)
     response = trim_stop_words(response, stop_words)
@@ -286,9 +286,7 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
             message=ChatMessage(role="assistant", content=response),
             finish_reason="stop",
         )
-    return ChatCompletionResponse(
-        model=request.model, choices=[choice_data], object="chat.completion"
-    ), mid_vars_item
+    return choice_data.message, mid_vars_item
 
 
 async def predict(

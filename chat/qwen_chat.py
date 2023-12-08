@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 import yaml
-from sympy import content
 
 sys.path.append('.')
 
@@ -258,7 +257,7 @@ class Chat:
         # self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
 
-    def open_page(self, history, mid_vars, **kwargs):
+    def open_page(self, history, mid_vars):
         """组装mysql中打开页面对应的prompt
         """
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
@@ -481,19 +480,19 @@ class Chat:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
                 out_text = {'end':True,'message':'','intentCode':'BMI'}
             else:
-                output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+                output_text = self.chatter_gaily(*args, **kwargs)
                 out_text = {'end':True, 'message':output_text, 'intentCode':intentCode}
         elif intentCode in ['food_rec']:
             logger.debug('进入饮食推荐的闲聊...')
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            output_text = self.chatter_gaily(*args, **kwargs)
             logger.debug('医师推荐闲聊的模型输出：' + output_text)
             out_text = {'end':True, 'message':output_text, 'intentCode':'other'}
         elif intentCode in ['sport_rec']:
-            output_text = self.chatter_gaily(history, mid_vars, **kwargs)
+            output_text = self.chatter_gaily(*args, **kwargs)
             out_text = {'end':True, 'message':output_text, 'intentCode':'other'}
         elif self.intent_map['schedule'].get(intentCode):
-            his = self.history_compose(history)
-            _iterable = self.tsm._run(his, intentCode=intentCode, **kwargs)
+            messages = self.history_compose(history)
+            _iterable = self.tsm._run(messages, **kwargs)
             while True:
                 out_text, mid_vars_item = next(_iterable)
                 if not out_text.get('end', False):
@@ -511,7 +510,7 @@ class Chat:
                 else:
                     break
         elif intentCode == "open_web_daily_monitor":
-            output_text = self.open_page(history, mid_vars, **kwargs)
+            output_text = self.open_page(history, mid_vars)
             logger.debug('打开页面模型输出：'  + output_text)
             msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             out_text = {'end':True, 'message':msg, 'intentCode':self.get_pageName_code(output_text)}
