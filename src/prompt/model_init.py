@@ -73,7 +73,7 @@ def chat_qwen(query: str = "",
         for i, n in enumerate(list(reversed(history))):
             msg += n['content']
             if len(msg) > 1200:
-                h = history[-i+1:]
+                h = history[-i:]
                 break
             else:
                 h = history
