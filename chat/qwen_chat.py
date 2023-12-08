@@ -248,6 +248,8 @@ class Chat:
         """组装mysql中闲聊对应的prompt
         """
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
+        if len(history) > 8:    # 每次history理论上为奇数个, 例: if len == 9 从第二轮的问题开始
+            history = history[-7:]
         kwargs['history'] = history
         backend_history = self.global_share_resource.chat_v2.chat_react(*args, **kwargs)
         content = backend_history[-1]['content']
