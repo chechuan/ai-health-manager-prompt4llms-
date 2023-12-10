@@ -23,7 +23,7 @@ from src.pkgs.knowledge.config.prompt_config import PROMPT_TEMPLATES
 from src.utils.Logger import logger
 
 headers = {
-	"User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36",
+	"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
 	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
 	"Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
 	"Connection": "keep-alive",
