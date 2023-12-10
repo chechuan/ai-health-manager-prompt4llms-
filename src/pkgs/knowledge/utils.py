@@ -120,6 +120,9 @@ async def search_engine_chat(query: str,
     res = etree.HTML(response.text)
     detail_urls = res.xpath('//h3[@class="t"]/a/@href')
     
+    if not detail_urls:
+        logger.error(f"Err to parse url: {url}\n")
+        return "对不起, 我不知道"
     task_list = []
     for d_url in detail_urls:
         task_list.append(asyncio.create_task(parse_detail_page(d_url)))
