@@ -246,7 +246,7 @@ class Chat:
             history = history[-7:]
         kwargs['history'] = history
         backend_history = self.global_share_resource.chat_v2.chat_react(*args, **kwargs)
-        content = backend_history[-1]['content']
+        content = backend_history[-1]['function_call']['arguments']
         # ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
         # input_history = [{"role":"system", "content": ext_info}] + input_history
         # content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
@@ -498,7 +498,7 @@ class Chat:
                         self.update_mid_vars(mid_vars, **item)
                     break
         elif intentCode == "auxiliary_diagnosis":
-            _iterable = self.chat_auxiliary_diagnosis(history=history, intentCode=intentCode, sys_prompt=sys_prompt, mid_vars=mid_vars, **kwargs)
+            _iterable = self.chat_auxiliary_diagnosis(**kwargs)
             while True:
                 out_text, mid_vars = next(_iterable)
                 if not out_text.get('end', False):

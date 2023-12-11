@@ -57,6 +57,9 @@ Action Input: Action的输入,通常为一个query,表示要查询或者询问�
 
 Begins!"""
 
+# Thought: I now know the final answer
+# Final Answer: the final answer to the original input question
+
 task_schedule_return_demo = [
     {
         "task": "做饭",
