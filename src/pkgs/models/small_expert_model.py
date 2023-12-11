@@ -5,8 +5,14 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
+import json
+import sys
+from pathlib import Path
 
+sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
+from src.utils.module import initAllResource
 
 
 class expertModel:
@@ -18,7 +24,7 @@ class expertModel:
             raise f"{key} must can be trans to number."
 
     @staticmethod
-    def tool_compute_bmi(weight: float or int, height: float or int) -> float(".1f"):
+    def tool_compute_bmi(weight: float or int, height: float or int) -> float():
         """计算bmi
         
         - Args
@@ -94,7 +100,62 @@ class expertModel:
             status = "体重正常"
         return status
         
+    def __rec_diet_eval__(self, param):
+        """
+        ## 需求
+        https://ehbl4r.axshare.com/#g=1&id=c2eydm&p=%E6%88%91%E7%9A%84%E9%A5%AE%E9%A3%9F
+        
+        ## 开发参数
+        ```json
+        {
+            "meal": "早餐",
+            "recommend_heat_target": 500,
+            "recipes": [
+                {"name":"西红柿炒鸡蛋", "weight": 100, "unit":"一盘"},
+                {"name":"红烧鸡腿", "weight":null, "unit":"1根"}
+            ]
+        }
+        ```
+        """
+        sys_prompt = (
+            "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、"
+            f"热量/蛋白/碳水/脂肪四大营养素摄入的角度简单的点评一下{param['meal']}是否健康"
+        )
+        prompt = (
+            f"本餐建议热量: {param['recommend_heat_target']}\n"
+            "实际吃的:\n"
+        )
 
+        recipes_prompt_list = []
+        for recipe in param["recipes"]:
+            tmp = f"{recipe['name']}"
+            if recipe['weight']:
+                tmp += f": {recipe['weight']}g"
+            elif recipe['unit']:
+                tmp += f": {recipe['unit']}"
+            recipes_prompt_list.append(tmp)
+        
+        recipes_prompt = "\n".join(recipes_prompt_list)
+        prompt += recipes_prompt
+        history = [{"role":"system", "content": sys_prompt},{"role":"user", "content": prompt}]
 
+        logger.debug(f"饮食点评 Prompt:\n{json.dumps(history, ensure_ascii=False)}")
+        
+        content = chat_qwen(history=history, temperature=0.7, top_p=0.8)
+        
+        logger.debug(f"饮食点评 Result:\n{content}")
+        
+        return content
+    
 if __name__ == "__main__":
-    expertModel.tool_compute_bmi(65, 1.72)
+    param = {
+        "meal": "早餐",
+        "recommend_heat_target": 500,
+        "recipes": [
+            {"name":"西红柿炒鸡蛋", "weight": 100, "unit":"一盘"},
+            {"name":"红烧鸡腿", "weight":None, "unit":"1根"}
+        ]
+    }
+    initAllResource()
+    expert_model = expertModel()
+    expert_model.__rec_diet_eval__(param)

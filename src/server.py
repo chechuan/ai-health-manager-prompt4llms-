@@ -15,9 +15,9 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from flask import Flask, Response, request
 from gevent import pywsgi
-from requests import Session
 
 from chat.qwen_chat import Chat
+from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.Logger import logger
 from src.utils.module import NpEncoder, clock, initAllResource
@@ -204,12 +204,28 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+
+    @app.route('/rec/diet/evaluation', methods=['post'])
+    def _rec_diet_evaluation():
+        """获取意图代码
+        """
+        global chat
+        try:
+            param = accept_param()
+            ret = expert_model.__rec_diet_eval__(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return Response(json.dumps(ret, ensure_ascii=False), content_type='application/json')
+
     return app
 
 def prepare_for_all():
     global chat
     global chat_v2
+    global expert_model
     global global_share_resource
     global args
 
@@ -217,6 +233,7 @@ def prepare_for_all():
     args = global_share_resource.args    
     chat = Chat(global_share_resource)
     chat_v2 = Chat_v2(global_share_resource)
+    expert_model = expertModel()
     
 def server_forever():
     global app

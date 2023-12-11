@@ -52,8 +52,6 @@ Action: 选择解决用户当前问题的工具, should be one of {{tools_name_t
 Action Input: 对应Action的输入,若已满足诊断条件,对患者问题的总体分析及诊断结果,格式为一串文本
 Observation: 工具返回的内容
 ...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
-Action: 前置话题可以终结了,调用结束话题工具
-Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容
 
 Begins!"""
 
