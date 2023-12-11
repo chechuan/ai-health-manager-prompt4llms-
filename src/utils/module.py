@@ -31,6 +31,8 @@ def handle_exception(exc_type, exc_value, exc_traceback):
         return
     logger.critical(exc_value.message, exc_info=(exc_type, exc_value, exc_traceback))
 
+def load_yaml(path: Path or str):
+    return yaml.load(open(path, "r"), Loader=yaml.FullLoader)
 
 def handle_error(func):
     def __inner(*args, **kwargs):

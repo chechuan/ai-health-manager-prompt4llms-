@@ -95,12 +95,12 @@ class promptEngine:
 class customPromptEngine:
     """组装先验知识到INSTRUCTION_TEMPLATE中
     """
-    def __init__(self, prompt_meta_data=None):
-        if prompt_meta_data:
-            self.prompt_meta_data = prompt_meta_data
+    def __init__(self, global_share_resource):
+        if global_share_resource.prompt_meta_data:
+            self.prompt_meta_data = global_share_resource.prompt_meta_data
         else:
             parser = argparse.ArgumentParser()
-            parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
+            parser.add_argument('--env', type=str, default="local", help='env: local, dev, fat, prod')
             parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
             parser.add_argument('--port', type=int, default=6500, help='port')
             args = parser.parse_args()

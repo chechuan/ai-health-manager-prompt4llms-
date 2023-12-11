@@ -44,8 +44,8 @@ class Chat_v2:
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env
         self.prompt_meta_data = global_share_resource.prompt_meta_data
-        self.promptEngine = customPromptEngine(self.prompt_meta_data)
-        self.funcall = funcCall(self.prompt_meta_data)
+        self.promptEngine = customPromptEngine(global_share_resource)
+        self.funcall = funcCall(global_share_resource)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.__initalize_intent_map__()
         self.session = Session()

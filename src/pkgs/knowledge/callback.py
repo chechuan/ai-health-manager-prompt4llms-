@@ -25,17 +25,18 @@ from config.constrant_for_task_schedule import query_schedule_template
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import req_prompt_data_from_mysql
+from src.utils.module import load_yaml, req_prompt_data_from_mysql
 
 
 class funcCall:
     headers: Dict = {"content-type": "application/json"}
     session = Session()
-    api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
     param_server: object = ParamServer()
 
-    def __init__(self, prompt_meta_data=None, env="local"):
-        self.prompt_meta_data = prompt_meta_data if prompt_meta_data else req_prompt_data_from_mysql(env)
+    def __init__(self, global_share_resource):
+        env = global_share_resource.args.env
+        self.api_config: Dict = load_yaml(Path("config","api_config.yaml"))[env]
+        self.prompt_meta_data = global_share_resource.prompt_meta_data if global_share_resource.prompt_meta_data else req_prompt_data_from_mysql(env)
         self.register_for_all()
         self.ext_api_factory = extApiFactory(self)
 
