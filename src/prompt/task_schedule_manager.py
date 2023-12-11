@@ -46,10 +46,7 @@ class taskSchedulaManager:
         "customId": None,"orgCode": None,"taskName": None,"taskType": None,"taskDesc": None,
         "intentCode": None, "repeatType": None, "cronDate": None, "fromTime": None, "toTime": None
         }
-    def __init__(self, 
-                 api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local'],
-                 prompt_meta_data: Dict[str, Dict] = {}
-                 ):
+    def __init__(self, global_share_resource):
         """日程管理模块
         - Args
             
@@ -58,8 +55,8 @@ class taskSchedulaManager:
             prompt_meta_data (Dict[str, Dict], required)
                 prompt meta data,分立的prompt元数据
         """
-        self.api_config = api_config
-        self.prompt_meta_data = prompt_meta_data
+        self.api_config = global_share_resource.api_config
+        self.prompt_meta_data = global_share_resource.prompt_meta_data
         # prompt = PromptTemplate(
         #     input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"], 
         #     template=TEMPLATE_TASK_SCHEDULE_MANAGER

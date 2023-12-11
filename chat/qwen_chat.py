@@ -40,16 +40,14 @@ class Chat:
         global_share_resource.chat = self
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env
-        api_config = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)[self.env]
-        mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[self.env]
 
-        self.mysql_conn = MysqlConnector(**mysql_config)
+        self.mysql_conn = MysqlConnector(**global_share_resource.mysql_config)
         self.prompt_meta_data = global_share_resource.prompt_meta_data
         
         self.promptEngine = promptEngine(self.prompt_meta_data)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         # self.sys_template = PromptTemplate(input_variables=['external_information'], template=self.prompt_meta_data['tool']['工具选择sys_prompt']['description'])
-        self.tsm = taskSchedulaManager(api_config, self.prompt_meta_data)
+        self.tsm = taskSchedulaManager(global_share_resource)
         self.__initalize_intent_map__()
     
     def __initalize_intent_map__(self):
@@ -72,10 +70,6 @@ class Chat:
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
-
-    @clock
-    def reload_prompt(self):
-        self.global_share_resource.reload_prompt(self.env)
     
     def get_tool_name(self, text):
         if '外部知识' in text:

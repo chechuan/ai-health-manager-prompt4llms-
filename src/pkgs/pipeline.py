@@ -42,7 +42,6 @@ class Chat_v2:
     def __init__(self, global_share_resource: initAllResource) -> None:
         global_share_resource.chat_v2 = self
         self.global_share_resource = global_share_resource
-        self.env = global_share_resource.args.env
         self.prompt_meta_data = global_share_resource.prompt_meta_data
         self.promptEngine = customPromptEngine(global_share_resource)
         self.funcall = funcCall(global_share_resource)
@@ -70,9 +69,6 @@ class Chat_v2:
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
-
-    def reload_prompt(self):
-        self.global_share_resource.reload_prompt(self.env)
 
     def chat_react(self, max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果

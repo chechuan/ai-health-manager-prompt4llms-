@@ -15,9 +15,6 @@ from pydantic import BaseModel, Field
 
 from src.utils.Logger import logger
 
-api_config: Dict = yaml.load(open(Path("config","api_config.yaml"), "r"),Loader=yaml.FullLoader)['local']
-openai.api_base = api_config['llm'] + "/v1"
-openai.api_key = "EMPTY"
 
 def chat_qwen(query: str = "", 
               history: List[Dict] = [], 

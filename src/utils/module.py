@@ -4,6 +4,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
+import argparse
 import functools
 import json
 import sys
@@ -14,12 +15,39 @@ from typing import AnyStr, Dict, Tuple
 from urllib import parse
 
 import numpy as np
+import openai
 import pandas as pd
 import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
 
 from src.utils.Logger import logger
+
+
+class initAllResource:
+    def __init__(self) -> None:
+        """初始化公共资源
+        """
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
+        parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
+        parser.add_argument('--port', type=int, default=6500, help='port')
+        self.args = parser.parse_args()
+
+        logger.info(f"Initialize args: {self.args}")
+
+        self.session = requests.Session()
+
+        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
+        self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
+        self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.mysql_config)
+
+        openai.api_base = self.api_config['llm'] + "/v1"
+        openai.api_key = "EMPTY"
+    
+    def reload_prompt(self):
+        self.prompt_meta_data = req_prompt_data_from_mysql(self.mysql_config)
 
 
 def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
@@ -384,7 +412,7 @@ class MysqlConnector:
         return res
 
 @clock
-def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
+def req_prompt_data_from_mysql(mysql_config) -> Dict:
     """从mysql中请求prompt meta data
     """
     def filter_format(obj, splited=False):
@@ -396,8 +424,6 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
                     obj_rev_item['event'] = obj_rev_item['event'].split("\n")
         return obj_rev
     
-    mysql_config = yaml.load(open(Path("config","mysql_config.yaml"), "r"),Loader=yaml.FullLoader)[env]
-    prompt_version = yaml.load(open(Path("config","prompt_version.yaml"), "r"),Loader=yaml.FullLoader)[env]
     mysql_conn = MysqlConnector(**mysql_config)
     prompt_meta_data = {}
     prompt_character = mysql_conn.query("select * from ai_prompt_character")
@@ -424,14 +450,3 @@ def req_prompt_data_from_mysql(env: AnyStr) -> Dict:
 
 def curr_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-class initAllResource:
-    def __init__(self, args) -> None:
-        """初始化公共资源
-        """
-        self.session = requests.Session()
-        self.args = args
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.args.env)
-    
-    def reload_prompt(self):
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.args.env)

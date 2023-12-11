@@ -1,3 +1,3 @@
 python src/server.py \
-    --env fat \
+    --env dev \
     --port 26928
