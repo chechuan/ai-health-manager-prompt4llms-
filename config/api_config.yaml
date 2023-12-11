@@ -14,11 +14,11 @@ fat:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26925
   graph: http://10.4.164.240:26925
-  ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
   algo_rec: http://aimp-algo-psc-diet-v5.ef.laikang.com
 prod:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26925
   graph: http://10.4.164.240:26925
-  ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
   algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
