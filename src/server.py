@@ -183,7 +183,7 @@ def create_app():
         """
         global chat
         try:
-            global_share_resource.reload_prompt()
+            prepare_for_all()
             ret = {"head": 200, "success": True, "msg": "restart success"}
         except Exception as err:
             logger.exception(err)

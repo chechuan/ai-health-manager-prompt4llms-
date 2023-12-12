@@ -9,6 +9,7 @@ import functools
 import json
 import sys
 import time
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import AnyStr, Dict, Tuple
@@ -21,8 +22,23 @@ import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
 
-from src.utils.Logger import logger
+try:
+    from src.utils.Logger import logger
+except Exception as err:
+    from Logger import logger
 
+def clock(func):
+    """info level 函数计时装饰器"""
+    @functools.wraps(func)  # --> 4
+    def clocked(*args, **kwargs):  # -- 1
+        """this is inner clocked function"""
+        start_time = time.time()
+        result = func(*args, **kwargs)  # --> 2
+        time_cost = time.time() - start_time
+        if time_cost > 0.0:
+            logger.info(func.__name__ + " -> {} ms".format(int(1000*time_cost)))
+        return result
+    return clocked
 
 class initAllResource:
     def __init__(self) -> None:
@@ -32,6 +48,9 @@ class initAllResource:
         parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
         parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
         parser.add_argument('--port', type=int, default=6500, help='port')
+        parser.add_argument('--special_prompt_version', 
+                            action="store_true",
+                            help='是否使用指定的prompt版本, Default为False,都使用lastest')
         self.args = parser.parse_args()
 
         logger.info(f"Initialize args: {self.args}")
@@ -41,14 +60,83 @@ class initAllResource:
         self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.mysql_config)
+        self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
         openai.api_key = "EMPTY"
-    
-    def reload_prompt(self):
-        self.prompt_meta_data = req_prompt_data_from_mysql(self.mysql_config)
 
+    @clock
+    def req_prompt_data_from_mysql(self) -> Dict:
+        """从mysql中请求prompt meta data
+        """
+        def filter_format(obj, splited=False):
+            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
+            obj_rev = json.loads(obj_str)
+            if splited:
+                for obj_rev_item in obj_rev:
+                    if obj_rev_item.get('event'):
+                        obj_rev_item['event'] = obj_rev_item['event'].split("\n")
+            return obj_rev
+
+        def search_target_version_item(item_list, ikey, curr_item_id, version):
+            """从列表中返回指定version的item, 默认未指定则为latest
+            """
+            spec_version = version.get(curr_item_id, None)
+            if spec_version:
+                for item in item_list:
+                    if item[ikey] == curr_item_id:
+                        if item['version'] == spec_version:
+                            return item
+                        else:
+                            latest_item = item
+                    else:
+                        continue
+            else:
+                latest_item = [i for i in item_list if i[ikey] == curr_item_id][0]
+            return latest_item
+
+        mysql_conn = MysqlConnector(**self.mysql_config)
+        prompt_meta_data = defaultdict(dict)
+        prompt_character = mysql_conn.query("select * from ai_prompt_character")
+        prompt_event = mysql_conn.query("select * from ai_prompt_event")
+        prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+        prompt_character = filter_format(prompt_character, splited=True)
+        prompt_event = filter_format(prompt_event)
+        prompt_tool = filter_format(prompt_tool)
+        
+        # TODO 优先使用指定的version 否则使用latest
+        if self.args.special_prompt_version:
+            for key, v in self.prompt_version.items():
+                if not v:
+                    if key == 'character':
+                        prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+                    elif key == 'event':
+                        prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
+                    elif key == 'tool':
+                        prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
+                else:
+                    if key == 'character':
+                        for i in prompt_character:
+                            prompt_meta_data[key][i['name']] = search_target_version_item(prompt_character, 'name', i['name'], v)
+                    elif key == 'event':
+                        for i in prompt_event:
+                            prompt_meta_data[key][i['intent_code']] = search_target_version_item(prompt_event, 'intent_code', i['intent_code'], v)
+                    elif key == 'tool':
+                        for i in prompt_tool:
+                            prompt_meta_data[key][i['name']] = search_target_version_item(prompt_tool, 'name', i['name'], v)
+        else:
+            prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+            prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
+            prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
+        prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
+        prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
+        prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
+
+        
+        for name, func in prompt_meta_data['tool'].items():
+            func['params'] = json.loads(func['params']) if func['params'] else func['params']
+        del mysql_conn
+        return prompt_meta_data
 
 def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
     return {'end':end, 'message':msg, 'intentCode':code,'type': type, 'init_intent': init_intent, **kwargs}
@@ -82,18 +170,7 @@ def req_data(url=None, payload=None, headers=None):
     logger.trace(f'url: {url},\tpayload: {payload}')
     return res
 
-def clock(func):
-    """info level 函数计时装饰器"""
-    @functools.wraps(func)  # --> 4
-    def clocked(*args, **kwargs):  # -- 1
-        """this is inner clocked function"""
-        start_time = time.time()
-        result = func(*args, **kwargs)  # --> 2
-        time_cost = time.time() - start_time
-        if time_cost > 0.0:
-            logger.info(func.__name__ + " -> {} ms".format(int(1000*time_cost)))
-        return result
-    return clocked
+
 
 def loadJS(path):
     return json.load(open(path, 'r'))
@@ -411,42 +488,9 @@ class MysqlConnector:
             self.engine.dispose()
         return res
 
-@clock
-def req_prompt_data_from_mysql(mysql_config) -> Dict:
-    """从mysql中请求prompt meta data
-    """
-    def filter_format(obj, splited=False):
-        obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
-        obj_rev = json.loads(obj_str)
-        if splited:
-            for obj_rev_item in obj_rev:
-                if obj_rev_item.get('event'):
-                    obj_rev_item['event'] = obj_rev_item['event'].split("\n")
-        return obj_rev
-    
-    mysql_conn = MysqlConnector(**mysql_config)
-    prompt_meta_data = {}
-    prompt_character = mysql_conn.query("select * from ai_prompt_character")
-    prompt_event = mysql_conn.query("select * from ai_prompt_event")
-    prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
-    prompt_character = filter_format(prompt_character, splited=True)
-    prompt_event = filter_format(prompt_event)
-    prompt_tool = filter_format(prompt_tool)
-    
-    # TODO 优先使用指定的version 否则使用latest
-    prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-    prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
-    prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
-    prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
-    prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
-    prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
-    for name, func in prompt_meta_data['tool'].items():
-        try:
-            func['params'] = json.loads(func['params']) if func['params'] else func['params']
-        except Exception as e:
-            ...
-    del mysql_conn
-    return prompt_meta_data
-
 def curr_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+if __name__ == "__main__":
+    initAllResource()

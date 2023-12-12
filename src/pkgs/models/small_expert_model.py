@@ -119,7 +119,7 @@ class expertModel:
         """
         sys_prompt = (
             "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、"
-            f"热量/蛋白/碳水/脂肪四大营养素摄入的角度简单的点评一下{param['meal']}是否健康"
+            f"热量/蛋白/碳水/脂肪四大营养素摄入的角度,简洁的点评一下{param['meal']}是否健康"
         )
         prompt = (
             f"本餐建议热量: {param['recommend_heat_target']}\n"
