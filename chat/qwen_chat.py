@@ -285,17 +285,19 @@ class Chat:
         logger.debug(f'信息提取prompt:\n{prompt}')
         model_output = chat_qwen(prompt, 
                                  verbose=False, 
-                                 temperature=0.7, 
+                                 temperature=0, 
                                  top_p=0.8,
                                  max_tokens=200, 
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
-        content = model_output.split('。')[0][:20]
+        content = model_output
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(history, mid_vars)
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
+        elif content:
+            content = content.split('\n')[0].split('。')[0][:20]
         content = content if content else '未知'
         return {'end':True, 'message':content, 'intentCode':intentCode}
 
