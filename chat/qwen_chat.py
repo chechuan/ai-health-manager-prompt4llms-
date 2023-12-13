@@ -266,13 +266,13 @@ class Chat:
             return 'pagename:"record-list3"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
-        #ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'].format('\n'.join(hp))
+        #ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'].format('\n'.join(hp))
         #last_h = [h['role'] + ' ' + h['content'] for h in input_history[-1:]]
         hi = ''
         if len(input_history) > 1:
             hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录：' + '\n' + '\n'.join([h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
         hi += f'Question:{input_history[-1]["content"]}\nThought:'
-        ext_info = self.prompt_meta_data['event']['打开功能画面']['description'] + "\n" + self.prompt_meta_data['event']['打开功能画面']['process'] + '\n' + hi
+        ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
