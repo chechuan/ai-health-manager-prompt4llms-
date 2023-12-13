@@ -218,6 +218,13 @@ class Chat_v2:
             history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
             kwargs['history'] = kwargs['backend_history'] + [history[-1]]
             kwargs['history'][-1]['intentCode'] = kwargs['intentCode']
+
+        # TODO 暂时不能改mysql中的chatter_gaily，手工替换一下
+        if kwargs['intentCode'] in ['other', 'chatter_gaily']:
+            kwargs['intentCode'] = '_chatter_gaily'
+            kwargs['prompt'] = None
+            kwargs['sys_prompt'] = None
+        
         _iterable = self.pipeline(*args, **kwargs)
         while True:
             try:
