@@ -179,7 +179,6 @@ class Chat_v2:
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
 
-
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
@@ -319,17 +318,16 @@ class Chat_v2:
         elif content:
             content = content.split('\n')[0].split('。')[0][:20]
         content = content if content else '未知'
-        return {'end':True, 'message':content, 'intentCode':intentCode}
+        return content, intentCode
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
-        model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
-        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
-        logger.debug('remind model output: ' + model_output)
-        if model_output.startswith('（）'):
-            model_output = model_output[2:].strip()
-        return {'end':True, 'message':model_output, 'intentCode':intentCode}
-
+        content = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
+        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=content, model=model)
+        logger.debug('remind model output: ' + content)
+        if content.startswith('（）'):
+            content = content[2:].strip()
+        return content, intentCode
 
     def open_page(self, history, mid_vars):
         """组装mysql中打开页面对应的prompt
@@ -375,15 +373,18 @@ class Chat_v2:
         chat_history = kwargs['history']
         intentCode = kwargs['intentCode']
         if self.intent_map['userinfo'].get(intentCode):
-            content = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
+            content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
         elif self.intent_map['tips'].get(intentCode): 
-            content = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
+            content, intentCode = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
         elif intentCode == "open_web_daily_monitor":
             output_text = self.open_page(chat_history, mid_vars, **kwargs)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
         else:
-            content = self.chatter_gaily(mid_vars, **kwargs)
+            content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
+        
+        assert type(content) == str, "only_prompt模式下，返回值必须为str类型"
+        
         chat_history.append({
             "role": "assistant", 
             "content": "当前回复模式为only_prompt,根据prompt直接生成回复",
