@@ -152,6 +152,8 @@ def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=
     if kwargs.get('gsr'):
         ret['intentDesc'] = kwargs['gsr'].intent_desc_map.get(code, '闲聊')
         del ret['gsr']
+    else:
+        ret['intentDesc'] = "闲聊"
     return ret
 
 def handle_exception(exc_type, exc_value, exc_traceback):
