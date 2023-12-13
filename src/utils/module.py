@@ -150,7 +150,10 @@ def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=
         **kwargs
     }
     if kwargs.get('gsr'):
-        ret['intentDesc'] = kwargs['gsr'].intent_desc_map.get(code, '闲聊')
+        if not kwargs['gsr'].intent_desc_map.get(code):
+            ret['intentDesc'] = '日常对话'
+        else:
+            ret['intentDesc'] = kwargs['gsr'].intent_desc_map[code]
         del ret['gsr']
     else:
         ret['intentDesc'] = "闲聊"
