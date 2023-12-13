@@ -6,7 +6,6 @@
 @Contact :   1627635056@qq.com
 '''
 
-import argparse
 import json
 import sys
 import traceback
