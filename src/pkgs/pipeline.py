@@ -353,7 +353,7 @@ class Chat_v2:
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         if content.find('Answer') != -1:
-            content = contnet[content.find('Answer')+7:].split('\n')[0].strip()
+            content = content[content.find('Answer')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content 
 
@@ -386,7 +386,8 @@ class Chat_v2:
             content = self.chatter_gaily(mid_vars, **kwargs)
         chat_history.append({
             "role": "assistant", 
-            "content": content, 
+            "content": "当前回复模式为only_prompt,根据prompt直接生成回复",
+            "function_call": {"name": "convComplete", "arguments": content} 
         })
         return chat_history, intentCode
     
@@ -432,10 +433,12 @@ class Chat_v2:
         out_history = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
-            ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
-            ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
-            yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
-            yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
+
+            if self.prompt_meta_data['event'][intentCode] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
+                ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
+                ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
+                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
+                yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
             
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
