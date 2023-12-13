@@ -61,7 +61,7 @@ class Chat:
             'default_reminder', 'broadcast_bp_up'
         ]
         useinfo_intent_code_list = [
-            'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
+            'ask_name','ask_age','ask_exercise_taboo','ask_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
             'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
             'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
         ]

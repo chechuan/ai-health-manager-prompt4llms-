@@ -36,10 +36,10 @@ role_map = {
 class Chat_v2:
     def __init__(self, global_share_resource: initAllResource) -> None:
         global_share_resource.chat_v2 = self
-        self.global_share_resource = global_share_resource
-        self.prompt_meta_data = global_share_resource.prompt_meta_data
-        self.promptEngine = customPromptEngine(global_share_resource)
-        self.funcall = funcCall(global_share_resource)
+        self.gsr = global_share_resource
+        self.prompt_meta_data = self.gsr.prompt_meta_data
+        self.promptEngine = customPromptEngine(self.gsr)
+        self.funcall = funcCall(self.gsr)
         self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
         self.__initalize_intent_map__()
         self.session = Session()
@@ -407,6 +407,9 @@ class Chat_v2:
             out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
         return out_history
     
+    def if_init(self, tool):
+        return self.prompt_meta_data['init_intent'].get(tool, False)
+    
     def pipeline(self, mid_vars=[], **kwargs):
         """
         ## 多轮交互流程
@@ -436,20 +439,13 @@ class Chat_v2:
             tool, content, thought = self.parse_last_history(out_history)
 
             if self.prompt_meta_data['event'][intentCode]['process_type'] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
-                ret_tool = make_meta_ret(msg=tool, 
-                                         type="Tool", 
-                                         code=intentCode, 
-                                         intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
-                ret_thought = make_meta_ret(msg=thought, 
-                                            type="Thought", 
-                                            code=intentCode, 
-                                            intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
+                ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
+                ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
                 yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
                 yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
-            
+
             if self.prompt_meta_data['rollout_tool'].get(tool):
                 break
-            
             try:
                 kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             except AssertionError as err:
@@ -463,18 +459,11 @@ class Chat_v2:
             else:
                 # function_call的结果, self_rag
                 content = kwargs['history'][-1]['content']
-                ret_function_call = make_meta_ret(msg=content, 
-                                                  type="Observation", 
-                                                  code=intentCode,
-                                                  intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
+                ret_function_call = make_meta_ret(msg=content, type="Observation", code=intentCode,gsr=self.gsr)
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-        ret_result = make_meta_ret(end=True, 
-                                   msg=content, 
-                                   code=intentCode, 
-                                   init_intent=self.prompt_meta_data['init_intent'].get(tool, False),
-                                   intentDesc=intentCode_desc_map.get(intentCode, '闲聊'))
+        ret_result = make_meta_ret(end=True, msg=content, code=intentCode, init_intent=self.if_init(tool),gsr=self.gsr)
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
