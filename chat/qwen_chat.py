@@ -509,7 +509,7 @@ class Chat:
                     yield out_text, mid_vars
                 else:
                     break
-        elif intentCode == "open_web_daily_monitor":
+        elif intentCode == "open_Function":
             output_text = self.open_page(history, mid_vars)
             logger.debug('打开页面模型输出：'  + output_text)
             msg = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text

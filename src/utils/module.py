@@ -318,7 +318,7 @@ def get_intent(text):
         code = 'BMI'
         desc = 'BMI'
     elif '页面' in text or '打开' in text:
-        code = 'open_web_daily_monitor'
+        code = 'open_Function'
         desc = '打开功能页面'
     elif '万年历' in text:
         code = 'calendar'

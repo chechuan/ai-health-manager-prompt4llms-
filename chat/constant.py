@@ -42,7 +42,7 @@ intentCode_desc_map = {
     'AIUI.audioBook':'有声书',
     'news':'新闻',
     'BMI':'BMI',
-    'open_web_daily_monitor':'功能页面',
+    'open_Function':'打开功能页面',
     'calendar':'万年历',
     'joke':'笑话',
     'other': '日常对话'
