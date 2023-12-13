@@ -12,12 +12,12 @@ import traceback
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
-import asyncio
 import time
 
 from flask import Flask, Response, request
-from gevent import pywsgi
+from gevent import monkey, pywsgi
 
+monkey.patch_all()
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
@@ -225,23 +225,10 @@ def create_app():
         """获取意图代码
         """
         t1 = curr_time()
-        time.sleep(1)
+        time.sleep(2)
         ret = {"start":t1, "end": curr_time()}
-        return Response(dumpJS(ret), content_type='application/json')
-    
-    async def async_sleep():
-        await asyncio.sleep(1)
-        return "async"
-
-    @app.route('/test/async', methods=['post'])
-    async def _test_async():
-        """获取意图代码
-        """
-        t1 = curr_time()
-        await async_sleep()
-        ret = {"start":t1, "end": curr_time()}
-        return Response(dumpJS(ret), content_type='application/json')
-    
+        logger.debug(ret)
+        return Response(dumpJS(ret), content_type='application/json')    
     return app
 
 def prepare_for_all():
