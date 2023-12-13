@@ -3,7 +3,6 @@ default_prompt = '你作为家庭智能健康管家，需要解答用户问题�
 EXT_USRINFO_TRANSFER_INTENTCODE = 'transfor_qa'
 
 intentCode_desc_map = {
-    'schedule_qry_up':'日程管理',
     'food_rec':'饮食处方咨询',
     'food_nutri':'饮食营养',
     'nutri_known':'营养知识咨询',
@@ -16,14 +15,12 @@ intentCode_desc_map = {
     'cookbook':'菜谱',
     'musicX':'音乐播放',
     'weather':'天气查询',
-    'auxiliary_diagnosis': '辅助诊断',
     'call_doctor':'呼叫医师',
     'call_sportMaster':'呼叫运动师',
     'call_psychologist':'呼叫情志师',
     'call_dietista':'呼叫营养师',
     'call_health_manager':'呼叫健管师',
     'other':'日常对话',
-    'schedule_manager':'日程管理',
     'websearch':'网络搜索',
     'KLLI3.captialInfo':'首都查询',
     'lottery':'彩票',

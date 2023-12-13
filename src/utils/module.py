@@ -131,15 +131,27 @@ class initAllResource:
         prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
         prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
         prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
-
-        
+   
         for name, func in prompt_meta_data['tool'].items():
             func['params'] = json.loads(func['params']) if func['params'] else func['params']
+        intent_desc_map = {i['intent_code']: i['intent_desc'] for i in prompt_meta_data}
+        default_desc_map = loadJS(Path("data","intent_desc_map.json"))
+        self.intent_desc_map = {**default_desc_map, **intent_desc_map}
         del mysql_conn
         return prompt_meta_data
 
 def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
-    return {'end':end, 'message':msg, 'intentCode':code,'type': type, 'init_intent': init_intent, **kwargs}
+    ret = {
+        'end':end, 
+        'message':msg, 
+        'intentCode':code,
+        'type': type, 
+        'init_intent': init_intent, 
+        **kwargs
+    }
+    if kwargs.get('gsr'):
+        ret['intentDesc'] = kwargs['gsr'].intent_desc_map.get(code, '闲聊')
+    return ret
 
 def handle_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
