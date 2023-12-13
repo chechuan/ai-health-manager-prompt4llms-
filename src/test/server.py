@@ -134,12 +134,12 @@ def create_app():
         t1 = curr_time()
         await async_sleep()
         ret = {"start":t1, "end": curr_time()}
+        logger.debug(ret)
         return Response(dumpJS(ret), content_type='application/json')
     
     return app
 
 def prepare_for_all():
-    global global_share_resource
     global args
     import argparse
     parser = argparse.ArgumentParser()

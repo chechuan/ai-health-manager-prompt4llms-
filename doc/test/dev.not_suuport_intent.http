@@ -1,0 +1,5 @@
+POST /chat/complete HTTP/1.1
+Content-Type: application/json
+Host: 0.0.0.0:6500
+
+{"orgCode": "sf", "customId": "007", "prompt": "你作为家庭智能健康管家，需要解答用户问题，如果用户回复了症状，则针对用户症状进行问诊；当用户提到高血压的相关症状时，如果对话历史中没有血压信息，则提示用户测量血压，如果对话中问过血压信息，就不要再问了，如果对话历史里有血压信息，则针对用户高血压症状问诊；如果用户提到其他疾病症状则对用户症状进行问诊。如果模型回复饮食情况则对用户饮食进行热量、膳食结构评价。今天日期是${currentDate}。用户个人信息如下：\\n${askName}${askSix}${askAge}${askNation}${askHeight}${askWeight}${askLaborIntensity}${askDisease}${askFamilyHistory}${askGoalManage}${askTastePrefer}${askFoodAlergy}${askMmolDrug}${askExerciseHabbit}${askExerciseTabooDegree}${askExerciseTabooXt}对话内容为：", "intentCode": "musicX", "history": [{"msgId": "8963058398", "role": "1", "content": "播放音乐", "sendTime": "2023-12-14 09:49:12"}], "promptParam": {"currentDate": "2023年12月14日", "askExerciseTabooXt": "", "askSix": "", "askExerciseHabbit": "", "askName": "", "askFamilyHistory": "", "askGoalManage": "", "askMmolDrug": "", "askFoodAlergy": "", "askAge": "", "askDisease": "", "askHeight": "", "askExerciseTabooDegree": "", "askLaborIntensity": "", "askNation": "", "askWeight": "", "askTastePrefer": ""}, "backend_history": []}

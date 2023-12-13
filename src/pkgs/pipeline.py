@@ -65,14 +65,19 @@ class Chat_v2:
             'userinfo': {i:1 for i in useinfo_intent_code_list}
         }
 
-    def chat_react(self, max_tokens=200, **kwargs):
+    def chat_react(self, *args, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
+        max_tokens = kwargs.get("max_tokens", 200)
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, verbose=kwargs.get("verbose", False), temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat")
+        model_output = chat_qwen(prompt, 
+                                 temperature=0.7, 
+                                 top_p=0.5, 
+                                 max_tokens=max_tokens, 
+                                 model="Qwen-14B-Chat")
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -182,7 +187,7 @@ class Chat_v2:
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        ext_info = self.prompt_meta_data['event']['chatter_gaily']['description'] + "\n" + self.prompt_meta_data['event']['chatter_gaily']['process']
+        ext_info = self.prompt_meta_data['event']['_chatter_gaily']['description'] + "\n" + self.prompt_meta_data['event']['chatter_gaily']['process']
         input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
         input_history = [i for i in input_history if not i.get('function_call')]
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
@@ -396,18 +401,18 @@ class Chat_v2:
         """首次交互
         """
         intentCode = kwargs.get('intentCode')
+        out_history = None
         if self.prompt_meta_data['event'].get(intentCode):
             if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "react":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-            else:
-                out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
-        else:
-            out_history = self.chatter_gaily(mid_vars, return_his=True, **kwargs)
+        if not out_history: 
+            out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
         return out_history
     
     def if_init(self, tool):
+        # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
         return self.prompt_meta_data['init_intent'].get(tool, False)
     
     def pipeline(self, mid_vars=[], **kwargs):
@@ -438,7 +443,7 @@ class Chat_v2:
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
-            if self.prompt_meta_data['event'][intentCode]['process_type'] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
+            if self.prompt_meta_data['event'].get(intentCode) and self.prompt_meta_data['event'][intentCode]['process_type'] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
                 ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
                 ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
                 yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}

@@ -111,7 +111,8 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     for h_idx in range(h_len):
         item = chat_history[h_idx]
         if item.get('intentCode') != intent_code:
-            item['intentCode'] = "chatter_gaily"
+            # TODO _chatter_gaily 上线后改为chatter_gaily
+            item['intentCode'] = "_chatter_gaily"
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
@@ -154,7 +155,6 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
 #         stop_words = stop_words + [im_end]
 #     stop_words_ids = [tokenizer.encode(w) for w in stop_words]
 
-#     # TODO: 增加流式输出的样例实现
 #     input_ids = torch.tensor([tokenizer.encode(input_text)]).to(model.device)
 #     output = model.generate(input_ids, stop_words_ids=stop_words_ids)
 #     output = output.tolist()[0]
