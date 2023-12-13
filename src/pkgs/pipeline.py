@@ -275,7 +275,7 @@ class Chat_v2:
                 yield_item = next(_iterable)
                 if not yield_item['data'].get("type"):
                     yield_item['data']['type'] = "Result"
-                logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
+                # logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
                 yield yield_item
             except StopIteration as err:
                 break

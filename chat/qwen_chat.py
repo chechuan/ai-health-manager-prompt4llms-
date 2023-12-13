@@ -277,7 +277,7 @@ class Chat:
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         if content.find('Answer') != -1:
-            content = contnet[content.find('Answer')+7:].split('\n')[0].strip()
+            content = content[content.find('Answer')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
     
