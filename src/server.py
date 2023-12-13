@@ -13,6 +13,9 @@ import traceback
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
+import asyncio
+import time
+
 from flask import Flask, Response, request
 from gevent import pywsgi
 
@@ -20,7 +23,7 @@ from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.Logger import logger
-from src.utils.module import NpEncoder, clock, initAllResource
+from src.utils.module import NpEncoder, clock, curr_time, dumpJS, initAllResource
 
 
 def accept_param():
@@ -173,9 +176,7 @@ def create_app():
             logger.error(traceback.format_exc())
             result = make_result(msg=repr(err), items=param)
         finally:
-            #return Response(decorate(result), mimetype='text/event-stream')
-            return Response(json.dumps(result, ensure_ascii=False),
-                    content_type='application/json')
+            return Response(dumpJS(result), content_type='application/json')
 
     @app.route('/reload_prompt', methods=['get'])
     def _reload_prompt():
@@ -189,7 +190,7 @@ def create_app():
             logger.exception(err)
             ret = {"head": 500, "success": False, "msg": repr(err)}
         finally:
-            return ret
+            return Response(dumpJS(ret), content_type='application/json')
     
     @app.route('/fetch_intent_code', methods=['get'])
     def _fetch_intent_code():
@@ -218,8 +219,27 @@ def create_app():
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
-            return Response(json.dumps(ret, ensure_ascii=False), content_type='application/json')
-
+            return Response(dumpJS(ret), content_type='application/json')
+        
+    @app.route('/test/sync', methods=['post'])
+    def _test_sync():
+        """获取意图代码
+        """
+        t1 = curr_time()
+        time.sleep(1)
+        ret = {"start":t1, "end": curr_time()}
+        return Response(dumpJS(ret), content_type='application/json')
+    
+    # def 
+    @app.route('/test/async', methods=['post'])
+    async def _test_async():
+        """获取意图代码
+        """
+        t1 = curr_time()
+        asyncio.run(asyncio.sleep(1))
+        ret = {"start":t1, "end": curr_time()}
+        return Response(dumpJS(ret), content_type='application/json')
+    
     return app
 
 def prepare_for_all():

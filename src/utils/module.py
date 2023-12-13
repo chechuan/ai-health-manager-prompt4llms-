@@ -134,7 +134,7 @@ class initAllResource:
    
         for name, func in prompt_meta_data['tool'].items():
             func['params'] = json.loads(func['params']) if func['params'] else func['params']
-        intent_desc_map = {i['intent_code']: i['intent_desc'] for i in prompt_meta_data}
+        intent_desc_map = {code: item['intent_desc'] for code, item in prompt_meta_data['event'].items()}
         default_desc_map = loadJS(Path("data","intent_desc_map.json"))
         self.intent_desc_map = {**default_desc_map, **intent_desc_map}
         del mysql_conn
@@ -503,6 +503,8 @@ class MysqlConnector:
 def curr_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+def dumpJS(obj):
+    return json.dumps(obj, ensure_ascii=False)
 
 if __name__ == "__main__":
     initAllResource()
