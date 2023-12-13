@@ -219,7 +219,7 @@ def create_app():
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
-            return Response(dumpJS(ret), content_type='application/json')
+            return ret
         
     @app.route('/test/sync', methods=['post'])
     def _test_sync():
@@ -230,13 +230,16 @@ def create_app():
         ret = {"start":t1, "end": curr_time()}
         return Response(dumpJS(ret), content_type='application/json')
     
-    # def 
+    async def async_sleep():
+        await asyncio.sleep(1)
+        return "async"
+
     @app.route('/test/async', methods=['post'])
     async def _test_async():
         """获取意图代码
         """
         t1 = curr_time()
-        asyncio.run(asyncio.sleep(1))
+        await async_sleep()
         ret = {"start":t1, "end": curr_time()}
         return Response(dumpJS(ret), content_type='application/json')
     
