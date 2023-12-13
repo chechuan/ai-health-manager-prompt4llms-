@@ -434,7 +434,7 @@ class Chat_v2:
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
-            if self.prompt_meta_data['event'][intentCode] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
+            if self.prompt_meta_data['event'][intentCode]['process_type'] != "only_prompt": # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
                 ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode)
                 ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode)
                 yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
