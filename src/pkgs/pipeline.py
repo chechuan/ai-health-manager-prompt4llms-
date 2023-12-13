@@ -124,6 +124,7 @@ class Chat_v2:
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
     
+    
     def get_parent_intent_name(self, text):
         if '五师' in text:
             return '呼叫五师'
@@ -131,37 +132,54 @@ class Chat_v2:
             return '音频播放'
         elif '生活' in text:
             return '生活工具查询'
-        elif '辅助诊断':
-            return '辅助诊断'
-        elif '饮食':
-            return '饮食咨询'
-        elif '运动':
+        elif '医疗' in text:
+            return '医疗健康'
+        elif '饮食' in text:
+            return '饮食营养'
+        elif '运动' in text:
             return '运动咨询'
         else:
             return '其它'
-
-    def cls_intent(self, history, mid_vars):
+    
+    def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
+            return '打开功能页面'
+        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
-        prompt = self.prompt_meta_data['tool']['意图识别']['description'] + "\n\n" + his_prompt + "\nThought: "
-        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+        if kwargs.get('intentPrompt', ''):
+            prompt = kwargs.get('intentPrompt') + "\n\n" + h_p + "\nThought: "
+        else:
+            prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
+        logger.debug('父意图模型输入：' + prompt)
+        generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
+                temperature=0, do_sample=False)
+        logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询']:
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
-            prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + his_prompt + "\nThought: "
-            generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8, temperature=0.7)
+            if parant_intent in ['呼叫五师']:
+                history = history[-1:]
+                h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+            if kwargs.get('subIntentPrompt', ''):
+                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
+            else:
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
+            logger.debug('子意图模型输入：' + prompt)
+            generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
+                    temperature=0, do_sample=False)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
-    
+
+
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
@@ -182,14 +200,41 @@ class Chat_v2:
 
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
-        intent = get_intent(self.cls_intent(history, mid_vars))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
-                out_text = {'message':get_doc_role(intent), 'intentCode':intent, 'processCode':'trans_back'}
-        elif intent in ['recipe_consult', 'play_music', 'check_weather','search_network','search_capital','lottery','oneiromancy','calculator','search_city','provincial_capital_search','translate','traffic_restrictions', 'unit_conversion','exchange_rate','date','eye_exercises','story','bible','opera','pingshu', 'audio_book','news']: #aiui
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui'}
+        task = kwargs.get('task', '')
+        input_prompt = kwargs.get('prompt', [])
+        if task == 'verify' and input_prompt:
+            intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
+                input_prompt))
         else:
-            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg'}
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
+        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+            out_text = {'message':get_doc_role(intent),
+                        'intentCode':'doc_role', 'processCode':'trans_back',
+                        'intentDesc':desc}
+        elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
+        #elif intent in ['open_web_daily_monitor']:
+        #    out_text = {'message':'', 'intentCode':intent,
+        #            'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['food_rec']:
+            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
+                out_text = {'message':'', 'intentCode':intent,
+                     'processCode':'trans_back', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':'food_rec',
+                        'processCode':'alg', 'intentDesc':desc}
+        elif intent in ['sport_rec']:
+            if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+                out_text = {'message':'',
+                        'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
+            else:
+                out_text = {'message':'', 'intentCode':intent,
+                        'processCode':'trans_back', 'intentDesc':desc}
+        else:
+            out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
+        logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
         return out_text
+
     
     def fetch_intent_code(self):
         """返回所有的intentCode"""
@@ -257,30 +302,39 @@ class Chat_v2:
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
         """
-        logger.debug('信息提取prompt为：' + prompt)
-        model_output = chat_qwen(prompt, verbose=False, temperature=0.7, top_p=0.8, max_tokens=200, do_sample=False)
-        content = model_output.split('。')[0][:20]
+        logger.debug(f'信息提取prompt:\n{prompt}')
+        model_output = chat_qwen(prompt,
+                                 verbose=False,
+                                 temperature=0,
+                                 top_p=0.8,
+                                 max_tokens=200,
+                                 do_sample=False)
+        logger.debug('信息提取模型输出：' + model_output)
+        content = model_output
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(history, mid_vars)
-            self.update_mid_vars(mid_vars, key="获取用户信息 02", input_text=history, output_text=content, model="Qwen-14B-Chat")
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
+        elif content:
+            content = content.split('\n')[0].split('。')[0][:20]
         content = content if content else '未知'
-        return content
+        return {'end':True, 'message':content, 'intentCode':intentCode}
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
         model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
-        self.update_mid_vars(mid_vars, key="获取提醒信息", input_text=prompt, output_text=model_output, model=model)
+        self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
         logger.debug('remind model output: ' + model_output)
         if model_output.startswith('（）'):
             model_output = model_output[2:].strip()
-        return model_output
-    
-    def open_page(self, history, mid_vars, **kwargs):
+        return {'end':True, 'message':model_output, 'intentCode':intentCode}
+
+
+    def open_page(self, history, mid_vars):
         """组装mysql中打开页面对应的prompt
         """
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         input_history = input_history[-3:]
         if '血压趋势图' in history[-1]['content']:
             return 'pagename:"bloodPressure-trend-chart"'
@@ -290,18 +344,18 @@ class Chat_v2:
             return 'pagename:"record-list3"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
-        ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'].format('\n'.join(hp))
-        last_h = [h['role'] + ' ' + h['content'] for h in input_history[-1:]]
         hi = ''
         if len(input_history) > 1:
             hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录：' + '\n' + '\n'.join([h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
         hi += f'Question:{input_history[-1]["content"]}\nThought:'
         ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
-        logger.debug('打开页面模型输入：' + json.dumps(input_history, ensure_ascii=False))
+        logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=input_history, output_text=content)
-        return content
+        if content.find('Answer') != -1:
+            content = contnet[content.find('Answer')+7:].split('\n')[0].strip()
+        self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        return content 
 
     def get_pageName_code(self, text):
         if 'bloodPressure-trend-chart' in text and 'pagename' in text:
