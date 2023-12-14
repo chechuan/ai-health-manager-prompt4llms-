@@ -334,18 +334,18 @@ class Chat_v2:
             content = content[2:].strip()
         return content, intentCode
 
-    def open_page(self, history, mid_vars):
+    def open_page(self, mid_vars, **kwargs):
         """组装mysql中打开页面对应的prompt
         """
-        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
         input_history = input_history[-3:]
-        if '血压趋势图' in history[-1]['content']:
+        if '血压趋势图' in input_history[-1]['content']:
             return 'pagename:"bloodPressure-trend-chart"'
-        elif '血压录入' in history[-1]['content']:
+        elif '血压录入' in input_history[-1]['content']:
             return 'pagename:"add-blood-pressure"'
-        elif '血压历史页面' in history[-1]['content'] or '历史血压页面' in history[-1]['content']:
+        elif '血压历史页面' in input_history[-1]['content'] or '历史血压页面' in input_history[-1]['content']:
             return 'pagename:"record-list3"'
-        elif '打开' in history[-1]['content'] and '日程' in history[-1]['content']:
+        elif '打开' in input_history[-1]['content'] and '日程' in input_history[-1]['content']:
             return 'pagename:"my-schedule"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
@@ -392,7 +392,7 @@ class Chat_v2:
         elif self.intent_map['tips'].get(intentCode): 
             content, intentCode = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
         elif intentCode == "open_Function":
-            output_text = self.open_page(chat_history, mid_vars, **kwargs)
+            output_text = self.open_page(mid_vars, **kwargs)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
         else:
@@ -415,11 +415,12 @@ class Chat_v2:
         if self.prompt_meta_data['event'].get(intentCode):
             if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+                kwargs['intentCode'] = intentCode
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "react":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         if not out_history: 
             out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
-        return out_history
+        return out_history, intentCode
     
     def if_init(self, tool):
         # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
@@ -449,7 +450,7 @@ class Chat_v2:
         intentCode = kwargs.get('intentCode')
         mid_vars = kwargs.get('mid_vars', [])
 
-        out_history = self.interact_first(mid_vars=mid_vars, **kwargs)
+        out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
@@ -478,7 +479,7 @@ class Chat_v2:
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-        ret_result = make_meta_ret(end=True, msg=content, code=intentCode, init_intent=self.if_init(tool),gsr=self.gsr)
+        ret_result = make_meta_ret(end=True, msg=content,code=intentCode, init_intent=self.if_init(tool),gsr=self.gsr)
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':

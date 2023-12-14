@@ -40,5 +40,11 @@
     "open_web_daily_monitor":"功能页面",
     "calendar":"万年历",
     "joke":"笑话",
+    "record-list3":"血压历史记录页面",
+    "bloodPressure-trend-chart":"血压趋势图页面",
+    "add-blood-pressure":"血压录入页面",
+    "diet-record":"我的饮食页面",
+    "add-record":"饮食录入页面",
+    "my-schedule":"日程管理页面",
     "other": "日常对话"
 }
