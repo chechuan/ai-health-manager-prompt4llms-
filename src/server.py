@@ -5,7 +5,9 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
+from gevent import monkey, pywsgi
 
+monkey.patch_all()
 import json
 import sys
 import traceback
@@ -15,9 +17,7 @@ sys.path.append(str(Path(__file__).parent.parent.absolute()))
 import time
 
 from flask import Flask, Response, request
-from gevent import monkey, pywsgi
 
-monkey.patch_all()
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2

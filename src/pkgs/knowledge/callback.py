@@ -10,12 +10,12 @@ import asyncio
 import copy
 import json
 import random
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AnyStr, Dict
 
-import yaml
 from requests import Session
 
 sys.path.append(str(Path.cwd()))
@@ -257,11 +257,8 @@ class funcCall:
         def decorate_search_prompt(query: str) -> str:
             """优化要查询的query"""
             prompt = (
-                "You are a powerful assistant, capable of understanding requirements and responding accordingly."
-                "# 要求\n"
-                "1. 提取其中关键信息并作出解释\n"
-                "2. 针对问题给出相关的有用的信息\n"
-                "3. 组装成一段话,要求语义连贯,适当简洁\n"
+                "You are a powerful assistant, capable of understanding requirements and responding accordingly.\n"
+                "要求提取其中关键信息,组装成一疑问句,要求语义连贯"
             )
             his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
             content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-14B-Chat")
@@ -284,17 +281,29 @@ class funcCall:
         url = self.api_config['langchain']+called_method
         response = self.session.post(url, json=payload, headers=self.headers)
         msg = eval(response.text)
-        
-        if "未找到相关文档" not in msg['docs'][0]:
+        dataSource = None
+
+        if "未找到相关文档" in msg['answer'] or '无法回答' in msg['answer'] or not msg['docs']:
             content = msg['answer']
             self.update_mid_vars(kwargs['mid_vars'], 
                                  key=f"查询知识库", 
                                  input_text=query, 
                                  output_text=msg, 
                                  model=model_name)
-        else:   # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            content = self.call_llm_with_search_engine(query, **kwargs)
-        return content
+            # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
+            content = self.call_llm_with_search_engine(query, **kwargs).strip()
+            dataSource = "搜索引擎"
+        else:
+            doc_name_list = [re.findall('\[.*?\]', msg['docs'][1][7:])[0][1:-1] for i in msg['docs']]
+            doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
+            dataSource = '、'.join(doc_name_list)
+            content = msg['answer'].strip()
+
+        if kwargs['return_all']:
+            return content, dataSource
+        else:
+            return content
+
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """llm + 搜索引擎
