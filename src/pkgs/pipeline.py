@@ -391,7 +391,7 @@ class Chat_v2:
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
         elif self.intent_map['tips'].get(intentCode): 
             content, intentCode = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
-        elif intentCode == "open_web_daily_monitor":
+        elif intentCode == "open_Function":
             output_text = self.open_page(chat_history, mid_vars, **kwargs)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
