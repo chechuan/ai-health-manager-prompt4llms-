@@ -9,6 +9,7 @@ loguru
 pandas
 fastapi
 pymysql
+Cython
 cchardet
 chardet
 typing-extensions==4.8.0
