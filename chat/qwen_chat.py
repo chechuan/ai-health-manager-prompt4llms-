@@ -264,6 +264,8 @@ class Chat:
             return 'pagename:"add-blood-pressure"'
         elif '血压历史页面' in history[-1]['content'] or '历史血压页面' in history[-1]['content']:
             return 'pagename:"record-list3"'
+        elif '打开' in history[-1]['content'] and '日程' in history[-1]['content']:
+            return 'pagename:"my_schedule"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
         #ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'].format('\n'.join(hp))
@@ -278,6 +280,8 @@ class Chat:
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         if content.find('Answer') != -1:
             content = content[content.find('Answer')+7:].split('\n')[0].strip()
+        elif content.find('Output') != -1:
+            content = content[content.find('Output')+6].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
     

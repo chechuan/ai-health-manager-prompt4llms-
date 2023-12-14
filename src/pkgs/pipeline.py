@@ -345,6 +345,8 @@ class Chat_v2:
             return 'pagename:"add-blood-pressure"'
         elif '血压历史页面' in history[-1]['content'] or '历史血压页面' in history[-1]['content']:
             return 'pagename:"record-list3"'
+        elif '打开' in history[-1]['content'] and '日程' in history[-1]['content']:
+            return 'pagename:"my-schedule"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
         hi = ''
@@ -369,6 +371,12 @@ class Chat_v2:
             return 'add-blood-pressure'
         elif 'record-list3' in text and 'pagename' in text:
             return 'record-list3'
+        elif 'my-schedule' in text and 'pagename' in text:
+            return 'my-schedule'
+        elif 'add-diet' in text and 'pagename' in text:
+            return 'add-diet'
+        elif 'diet-record' in text and 'pagename' in text:
+            return 'diet-record'
         else:
             return 'other'
     
