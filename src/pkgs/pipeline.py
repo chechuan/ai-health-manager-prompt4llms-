@@ -356,7 +356,7 @@ class Chat_v2:
         ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        content = chat_qwen("", input_history, temperature=0, top_p=0.8, do_sample=False)
         if content.find('Answer') != -1:
             content = content[content.find('Answer')+7:].split('\n')[0].strip()
         if content.find('Output') != -1:
@@ -480,6 +480,7 @@ class Chat_v2:
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
         ret_result = make_meta_ret(end=True, msg=content,code=intentCode, init_intent=self.if_init(tool),gsr=self.gsr)
+        logger.debug(f'输出内容：{json.dumps(ret_result, ensure_ascii=False)}')
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
