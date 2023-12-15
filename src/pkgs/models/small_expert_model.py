@@ -151,7 +151,7 @@ class expertModel:
         
         return content
     
-    def __bpta_compose_value_prompt(key: str = "对值的解释", data: List = []):
+    def __bpta_compose_value_prompt(self, key: str = "对值的解释", data: List = []):
             value_list = [i['value'] for i in data]
             content = f"{key}{value_list}\n"
             return content
