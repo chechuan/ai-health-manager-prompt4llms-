@@ -7,6 +7,7 @@
 import argparse
 import functools
 import json
+import pickle
 import sys
 import time
 from collections import defaultdict
@@ -21,6 +22,8 @@ import pandas as pd
 import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
+
+from config.constrant import CACHE_DIR
 
 try:
     from src.utils.Logger import logger
@@ -48,15 +51,18 @@ class initAllResource:
         parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
         parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
         parser.add_argument('--port', type=int, default=6500, help='port')
+        parser.add_argument('--use_cache', action="store_true", help='是否使用缓存, Default为False')
         parser.add_argument('--special_prompt_version', 
                             action="store_true",
                             help='是否使用指定的prompt版本, Default为False,都使用lastest')
         self.args = parser.parse_args()
-
         logger.info(f"Initialize args: {self.args}")
 
         self.session = requests.Session()
 
+        self.cache_dir = Path(CACHE_DIR)
+        if not self.cache_dir.exists():
+            self.cache_dir.mkdir()
         self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
@@ -95,49 +101,56 @@ class initAllResource:
                 latest_item = [i for i in item_list if i[ikey] == curr_item_id][0]
             return latest_item
 
-        mysql_conn = MysqlConnector(**self.mysql_config)
-        prompt_meta_data = defaultdict(dict)
-        prompt_character = mysql_conn.query("select * from ai_prompt_character")
-        prompt_event = mysql_conn.query("select * from ai_prompt_event")
-        prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
-        prompt_character = filter_format(prompt_character, splited=True)
-        prompt_event = filter_format(prompt_event)
-        prompt_tool = filter_format(prompt_tool)
+        data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
+        if not self.args.use_cache:
+            mysql_conn = MysqlConnector(**self.mysql_config)
+            prompt_meta_data = defaultdict(dict)
+            prompt_character = mysql_conn.query("select * from ai_prompt_character")
+            prompt_event = mysql_conn.query("select * from ai_prompt_event")
+            prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+            prompt_character = filter_format(prompt_character, splited=True)
+            prompt_event = filter_format(prompt_event)
+            prompt_tool = filter_format(prompt_tool)
         
-        # TODO 优先使用指定的version 否则使用latest
-        if self.args.special_prompt_version:
-            for key, v in self.prompt_version.items():
-                if not v:
-                    if key == 'character':
-                        prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-                    elif key == 'event':
-                        prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
-                    elif key == 'tool':
-                        prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
-                else:
-                    if key == 'character':
-                        for i in prompt_character:
-                            prompt_meta_data[key][i['name']] = search_target_version_item(prompt_character, 'name', i['name'], v)
-                    elif key == 'event':
-                        for i in prompt_event:
-                            prompt_meta_data[key][i['intent_code']] = search_target_version_item(prompt_event, 'intent_code', i['intent_code'], v)
-                    elif key == 'tool':
-                        for i in prompt_tool:
-                            prompt_meta_data[key][i['name']] = search_target_version_item(prompt_tool, 'name', i['name'], v)
+            # TODO 优先使用指定的version 否则使用latest
+            if self.args.special_prompt_version:
+                for key, v in self.prompt_version.items():
+                    if not v:
+                        if key == 'character':
+                            prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+                        elif key == 'event':
+                            prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
+                        elif key == 'tool':
+                            prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool}
+                    else:
+                        if key == 'character':
+                            for i in prompt_character:
+                                prompt_meta_data[key][i['name']] = search_target_version_item(prompt_character, 'name', i['name'], v)
+                        elif key == 'event':
+                            for i in prompt_event:
+                                prompt_meta_data[key][i['intent_code']] = search_target_version_item(prompt_event, 'intent_code', i['intent_code'], v)
+                        elif key == 'tool':
+                            for i in prompt_tool:
+                                prompt_meta_data[key][i['name']] = search_target_version_item(prompt_tool, 'name', i['name'], v)
+            else:
+                prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+                prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
+                prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
+            prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
+            prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
+            prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
+            pickle.dump(prompt_meta_data, open(data_cache_file, 'wb'))
+            logger.debug(f"dump prompt_meta_data to {data_cache_file}")
+            del mysql_conn
         else:
-            prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
-            prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
-            prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
-        prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
-        prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
-        prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
+            prompt_meta_data = pickle.load(open(data_cache_file, 'rb'))
+            logger.debug(f"load prompt_meta_data from {data_cache_file}")
    
         for name, func in prompt_meta_data['tool'].items():
             func['params'] = json.loads(func['params']) if func['params'] else func['params']
         intent_desc_map = {code: item['intent_desc'] for code, item in prompt_meta_data['event'].items()}
         default_desc_map = loadJS(Path("data","intent_desc_map.json"))
         self.intent_desc_map = {**default_desc_map, **intent_desc_map}
-        del mysql_conn
         return prompt_meta_data
 
 def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
@@ -187,8 +200,6 @@ def req_data(url=None, payload=None, headers=None):
     res = json.loads(requests.post(url, data=payload, headers=headers).text)
     logger.trace(f'url: {url},\tpayload: {payload}')
     return res
-
-
 
 def loadJS(path):
     return json.load(open(path, 'r'))

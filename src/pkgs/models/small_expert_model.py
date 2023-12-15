@@ -10,9 +10,10 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import initAllResource
+from src.utils.module import clock, initAllResource
 
 
 class expertModel:
@@ -99,7 +100,8 @@ class expertModel:
         else:
             status = "体重正常"
         return status
-        
+
+    @clock
     def __rec_diet_eval__(self, param):
         """
         ## 需求
@@ -147,7 +149,8 @@ class expertModel:
         
         return content
     
-    def __blood_pressure_trend_analysis(self, param):
+    @clock
+    def __blood_pressure_trend_analysis__(self, param: dict) -> str:
         """血压趋势分析
 
         通过应用端提供的血压数据，提供血压报告的分析与解读的结果，返回应用端。
@@ -155,30 +158,59 @@ class expertModel:
         ## 开发参数
         ```json
         {
-            "高压": [],
-            "低压": [],
-            "心率": []
+            "ihm_health_sbp": [  //收缩压
+                {
+                    "date": "2023-0-12-13 10:10:10",
+                    "value": 60
+                }
+            ],
+            "ihm_health_dbp": [ //舒张压
+                {
+                    "date": "2023-0-12-13 10:10:10",
+                    "value": 120
+                }
+            ],
+            "ihm_health_hr": [ //心率
+                {
+                    "date": "2023-0-12-13 10:10:10",
+                    "value": 89
+                }
+            ]
         }
         ```
         """
-        sys_prompt = (
-            "请你扮演一个专业的家庭医师, 结合提供的信息帮助用户分析一下血压趋势, 下面是近期用户信息:\n"
-            f"高压: {param['高压']}\n"
-            f"低压: {param['低压']}\n"
-            f"心率: {param['心率']}\n"
-            
-            )
-        ...
-
+        
+        history = []
+        sys_prompt = "请你扮演一个专业的家庭医师,结合提供的信息帮助用户分析血压和心率变化整体趋势并给出健康建议,不超过200字."
+        history.append({"role":"system", "content": sys_prompt})
+        
+        # start_index, end_index = 5, 10
+        tst = param['ihm_health_sbp'][0]['date']
+        ted = param['ihm_health_sbp'][-1]['date']
+        content = f"从{tst}至{ted}期间\n"
+        # 收缩压
+        if param.get('ihm_health_sbp'):
+            value_list = [i['value'] for i in param['ihm_health_sbp']]
+            content += f"收缩压测量数据: {value_list}\n"
+        if param.get('ihm_health_dbp'):
+            value_list = [i['value'] for i in param['ihm_health_dbp']]
+            content += f"舒张压测量数据: {value_list}\n"
+        if param.get('ihm_health_hr'):
+            value_list = [i['value'] for i in param['ihm_health_hr']]
+            content += f"心率测量数据: {value_list}\n"
+        history.append({"role":"user", "content": content})
+        logger.debug(f"血压趋势分析\n{history}")
+        content = chat_qwen(history=history, 
+                            temperature=0.7, 
+                            top_p=0.8, 
+                            model="Qwen-1_8B-Chat"
+                            )
+        logger.debug(f"趋势分析结果: {content}")
+        return content
+    
 if __name__ == "__main__":
-    param = {
-        "meal": "早餐",
-        "recommend_heat_target": 500,
-        "recipes": [
-            {"name":"西红柿炒鸡蛋", "weight": 100, "unit":"一盘"},
-            {"name":"红烧鸡腿", "weight":None, "unit":"1根"}
-        ]
-    }
+    param = testParam.param_pressure_trend
     initAllResource()
     expert_model = expertModel()
-    expert_model.__rec_diet_eval__(param)
+    # expert_model.__rec_diet_eval__(param)
+    expert_model.__blood_pressure_trend_analysis__(param)
