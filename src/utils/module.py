@@ -102,7 +102,7 @@ class initAllResource:
             return latest_item
 
         data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
-        if not self.args.use_cache:
+        if not self.args.use_cache or not data_cache_file.exists():
             mysql_conn = MysqlConnector(**self.mysql_config)
             prompt_meta_data = defaultdict(dict)
             prompt_character = mysql_conn.query("select * from ai_prompt_character")

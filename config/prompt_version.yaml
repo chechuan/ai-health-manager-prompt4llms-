@@ -3,6 +3,7 @@ local:
     chatter_gaily: 1.0.1
   character:
   tool:
+    create_schedule: 1.0.1
 dev:
   event:
     chatter_gaily: 1.0.1

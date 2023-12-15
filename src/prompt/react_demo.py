@@ -12,9 +12,11 @@ import json
 import os
 
 import json5
-# import torch
 
 from src.utils.module import curr_time
+
+# import torch
+
 
 # 将一个插件的关键信息拼接成一段文本的模版。
 # TOOL_DESC = """{name_for_model}: Call this tool to interact with the {name_for_human} API. What is the {name_for_human} API useful for? {description_for_model} Parameters: {parameters}"""
@@ -110,9 +112,12 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     h_len = len(chat_history)
     for h_idx in range(h_len):
         item = chat_history[h_idx]
+        # if item.get('intentCode') != intent_code:
+        #     # TODO _chatter_gaily 上线后改为chatter_gaily
+        #     item['intentCode'] = "_chatter_gaily"
         if item.get('intentCode') != intent_code:
-            # TODO _chatter_gaily 上线后改为chatter_gaily
-            item['intentCode'] = "_chatter_gaily"
+            # 不相关其他事件对话历史太长，影响本次生成效果
+            continue
         if item.get('function_call'):
             prompt_react += f"Thought: {item['content']}\n"
             prompt_react += f"Action: {item['function_call']['name']}\n"
