@@ -256,6 +256,10 @@ class Chat:
     def open_page(self, history, mid_vars):
         """组装mysql中打开页面对应的prompt
         """
+        add_diet_list = ['打开记录','打开录入','打开添加']
+        diet_record_list = ['饮食记录','饮食添加','打开推荐','饮食评估','食谱','我的饮食','食谱页面','餐食记录']
+        market_list = ['集市']
+        home_list = ['智能','家居','面板']
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         input_history = input_history[-3:]
         if '血压趋势图' in history[-1]['content']:
@@ -266,6 +270,16 @@ class Chat:
             return 'pagename:"record-list3"'
         elif '打开' in history[-1]['content'] and '日程' in history[-1]['content']:
             return 'pagename:"my_schedule"'
+        elif sum([1 for i in add_diet_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"add-diet"'
+        elif sum([1 for i in diet_record_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"diet-record"'
+        elif sum([1 for i in market_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"my-market"'
+        elif sum([1 for i in home_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"smart-home"'
+        elif '打开' in input_history[-1]['content'] and '日程' in input_history[-1]['content']:
+            return 'pagename:"my-schedule"'
 
         hp = [h['role'] + ' ' + h['content'] for h in input_history]
         #ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'].format('\n'.join(hp))
@@ -531,6 +545,16 @@ class Chat:
             return 'add-blood-pressure'
         elif 'record-list3' in text and 'pagename' in text:
             return 'record-list3'
+        elif 'my-schedule' in text and 'pagename' in text:
+            return 'my-schedule'
+        elif 'add-diet' in text and 'pagename' in text:
+            return 'add-diet'
+        elif 'diet-record' in text and 'pagename' in text:
+            return 'diet-record'
+        elif 'my-market' in text and 'pagename' in text:
+            return 'my-market'
+        elif 'smart-home' in text and 'pagename' in text:
+            return 'smart-home'
         else:
             return 'other'
 

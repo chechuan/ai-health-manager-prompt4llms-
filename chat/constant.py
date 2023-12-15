@@ -45,5 +45,11 @@ intentCode_desc_map = {
     'open_Function':'打开功能页面',
     'calendar':'万年历',
     'joke':'笑话',
+    "diet-record":"我的饮食页面",
+    "add-diet":"饮食录入页面",
+    "my-schedule":"日程管理页面",
+    "open_Function":"打开功能页面",
+    "my-market":"打开集市",
+    'smart-home':'智能家居面板',
     'other': '日常对话'
 }
