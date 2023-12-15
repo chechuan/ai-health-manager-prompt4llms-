@@ -147,6 +147,29 @@ class expertModel:
         
         return content
     
+    def __blood_pressure_trend_analysis(self, param):
+        """血压趋势分析
+
+        通过应用端提供的血压数据，提供血压报告的分析与解读的结果，返回应用端。
+
+        ## 开发参数
+        ```json
+        {
+            "高压": [],
+            "低压": [],
+            "心率": []
+        }
+        ```
+        """
+        sys_prompt = (
+            "请你扮演一个专业的家庭医师, 结合提供的信息帮助用户分析一下血压趋势, 下面是近期用户信息:\n"
+            f"高压: {param['高压']}\n"
+            f"低压: {param['低压']}\n"
+            f"心率: {param['心率']}\n"
+            
+            )
+        ...
+
 if __name__ == "__main__":
     param = {
         "meal": "早餐",

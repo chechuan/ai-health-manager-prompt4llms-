@@ -16,6 +16,7 @@ from langchain.prompts import PromptTemplate
 from requests import Session
 
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
+from config.constrant import DEFAULT_DATA_SOURCE
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import funcCall
@@ -280,6 +281,8 @@ class Chat_v2:
                 yield_item = next(_iterable)
                 if not yield_item['data'].get("type"):
                     yield_item['data']['type'] = "Result"
+                if yield_item['data']['type'] == "Result" and not yield_item['data'].get("dataSource"):
+                    yield_item['data']['dataSource'] = DEFAULT_DATA_SOURCE
                 # logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
                 yield yield_item
             except StopIteration as err:

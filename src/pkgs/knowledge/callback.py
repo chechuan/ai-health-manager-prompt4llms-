@@ -10,17 +10,17 @@ import asyncio
 import copy
 import json
 import random
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, AnyStr, Dict
 
-import yaml
 from requests import Session
 
 sys.path.append(str(Path.cwd()))
 
-from config.constrant import ParamServer
+from config.constrant import DEFAULT_DATA_SOURCE, ParamServer
 from config.constrant_for_task_schedule import query_schedule_template
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
@@ -257,11 +257,8 @@ class funcCall:
         def decorate_search_prompt(query: str) -> str:
             """优化要查询的query"""
             prompt = (
-                "You are a powerful assistant, capable of understanding requirements and responding accordingly."
-                "# 要求\n"
-                "1. 提取其中关键信息并作出解释\n"
-                "2. 针对问题给出相关的有用的信息\n"
-                "3. 组装成一段话,要求语义连贯,适当简洁\n"
+                "You are a powerful assistant, capable of understanding requirements and responding accordingly.\n"
+                "要求提取其中关键信息,组装成一疑问句,要求语义连贯"
             )
             his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
             content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-14B-Chat")
@@ -284,17 +281,27 @@ class funcCall:
         url = self.api_config['langchain']+called_method
         response = self.session.post(url, json=payload, headers=self.headers)
         msg = eval(response.text)
-        
-        if "未找到相关文档" not in msg['docs'][0]:
+        dataSource = None
+
+        if "未找到相关文档" in msg['answer'] or '无法回答' in msg['answer'] or not msg['docs']:
             content = msg['answer']
             self.update_mid_vars(kwargs['mid_vars'], 
                                  key=f"查询知识库", 
                                  input_text=query, 
                                  output_text=msg, 
                                  model=model_name)
-        else:   # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            content = self.call_llm_with_search_engine(query, **kwargs)
-        return content
+            # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
+            content = self.call_llm_with_search_engine(query, **kwargs).strip()
+            dataSource = "搜索引擎"
+        else:
+            doc_name_list = [re.findall('\[.*?\]', msg['docs'][1][7:])[0][1:-1] for i in msg['docs']]
+            doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
+            dataSource = "知识库: " + '、'.join(doc_name_list)
+            content = msg['answer'].strip()
+
+        ret = {"content": content, "dataSource": dataSource}
+        return ret
+
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """llm + 搜索引擎
@@ -325,7 +332,8 @@ class funcCall:
                              input_text=prompt, 
                              output_text=content, 
                              model=model_name)
-        return content
+        ret_obj = {"content": content, "dataSource": "搜索引擎"}
+        return ret_obj
     
     def call_llm_with_graph(self, *args, **kwargs) -> AnyStr:
         """
@@ -336,9 +344,9 @@ class funcCall:
         response = self.session.post(self.api_config['graph']+called_method,
                                      json=payload,
                                      headers=self.headers)
-        res_js = eval(response.text)
-        ret = res_js['result']
-        return ret
+        content = eval(response.text)['result']
+        ret_obj = {"content": content, "dataSource": "知识图谱"}
+        return ret_obj
     
     def call_search_database(self, *args, **kwargs) -> AnyStr:
         """调用查询数据库接口
@@ -354,7 +362,9 @@ class funcCall:
         candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
         assert task in candidate_task, f"Generate task: {task} not in the candidate_task {candidate_task}"
         content = self.ext_api_factory._call(*args, **kwargs, task=task, func_cls=self)
-        return content
+
+        ret_obj = {"content": content, "dataSource": "外部api"}
+        return ret_obj
 
     def _call(self, **kwargs):
         """"""
@@ -363,7 +373,12 @@ class funcCall:
         func_name = function_call["name"]
         arguments = function_call["arguments"]
         assert self.funcmap.get(func_name) is not None, f"Unregistered function {{{func_name}}}, 请重试"
-        content = self.funcmap[func_name]['func'](arguments, **kwargs)
+        ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
+        if isinstance(ret_obj, str):
+            content = ret_obj
+        elif isinstance(ret_obj, dict):
+            content = ret_obj['content']
+            dataSource = ret_obj['dataSource']
         history.append({"role": "user","content": content})
         logger.debug(f"Observation: {content}")
         return history
