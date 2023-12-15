@@ -389,6 +389,8 @@ class Chat_v2:
             return 'add-diet'
         elif 'diet-record' in text and 'pagename' in text:
             return 'diet-record'
+        elif 'my-market' in text and 'pagename' in text:
+            return 'my-market'
         else:
             return 'other'
     
