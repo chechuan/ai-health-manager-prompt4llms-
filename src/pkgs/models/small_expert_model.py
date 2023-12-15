@@ -194,11 +194,11 @@ class expertModel:
         ted = param['ihm_health_sbp'][-1]['date']
         content = f"从{tst}至{ted}期间\n"
         if param.get('ihm_health_sbp'):
-            content = self.__bpta_compose_value_prompt("收缩压测量数据: ", param['ihm_health_sbp'])
+            content += self.__bpta_compose_value_prompt("收缩压测量数据: ", param['ihm_health_sbp'])
         if param.get('ihm_health_dbp'):
-            content = self.__bpta_compose_value_prompt("舒张压测量数据: ", param['ihm_health_dbp'])
+            content += self.__bpta_compose_value_prompt("舒张压测量数据: ", param['ihm_health_dbp'])
         if param.get('ihm_health_hr'):
-            content = self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
+            content += self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
         history.append({"role":"user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
         content = chat_qwen(history=history, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
