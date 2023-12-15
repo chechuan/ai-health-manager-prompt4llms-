@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from typing import List
+
 from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
@@ -149,6 +151,11 @@ class expertModel:
         
         return content
     
+    def __bpta_compose_value_prompt(key: str = "对值的解释", data: List = []):
+            value_list = [i['value'] for i in data]
+            content = f"{key}{value_list}\n"
+            return content
+    
     @clock
     def __blood_pressure_trend_analysis__(self, param: dict) -> str:
         """血压趋势分析
@@ -179,32 +186,22 @@ class expertModel:
         }
         ```
         """
-        
         history = []
         sys_prompt = "请你扮演一个专业的家庭医师,结合提供的信息帮助用户分析血压和心率变化整体趋势并给出健康建议,不超过200字."
         history.append({"role":"system", "content": sys_prompt})
         
-        # start_index, end_index = 5, 10
         tst = param['ihm_health_sbp'][0]['date']
         ted = param['ihm_health_sbp'][-1]['date']
         content = f"从{tst}至{ted}期间\n"
-        # 收缩压
         if param.get('ihm_health_sbp'):
-            value_list = [i['value'] for i in param['ihm_health_sbp']]
-            content += f"收缩压测量数据: {value_list}\n"
+            content = self.__bpta_compose_value_prompt("收缩压测量数据: ", param['ihm_health_sbp'])
         if param.get('ihm_health_dbp'):
-            value_list = [i['value'] for i in param['ihm_health_dbp']]
-            content += f"舒张压测量数据: {value_list}\n"
+            content = self.__bpta_compose_value_prompt("舒张压测量数据: ", param['ihm_health_dbp'])
         if param.get('ihm_health_hr'):
-            value_list = [i['value'] for i in param['ihm_health_hr']]
-            content += f"心率测量数据: {value_list}\n"
+            content = self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
         history.append({"role":"user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
-        content = chat_qwen(history=history, 
-                            temperature=0.7, 
-                            top_p=0.8, 
-                            model="Qwen-1_8B-Chat"
-                            )
+        content = chat_qwen(history=history, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
         logger.debug(f"趋势分析结果: {content}")
         return content
     
