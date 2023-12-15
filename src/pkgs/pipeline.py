@@ -340,6 +340,8 @@ class Chat_v2:
     def open_page(self, mid_vars, **kwargs):
         """组装mysql中打开页面对应的prompt
         """
+        add_diet_list = ['打开记录','打开录入','打开添加']
+        diet_record_list = ['饮食记录','饮食添加','打开推荐','饮食评估','食谱','我的饮食','食谱页面','餐食记录']
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
         input_history = input_history[-3:]
         if '血压趋势图' in input_history[-1]['content']:
@@ -348,6 +350,10 @@ class Chat_v2:
             return 'pagename:"add-blood-pressure"'
         elif '血压历史页面' in input_history[-1]['content'] or '历史血压页面' in input_history[-1]['content']:
             return 'pagename:"record-list3"'
+        elif sum([1 for i in add_diet_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"add-diet"'
+        elif sum([1 for i in diet_record_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"diet-record"'
         elif '打开' in input_history[-1]['content'] and '日程' in input_history[-1]['content']:
             return 'pagename:"my-schedule"'
 
