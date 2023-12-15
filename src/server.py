@@ -21,6 +21,7 @@ from flask import Flask, Response, request
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
+from src.utils.api_protocal import healthBloodPressureTrendAnalysis
 from src.utils.Logger import logger
 from src.utils.module import NpEncoder, clock, curr_time, dumpJS, initAllResource
 
@@ -209,10 +210,23 @@ def create_app():
     def _rec_diet_evaluation():
         """获取意图代码
         """
-        global chat
         try:
             param = accept_param()
             ret = expert_model.__rec_diet_eval__(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+    
+    @app.route('/health/blood_pressure_trend_analysis', methods=['post'])
+    def _health_blood_pressure_trend_analysis():
+        """血压趋势分析
+        """
+        try:
+            param = request.get_json()
+            ret = expert_model.__blood_pressure_trend_analysis__(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)

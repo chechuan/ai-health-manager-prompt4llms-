@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 '''
 
+CACHE_DIR = ".cache"
 DEFAULT_DATA_SOURCE = "语言模型"
 PLAN_MAP = {
     '辅助诊断': ("对于医学相关问题,请遵循以下流程:\n"

@@ -11,9 +11,13 @@
             "program": "src/server.py",
             "console": "integratedTerminal",
             "justMyCode": true,
+            "env": {
+                "GEVENT_SUPPORT": "True"
+            },
             "args": [
                 "--env", "local", 
-                "--special_prompt_version"
+                "--special_prompt_version",
+                "--use_cache"
             ]
         },
         {
