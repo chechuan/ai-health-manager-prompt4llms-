@@ -20,7 +20,7 @@ from requests import Session
 
 sys.path.append(str(Path.cwd()))
 
-from config.constrant import ParamServer
+from config.constrant import DEFAULT_DATA_SOURCE, ParamServer
 from config.constrant_for_task_schedule import query_schedule_template
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
@@ -296,13 +296,11 @@ class funcCall:
         else:
             doc_name_list = [re.findall('\[.*?\]', msg['docs'][1][7:])[0][1:-1] for i in msg['docs']]
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
-            dataSource = '、'.join(doc_name_list)
+            dataSource = "知识库: " + '、'.join(doc_name_list)
             content = msg['answer'].strip()
 
-        if kwargs['return_all']:
-            return content, dataSource
-        else:
-            return content
+        ret = {"content": content, "dataSource": dataSource}
+        return ret
 
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
@@ -334,7 +332,8 @@ class funcCall:
                              input_text=prompt, 
                              output_text=content, 
                              model=model_name)
-        return content
+        ret_obj = {"content": content, "dataSource": "搜索引擎"}
+        return ret_obj
     
     def call_llm_with_graph(self, *args, **kwargs) -> AnyStr:
         """
@@ -345,9 +344,9 @@ class funcCall:
         response = self.session.post(self.api_config['graph']+called_method,
                                      json=payload,
                                      headers=self.headers)
-        res_js = eval(response.text)
-        ret = res_js['result']
-        return ret
+        content = eval(response.text)['result']
+        ret_obj = {"content": content, "dataSource": "知识图谱"}
+        return ret_obj
     
     def call_search_database(self, *args, **kwargs) -> AnyStr:
         """调用查询数据库接口
@@ -363,7 +362,9 @@ class funcCall:
         candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
         assert task in candidate_task, f"Generate task: {task} not in the candidate_task {candidate_task}"
         content = self.ext_api_factory._call(*args, **kwargs, task=task, func_cls=self)
-        return content
+
+        ret_obj = {"content": content, "dataSource": "外部api"}
+        return ret_obj
 
     def _call(self, **kwargs):
         """"""
@@ -372,7 +373,12 @@ class funcCall:
         func_name = function_call["name"]
         arguments = function_call["arguments"]
         assert self.funcmap.get(func_name) is not None, f"Unregistered function {{{func_name}}}, 请重试"
-        content = self.funcmap[func_name]['func'](arguments, **kwargs)
+        ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
+        if isinstance(ret_obj, str):
+            content = ret_obj
+        elif isinstance(ret_obj, dict):
+            content = ret_obj['content']
+            dataSource = ret_obj['dataSource']
         history.append({"role": "user","content": content})
         logger.debug(f"Observation: {content}")
         return history
