@@ -149,7 +149,8 @@ class funcCall:
             cronDate = [i for i in schedule if i['task'] == task][0]['time']
         except Exception as err:
             logger.exception(err)
-            return f"日程取消失败,目标操作日程 `{task}` not in current schedule {schedule}"
+            logger.error(f"日程取消失败,目标操作日程 `{task}` not in current schedule {schedule}")
+            return f"{task}日程取消失败"
 
         func_item = self.funcmap['cancel_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -187,7 +188,8 @@ class funcCall:
             task_time_ori = [i for i in schedule if i['task']==task][0]['time']
         except Exception as err:
             logger.exception(err)
-            return f"日程修改失败, 目标操作日程 `{task}` not in current schedule {schedule}"
+            logger.error(f"日程修改失败, 目标操作日程 `{task}` not in current schedule {schedule}")
+            return f"{task}日程修改失败"
 
         func_item = self.funcmap['modify_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
@@ -301,7 +303,6 @@ class funcCall:
 
         ret = {"content": content, "dataSource": dataSource}
         return ret
-
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """llm + 搜索引擎
