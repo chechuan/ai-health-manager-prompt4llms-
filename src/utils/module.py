@@ -202,7 +202,7 @@ def req_data(url=None, payload=None, headers=None):
     return res
 
 def loadJS(path):
-    return json.load(open(path, 'r'))
+    return json.load(open(path, 'r', encoding="utf-8"))
 
 class NpEncoder(json.JSONEncoder):
     """json npencoder, dumps时对np数据格式转为python原生格式
