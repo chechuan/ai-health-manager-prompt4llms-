@@ -99,7 +99,11 @@ class Chat_v2:
         out_text = list(out_text)
         try:
             gen_args = json.loads(out_text[2])
-            out_text[2] = gen_args['query']
+            for k, v in gen_args.items():
+                if isinstance(v, str):
+                    out_text[2] = v
+                    break
+            # out_text[2] = gen_args['query']
         except Exception as e:
             ...
         kwargs['history'].append({
@@ -474,7 +478,8 @@ class Chat_v2:
                 yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
                 yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
 
-            if self.prompt_meta_data['rollout_tool'].get(tool):
+            if self.prompt_meta_data['rollout_tool'].get(tool) or not self.funcall.funcmap.get(tool):  
+                # 2023年12月17日17:19:06 增加判断是否支持对应函数 未定义支持的 即使未写rollout_tool也直接返回,不走函数调用
                 break
             try:
                 kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
