@@ -99,7 +99,8 @@ class Chat_v2:
                 # 原保底逻辑
                 # out_text[2] = gen_args['query']
                 ...
-        except Exception as e:
+        except Exception as err:
+            # logger.exception(err)
             ...
         kwargs['history'].append({
             "intentCode": kwargs['intentCode'],

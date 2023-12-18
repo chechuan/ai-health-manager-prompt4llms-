@@ -438,7 +438,11 @@ def parse_latest_plugin_call(text: str):
             plugin_thought = "I know the final answer."
     else:
         m = text.find("\nAnswer: ")
-        n = m + len("\nAnswer: ") + text[m + len("\nAnswer: "):].find("\nThought:")
+        next_thought_index = text[m + len("\nAnswer: "):].find("\nThought:")
+        if next_thought_index == -1:
+            n = len(text)
+        else:
+            n = m + len("\nAnswer: ") + next_thought_index
         plugin_thought = text[len("\nThought: "):m].strip()
         plugin_args = text[m + len("\nAnswer: "):n].strip()
     return [plugin_thought, plugin_name, plugin_args]
