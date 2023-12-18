@@ -305,7 +305,7 @@ class funcCall:
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
             dataSource = "知识库: " + '、'.join(doc_name_list)
             content = msg['answer'].strip()
-            self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=content, model="langchain")
+            self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain")
 
         ret = {"content": content, "dataSource": dataSource}
         return ret
