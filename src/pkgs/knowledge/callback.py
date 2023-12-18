@@ -381,6 +381,7 @@ class funcCall:
         ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
         if isinstance(ret_obj, str):
             content = ret_obj
+            dataSource = DEFAULT_DATA_SOURCE
         elif isinstance(ret_obj, dict):
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
