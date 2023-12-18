@@ -356,6 +356,9 @@ def get_intent(text):
     elif '营养其他' in text:
         code = 'nutri_other'
         desc = '营养其他'
+    elif '高血压' in text:
+        code = 'chronic_qa'
+        desc = '高血压知识问答'
     else:
         code = 'other'
         desc = '日常对话'

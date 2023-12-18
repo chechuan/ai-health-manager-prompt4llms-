@@ -149,10 +149,19 @@ class Chat_v2:
     def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
+        open_sch_list = ['打开','日程']
+        market_list = ['打开','集市']
+        home_list = ['打开','家居']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
+            return '打开功能页面'
+        if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
+            return '打开功能页面'
+        if sum([1 for i in market_list if i in history[-1]['content']]) >= 2:
+            return '打开功能页面'
+        if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
         h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
@@ -227,13 +236,13 @@ class Chat_v2:
             else:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
-        elif intent in ['sport_rec']:
-            if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
-                out_text = {'message':'',
-                        'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
-            else:
-                out_text = {'message':'', 'intentCode':intent,
-                        'processCode':'trans_back', 'intentDesc':desc}
+        #elif intent in ['sport_rec']:
+        #    if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+        #        out_text = {'message':'',
+        #                'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
+        #    else:
+        #        out_text = {'message':'', 'intentCode':intent,
+        #                'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
