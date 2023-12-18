@@ -242,10 +242,10 @@ def get_intent(text):
         code = 'auxiliary_diagnosis'
         desc = '辅助诊断'
     elif '用药' in text:
-        code = 'drug'
+        code = 'drug_rec'
         desc = '用药咨询'
     elif '营养知识' in text:
-        code = 'nutri_known'
+        code = 'nutri_knowledge_rec'
         desc = '营养知识咨询'
     elif '饮食处方' in text:
         code = 'food_rec'
