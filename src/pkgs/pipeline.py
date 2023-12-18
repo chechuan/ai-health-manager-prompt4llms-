@@ -69,7 +69,7 @@ class Chat_v2:
     def chat_react(self, *args, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        max_tokens = kwargs.get("max_tokens", 150)
+        max_tokens = kwargs.get("max_tokens", 200)
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
