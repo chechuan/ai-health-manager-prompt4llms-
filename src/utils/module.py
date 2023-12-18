@@ -230,6 +230,9 @@ def get_intent(text):
     elif '运动咨询' in text:
         code = 'sport_rec'
         desc = '运动咨询'
+    elif '页面' in text or '打开' in text:
+        code = 'open_Function'
+        desc = '打开功能页面'
     elif '菜谱' in text:
         code = 'cookbook'
         desc = '菜谱'
@@ -335,9 +338,6 @@ def get_intent(text):
     elif 'BMI' in text:
         code = 'BMI'
         desc = 'BMI'
-    elif '页面' in text or '打开' in text:
-        code = 'open_Function'
-        desc = '打开功能页面'
     elif '万年历' in text:
         code = 'calendar'
         desc = '万年历'
