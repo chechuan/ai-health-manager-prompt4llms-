@@ -99,11 +99,11 @@ class Chat_v2:
         out_text = list(out_text)
         try:
             gen_args = json.loads(out_text[2])
-            for k, v in gen_args.items():
-                if isinstance(v, str):
-                    out_text[2] = v
-                    break
-            # out_text[2] = gen_args['query']
+            # for k, v in gen_args.items():
+            #     if isinstance(v, str):
+            #         out_text[2] = v
+            #         break
+            out_text[2] = gen_args['query']
         except Exception as e:
             ...
         kwargs['history'].append({
