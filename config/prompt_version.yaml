@@ -2,12 +2,19 @@ local:
   event:
     chatter_gaily: 1.0.1
     chronic_qa: 0.1.0
+    nutri_knowledge_rec: 0.1.0
+    sport_rec: 0.1.0
+    drug_rec: 0.1.0
   character:
   tool:
     create_schedule: 1.0.1
 dev:
   event:
     chatter_gaily: 1.0.1
+    chronic_qa: 0.1.0
+    nutri_knowledge_rec: 0.1.0
+    sport_rec: 0.1.0
+    drug_rec: 0.1.0
   character:
   tool:
 fat:
