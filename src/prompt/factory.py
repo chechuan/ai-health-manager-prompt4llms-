@@ -159,9 +159,9 @@ class customPromptEngine:
         if not self.prompt_meta_data['event'].get(intent_code):
             logger.exception(f"not support current enevt {intent_code}, change to {default_intent_code}")
             intent_code = default_intent_code
-        if kwds.get('use_sys_prompt') and sys_prompt:
+        if kwds.get('use_sys_prompt'):
             sys_prompt = kwds.get("sys_prompt", "")
-        else:
+        if not sys_prompt:
             sys_prompt = ""
             event = self.prompt_meta_data['event'][intent_code]
             character = event['character'] if event.get('character') else None

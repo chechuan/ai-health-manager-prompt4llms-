@@ -29,6 +29,25 @@ TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 # - 直接回复用户问题: 问题过于简单，且无信息缺失，结合历史给出诊断结果
 # - 结束话题: 当前用户问题不属于辅助诊断场景
 # Action的输入,通常为一个query,表示要查询或者询问的内容,一次只问一个问题,询问太多会引起用户厌烦
+
+
+
+# TOOL_CHOOSE_PROMPT_PIPELINE = """{external_information}
+
+# Use the following format:
+# Question:  the input question you must answer
+# Thought: you should always think about what to do
+# Action: the action to take, should be one of {{tools_name_text}}
+# Action Input: the input to the action
+# Observation: the result of the action
+# ...(Thought/Action/Action Input/Observation can be repeated zero or more times)
+# Thought: I now know the final answer
+# Final Answer: the final answer to the original input question
+
+# Begins!"""
+
+
+
 TOOL_CHOOSE_PROMPT = """{external_information}
 
 请遵循以下格式回复:
@@ -56,20 +75,19 @@ Begins!"""
 
 # Begins!"""
 
+
 TOOL_CHOOSE_PROMPT_PIPELINE = """{external_information}
 
-Use the following format:
-Question:  the input question you must answer
+请遵循以下格式回复:
+Question: the input question you must answer
 Thought: you should always think about what to do
 Action: the action to take, should be one of {{tools_name_text}}
 Action Input: the input to the action
 Observation: the result of the action
-...(Thought/Action/Action Input/Observation can be repeated zero or more times)
+...(Thought/Action/Action Input can be repeated zero or more times)
 
 Begins!"""
 
-# Thought: I now know the final answer
-# Final Answer: the final answer to the original input question
 
 task_schedule_return_demo = [
     {
