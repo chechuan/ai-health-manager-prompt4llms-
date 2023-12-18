@@ -241,13 +241,13 @@ class Chat_v2:
             else:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
-        elif intent in ['sport_rec']:
-            if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
-                out_text = {'message':'',
-                        'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
-            else:
-                out_text = {'message':'', 'intentCode':intent,
-                        'processCode':'trans_back', 'intentDesc':desc}
+        #elif intent in ['sport_rec']:
+        #    if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+        #        out_text = {'message':'',
+        #                'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
+        #    else:
+        #        out_text = {'message':'', 'intentCode':intent,
+        #                'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
