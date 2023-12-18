@@ -152,10 +152,11 @@ class Chat_v2:
         open_sch_list = ['打开','日程']
         market_list = ['打开','集市']
         home_list = ['打开','家居']
+        bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
+        if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:     
             return '打开功能页面'
         if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
