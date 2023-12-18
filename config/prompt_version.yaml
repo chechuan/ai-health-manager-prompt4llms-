@@ -1,6 +1,7 @@
 local:
   event:
     chatter_gaily: 1.0.1
+    chronic_qa: 0.1.0
   character:
   tool:
     create_schedule: 1.0.1

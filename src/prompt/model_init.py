@@ -86,7 +86,7 @@ def chat_qwen(query: str = "",
         )
         ret = completion['choices'][0]['message']['content'].strip()
     time_cost = round(time.time() - t_st, 1)
-    logger.success(f"Model {model} generate costs summary" + 
+    logger.success(f"Model {model} generate costs summary: " + 
                 f"prompt_tokens:{completion['usage']['prompt_tokens']}, " + 
                 f"completion_tokens:{completion['usage']['completion_tokens']}, " + 
                 f"total_tokens:{completion['usage']['total_tokens']}, "

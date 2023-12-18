@@ -139,6 +139,7 @@ class initAllResource:
             prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}
             prompt_meta_data['rollout_tool'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'rollout'}
             prompt_meta_data['rollout_tool_after_complete'] = {i['code']: 1 for i in prompt_tool if i['requirement'] == 'complete_rollout'}
+            prompt_meta_data['prompt_tool_code_map'] = {i['code']: i['name'] for i in prompt_tool if i['code']}
             pickle.dump(prompt_meta_data, open(data_cache_file, 'wb'))
             logger.debug(f"dump prompt_meta_data to {data_cache_file}")
             del mysql_conn
@@ -415,6 +416,8 @@ def parse_latest_plugin_call(text: str):
 
     k = k1 if k1 and k1 > 0 else k2
     l = text.find('\nFinal Answer:')
+
+    plugin_name = "AskHuman"
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,
@@ -425,17 +428,20 @@ def parse_latest_plugin_call(text: str):
         plugin_thought = text[h + len('\nThought:'):i].strip()
         plugin_name = text[i + len('\nAction:'):j].strip()
         plugin_args = text[j + len('\nAction Input:'):k].strip()
-        return plugin_thought, plugin_name, plugin_args
     elif l > 0:
         if h > 0:
             plugin_thought = text[h + len('Thought:'):l].strip()
             plugin_args = text[l + len('\nFinal Answer:'):].strip()
             plugin_args.split("\n")[0]
-            return plugin_thought, "直接回复用户问题", plugin_args
         else:
             plugin_args = text[l + len('\nFinal Answer:'):].strip()
-            return "I know the final answer.", "直接回复用户问题", plugin_args
-    return '', ''
+            plugin_thought = "I know the final answer."
+    else:
+        m = text.find("\nAnswer: ")
+        n = m + len("\nAnswer: ") + text[m + len("\nAnswer: "):].find("\nThought:")
+        plugin_thought = text[len("\nThought: "):m].strip()
+        plugin_args = text[m + len("\nAnswer: "):n].strip()
+    return [plugin_thought, plugin_name, plugin_args]
 
 class MysqlConnector:
     def __init__(self, 

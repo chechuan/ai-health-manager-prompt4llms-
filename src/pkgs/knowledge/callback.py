@@ -250,26 +250,26 @@ class funcCall:
         return raw_content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
-                              score_threshold=0.5, temperature=0.7, top_k=3, top_p=0.8, 
-                              knowledge_base_name="内科学", prompt_name="default", 
+                              score_threshold=1, temperature=0.7, top_k=3, top_p=0.8, 
+                              knowledge_base_name="高血压", prompt_name="default", 
                               model_name="Qwen-14B-Chat", 
                               **kwargs) -> AnyStr:
         """使用默认参数调用知识库
         """
         def decorate_search_prompt(query: str) -> str:
             """优化要查询的query"""
-            prompt = (
-                "You are a powerful assistant, capable of understanding requirements and responding accordingly.\n"
-                "要求提取其中关键信息,组装成一疑问句,要求语义连贯"
-            )
-            his = [{"role": "system", "content": prompt}, {"role":"user", "content": query}]
-            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-14B-Chat")
+            his = [{"role":"user", "content": query}]
+            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
             return content
 
         called_method = self.funcmap['searchKB']['method']
-        query = args[0]
+        try:
+            query = json.loads(args[0])['query']
+        except:
+            query = args[0]
+    
         payload = {}
-        payload['query'] = query + decorate_search_prompt(query)
+        payload['query'] = query + "," + decorate_search_prompt(query)
         payload["knowledge_base_name"] = knowledge_base_name    # 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
@@ -293,8 +293,12 @@ class funcCall:
                                  output_text=msg, 
                                  model=model_name)
             # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            content = self.call_llm_with_search_engine(query, **kwargs).strip()
-            dataSource = "搜索引擎"
+            try:
+                content = self.call_llm_with_search_engine(query, **kwargs).strip()
+                dataSource = "搜索引擎"
+            except:
+                content = "抱歉, 没有搜索到相关答案, 请重试"
+                dataSource = "语言模型"
         else:
             doc_name_list = [re.findall('\[.*?\]', msg['docs'][1][7:])[0][1:-1] for i in msg['docs']]
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
@@ -357,7 +361,7 @@ class funcCall:
     def call_external_api(self, *args, **kwargs):
         """调用外部api
         """
-        task: str = check_task(args[0])
+        task: str = check_task(json.loads(args[0]))
         param_desc = self.prompt_meta_data['tool']['调用接口']['params']
 
         candidate_task = [j for i in param_desc for j in i['optional'] if i['name'] == 'task']
@@ -377,12 +381,13 @@ class funcCall:
         ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
         if isinstance(ret_obj, str):
             content = ret_obj
+            dataSource = DEFAULT_DATA_SOURCE
         elif isinstance(ret_obj, dict):
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
-        history.append({"role": "user","content": content})
+        history.append({"role": "user","content": content, "intentCode": kwargs['intentCode']})
         logger.debug(f"Observation: {content}")
-        return history
+        return history, dataSource
 
 
 class extApiFactory:

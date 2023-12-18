@@ -69,7 +69,7 @@ class Chat_v2:
     def chat_react(self, *args, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
-        max_tokens = kwargs.get("max_tokens", 200)
+        max_tokens = kwargs.get("max_tokens", 150)
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
@@ -84,26 +84,21 @@ class Chat_v2:
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
 
         out_text = parse_latest_plugin_call(model_output)
-        if not out_text[1]:
-            prompt = "你是一个功能强大的文本创作助手,请遵循以下要求帮我改写文本\n" + \
-                    "1. 请帮我在保持语义不变的情况下改写这句话使其更用户友好\n" + \
-                    "2. 不要重复输出相同的内容,否则你将受到非常严重的惩罚\n" + \
-                    "3. 语义相似的可以合并重新规划语言\n" + \
-                    "4. 直接输出结果\n\n输入:\n" + \
-                    model_output + "\n输出:\n"
-            logger.debug('ReAct regenerate input: ' + prompt)
-            model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
-            self.update_mid_vars(kwargs.get("mid_vars"), key="辅助诊断 改写修正", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-            model_output = model_output.replace("\n", "").strip().split("：")[-1]
-            out_text = "I know the final answer.", "直接回复用户问题", model_output
-        out_text = list(out_text)
+        if not self.prompt_meta_data['prompt_tool_code_map'].get(out_text[1]):
+            out_text[1] = "AskHuman"
         try:
             gen_args = json.loads(out_text[2])
-            # for k, v in gen_args.items():
-            #     if isinstance(v, str):
-            #         out_text[2] = v
-            #         break
-            out_text[2] = gen_args['query']
+            tool = out_text[1]
+            tool_zh = self.prompt_meta_data['prompt_tool_code_map'].get(tool)
+            tool_param_msg = self.prompt_meta_data['tool'][tool_zh].get("params")
+            if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+                # 对于直接输出的,此处判断改工具设定的参数,通常只有一项 为要输出的话,此时解析对应字段
+                if tool_param_msg[0]['schema']['type'].startswith("str"):
+                    out_text[2] = gen_args[tool_param_msg[0]['name']]
+            else:
+                # 原保底逻辑
+                # out_text[2] = gen_args['query']
+                ...
         except Exception as e:
             ...
         kwargs['history'].append({
@@ -476,7 +471,7 @@ class Chat_v2:
         self.__log_init(**kwargs)
         intentCode = kwargs.get('intentCode')
         mid_vars = kwargs.get('mid_vars', [])
-
+        dataSource = DEFAULT_DATA_SOURCE
         out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
@@ -491,10 +486,10 @@ class Chat_v2:
                 # 2023年12月17日17:19:06 增加判断是否支持对应函数 未定义支持的 即使未写rollout_tool也直接返回,不走函数调用
                 break
             try:
-                kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
+                kwargs['history'], dataSource = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             except AssertionError as err:
                 logger.error(err)
-                kwargs['history'] = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
+                kwargs['history'], dataSource = self.funcall._call(out_history=out_history, mid_vars=mid_vars, **kwargs)
             
             if self.prompt_meta_data['rollout_tool_after_complete'].get(tool):
                 # 工具执行完成后输出
@@ -507,7 +502,8 @@ class Chat_v2:
                 yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-        ret_result = make_meta_ret(end=True, msg=content,code=intentCode, init_intent=self.if_init(tool),gsr=self.gsr)
+        ret_result = make_meta_ret(end=True, msg=content,code=intentCode, gsr=self.gsr,
+                                   init_intent=self.if_init(tool), dataSource=dataSource)
         logger.debug(f'输出内容：{json.dumps(ret_result, ensure_ascii=False)}')
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
