@@ -74,11 +74,7 @@ class Chat_v2:
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, 
-                                 temperature=0.7, 
-                                 top_p=0.5, 
-                                 max_tokens=max_tokens, 
-                                 model="Qwen-14B-Chat")
+        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat")
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -129,7 +125,6 @@ class Chat_v2:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
-    
     
     def get_parent_intent_name(self, text):
         if '五师' in text:
@@ -198,9 +193,29 @@ class Chat_v2:
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        ext_info = self.prompt_meta_data['event']['_chatter_gaily']['description'] + "\n" + self.prompt_meta_data['event']['chatter_gaily']['process']
-        input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
-        input_history = [i for i in input_history if not i.get('function_call')]
+        def compose_func_reply(raw_input_history):
+            """拼接func中回复的内容到history中
+            
+            最终的history只有role/content字段
+            """
+            history = []
+            for i in raw_input_history:
+                if not i.get("function_call"):
+                    history.append(i)
+                else:
+                    func_args = i['function_call']
+                    role = i['role']
+                    content = f"{func_args['arguments']}"
+                    history.append({"role": role, "content": content})
+            return history
+        
+        intentCode = kwargs.get("intentCode", '_chatter_gaily')
+        desc = self.prompt_meta_data['event'][intentCode]['description']
+        process = self.prompt_meta_data['event'][intentCode]['process']
+        ext_info = desc + "\n" + process
+
+        raw_input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
+        input_history = compose_func_reply(raw_input_history)
         content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         if kwargs.get("return_his"):
@@ -250,7 +265,6 @@ class Chat_v2:
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
         return out_text
 
-    
     def fetch_intent_code(self):
         """返回所有的intentCode"""
         intent_code_map = {
@@ -438,6 +452,9 @@ class Chat_v2:
         intentCode = kwargs.get('intentCode')
         out_history = None
         if self.prompt_meta_data['event'].get(intentCode):
+            # if intentCode == "_chatter_gaily" :       
+            #    # TODO优化闲聊效果
+            #     out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
             if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs['intentCode'] = intentCode
