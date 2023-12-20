@@ -92,6 +92,7 @@ class initAllResource:
                 for item in item_list:
                     if item[ikey] == curr_item_id:
                         if item['version'] == spec_version:
+                            logger.debug(f"load spec version {ikey} - {curr_item_id} - {spec_version}")
                             return item
                         else:
                             latest_item = item
@@ -125,12 +126,18 @@ class initAllResource:
                     else:
                         if key == 'character':
                             for i in prompt_character:
+                                if prompt_meta_data[key].get(i['name']):
+                                    continue
                                 prompt_meta_data[key][i['name']] = search_target_version_item(prompt_character, 'name', i['name'], v)
                         elif key == 'event':
                             for i in prompt_event:
+                                if prompt_meta_data[key].get(i['intent_code']):
+                                    continue
                                 prompt_meta_data[key][i['intent_code']] = search_target_version_item(prompt_event, 'intent_code', i['intent_code'], v)
                         elif key == 'tool':
                             for i in prompt_tool:
+                                if prompt_meta_data[key].get(i['name']):
+                                    continue
                                 prompt_meta_data[key][i['name']] = search_target_version_item(prompt_tool, 'name', i['name'], v)
             else:
                 prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
