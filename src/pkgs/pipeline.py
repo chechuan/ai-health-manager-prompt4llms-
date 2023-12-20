@@ -64,7 +64,7 @@ class Chat_v2:
         self.intent_map = {
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
-            'userinfo': {i:1 for i in useinfo_intent_code_list}
+            'userinfo': {i:1 for i in useinfo_intent_code_list},
             'aiui': {i:1 for i in aiui_intent_code_list}
         }
 
