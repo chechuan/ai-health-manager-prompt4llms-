@@ -299,11 +299,13 @@ class funcCall:
             except:
                 content = "抱歉, 没有搜索到相关答案, 请重试"
                 dataSource = "语言模型"
+            self.update_mid_vars(kwargs['mid_vars'], key=f"搜索引擎", input_text=query, output_text=content, model="baidu crawler")
         else:
             doc_name_list = [re.findall('\[.*?\]', msg['docs'][1][7:])[0][1:-1] for i in msg['docs']]
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
             dataSource = "知识库: " + '、'.join(doc_name_list)
             content = msg['answer'].strip()
+            self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain")
 
         ret = {"content": content, "dataSource": dataSource}
         return ret

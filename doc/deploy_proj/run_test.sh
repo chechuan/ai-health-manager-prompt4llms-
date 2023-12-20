@@ -1,4 +1,4 @@
 python src/server.py \
-    --env dev \
-    --port 26928 \
+    --env test \
+    --port 26921 \
     --special_prompt_version

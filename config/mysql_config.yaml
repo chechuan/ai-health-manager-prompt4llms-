@@ -9,9 +9,15 @@ dev:
   port: 3306
   user: lk_base_n_dev
   passwd: fpBase09@23aQdn
+  db_name: lk-h-aihealthmanager-alg
+test:
+  ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
+  port: 3306
+  user: lk_base_n_dev
+  passwd: fpBase09@23aQdn
   db_name: lk-h-aihealthmanager-dev
 fat:
-  ip: pc-2ze23ih17gujd950v.mysql.polardb.rds.aliyuncs.com
+  ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
   port: 3306
   user: lk_base_n_qa
   passwd: fpBase09@23aQdn

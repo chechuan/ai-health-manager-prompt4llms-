@@ -75,18 +75,32 @@ Begins!"""
 
 # Begins!"""
 
-
 TOOL_CHOOSE_PROMPT_PIPELINE = """{external_information}
 
 请遵循以下格式回复:
-Question: the input question you must answer
-Thought: you should always think about what to do
-Action: the action to take, should be one of {{tools_name_text}}
-Action Input: the input to the action
-Observation: the result of the action
-...(Thought/Action/Action Input can be repeated zero or more times)
+Question: 用户的问题
+Thought: 可以适当忽略历史记录中的无关信息,思考针对当前问题应该做什么
+Action: 选择的解决用户当前问题的工具, should be one of {{tools_name_text}}
+Action Input: 对应Action的输入,通常为query,若已满足诊断条件,对Question的总体分析及诊断结果
+Observation: 工具返回的内容
+...(Thought/Action/Action Input 可能会循环一次或多次直到解决问题)
+Action: 前置话题可以终结了,调用结束话题工具
+Action Input: Action的输入,通常为一个query,表示要查询或者询问的内容
 
 Begins!"""
+
+
+# TOOL_CHOOSE_PROMPT_PIPELINE = """{external_information}
+
+# 请遵循以下格式回复:
+# Question: the input question you must answer
+# Thought: you should always think about what to do
+# Action: the action to take, should be one of {{tools_name_text}}
+# Action Input: the input to the action
+# Observation: the result of the action
+# ...(Thought/Action/Action Input can be repeated zero or more times)
+
+# Begins!"""
 
 
 task_schedule_return_demo = [
