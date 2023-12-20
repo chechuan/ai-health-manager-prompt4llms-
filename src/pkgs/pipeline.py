@@ -60,10 +60,12 @@ class Chat_v2:
             'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
             'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
         ]
+        aiui_intent_code_list = ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']
         self.intent_map = {
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list}
+            'aiui': {i:1 for i in aiui_intent_code_list}
         }
 
     def chat_react(self, *args, **kwargs):
@@ -226,7 +228,7 @@ class Chat_v2:
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
-        elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
+        elif self.intent_map['aiui'].get(intent):
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
         #elif intent in ['open_web_daily_monitor']:
         #    out_text = {'message':'', 'intentCode':intent,
@@ -356,11 +358,11 @@ class Chat_v2:
         market_list = ['集市']
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
         input_history = input_history[-3:]
-        if '血压趋势图' in input_history[-1]['content']:
+        if '血压趋势' in input_history[-1]['content']:
             return 'pagename:"bloodPressure-trend-chart"'
         elif sum([1 for i in add_bp_list if i in input_history[-1]['content']]) > 0:
             return 'pagename:"add-blood-pressure"'
-        elif '血压历史页面' in input_history[-1]['content'] or '历史血压页面' in input_history[-1]['content']:
+        elif '血压历史' in input_history[-1]['content'] or '历史血压' in input_history[-1]['content']:
             return 'pagename:"record-list3"'
         elif sum([1 for i in add_diet_list if i in input_history[-1]['content']]) > 0:
             return 'pagename:"add-diet"'
