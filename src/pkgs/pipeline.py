@@ -307,7 +307,6 @@ class Chat_v2:
                     yield_item['data']['type'] = "Result"
                 if yield_item['data']['type'] == "Result" and not yield_item['data'].get("dataSource"):
                     yield_item['data']['dataSource'] = DEFAULT_DATA_SOURCE
-                # logger.debug('输出为：' + json.dumps(yield_item, ensure_ascii=False))
                 yield yield_item
             except StopIteration as err:
                 break
@@ -524,7 +523,6 @@ class Chat_v2:
 
         ret_result = make_meta_ret(end=True, msg=content,code=intentCode, gsr=self.gsr,
                                    init_intent=self.if_init(tool), dataSource=dataSource)
-        logger.debug(f'输出内容：{json.dumps(ret_result, ensure_ascii=False)}')
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
