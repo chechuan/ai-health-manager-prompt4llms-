@@ -66,10 +66,13 @@ class initAllResource:
         self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
+        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
         openai.api_key = "EMPTY"
+        support_model_list = [i['id'] for i in openai.Model.list()['data']]
+        logger.info(f"Support model list: {support_model_list}")
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:
@@ -415,6 +418,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     return '', ''
 
 def parse_latest_plugin_call(text: str):
+    # TODO 优化解析逻辑
     h = text.find('\nThought:')
     i = text.find('\nAction:')
     j = text.find('\nAction Input:')

@@ -440,7 +440,7 @@ class Chat_v2:
         
         chat_history.append({
             "role": "assistant", 
-            "content": "当前回复模式为only_prompt,根据prompt直接生成回复",
+            "content": "I know the answer.",
             "function_call": {"name": "convComplete", "arguments": content} 
         })
         return chat_history, intentCode

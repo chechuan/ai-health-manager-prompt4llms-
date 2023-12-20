@@ -269,8 +269,8 @@ class funcCall:
             query = args[0]
     
         payload = {}
-        payload['query'] = query + "," + decorate_search_prompt(query)
-        payload["knowledge_base_name"] = knowledge_base_name    # 让模型选择知识库
+        payload['query'] = query + "\n" + decorate_search_prompt(query)
+        payload["knowledge_base_name"] = knowledge_base_name    # TODO 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
         payload["score_threshold"] = score_threshold
@@ -287,11 +287,7 @@ class funcCall:
 
         if "未找到相关文档" in msg['answer'] or '无法回答' in msg['answer'] or not msg['docs']:
             content = msg['answer']
-            self.update_mid_vars(kwargs['mid_vars'], 
-                                 key=f"查询知识库", 
-                                 input_text=query, 
-                                 output_text=msg, 
-                                 model=model_name)
+            self.update_mid_vars(kwargs['mid_vars'], key=f"查询知识库", input_text=query, output_text=msg, model=model_name)
             # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
             try:
                 content = self.call_llm_with_search_engine(query, **kwargs).strip()
@@ -316,10 +312,7 @@ class funcCall:
         使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
         query = args[0]
-        search_result = asyncio.run(search_engine_chat(query, 
-                                                       top_k=kwargs.get("top_k", 3), 
-                                                       max_length=500,
-                                                       session=self.session))
+        search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
 
         template = get_template("search_engine_chat")
         if search_result:
@@ -380,7 +373,11 @@ class funcCall:
         func_name = function_call["name"]
         arguments = function_call["arguments"]
         assert self.funcmap.get(func_name) is not None, f"Unregistered function {{{func_name}}}, 请重试"
-        ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
+        try:
+            ret_obj = self.funcmap[func_name]['func'](arguments, **kwargs)
+        except Exception as e:
+            logger.exception(e)
+            ret_obj = f"工具调用失败, 请重试"
         if isinstance(ret_obj, str):
             content = ret_obj
             dataSource = DEFAULT_DATA_SOURCE
