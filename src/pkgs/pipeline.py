@@ -209,7 +209,7 @@ class Chat_v2:
                     history.append({"role": role, "content": content})
             return history
         
-        intentCode = kwargs.get("intentCode", '_chatter_gaily')
+        intentCode = kwargs.get("intentCode", 'chatter_gaily')
         desc = self.prompt_meta_data['event'][intentCode]['description']
         process = self.prompt_meta_data['event'][intentCode]['process']
         ext_info = desc + "\n" + process
@@ -295,7 +295,7 @@ class Chat_v2:
 
         # TODO 暂时不能改mysql中的chatter_gaily，手工替换一下
         if kwargs['intentCode'] in ['other', 'chatter_gaily']:
-            kwargs['intentCode'] = '_chatter_gaily'
+            kwargs['intentCode'] = 'chatter_gaily'
             kwargs['prompt'] = None
             kwargs['sys_prompt'] = None
         
