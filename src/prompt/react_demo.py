@@ -113,8 +113,7 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     for h_idx in range(h_len):
         item = chat_history[h_idx]
         # if item.get('intentCode') != intent_code:
-        #     # TODO _chatter_gaily 上线后改为chatter_gaily
-        #     item['intentCode'] = "_chatter_gaily"
+        #     item['intentCode'] = "other"
         if item.get('intentCode') != intent_code:
             # 不相关其他事件对话历史太长，影响本次生成效果
             continue
