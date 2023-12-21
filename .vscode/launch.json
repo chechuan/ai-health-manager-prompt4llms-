@@ -15,8 +15,7 @@
                 "GEVENT_SUPPORT": "True"
             },
             "args": [
-                "--env",
-                "local",
+                "--env", "local",
                 "--special_prompt_version",
                 "--use_cache"
             ]

@@ -218,12 +218,12 @@ class Chat_v2:
 
         raw_input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
         input_history = compose_func_reply(raw_input_history)
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8, max_tokens=300)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         if kwargs.get("return_his"):
             input_history.append({
                 "role": "assistant", 
-                "content": "闲聊或未配置事件的意图", 
+                "content": "I know the answer.", 
                 "function_call": {"name": "convComplete", "arguments": content}
             })
             return input_history
@@ -279,9 +279,13 @@ class Chat_v2:
     def pre_fill_param(self, *args, **kwargs):
         """结合业务逻辑，预构建输入
         """
-        if kwargs.get("intentCode") == "schedule_qry_up" and not kwargs.get("history"):
+        intentCode = kwargs.get("intentCode")
+        if not self.prompt_meta_data['event'].get(intentCode):
+            logger.debug(f"not support current event {intentCode}, change intentCode to other.")
+            kwargs['intentCode'] = 'other'
+        if intentCode == "schedule_qry_up" and not kwargs.get("history"):
             kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
-        if kwargs.get("intentCode") == "schedule_manager":
+        if intentCode == "schedule_manager":
             current_schedule = self.funcall.call_get_schedule(*args, **kwargs)
             kwargs['current_schedule'] = "\n".join([f"task: {i['task']}, time: {i['time']}" for i in current_schedule])
         return args, kwargs
@@ -451,10 +455,9 @@ class Chat_v2:
         intentCode = kwargs.get('intentCode')
         out_history = None
         if self.prompt_meta_data['event'].get(intentCode):
-            # if intentCode == "_chatter_gaily" :       
-            #    # TODO优化闲聊效果
-            #     out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
-            if self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
+            if intentCode == "other" :
+                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+            elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs['intentCode'] = intentCode
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "react":
