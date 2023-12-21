@@ -453,7 +453,7 @@ class Chat:
         history = kwargs.get('history', [])
         mid_vars = kwargs['mid_vars']
         sys_prompt = kwargs.get('sys_prompt', '')
-        intentCode = kwargs.get('intentCode', 'chatter_gaily')
+        intentCode = kwargs.get('intentCode', 'other')
 
         logger.debug(f'chat_gen输入的intentCode为: {intentCode}')
         if history:

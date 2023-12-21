@@ -153,8 +153,7 @@ class customPromptEngine:
     def _call(self, *args, **kwds):
         """拼接角色事件知识
         """
-        # TODO _chatter_gaily 上线后改为chatter_gaily 2023年12月14日10:31:00
-        default_intent_code = "chatter_gaily"
+        default_intent_code = "other"
         intent_code = kwds.get("intentCode", default_intent_code)
         if not self.prompt_meta_data['event'].get(intent_code):
             logger.exception(f"not support current enevt {intent_code}, change to {default_intent_code}")

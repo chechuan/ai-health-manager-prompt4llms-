@@ -217,7 +217,7 @@ class Chat_v2:
                     history.append({"role": role, "content": content})
             return history
         
-        intentCode = kwargs.get("intentCode", 'chatter_gaily')
+        intentCode = kwargs.get("intentCode", 'other')
         desc = self.prompt_meta_data['event'][intentCode]['description']
         process = self.prompt_meta_data['event'][intentCode]['process']
         ext_info = desc + "\n" + process
@@ -298,9 +298,7 @@ class Chat_v2:
             kwargs['history'] = kwargs['backend_history'] + [history[-1]]
             kwargs['history'][-1]['intentCode'] = kwargs['intentCode']
 
-        # TODO 暂时不能改mysql中的chatter_gaily，手工替换一下
-        if kwargs['intentCode'] in ['other', 'chatter_gaily']:
-            kwargs['intentCode'] = 'chatter_gaily'
+        if kwargs['intentCode'] == 'other':
             kwargs['prompt'] = None
             kwargs['sys_prompt'] = None
         
@@ -445,7 +443,7 @@ class Chat_v2:
         
         chat_history.append({
             "role": "assistant", 
-            "content": "当前回复模式为only_prompt,根据prompt直接生成回复",
+            "content": "I know the answer.",
             "function_call": {"name": "convComplete", "arguments": content} 
         })
         return chat_history, intentCode

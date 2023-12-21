@@ -1,0 +1,7 @@
+default_model: Qwen-14B-Chat
+local:
+  qwen-tiny: Qwen-1_8B-Chat
+  baichuan2-tiny: Baichuan2-7B-Chat
+dev:
+test:
+fat:
