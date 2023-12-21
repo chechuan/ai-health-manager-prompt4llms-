@@ -283,9 +283,6 @@ def get_intent(text):
     elif '健管师' in text:
         code = 'call_health_manager'
         desc = '呼叫健管师'
-    elif '日程管理'in text:
-        code = 'schedule_manager'
-        desc = '日程管理'
     elif '网络' in text:
         code = 'websearch'
         desc = '网络搜索'
@@ -376,6 +373,9 @@ def get_intent(text):
     elif '非会议日程管理' in text:
         code = 'other_schedule'
         desc = '会议日程管理'
+    elif '日程管理'in text:
+        code = 'schedule_manager'
+        desc = '日程管理'
     elif '食材采购清单管理' in text:
         code = 'food_purchasing_list_management'
         desc = '食材采购清单管理'
