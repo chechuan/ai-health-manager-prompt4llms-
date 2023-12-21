@@ -1,9 +1,9 @@
 local:
   event:
     other: 1.0.3
+    drug_rec: 0.1.0
     chronic_qa: 0.1.0
     nutri_knowledge_rec: 0.1.0
-    drug_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
   character:
   tool:
@@ -11,18 +11,18 @@ local:
 dev:
   event:
     other: 1.0.3
+    drug_rec: 0.1.0
     chronic_qa: 0.1.0
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
-    drug_rec: 0.1.0
   character:
   tool:
 test:
   event:
     other: 1.0.3
+    drug_rec: 0.1.0
     chronic_qa: 0.1.0
     nutri_knowledge_rec: 0.1.0
-    drug_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
   character:
   tool:

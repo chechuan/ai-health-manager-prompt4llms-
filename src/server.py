@@ -219,7 +219,7 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-    
+
     @app.route('/health/blood_pressure_trend_analysis', methods=['post'])
     def _health_blood_pressure_trend_analysis():
         """血压趋势分析

@@ -152,9 +152,10 @@ class expertModel:
         return content
     
     def __bpta_compose_value_prompt(self, key: str = "对值的解释", data: List = []):
-            value_list = [i['value'] for i in data]
-            content = f"{key}{value_list}\n"
-            return content
+        """血压趋势分析, 拼接值"""
+        value_list = [i['value'] for i in data]
+        content = f"{key}{value_list}\n"
+        return content
     
     @clock
     def __blood_pressure_trend_analysis__(self, param: dict) -> str:
@@ -204,7 +205,7 @@ class expertModel:
         content = chat_qwen(history=history, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
         logger.debug(f"趋势分析结果: {content}")
         return content
-    
+
 if __name__ == "__main__":
     param = testParam.param_pressure_trend
     initAllResource()
