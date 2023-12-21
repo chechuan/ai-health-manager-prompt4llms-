@@ -241,7 +241,7 @@ class Chat:
         parant_intent = self.get_parent_intent_name(text)
         if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图', '食材采购意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
-            if parant_intent in ['呼叫五师']:
+            if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
                 h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
             if kwargs.get('subIntentPrompt', ''):
@@ -251,6 +251,7 @@ class Chat:
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False)
+            logger.debug('子意图模型输出：' + generate_text)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
