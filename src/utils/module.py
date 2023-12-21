@@ -373,7 +373,7 @@ def get_intent(text):
     elif '会议日程管理' in text:
         code = 'meeting_schedule'
         desc = '会议日程管理'
-    elif '非会议日程管理':
+    elif '非会议日程管理' in text:
         code = 'other_schedule'
         desc = '会议日程管理'
     elif '食材采购清单管理' in text:
