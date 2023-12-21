@@ -245,7 +245,7 @@ class Chat_v2:
                 input_prompt))
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
-        if self.intent_map['callout'].get(intent)::
+        if self.intent_map['callout'].get(intent):
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
