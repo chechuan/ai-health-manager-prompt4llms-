@@ -19,3 +19,19 @@ class healthBloodPressureTrendAnalysis(BaseModel):
     ihm_health_sbp: List[ihmHealthData]
     ihm_health_dbp: List[ihmHealthData]
     ihm_health_hr: List[ihmHealthData]
+
+class RolePlayChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system", "function"]
+    content: Optional[str]
+    function_call: Optional[Dict] = None
+    schedule: Optional[List] = None
+
+class RolePlayRequest(BaseModel):
+    model: str
+    messages: List[RolePlayChatMessage]
+    functions: Optional[List[Dict]] = None
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
+    max_length: Optional[int] = None
+    stream: Optional[bool] = False
+    stop: Optional[List[str]] = None
