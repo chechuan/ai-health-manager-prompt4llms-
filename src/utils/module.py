@@ -366,6 +366,21 @@ def get_intent(text):
     elif '高血压' in text:
         code = 'chronic_qa'
         desc = '高血压知识问答'
+    elif '会议日程管理' in text:
+        code = 'meeting_schedule'
+        desc = '会议日程管理'
+    elif '非会议日程管理':
+        code = 'other_schedule'
+        desc = '会议日程管理'
+    elif '食材采购清单管理' in text:
+        code = 'food_purchasing_list_management'
+        desc = '食材采购清单管理'
+    elif '生成食材采购清单' in text:
+        code = 'create_food_purchasing_list'
+        desc = '生成食材采购清单'
+    elif '食材采购' in text:
+        code = 'food_purchasing'
+        desc = '食材采购'
     else:
         code = 'other'
         desc = '日常对话'
