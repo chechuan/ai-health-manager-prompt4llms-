@@ -61,16 +61,20 @@ class Chat:
             'default_reminder', 'broadcast_bp_up'
         ]
         useinfo_intent_code_list = [
-            'ask_name','ask_age','ask_exercise_taboo','ask_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
-            'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
+            'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
+            'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height',
             'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
         ]
+        aiui_intent_code_list = ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']
+        callout_intent_code_list = ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']
         self.intent_map = {
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
-            'userinfo': {i:1 for i in useinfo_intent_code_list}
+            'userinfo': {i:1 for i in useinfo_intent_code_list},
+            'aiui': {i:1 for i in aiui_intent_code_list}
+            'callout': {i:1 for i in callout_intent_code_list}
         }
-    
+
     def get_tool_name(self, text):
         if '外部知识' in text:
             return '调用外部知识库'
@@ -168,17 +172,21 @@ class Chat:
     
     def get_parent_intent_name(self, text):
         if '五师' in text:
-            return '呼叫五师'
+            return '呼叫五师意图'
         elif '音频' in text:
-            return '音频播放'
+            return '音频播放意图'
         elif '生活' in text:
-            return '生活工具查询'
+            return '生活工具查询意图'
         elif '医疗' in text:
-            return '医疗健康'
+            return '医疗健康意图'
         elif '饮食' in text:
-            return '饮食营养'
+            return '饮食营养意图'
         elif '运动' in text:
-            return '运动咨询'
+            return '运动咨询意图'
+        elif '日程':
+            return '日程管理意图'
+        elif '食材采购' in text:
+            return '食材采购意图'
         else:
             return '其它'
 
@@ -203,10 +211,20 @@ class Chat:
     def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
+        open_sch_list = ['打开','日程']
+        market_list = ['打开','集市']
+        home_list = ['打开','家居']
+        bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        if '血压趋势图' in history[-1]['content'] or '血压录入' in history[-1]['content'] or '血压历史' in history[-1]['content'] or '历史血压' in history[-1]['content']:
+        if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:
+            return '打开功能页面'
+        if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
+            return '打开功能页面'
+        if sum([1 for i in market_list if i in history[-1]['content']]) >= 2:
+            return '打开功能页面'
+        if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
         h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
@@ -215,13 +233,13 @@ class Chat:
         else:
             prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
-        generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
+        generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False)
         logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养']:
+        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图', '食材采购意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
@@ -231,13 +249,13 @@ class Chat:
             else:
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
-            generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
+            generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
-    
+
     def chatter_gaily(self, *args, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
@@ -381,7 +399,7 @@ class Chat:
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
                 # logger.exception(out_history)
         yield out_text, mid_vars
-    
+   
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
         task = kwargs.get('task', '')
@@ -391,15 +409,12 @@ class Chat:
                 input_prompt))
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+        if self.intent_map['callout'].get(intent)::
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
-        elif intent in ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']: #aiui
+        elif self.intent_map['aiui'].get(intent):
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        #elif intent in ['open_web_daily_monitor']:
-        #    out_text = {'message':'', 'intentCode':intent,
-        #            'processCode':'trans_back', 'intentDesc':desc}
         elif intent in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                 out_text = {'message':'', 'intentCode':intent,
@@ -407,13 +422,13 @@ class Chat:
             else:
                 out_text = {'message':'', 'intentCode':'food_rec',
                         'processCode':'alg', 'intentDesc':desc}
-        elif intent in ['sport_rec']:
-            if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
-                out_text = {'message':'',
-                        'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
-            else:
-                out_text = {'message':'', 'intentCode':intent,
-                        'processCode':'trans_back', 'intentDesc':desc}
+        #elif intent in ['sport_rec']:
+        #    if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+        #        out_text = {'message':'',
+        #                'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
+        #    else:
+        #        out_text = {'message':'', 'intentCode':intent,
+        #                'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
