@@ -21,7 +21,7 @@ from flask import Flask, Response, request
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
-from src.utils.api_protocal import healthBloodPressureTrendAnalysis
+from src.utils.api_protocal import RolePlayRequest, healthBloodPressureTrendAnalysis
 from src.utils.Logger import logger
 from src.utils.module import NpEncoder, clock, curr_time, dumpJS, initAllResource
 
@@ -233,6 +233,26 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route('/chat/role_play', methods=['post'])
+    def _chat_role_play(request: RolePlayRequest):
+        """角色扮演对话
+        """
+        try:
+            param = accept_param()
+            generator = chat_v2.general_yield_result(sys_prompt=param.get('prompt'), 
+                                                  mid_vars=[], 
+                                                  use_sys_prompt=True, 
+                                                  **param)
+            result = decorate_chat_complete(generator, 
+                                            return_mid_vars=True,
+                                            return_backend_history=True
+                                            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return Response(result, mimetype='text/event-stream')
         
     @app.route('/test/sync', methods=['post'])
     def _test_sync():

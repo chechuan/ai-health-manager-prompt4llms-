@@ -1,7 +1,8 @@
-default_model: Qwen-14B-Chat
 local:
-  qwen-tiny: Qwen-1_8B-Chat
-  baichuan2-tiny: Baichuan2-7B-Chat
+  call_schedule_query: Qwen-14B-Chat
+  blood_pressure_trend_analysis: Qwen-1_8B-Chat
+  decorate_search_prompt: Qwen-1_8B-Chat
+  react_model: Qwen-14B-Chat
 dev:
 test:
 fat:

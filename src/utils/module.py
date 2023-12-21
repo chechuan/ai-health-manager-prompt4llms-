@@ -143,7 +143,8 @@ class initAllResource:
                                     continue
                                 prompt_meta_data[key][i['name']] = search_target_version_item(prompt_tool, 'name', i['name'], v)
             else:
-                prompt_meta_data['character'] = {i['name']: i for i in prompt_character}
+                prompt_meta_data['character'] = {i['name']: i for i in prompt_character if i['type'] == 'event'}
+                prompt_meta_data['role_play'] = {i['name']: i for i in prompt_character if i['type'] == 'role_play'}
                 prompt_meta_data['event'] = {i['intent_code']: i for i in prompt_event}
                 prompt_meta_data['tool'] = {i['name']: i for i in prompt_tool if i['in_used'] == 1}
             prompt_meta_data['init_intent'] = {i['code']: True for i in prompt_tool if i['init_intent'] == 1}

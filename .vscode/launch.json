@@ -15,9 +15,22 @@
                 "GEVENT_SUPPORT": "True"
             },
             "args": [
-                "--env", "local", 
+                "--env",
+                "local",
                 "--special_prompt_version",
-                // "--use_cache"
+                "--use_cache"
+            ]
+        },
+        {
+            "name": "Python: role_play",
+            "type": "python",
+            "request": "launch",
+            "program": "src/pkgs/models/role_play_model.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--env", "local",
+                "--use_cache"
             ]
         },
         {
