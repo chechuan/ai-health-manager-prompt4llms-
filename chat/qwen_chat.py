@@ -71,7 +71,7 @@ class Chat:
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list},
-            'aiui': {i:1 for i in aiui_intent_code_list}
+            'aiui': {i:1 for i in aiui_intent_code_list},
             'callout': {i:1 for i in callout_intent_code_list}
         }
 
@@ -409,7 +409,7 @@ class Chat:
                 input_prompt))
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
-        if self.intent_map['callout'].get(intent)::
+        if self.intent_map['callout'].get(intent):
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
