@@ -66,7 +66,7 @@ class Chat_v2:
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list},
-            'aiui': {i:1 for i in aiui_intent_code_list}
+            'aiui': {i:1 for i in aiui_intent_code_list},
             'callout': {i:1 for i in callout_intent_code_list}
         }
 
