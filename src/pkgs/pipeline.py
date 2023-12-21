@@ -61,11 +61,13 @@ class Chat_v2:
             'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
         ]
         aiui_intent_code_list = ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']
+        callout_intent_code_list = ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']
         self.intent_map = {
             'schedule': {i:1 for i in schedule_manager},
             'tips': {i:1 for i in tips_intent_code_list},
             'userinfo': {i:1 for i in useinfo_intent_code_list},
-            'aiui': {i:1 for i in aiui_intent_code_list}
+            'aiui': {i:1 for i in aiui_intent_code_list},
+            'callout': {i:1 for i in callout_intent_code_list}
         }
 
     def chat_react(self, *args, **kwargs):
@@ -130,17 +132,21 @@ class Chat_v2:
     
     def get_parent_intent_name(self, text):
         if '五师' in text:
-            return '呼叫五师'
+            return '呼叫五师意图'
         elif '音频' in text:
-            return '音频播放'
+            return '音频播放意图'
         elif '生活' in text:
-            return '生活工具查询'
+            return '生活工具查询意图'
         elif '医疗' in text:
-            return '医疗健康'
+            return '医疗健康意图'
         elif '饮食' in text:
-            return '饮食营养'
+            return '饮食营养意图'
         elif '运动' in text:
-            return '运动咨询'
+            return '运动咨询意图'
+        elif '日程':
+            return '日程管理意图'
+        elif '食材采购' in text:
+            return '食材采购意图'
         else:
             return '其它'
     
@@ -175,7 +181,7 @@ class Chat_v2:
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养']:
+        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图', '食材采购意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师']:
                 history = history[-1:]
@@ -239,15 +245,12 @@ class Chat_v2:
                 input_prompt))
         else:
             intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
-        if intent in ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']:
+        if self.intent_map['callout'].get(intent):
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',
                         'intentDesc':desc}
         elif self.intent_map['aiui'].get(intent):
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        #elif intent in ['open_web_daily_monitor']:
-        #    out_text = {'message':'', 'intentCode':intent,
-        #            'processCode':'trans_back', 'intentDesc':desc}
         elif intent in ['food_rec']:
             if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
                 out_text = {'message':'', 'intentCode':intent,
