@@ -183,7 +183,7 @@ class Chat:
             return '饮食营养意图'
         elif '运动' in text:
             return '运动咨询意图'
-        elif '日程':
+        elif '日程' in text:
             return '日程管理意图'
         elif '食材采购' in text:
             return '食材采购意图'
@@ -235,7 +235,7 @@ class Chat:
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False)
-        logger.debug('意图识别模型输出：' + generate_text)
+        logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
