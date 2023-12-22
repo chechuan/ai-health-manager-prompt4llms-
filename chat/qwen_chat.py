@@ -234,7 +234,7 @@ class Chat:
             prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
-                temperature=0, do_sample=False, model='Qwen-72B-Chat')
+                temperature=0, do_sample=False)
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
@@ -250,7 +250,7 @@ class Chat:
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
-                    temperature=0, do_sample=False, model='Qwen-72B-Chat')
+                    temperature=0, do_sample=False)
             logger.debug('子意图模型输出：' + generate_text)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
