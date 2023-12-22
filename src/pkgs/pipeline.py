@@ -424,41 +424,6 @@ class Chat_v2:
             return 'my-market'
         else:
             return 'other'
-    
-    def __create_food_purchasing_list__(self) -> str:
-        """生成食材采购清单 -> 固定内容
-        # 2023年12月21日16:16:39 无思考过程
-        """
-        content = [
-            "| 名称 | 质量 |",
-            "|------|------|",
-            "| 鸡蛋 | 500g |",
-            "| 鸡胸肉 | 500g |",
-            "| 酱油 | 1瓶 |",
-            "| 牛腩 | 200g |",
-            "| 菠菜 | 500g |"
-        ]
-        return "\n".join(content)
-    
-    def __food_purchasing_list_management__(self, history="", intentCode="", **kwargs):
-        """采购清单管理,
-        只用最近一条(用户输入)和其上一条的结果(当前状态的采购列表)
-        """
-        event_msg = self.prompt_meta_data['event'][intentCode]
-        sys_prompt = event_msg['description'] + event_msg['process']
-        user_input, purchasing_list = "", ""
-        model = self.gsr.model_config['food_purchasing_list_management']
-        for i in history[::-1]:
-            if user_input and purchasing_list:
-                break
-            if i['role'] == "user":
-                user_input = i['content']
-            elif i['role'] == "assistant":
-                purchasing_list = i['content']
-        sys_prompt = sys_prompt.replace("{purchasing_list}", purchasing_list)
-        input_history = [{"role":"system", "content": sys_prompt}, {"role":"user", "content": user_input}]
-        content = chat_qwen(history=input_history, temperature=0.7, model=model, top_p=0.8)
-        return content
 
     def complete(self, mid_vars: List[object], **kwargs):
         """only prompt模式的生成及相关逻辑
@@ -475,10 +440,6 @@ class Chat_v2:
             output_text = self.open_page(mid_vars, **kwargs)
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
-        elif intentCode == "create_food_purchasing_list":
-            content = self.__create_food_purchasing_list__()
-        elif intentCode == "food_purchasing_list_management":
-            content = self.__food_purchasing_list_management__(**kwargs)
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
         

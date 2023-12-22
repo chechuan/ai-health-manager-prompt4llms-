@@ -6,12 +6,19 @@
 @Contact :   1627635056@qq.com
 '''
 import json
+import re
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
-from typing import List
+from sympy import EX
 
+import chat
+from chat import qwen_chat
+
+sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from typing import Dict, List
+
+from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
@@ -19,6 +26,9 @@ from src.utils.module import clock, initAllResource
 
 
 class expertModel:
+    def __init__(self, gsr) -> None:
+        self.gsr = gsr
+        
     def check_number(x: str or int or float, key: str):
         try:
             x = float(x)
@@ -206,7 +216,61 @@ class expertModel:
         logger.debug(f"趋势分析结果: {content}")
         return content
 
-    def __rec_diet_reunion_meals_restaurant_selection__(self, param) -> str:
+    def __food_purchasing_list_manage__(self, **kwds):
+        """食材采购清单管理
+
+        [
+            "|名称|数量|单位|",
+            "|---|---|---|",
+            "|鸡蛋|500|g|",
+            "|鸡胸肉|500g|g|",
+            "|酱油|1|瓶|",
+            "|牛腩|200|g|",
+            "|菠菜|500|g|"
+        ]
+
+        """
+        intentCode = kwds.get("intentCode", "create_food_purchasing_list")
+        purchasing_list = kwds.get("purchasing_list")
+        prompt = kwds.get("prompt")
+
+        if kwds['intentCode'] == "create_food_purchasing_list":     # 固定内容
+            ret = [
+                {"name": "鸡蛋", "quantity": 500, "unit": "g"},
+                {"name": "鸡胸肉", "quantity": 500, "unit": "g"},
+                {"name": "酱油", "quantity": 1, "unit": "瓶"},
+                {"name": "牛腩", "quantity": 200, "unit": "g"},
+                {"name": "菠菜", "quantity": 500, "unit": "g"}
+            ]
+        elif kwds['intentCode'] == "food_purchasing_list_management":
+            event_msg = self.gsr.prompt_meta_data['event'][intentCode]
+            sys_prompt = event_msg['description'] + event_msg['process']
+            model = self.gsr.model_config['food_purchasing_list_management']
+            sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
+            query = sys_prompt + f"\n\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
+            content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=200)
+            try:
+                first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
+                ret = json.loads(first_match_content)
+            except Exception as err:
+                logger.exception(content)
+                content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=300)
+                try:
+                    first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
+                    ret = json.loads(first_match_content)
+                except Exception as err:
+                    logger.exception(err)
+                    logger.critical(content)
+                    ret = [
+                        {"name": "鸡蛋", "quantity": "500", "unit": "g"},
+                        {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
+                        {"name": "酱油", "quantity": "1", "unit": "瓶"},
+                        {"name": "牛腩", "quantity": "200", "unit": "g"},
+                        {"name": "菠菜", "quantity": "500", "unit": "g"}
+                    ]
+        return ret
+
+    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -218,18 +282,36 @@ class expertModel:
         Example
             ```json
             {
+                "restaurant_message":"候选餐厅信息",
                 "history": [
-                    {"role":"小明", "content":"我想吃炸薯条"},
-                    {"role":"妈妈", "content":"下次再带你吃炸薯条,我们现在讨论过年晚上去哪儿吃,要不吃中餐吧,川菜怎么样,咱家人都能吃辣"},
-                    {"role":"爸爸", "content": "好啊,那去吃川菜,川菜确实很好吃"},
-                    {"role":"奶奶", "content":"川菜听起来不错，但是你们年轻人啊，吃东西总是太辣了，对肠胃不好。要不我们还是去吃个团圆饭，清淡一点的好。"},
-                    {"role":"姑姑", "content":"奶奶说得对，我们还是要照顾到大家的口味。不如我们去吃粤菜，既有海鲜又有炖汤，健康又美味。"},
-                    {"role":"小姨", "content": "粤菜是个好主意，我听说附近开了一家新的粤菜馆，评价很不错，我们晚上可以去试试。"}
-                ]
+                    {"name":"爸爸", "content": "咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？"},
+                    {"name":"妈妈", "content":"年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧"},
+                    {"name":"爷爷", "content":"年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧"},
+                    {"name":"奶奶", "content":"我没什么意见，环境好一点有孩子活动空间就可以。"},
+                    {"name":"大儿子", "content":"我想吃海鲜！吃海鲜！"}
+                ],
+                "backend_history": []
             }
             ```
         """
-        content = "根据提供的信息, 推荐你们去元善家宴餐厅, 理由是: 环境优雅, 菜品丰富, 服务热情, 价格亲民, 适合聚餐."
+        model = self.gsr.model_config['reunion_meals_restaurant_selection']
+        restaurant_message = kwds.get("restaurant_message", DEFAULT_RESTAURANT_MESSAGE)
+        event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']
+        query = ""
+        sys_prompt = event_msg['description'].replace("{RESTAURANT_MESSAGE}", restaurant_message)
+        all_user_input = "群里的聊天信息:\n"
+        for item in history:
+            name, role, content = item.get("name"), item.get("role"), item.get("content")
+            user_input = ""
+            user_input += name
+            if role:
+                user_input += f" {role}"
+            user_input += f": {content}\n"
+            all_user_input += user_input
+        query = sys_prompt + "\n\n" + all_user_input
+        input_history = [{"role": "user", "content": query}]
+        content = chat_qwen(history=input_history, temperature=0.7, top_p=0.8, model=model)
+        logger.debug("餐厅推荐:\n" + content)
         return content
 
 if __name__ == "__main__":
