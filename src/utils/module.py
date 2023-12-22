@@ -369,7 +369,7 @@ def get_intent(text):
         desc = '高血压知识问答'
     elif '非会议日程管理' in text:
         code = 'other_schedule'
-        desc = '会议日程管理'
+        desc = '非会议日程管理'
     elif '会议日程管理' in text:
         code = 'meeting_schedule'
         desc = '会议日程管理'
