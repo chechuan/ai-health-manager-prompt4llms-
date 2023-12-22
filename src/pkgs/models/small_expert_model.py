@@ -206,6 +206,25 @@ class expertModel:
         logger.debug(f"趋势分析结果: {content}")
         return content
 
+    def __rec_diet_reunion_meals_restaurant_selection__(self, param) -> str:
+        """聚餐场景
+        提供各餐厅信息
+        群组中各角色聊天内容
+        推荐满足角色提出条件的餐厅, 并给出推荐理由
+
+        Args
+
+        
+        Example
+            ```json
+            {
+                "history": 
+            }
+            ```
+        """
+        content = "根据提供的信息, 推荐你们去元善家宴餐厅, 理由是: 环境优雅, 菜品丰富, 服务热情, 价格亲民, 适合聚餐."
+        return content
+
 if __name__ == "__main__":
     param = testParam.param_pressure_trend
     initAllResource()

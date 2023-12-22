@@ -206,6 +206,20 @@ def create_app():
         finally:
             return ret
 
+    @app.route('/rec/diet/reunion_meals/restaurant_selection', methods=['post'])
+    def _rec_diet_reunion_meals_restaurant_selection():
+        """年夜饭, 结合群组对话和餐厅信息选择偏好餐厅
+        """
+        try:
+            param = accept_param()
+            ret = expert_model.__rec_diet_reunion_meals_restaurant_selection__(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
     @app.route('/rec/diet/evaluation', methods=['post'])
     def _rec_diet_evaluation():
         """获取意图代码
