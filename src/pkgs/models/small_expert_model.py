@@ -216,6 +216,19 @@ class expertModel:
         logger.debug(f"趋势分析结果: {content}")
         return content
 
+    def __food_purchasing_list_intent_(self, content):
+        """食材采购清单过程中的意图识别
+
+        - Args
+            content [Str] 清单页面说的话
+
+        - Return
+            intentCode [Str] code: 清单管理or关闭清单/提交
+
+        """
+        code = "manage" or "quit"
+        return code
+
     def __food_purchasing_list_manage__(self, **kwds):
         """食材采购清单管理
 
@@ -242,32 +255,40 @@ class expertModel:
                 {"name": "牛腩", "quantity": 200, "unit": "g"},
                 {"name": "菠菜", "quantity": 500, "unit": "g"}
             ]
-        elif kwds['intentCode'] == "food_purchasing_list_management":
-            event_msg = self.gsr.prompt_meta_data['event'][intentCode]
-            sys_prompt = event_msg['description'] + event_msg['process']
-            model = self.gsr.model_config['food_purchasing_list_management']
-            sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
-            query = sys_prompt + f"\n\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
-            content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=200)
-            try:
-                first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
-                ret = json.loads(first_match_content)
-            except Exception as err:
-                logger.exception(content)
-                content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=300)
+        else:
+            intentCode = self.__food_purchasing_list_intent_(prompt)
+            purchasing_list = []
+            if intentCode == "quit":
+                reply = "好的,已为您提交"
+            elif intentCode == "manage":
+                # TODO 增加意图判断 是管理还是结束
+                reply = "订单修改成功"
+                event_msg = self.gsr.prompt_meta_data['event'][intentCode]
+                sys_prompt = event_msg['description'] + event_msg['process']
+                model = self.gsr.model_config['food_purchasing_list_management']
+                sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
+                query = sys_prompt + f"\n\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
+                content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=200)
                 try:
                     first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
-                    ret = json.loads(first_match_content)
+                    purchasing_list = json.loads(first_match_content)
                 except Exception as err:
-                    logger.exception(err)
-                    logger.critical(content)
-                    ret = [
-                        {"name": "鸡蛋", "quantity": "500", "unit": "g"},
-                        {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
-                        {"name": "酱油", "quantity": "1", "unit": "瓶"},
-                        {"name": "牛腩", "quantity": "200", "unit": "g"},
-                        {"name": "菠菜", "quantity": "500", "unit": "g"}
-                    ]
+                    logger.exception(content)
+                    content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=300)
+                    try:
+                        first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
+                        purchasing_list = json.loads(first_match_content)
+                    except Exception as err:
+                        logger.exception(err)
+                        logger.critical(content)
+                        purchasing_list = [
+                            {"name": "鸡蛋", "quantity": "500", "unit": "g"},
+                            {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
+                            {"name": "酱油", "quantity": "1", "unit": "瓶"},
+                            {"name": "牛腩", "quantity": "200", "unit": "g"},
+                            {"name": "菠菜", "quantity": "500", "unit": "g"}
+                        ]
+        ret = {"purchasing_list": purchasing_list, "content": reply}
         return ret
 
     def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
