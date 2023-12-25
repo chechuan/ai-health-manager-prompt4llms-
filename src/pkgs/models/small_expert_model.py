@@ -8,7 +8,10 @@
 import json
 import re
 import sys
+import time
 from pathlib import Path
+
+import openai
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 from typing import Dict, List
@@ -17,7 +20,7 @@ from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import clock, initAllResource, get_intent
+from src.utils.module import clock, get_intent, initAllResource
 
 
 class expertModel:
@@ -251,11 +254,11 @@ class expertModel:
                 logger.exception(err)
                 logger.critical(content)
                 purchasing_list = [
-                    {"name": "鸡蛋", "quantity": "500", "unit": "g"},
-                    {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
-                    {"name": "酱油", "quantity": "1", "unit": "瓶"},
-                    {"name": "牛腩", "quantity": "200", "unit": "g"},
-                    {"name": "菠菜", "quantity": "500", "unit": "g"}
+                    {"name": "鸡蛋", "quantity": 500, "unit": "g"},
+                    {"name": "鸡胸肉", "quantity": 500, "unit": "g"},
+                    {"name": "酱油", "quantity": 1, "unit": "瓶"},
+                    {"name": "牛腩", "quantity": 200, "unit": "g"},
+                    {"name": "菠菜", "quantity": 500, "unit": "g"}
                 ]
         ret = {
             "purchasing_list": purchasing_list, 
@@ -278,37 +281,68 @@ class expertModel:
         Example
             ```json
             {
-                "restaurant_message":"候选餐厅信息",
+                "restaurant_message":"",
                 "history": [
-                    {"name":"爸爸", "content": "咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？"},
-                    {"name":"妈妈", "content":"年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧"},
-                    {"name":"爷爷", "content":"年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧"},
-                    {"name":"奶奶", "content":"我没什么意见，环境好一点有孩子活动空间就可以。"},
-                    {"name":"大儿子", "content":"我想吃海鲜！吃海鲜！"}
+                    {"name":"龙傲天", "role":"爸爸", "content": "咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？"},
+                    {"name":"李蒹葭", "role":"妈妈", "content":"年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧"},
+                    {"name":"龙霸天", "role":"爷爷", "content":"年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧"},
+                    {"name":"李秀莲", "role":"奶奶", "content":"我没什么意见，环境好一点有孩子活动空间就可以。"},
+                    {"name":"龙翔", "role":"大儿子", "content":"我想吃海鲜！吃海鲜！"}
                 ],
                 "backend_history": []
             }
             ```
         """
+        def make_system_prompt():
+            restaurant_message = kwds.get("restaurant_message", DEFAULT_RESTAURANT_MESSAGE)
+            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']
+            sys_prompt = event_msg['description'].replace("{RESTAURANT_MESSAGE}", restaurant_message)
+            return sys_prompt
+        
+        def make_ret_item(message: str, end: bool, backend_history: List[Dict]) -> Dict:
+            return {
+                "message": message,
+                "end": end,
+                "backend_history": backend_history,
+                "dataSource": "语言模型",
+                "intentCode": "shared_decision", 
+                "intentDesc": "年夜饭共策",
+                "type": "Result"
+            }
+        
         model = self.gsr.model_config['reunion_meals_restaurant_selection']
-        restaurant_message = kwds.get("restaurant_message", DEFAULT_RESTAURANT_MESSAGE)
-        event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']
+        sys_prompt = make_system_prompt()
+        messages = [{"role":"system", "content": sys_prompt}] + backend_history
+
         query = ""
-        sys_prompt = event_msg['description'].replace("{RESTAURANT_MESSAGE}", restaurant_message)
-        all_user_input = "群里的聊天信息:\n"
         for item in history:
             name, role, content = item.get("name"), item.get("role"), item.get("content")
             user_input = ""
             user_input += name
             if role:
-                user_input += f" {role}"
+                user_input += f"({role})"
             user_input += f": {content}\n"
-            all_user_input += user_input
-        query = sys_prompt + "\n\n" + all_user_input
-        input_history = [{"role": "user", "content": query}]
-        content = chat_qwen(history=input_history, temperature=0.7, top_p=0.8, model=model)
-        logger.debug("餐厅推荐:\n" + content)
-        return content
+            query += user_input
+        messages.append({"role": "user", "content": query})
+        response = openai.ChatCompletion.create(model=model, messages=messages,
+                                                temperature=0.9, top_p=0.8, top_k=-1, repetition_penalty=1.1, stream=True)
+        
+        t_st = time.time()
+        ret_content = ""
+        for i in response:
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get('content')
+            if text_stream:
+                ret_content += text_stream
+                print(text_stream, flush=True, end="")
+                yield make_ret_item(text_stream, False, [])
+        messages.append({"role": "assistant", "content": ret_content})
+
+        time_cost = round(time.time() - t_st, 1)
+        logger.success(f"Model {model} generate costs summary: " + 
+                        f"total_texts:{len(ret_content)}, "
+                        f"complete cost: {time_cost}s")
+        yield make_ret_item("", True, messages[1:])
 
 if __name__ == "__main__":
     expert_model = expertModel(initAllResource())

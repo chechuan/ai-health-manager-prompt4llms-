@@ -21,9 +21,10 @@ from flask import Flask, Response, request
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
-from src.utils.api_protocal import RolePlayRequest, healthBloodPressureTrendAnalysis
+from src.utils.api_protocal import RolePlayRequest
 from src.utils.Logger import logger
-from src.utils.module import NpEncoder, clock, curr_time, dumpJS, initAllResource
+from src.utils.module import (NpEncoder, curr_time, decorate_text_stream, dumpJS,
+                              format_sse_chat_complete, initAllResource)
 
 
 def accept_param():
@@ -49,26 +50,6 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
     if cls:
         res = json.dumps(res, cls=NpEncoder)
     yield res
-
-def format_sse(data: str, event=None) -> str:
-    msg = 'data: {}\n\n'.format(data)
-    if event is not None:
-        msg = 'event: {}\n{}'.format(event, msg)
-    return msg    
-
-def decorate(generator):
-    try:
-        for item in generator:
-            item['backend_history'] = []
-            yield format_sse(json.dumps(item, ensure_ascii=False), 'delta')
-    except Exception as err:
-        logger.exception(err)
-
-def format_sse_chat_complete(data: str, event=None) -> str:
-    msg = 'data: {}\n\n'.format(data)
-    if event is not None:
-        msg = 'event: {}\n{}'.format(event, msg)
-    return msg    
 
 def decorate_chat_complete(generator, return_mid_vars=False, return_backend_history=False):
     try:
@@ -226,14 +207,14 @@ def create_app():
         """
         try:
             param = accept_param()
-            ret = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
-            ret = make_result(items=ret)
+            generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+            ret = decorate_text_stream(generator)
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
-            return ret
-        
+            return Response(ret, mimetype='text/event-stream')
+
     @app.route('/rec/diet/evaluation', methods=['post'])
     def _rec_diet_evaluation():
         """膳食摄入评估

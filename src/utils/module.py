@@ -572,5 +572,19 @@ def curr_time():
 def dumpJS(obj):
     return json.dumps(obj, ensure_ascii=False)
 
+def format_sse_chat_complete(data: str, event=None) -> str:
+    msg = 'data: {}\n\n'.format(data)
+    if event is not None:
+        msg = 'event: {}\n{}'.format(event, msg)
+    return msg
+
+def decorate_text_stream(generator):
+    while True:
+        yield_item = next(generator)
+        yield format_sse_chat_complete(json.dumps(yield_item, ensure_ascii=False), 'delta')
+        if yield_item['end'] is True:
+            break
+
+
 if __name__ == "__main__":
     initAllResource()
