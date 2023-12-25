@@ -1,19 +1,13 @@
 # -*- encoding: utf-8 -*-
 '''
 @Time    :   2023-12-05 15:14:07
-@desc    :   小专家模型
+@desc    :   专家模型 & 独立功能
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 '''
 import json
-import re
 import sys
 from pathlib import Path
-
-from sympy import EX
-
-import chat
-from chat import qwen_chat
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 from typing import Dict, List
@@ -285,7 +279,13 @@ class expertModel:
                         {"name": "牛腩", "quantity": "200", "unit": "g"},
                         {"name": "菠菜", "quantity": "500", "unit": "g"}
                     ]
-        ret = {"purchasing_list": purchasing_list, "content": reply, "intentCode": intentCode}
+        ret = {
+            "purchasing_list": purchasing_list, 
+            "content": reply, 
+            "intentCode": intentCode, 
+            "dataSource": "语言模型", 
+            "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error")
+        }
         return ret
 
     def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
@@ -333,8 +333,12 @@ class expertModel:
         return content
 
 if __name__ == "__main__":
-    param = testParam.param_pressure_trend
-    initAllResource()
-    expert_model = expertModel()
-    # expert_model.__rec_diet_eval__(param)
-    expert_model.__blood_pressure_trend_analysis__(param)
+    expert_model = expertModel(initAllResource())
+    # expert_model.__rec_diet_eval__(param)sss
+
+    # param = testParam.param_pressure_trend
+    # expert_model.__blood_pressure_trend_analysis__(param)
+
+    param = testParam.param_rec_diet_reunion_meals_restaurant_selection
+    expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    
