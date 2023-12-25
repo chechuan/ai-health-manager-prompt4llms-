@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: 当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--use_cache"
+            ]
+        },
+        {
             "name": "Python: run server",
             "type": "python",
             "request": "launch",
@@ -17,7 +28,7 @@
             "args": [
                 "--env", "local",
                 "--special_prompt_version",
-                // "--use_cache"
+                "--use_cache"
             ]
         },
         {
@@ -28,17 +39,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env", "local",
-                "--use_cache"
+                "--env", "local", "--use_cache"
             ]
-        },
-        {
-            "name": "Python: 当前文件",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true
         },
         {
             "name": "Python: Prompt Factory",
@@ -48,14 +50,10 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env",
-                "居家",
-                "--scene",
-                "一般用户",
-                "--role",
-                "医师",
-                "--plan",
-                "辅助诊断"
+                "--env", "居家",
+                "--scene", "一般用户",
+                "--role", "医师",
+                "--plan", "辅助诊断"
             ]
         }
     ]
