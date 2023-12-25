@@ -288,7 +288,7 @@ class expertModel:
                             {"name": "牛腩", "quantity": "200", "unit": "g"},
                             {"name": "菠菜", "quantity": "500", "unit": "g"}
                         ]
-        ret = {"purchasing_list": purchasing_list, "content": reply}
+        ret = {"purchasing_list": purchasing_list, "content": reply, "intentCode": intentCode}
         return ret
 
     def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
