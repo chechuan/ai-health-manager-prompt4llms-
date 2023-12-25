@@ -17,7 +17,7 @@ from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import clock, initAllResource
+from src.utils.module import clock, initAllResource, get_intent
 
 
 class expertModel:

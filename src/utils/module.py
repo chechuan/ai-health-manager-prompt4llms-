@@ -385,6 +385,15 @@ def get_intent(text):
     elif '食材采购' in text:
         code = 'food_purchasing'
         desc = '食材采购'
+    elif '食材采购清单确认' in text:
+        code = 'food_purchasing_list_verify'
+        desc = '食材采购清单确认'
+    elif '食材采购清单关闭' in text:
+        code = 'food_purchasing_list_close'
+        desc = '食材采购清单关闭'
+    elif '拉群共策' in text:
+        code = 'shared_decision'
+        desc = '拉群共策'
     else:
         code = 'other'
         desc = '日常对话'
