@@ -22,7 +22,7 @@ from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import clock, initAllResource
+from src.utils.module import clock, initAllResource, get_intent
 
 
 class expertModel:
@@ -226,7 +226,15 @@ class expertModel:
             intentCode [Str] code: 清单管理or关闭清单/提交
 
         """
-        code = "food_purchasing_list_management"  # or "quit"
+        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in content[-3:]])
+        prompt = self.prompt_meta_data['tool']['食材采购意图']['description'] + "\n\n" + h_p + "\nThought: "
+        logger.debug('食材意图模型输入：' + prompt)
+        generate_text = chat_qwen(query=prompt, max_tokens=100, top_p=0.8,
+                temperature=0, do_sample=False)
+        logger.debug('食材意图识别模型输出：' + generate_text)
+        intentIdx = generate_text.find("\nIntent:") + 9
+        text = generate_text[intentIdx:].split("\n")[0].strip()
+        code, desc = get_intent(text)
         return code
 
     def __food_purchasing_list_manage__(self, **kwds):
