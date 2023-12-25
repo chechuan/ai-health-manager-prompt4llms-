@@ -25,6 +25,7 @@ def chat_qwen(query: str = "",
               max_tokens=512,
               model="Qwen-14B-Chat",
               do_sample=True,
+              stop=[],
               **kwargs):
     """chat with qwen api which is serve at http://10.228.67.99:26921
     
@@ -60,7 +61,8 @@ def chat_qwen(query: str = "",
             top_k=top_k,
             temperature=temperature,
             max_tokens=max_tokens,
-            do_sample=do_sample
+            do_sample=do_sample,
+            stop=stop
         )
         ret = completion['choices'][0]['text']
     else:
@@ -82,7 +84,8 @@ def chat_qwen(query: str = "",
             repetition_penalty=repetition_penalty,
             temperature=temperature,
             max_tokens=max_tokens,
-            do_sample=do_sample
+            do_sample=do_sample,
+            stop=stop
         )
         ret = completion['choices'][0]['message']['content'].strip()
     time_cost = round(time.time() - t_st, 1)
