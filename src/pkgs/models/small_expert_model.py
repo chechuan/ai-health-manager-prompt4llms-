@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 '''
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -210,20 +211,7 @@ class expertModel:
         logger.debug(f"趋势分析结果: {content}")
         return content
 
-    def __food_purchasing_list_intent_(self, content):
-        """食材采购清单过程中的意图识别
-
-        - Args
-            content [Str] 清单页面说的话
-
-        - Return
-            intentCode [Str] code: 清单管理or关闭清单/提交
-
-        """
-        code = "food_purchasing_list_management"  # or "quit"
-        return code
-
-    def __food_purchasing_list_manage__(self, **kwds):
+    def __food_purchasing_list_manage__(self, reply="好的-unknow reply",**kwds):
         """食材采购清单管理
 
         [
@@ -237,40 +225,38 @@ class expertModel:
         ]
 
         """
+        def parse_model_response(content):
+            first_match_content = re.findall("```json(.*?)```", content, re.S)[0].strip()
+            ret = json.loads(first_match_content)
+            reply, purchasing_list = ret['content'], ret['purchasing_list']
+            return reply, purchasing_list
         purchasing_list = kwds.get("purchasing_list")
         prompt = kwds.get("prompt")
-        intentCode = self.__food_purchasing_list_intent_(prompt)
-        if intentCode == "quit":
-            purchasing_list = []
-            reply = "好的,已为您提交"
-        elif intentCode == "food_purchasing_list_management":
-            # TODO 增加意图判断 是管理还是结束
-            reply = "订单修改成功"
-            event_msg = self.gsr.prompt_meta_data['event'][intentCode]
-            sys_prompt = event_msg['description'] + event_msg['process']
-            model = self.gsr.model_config['food_purchasing_list_management']
-            sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
-            query = sys_prompt + f"\n\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
-            content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, stop="\n```")
+        intentCode = "food_purchasing_list_management"
+        event_msg = self.gsr.prompt_meta_data['event'][intentCode]
+        sys_prompt = event_msg['description'] + event_msg['process']
+        model = self.gsr.model_config['food_purchasing_list_management']
+        sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
+        query = sys_prompt + f"\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
+        history = [{"role":"user", "content":query}]
+        content = chat_qwen(history=history, temperature=0.7, model=model, top_p=0.8)
+        try:
+            reply, purchasing_list = parse_model_response(content)
+        except Exception as err:
+            logger.exception(content)
+            content = chat_qwen(history=history, temperature=0.7, model=model, top_p=0.8)
             try:
-                # first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
-                purchasing_list = json.loads(content)
+                reply, purchasing_list = parse_model_response(content)
             except Exception as err:
-                logger.exception(content)
-                content = chat_qwen(query=query, temperature=0.7, model=model, top_p=0.8, max_tokens=300, stop="\n```")
-                try:
-                    # first_match_content = re.findall("(.*?)```", content, re.S)[0].strip()
-                    purchasing_list = json.loads(content)
-                except Exception as err:
-                    logger.exception(err)
-                    logger.critical(content)
-                    purchasing_list = [
-                        {"name": "鸡蛋", "quantity": "500", "unit": "g"},
-                        {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
-                        {"name": "酱油", "quantity": "1", "unit": "瓶"},
-                        {"name": "牛腩", "quantity": "200", "unit": "g"},
-                        {"name": "菠菜", "quantity": "500", "unit": "g"}
-                    ]
+                logger.exception(err)
+                logger.critical(content)
+                purchasing_list = [
+                    {"name": "鸡蛋", "quantity": "500", "unit": "g"},
+                    {"name": "鸡胸肉", "quantity": "500", "unit": "g"},
+                    {"name": "酱油", "quantity": "1", "unit": "瓶"},
+                    {"name": "牛腩", "quantity": "200", "unit": "g"},
+                    {"name": "菠菜", "quantity": "500", "unit": "g"}
+                ]
         ret = {
             "purchasing_list": purchasing_list, 
             "content": reply, 

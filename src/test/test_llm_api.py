@@ -7,12 +7,17 @@
 '''
 
 
+import json
+import time
+
 import openai
 
-openai.api_base = "http://10.228.67.99:26921"
+openai.api_base = "http://10.228.67.99:26921/v1"
 openai.api_key = "EMPTY"
+
 support_model_list = [i['id'] for i in openai.Model.list()['data']]
 print(f"Support model list: {support_model_list}")
+
 餐厅信息 = """1.七修酒店元善家宴
 评分：4.7
 人均消费139元；
@@ -164,8 +169,7 @@ print(f"Support model list: {support_model_list}")
 议题：年夜饭共策
 用户家庭位置：新奥研究院"""
 
-聊天信息 = """群里的聊天信息:
-爸爸说咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？
+聊天信息 = """爸爸说咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？
 妈妈说年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧
 爷爷说年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧
 奶奶说我没什么意见，环境好一点有孩子活动空间就可以。
@@ -173,8 +177,8 @@ print(f"Support model list: {support_model_list}")
 messages = [
     {"role":"system", "content":f"{餐厅信息}\n{系统提示}"},
     {"role":"user", "content":f"{聊天信息}"}
-    ]
-
+]
+start_time = time.time()
 response = openai.ChatCompletion.create(
     model="Qwen-72B-Chat",
     messages=messages,
@@ -185,5 +189,18 @@ response = openai.ChatCompletion.create(
     stream=True
 )
 
-for chunk in response['choices']:
-    ...
+response_time = time.time()
+print(f'latency {response_time - start_time:.2f} s -> response')
+content = ""
+printed = False
+for i in response:
+    t = time.time()
+    msg = json.dumps(i.choices[0].delta.to_dict(), ensure_ascii=False)
+    text_stream = msg.get('content')
+    if text_stream:
+        if not printed:
+            print(f'latency first token {t - start_time:.2f} s -> {msg}')
+            printed = True
+        content += text_stream
+        print(content, flush=True, end="")
+    
