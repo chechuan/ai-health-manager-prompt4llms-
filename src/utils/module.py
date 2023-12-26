@@ -209,6 +209,8 @@ def req_data(url=None, payload=None, headers=None):
     '''
     if not payload:
         payload = {'data': '{"params":[],"returnFieldsType":2,"isFrontShow":false}'}
+    if not headers:
+        headers = {'content-type': "application/json"}
     res = json.loads(requests.post(url, data=payload, headers=headers).text)
     logger.trace(f'url: {url},\tpayload: {payload}')
     return res
