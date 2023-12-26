@@ -122,7 +122,7 @@ class Chat_v2:
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
         logger.debug('sys prompt: ' + sys_prompt)
-        logger.debug('functions:' + functions)
+        logger.debug(functions)
         return sys_prompt, functions
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
