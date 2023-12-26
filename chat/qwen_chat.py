@@ -428,7 +428,7 @@ class Chat:
         #    else:
         #        out_text = {'message':'', 'intentCode':intent,
         #                'processCode':'trans_back', 'intentDesc':desc}
-        elif intent in ['shared_decision']:
+        elif intent in ['shared_decision', 'create_food_purchasing_list']:
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
         else:
