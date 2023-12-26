@@ -428,6 +428,9 @@ class Chat:
         #    else:
         #        out_text = {'message':'', 'intentCode':intent,
         #                'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['shared_decision']:
+            out_text = {'message':'', 'intentCode':intent,
+                    'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
