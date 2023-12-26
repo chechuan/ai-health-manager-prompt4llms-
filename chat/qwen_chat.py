@@ -185,8 +185,6 @@ class Chat:
             return '运动咨询意图'
         elif '日程' in text:
             return '日程管理意图'
-        elif '食材采购' in text:
-            return '食材采购意图'
         else:
             return '其它'
 
@@ -239,7 +237,7 @@ class Chat:
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图', '食材采购意图']:
+        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
@@ -430,6 +428,9 @@ class Chat:
         #    else:
         #        out_text = {'message':'', 'intentCode':intent,
         #                'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ['shared_decision', 'create_food_purchasing_list']:
+            out_text = {'message':'', 'intentCode':intent,
+                    'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))

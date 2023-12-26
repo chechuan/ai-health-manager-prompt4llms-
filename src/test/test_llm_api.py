@@ -7,12 +7,17 @@
 '''
 
 
+import json
+import time
+
 import openai
 
-openai.api_base = "http://10.228.67.99:26921"
+openai.api_base = "http://10.228.67.99:26921/v1"
 openai.api_key = "EMPTY"
+
 support_model_list = [i['id'] for i in openai.Model.list()['data']]
 print(f"Support model list: {support_model_list}")
+
 餐厅信息 = """1.七修酒店元善家宴
 评分：4.7
 人均消费139元；
@@ -164,26 +169,48 @@ print(f"Support model list: {support_model_list}")
 议题：年夜饭共策
 用户家庭位置：新奥研究院"""
 
-聊天信息 = """群里的聊天信息:
-爸爸说咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？
-妈妈说年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧
-爷爷说年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧
-奶奶说我没什么意见，环境好一点有孩子活动空间就可以。
-大儿子说我想吃海鲜！吃海鲜！"""
+聊天信息 = """爸爸: 咱们每年年夜饭都在家吃，咱们今年下馆子吧！大家有什么意见？
+妈妈: 年夜饭我姐他们一家过来一起，咱们一共10个人，得找一个能坐10个人的包间，预算一两千吧
+爷爷: 年夜饭得有鱼，找一家中餐厅，做鱼比较好吃的，孩子奶奶腿脚不太好，离家近点吧
+奶奶: 我没什么意见，环境好一点有孩子活动空间就可以。
+大儿子: 我想吃海鲜！吃海鲜！"""
+回复结果 = """推荐年夜饭餐厅：七修酒店元善家宴
+餐厅情况：七修酒店元善家宴位于新奥购物中心内，距离新奥研究院很近，交通方便，适合全家出行。该餐厅环境优雅，装修精致，是具有中国传统文化特色的主题餐厅，适合家庭聚会。此外，该餐厅有大小不同的包间，可以容纳10人以上的大桌，适合家庭聚餐。
+菜品推荐：餐厅的菜品丰富多样，既有传统的家常菜，也有精致的创意菜，适合全家人的口味。尤其是餐厅的招牌菜“私家酱汗蒸海鲈鱼”，不仅鱼肉鲜嫩，而且酱汁浓郁，非常符合年夜饭的气氛。此外，餐厅还有各种海鲜菜品，满足了大儿子想吃海鲜的愿望。另外，餐厅的“螺丝椒烧安康鱼肚”、“腊八蒜宝扇贝柱”等菜品也非常有特色，值得品尝。
+总之，七修酒店元善家宴是适合全家人的年夜饭餐厅，不仅菜品丰富，环境优雅，而且交通便利，适合家庭聚会。"""
+聊天信息1 = """爸爸: 这儿是不是有点贵啊，我们找个接地气儿点的吧
+奶奶: 好啊，过年人多点好，热闹
+"""
 messages = [
     {"role":"system", "content":f"{餐厅信息}\n{系统提示}"},
-    {"role":"user", "content":f"{聊天信息}"}
-    ]
-
+    {"role":"user", "content":f"{聊天信息}"},
+    # {"role":"assistant", "content":f"{回复结果}"},
+    # {"role":"user", "content":f"{聊天信息1}"}
+]
+start_time = time.time()
+model_list = ['Baichuan2-7B-Chat', 'Qwen-14B-Chat', 'Qwen-1_8B-Chat', 'Qwen-72B-Chat', 'Yi-34B-Chat']
 response = openai.ChatCompletion.create(
-    model="Qwen-72B-Chat",
+    model=model_list[-2],
     messages=messages,
-    temperature=0.7,
+    temperature=0.9,
     top_p=0.8,
     top_k=-1,
     repetition_penalty=1.1,
     stream=True
 )
 
-for chunk in response['choices']:
-    ...
+response_time = time.time()
+print(f'latency {response_time - start_time:.2f} s -> response')
+content = ""
+printed = False
+for i in response:
+    t = time.time()
+    msg = i.choices[0].delta.to_dict()
+    text_stream = msg.get('content')
+    if text_stream:
+        if not printed:
+            print(f'latency first token {t - start_time:.2f} s')
+            printed = True
+        content += text_stream
+        print(text_stream, flush=True, end="")
+    

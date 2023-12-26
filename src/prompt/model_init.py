@@ -26,6 +26,7 @@ def chat_qwen(query: str = "",
               model="Qwen-14B-Chat",
               do_sample=True,
               stop=[],
+              stream=False,
               **kwargs):
     """chat with qwen api which is serve at http://10.228.67.99:26921
     
@@ -62,9 +63,13 @@ def chat_qwen(query: str = "",
             temperature=temperature,
             max_tokens=max_tokens,
             do_sample=do_sample,
-            stop=stop
+            stop=stop,
+            stream=stream
         )
+        if stream:
+            return completion
         ret = completion['choices'][0]['text']
+        
     else:
         if query and not isinstance(query, object):
             history += [{"role": "user", "content": query}]
@@ -85,8 +90,11 @@ def chat_qwen(query: str = "",
             temperature=temperature,
             max_tokens=max_tokens,
             do_sample=do_sample,
-            stop=stop
+            stop=stop,
+            stream=stream
         )
+        if stream:
+            return completion
         ret = completion['choices'][0]['message']['content'].strip()
     time_cost = round(time.time() - t_st, 1)
     logger.success(f"Model {model} generate costs summary: " + 
