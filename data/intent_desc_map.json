@@ -50,5 +50,7 @@
     "my-market":"打开集市",
     "create_food_purchasing_list":"生成食材采购清单",
     "shared_decision":"拉群共策",
+    "personal-setting":"个人设置页面",
+    "qr-code":"二维码页面",
     "other": "日常对话"
 }

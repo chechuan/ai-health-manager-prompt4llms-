@@ -411,12 +411,18 @@ class Chat_v2:
         add_diet_list = ['打开记录','打开录入','打开添加']
         diet_record_list = ['饮食记录','饮食添加','打开推荐','饮食评估','食谱','我的饮食','食谱页面','餐食记录']
         market_list = ['集市']
+        personal_list = ['我的设置']
+        qr_code_list = ['二维码']
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
         input_history = input_history[-3:]
         if '血压趋势' in input_history[-1]['content']:
             return 'pagename:"bloodPressure-trend-chart"'
         elif sum([1 for i in add_bp_list if i in input_history[-1]['content']]) > 0:
             return 'pagename:"add-blood-pressure"'
+        elif sum([1 for i in personal_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"personal-setting"'
+        elif sum([1 for i in qr_code_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"qr-code"'
         elif '血压历史' in input_history[-1]['content'] or '历史血压' in input_history[-1]['content']:
             return 'pagename:"record-list3"'
         elif sum([1 for i in add_diet_list if i in input_history[-1]['content']]) > 0:
@@ -459,6 +465,10 @@ class Chat_v2:
             return 'diet-record'
         elif 'my-market' in text and 'pagename' in text:
             return 'my-market'
+        elif 'personal-setting' in text and 'pagename' in text:
+            return 'personal-setting'
+        elif 'qr-code' in text and 'pagename' in text:
+            return 'qr-code'
         else:
             return 'other'
 
