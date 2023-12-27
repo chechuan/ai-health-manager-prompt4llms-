@@ -269,7 +269,7 @@ class expertModel:
         }
         return ret
 
-    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
+    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history: str = "", **kwds) -> str:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -309,7 +309,7 @@ class expertModel:
                 "intentDesc": "年夜饭共策",
                 "type": "Result"
             }
-        
+        backend_history = json.loads(backend_history) if backend_history else []
         model = self.gsr.model_config['reunion_meals_restaurant_selection']
         sys_prompt = make_system_prompt()
         messages = [{"role":"system", "content": sys_prompt}] + backend_history
