@@ -352,5 +352,8 @@ if __name__ == "__main__":
     # expert_model.__blood_pressure_trend_analysis__(param)
 
     param = testParam.param_rec_diet_reunion_meals_restaurant_selection
-    expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    while True:
+        yield_item = next(generator)
+        print(yield_item)
     
