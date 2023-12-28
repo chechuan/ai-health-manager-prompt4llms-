@@ -224,12 +224,19 @@ class Chat:
             return '打开功能页面'
         if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
-        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
+        if len(history) > 1:
+            h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
+                + f": {i['content']}" for i in history[-3:-1]])
+        else:
+            h_p = "无"
+        prefix = "Question" if history[-1]['role'] == "user" else "Answer"
+        query = f"{prefix}: {history[-1]['content']}"
+
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
-            prompt = kwargs.get('intentPrompt') + "\n\n" + h_p + "\nThought: "
+            prompt = kwargs.get('intentPrompt') + "\n\n" + query + "\nThought: "
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
+            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False)
@@ -237,15 +244,16 @@ class Chat:
         intentIdx = generate_text.find("\nIntent: ") + 9
         text = generate_text[intentIdx:].split("\n")[0]
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '日程管理意图']:
+        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
-                h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+                query = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+                h_p = '无'
             if kwargs.get('subIntentPrompt', ''):
-                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
+                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             else:
-                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False)
