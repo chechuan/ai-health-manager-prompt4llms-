@@ -131,7 +131,7 @@ class Chat_v2:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
-    
+
     def get_parent_intent_name(self, text):
         if '五师' in text:
             return '呼叫五师意图'
@@ -581,14 +581,14 @@ class Chat_v2:
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
-    chat = Chat_v2()
+    chat = Chat_v2(initAllResource())
     ori_input_param = testParam.param_bug_schedular_202311201817
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.chat_gen(history=history, 
+    out_text, mid_vars = next(chat.pipeline(history=history, 
                                             sys_prompt=prompt, 
                                             verbose=True, 
                                             intentCode=intentCode, 
@@ -598,7 +598,7 @@ if __name__ == '__main__':
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.chat_gen(history=history, 
+        out_text, mid_vars = next(chat.pipeline(history=history, 
                                                 sys_prompt=prompt, 
                                                 verbose=True, 
                                                 intentCode=intentCode, 

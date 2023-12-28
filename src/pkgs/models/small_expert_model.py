@@ -293,10 +293,10 @@ class expertModel:
             }
             ```
         """
-        def make_system_prompt():
-            restaurant_message = kwds.get("restaurant_message", DEFAULT_RESTAURANT_MESSAGE)
-            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']
-            sys_prompt = event_msg['description'].replace("{RESTAURANT_MESSAGE}", restaurant_message)
+        def make_system_prompt(kwds):
+            restaurant_message = kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
+            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']['description'] if not kwds.get("event_msg") else kwds.get("event_msg")
+            sys_prompt = event_msg.replace("{RESTAURANT_MESSAGE}", restaurant_message)
             return sys_prompt
         
         def make_ret_item(message: str, end: bool, backend_history: List[Dict]) -> Dict:
@@ -310,7 +310,7 @@ class expertModel:
                 "type": "Result"
             }
         model = self.gsr.model_config['reunion_meals_restaurant_selection']
-        sys_prompt = make_system_prompt()
+        sys_prompt = make_system_prompt(kwds)
         # messages = [{"role":"system", "content": sys_prompt}] + backend_history
         messages = [{"role":"system", "content": sys_prompt}]
         try:
