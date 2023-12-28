@@ -236,7 +236,7 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt') + "\n\n" + query + "\nThought: "
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'].fromat(h_p) + "\n\n" + query + "\nThought: "
+            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False)
