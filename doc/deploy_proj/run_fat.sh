@@ -1,4 +1,4 @@
 python src/server.py \
-    --env test \
+    --env fat \
     --port 6500 \
     --special_prompt_version

@@ -127,7 +127,11 @@ class funcCall:
         resp_js = json.loads(response)
 
         if resp_js["code"] == 200:
-            content = eval(msg.function_call['arguments'])['ask']
+            msg = eval(msg.function_call['arguments'])
+            if msg.get('ask'):
+                content = msg['ask']
+            else:
+                content = "日程创建成功"
             logger.info(f"Create schedule org: {orgCode} - uid: {customId} - {cur_time} {task}")
         else:
             content = "抱歉，日程创建失败，请稍后再试"
