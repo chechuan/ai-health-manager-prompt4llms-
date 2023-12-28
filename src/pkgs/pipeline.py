@@ -25,7 +25,7 @@ from src.prompt.model_init import chat_qwen
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
 from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
-                              parse_latest_plugin_call, req_data)
+                              parse_latest_plugin_call)
 
 role_map = {
         '0': 'user',
@@ -242,35 +242,48 @@ class Chat_v2:
     def chatter_gaily_knowledge(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        def chat_knowledge_base_chat():
-            default_param = {
-                "query": "你说接上一个",
-                "knowledge_base_name": "samples",
-                "top_k": 3,
-                "score_threshold": 0.3,
-                "history": [
-                    {"role": "user","content": "我们来玩成语接龙，恼羞成怒"},
-                    {"role": "assistant","content": "怒发冲冠"}
-                ],
-                "stream": False,
-                "model_name": "Qwen-14B-Chat",
-                "temperature": 0.7,
-                "max_tokens": 20,
-                "prompt_name": "default"
-            }
-            url = 'http://10.228.67.99:26924/chat/knowledge_base_chat'
-            content = req_data(url, default_param)
-            return content
-        messages = kwargs['history']
-        content = chat_knowledge_base_chat()
-        self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False), output_text=content)
+        def compose_func_reply(messages):
+            """拼接func中回复的内容到history中
+            
+            最终的history只有role/content字段
+            """
+            payload = {"query": "","knowledge_base_name": "","top_k": 5,"score_threshold": 1,"history": [],
+                "stream": False,"model_name": "Qwen-14B-Chat","temperature": 0.7,
+                "top_p": 0.8,"max_tokens": 0,"prompt_name": "text"}
+            history = []
+            for i in messages:
+                if not i.get("function_call"):
+                    history.append(i)
+                else:
+                    func_args = i['function_call']
+                    role = i['role']
+                    content = f"{func_args['arguments']}"
+                    history.append({"role": role, "content": content})
+            payload['history'] = history[:-1]   
+            payload['query'] = history[-1]['content']
+            payload['knowledge_base_name'] = "新奥百科知识库"
+            return payload
+
+        url = self.gsr.api_config['langchain'] + '/chat/knowledge_base_chat'
+        intentCode = kwargs.get("intentCode", 'other')
+
+        messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
+        event_msg = self.prompt_meta_data['event'][intentCode]
+        system_prompt = event_msg['description'] + "\n" + event_msg['process']
+
+        messages = [{"role":"system", "content": system_prompt}] + messages
+        payload = compose_func_reply(messages)
+
+        response = self.session.post(url, data=json.dumps(payload)).json()
+        content, docs = response['answer'], response['docs']
+        self.update_mid_vars(mid_vars, key="闲聊-知识库-新奥百科", input_text=payload, output_text=response, model="知识库-新奥百科知识库-Qwen-14B-Chat")
         if kwargs.get("return_his"):
             messages.append({
                 "role": "assistant", 
                 "content": "I know the answer.", 
                 "function_call": {"name": "convComplete", "arguments": content}
             })
-            return messages
+            return messages[1:]
         else:
             return content
 
@@ -508,8 +521,8 @@ class Chat_v2:
         if self.prompt_meta_data['event'].get(intentCode):
             if intentCode == "other" :
                 # TODO 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
-                # out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
+                # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs['intentCode'] = intentCode

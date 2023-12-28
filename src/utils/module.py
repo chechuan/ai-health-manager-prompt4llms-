@@ -204,17 +204,6 @@ def handle_error(func):
             print(e.message)
     return __inner
 
-def req_data(url=None, payload=None, headers=None):
-    '''request.post()请求数据
-    '''
-    if not payload:
-        payload = {'data': '{"params":[],"returnFieldsType":2,"isFrontShow":false}'}
-    if not headers:
-        headers = {'content-type': "application/json"}
-    res = json.loads(requests.post(url, data=payload, headers=headers).text)
-    logger.trace(f'url: {url},\tpayload: {payload}')
-    return res
-
 def loadJS(path):
     return json.load(open(path, 'r', encoding="utf-8"))
 

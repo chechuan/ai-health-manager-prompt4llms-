@@ -280,7 +280,7 @@ class funcCall:
         payload["top_p"] = top_p
         payload["prompt_name"] = prompt_name
         
-        url = self.api_config['langchain']+called_method
+        url = self.api_config['langchain'] + called_method
         response = self.session.post(url, json=payload, headers=self.headers)
         msg = eval(response.text)
         dataSource = None
