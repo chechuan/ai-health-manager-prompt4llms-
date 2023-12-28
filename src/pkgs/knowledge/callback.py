@@ -12,7 +12,6 @@ import json
 import random
 import re
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any, AnyStr, Dict
 
@@ -25,7 +24,7 @@ from config.constrant_for_task_schedule import query_schedule_template
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import initAllResource
+from src.utils.module import clock, curr_time, date_after_days, initAllResource, this_sunday
 
 
 class funcCall:
@@ -33,9 +32,12 @@ class funcCall:
     session = Session()
     param_server: object = ParamServer()
 
-    def __init__(self, global_share_resource):
-        self.api_config = global_share_resource.api_config
-        self.prompt_meta_data = global_share_resource.prompt_meta_data if global_share_resource.prompt_meta_data else initAllResource()
+    def __init__(self, gsr: initAllResource=None):
+        if not gsr:
+            gsr = initAllResource()
+        self.api_config = gsr.api_config
+        self.model_config = gsr.model_config
+        self.prompt_meta_data = gsr.prompt_meta_data
         self.register_for_all()
         self.ext_api_factory = extApiFactory(self)
 
@@ -66,6 +68,7 @@ class funcCall:
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
 
+    @clock
     def call_get_schedule(self, *args, **kwds):
         """查询用户实时日程
         """
@@ -74,14 +77,16 @@ class funcCall:
         assert kwds.get("orgCode"), KeyError("orgCode is required")
         assert kwds.get("customId"), KeyError("customId is required")
 
-        payload = {"orgCode": kwds.get("orgCode"),"customId": kwds.get("customId")}
+        cur_time, end_time = curr_time(), date_after_days(14)       # 查询未来两周的日程
+        payload = {"orgCode": kwds["orgCode"],"customId": kwds["customId"],"startTime": cur_time,"endTime":end_time}
         resp_js = self.session.post(url, json=payload, headers=self.headers).json()
         data = resp_js['data']
-        ret = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
-        set_str = set([json.dumps(i, ensure_ascii=False) for i in ret])
-        ret = [json.loads(i) for i in set_str]
+        schedule = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
+        set_str = set([json.dumps(i, ensure_ascii=False) for i in schedule])
+        schedule = [json.loads(i) for i in set_str]
+        schedule = list(sorted(schedule, key=lambda item: item['time']))        # 增加对查到的日程按时间排序
         self.update_mid_vars(kwds['mid_vars'], key="查询用户日程", input_text=payload, output_text=data, model="算法后端")
-        return ret
+        return schedule
 
     def call_schedule_create(self, *args, **kwds):
         """调用创建日程接口
@@ -235,18 +240,56 @@ class funcCall:
             prompt += "\n\n日程提醒:\n"
             return prompt
         
+        def confirm_query_time_range(query: str) -> Dict:
+            """确定查询的时间范围
+            """
+            current = curr_time()
+            sunday = this_sunday()
+            example_output = json.dumps({"startTime": current,"endTime":sunday})
+            prompt = (
+                f"请你理解用户所说, 提取对应查询的时间范围, 以json格式返回, 请按以下格式思考:\n"
+                "Question: user input\n"
+                f"Thought: you should always thinks what to do\n"
+                f'Input: example output such as: {example_output}\n'
+                "Observation: 已生成查询时间范围\n"
+                "Begins!\n\n"
+
+                f"Question: 现在的时间是{current}, {query}\n"
+                "Thought: "
+            )
+            text = chat_qwen(prompt, model=model, stop="Observation")
+            output = text[text.find("Input:") + len("Input:"):].strip()
+            time_range = json.loads(output)
+            return time_range
+
         model = kwds.get("model", "Qwen-14B-Chat")
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
+        query = kwds['history'][-2]['content']
+        try:
+            time_range = confirm_query_time_range(query)
+        except Exception as err:
+            time_range = {"startTime": curr_time(), "endTime": date_after_days(14)}
 
-        cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
-        today_schedule = [i for i in schedule if i['time'][:10]==cur_time[:10] and i['time'] > cur_time]
+        prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
+        today_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         history = [{"role": "system", "content": prompt}]
         user_input = compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})
         raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
+        print(json.dumps(history, ensure_ascii=False, indent=4))
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
         return raw_content
+
+        # cur_time, end_time = curr_time(), date_after_days(14)
+        # prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
+        # today_schedule = [i for i in schedule if i['time'][:10]==cur_time[:10] and i['time'] > cur_time]
+        # history = [{"role": "system", "content": prompt}]
+        # user_input = compose_today_schedule(today_schedule)
+        # history.append({"role": "user", "content": user_input})
+        # raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
+        # print(json.dumps(history, ensure_ascii=False, indent=4))
+        # self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
+        # return raw_content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
                               score_threshold=1, temperature=0.7, top_k=3, top_p=0.8, 

@@ -11,7 +11,7 @@ import pickle
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import AnyStr, Dict, Tuple
 from urllib import parse
@@ -559,6 +559,17 @@ class MysqlConnector:
 
 def curr_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+def date_after_days(days: int):
+    now = datetime.now()
+    date_after = ((now+timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S"))
+    return date_after
+
+def this_sunday():
+    """返回下周一0点0分0秒
+    """
+    today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
+    return datetime.strftime(today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S")
 
 def dumpJS(obj):
     return json.dumps(obj, ensure_ascii=False)

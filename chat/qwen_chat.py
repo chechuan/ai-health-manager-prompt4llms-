@@ -19,7 +19,7 @@ from langchain.prompts import PromptTemplate
 
 from chat.constant import *
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT
+from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import chat_qwen
@@ -28,12 +28,6 @@ from src.utils.Logger import logger
 from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock, get_doc_role,
                               get_intent, initAllResource, make_meta_ret)
 
-role_map = {
-        '0': 'user',
-        '1': 'user',
-        '2': 'doctor',
-        '3': 'assistant'
-}
 
 class Chat:
     def __init__(self, global_share_resource: initAllResource) -> None:

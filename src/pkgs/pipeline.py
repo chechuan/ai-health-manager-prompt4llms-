@@ -18,6 +18,7 @@ from requests import Session
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
 from config.constrant import DEFAULT_DATA_SOURCE
 from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
+from config.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine
@@ -27,12 +28,6 @@ from src.utils.Logger import logger
 from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
                               parse_latest_plugin_call)
 
-role_map = {
-        '0': 'user',
-        '1': 'user',
-        '2': 'doctor',
-        '3': 'assistant'
-}
 
 class Chat_v2:
     def __init__(self, global_share_resource: initAllResource) -> None:
@@ -78,7 +73,7 @@ class Chat_v2:
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat")
+        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat", stop=["\nObservation"])
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")

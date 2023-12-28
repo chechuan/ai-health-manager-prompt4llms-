@@ -583,3 +583,11 @@ DEFAULT_RESTAURANT_MESSAGE = """1.七修酒店元善家宴
 张大宝（角色：大儿子）：我想吃西餐，咱们吃西餐吧！
 
 """
+
+
+role_map = {
+    '0': 'user',
+    '1': 'user',
+    '2': 'doctor',
+    '3': 'assistant'
+}

@@ -5,6 +5,7 @@ local:
   react_model: Qwen-14B-Chat
   food_purchasing_list_management: Qwen-14B-Chat
   reunion_meals_restaurant_selection: Yi-34B-Chat
+  schedular_time_understand: Qwen-14B-Chat
 dev:
   call_schedule_query: Qwen-14B-Chat
   blood_pressure_trend_analysis: Qwen-1_8B-Chat
