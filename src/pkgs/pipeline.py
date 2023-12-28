@@ -452,6 +452,7 @@ class Chat_v2:
         return content 
 
     def get_pageName_code(self, text):
+        logger.debug('页面生成内容：' + text)
         if 'bloodPressure-trend-chart' in text and 'pagename' in text:
             return 'bloodPressure-trend-chart'
         elif 'add-blood-pressure' in text and 'pagename' in text:
@@ -470,6 +471,8 @@ class Chat_v2:
             return 'personal-setting'
         elif 'qr-code' in text and 'pagename' in text:
             return 'qr-code'
+        elif 'smart-home' in text and 'pagename' in text:
+            return 'smart-home'
         else:
             return 'other'
 
