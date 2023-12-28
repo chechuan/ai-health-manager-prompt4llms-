@@ -131,7 +131,7 @@ class Chat_v2:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
-    
+
     def get_parent_intent_name(self, text):
         if '五师' in text:
             return '呼叫五师意图'
@@ -203,13 +203,13 @@ class Chat_v2:
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt
         """
-        def compose_func_reply(raw_input_history):
+        def compose_func_reply(messages):
             """拼接func中回复的内容到history中
             
             最终的history只有role/content字段
             """
             history = []
-            for i in raw_input_history:
+            for i in messages:
                 if not i.get("function_call"):
                     history.append(i)
                 else:
@@ -220,21 +220,22 @@ class Chat_v2:
             return history
         
         intentCode = kwargs.get("intentCode", 'other')
+        messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
         desc = self.prompt_meta_data['event'][intentCode]['description']
         process = self.prompt_meta_data['event'][intentCode]['process']
         ext_info = desc + "\n" + process
 
-        raw_input_history = [{"role":"system", "content": ext_info}] + kwargs['history']
-        input_history = compose_func_reply(raw_input_history)
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8, max_tokens=300)
-        self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
+        messages = [{"role":"system", "content": ext_info}] + messages
+        messages = compose_func_reply(messages)
+        content = chat_qwen("", messages, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False), output_text=content)
         if kwargs.get("return_his"):
-            input_history.append({
+            messages.append({
                 "role": "assistant", 
                 "content": "I know the answer.", 
                 "function_call": {"name": "convComplete", "arguments": content}
             })
-            return input_history
+            return messages
         else:
             return content
     
@@ -581,14 +582,14 @@ class Chat_v2:
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 if __name__ == '__main__':
-    chat = Chat_v2()
+    chat = Chat_v2(initAllResource())
     ori_input_param = testParam.param_bug_schedular_202311201817
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.chat_gen(history=history, 
+    out_text, mid_vars = next(chat.pipeline(history=history, 
                                             sys_prompt=prompt, 
                                             verbose=True, 
                                             intentCode=intentCode, 
@@ -598,7 +599,7 @@ if __name__ == '__main__':
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.chat_gen(history=history, 
+        out_text, mid_vars = next(chat.pipeline(history=history, 
                                                 sys_prompt=prompt, 
                                                 verbose=True, 
                                                 intentCode=intentCode, 

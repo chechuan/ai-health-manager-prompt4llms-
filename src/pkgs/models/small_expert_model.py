@@ -269,7 +269,7 @@ class expertModel:
         }
         return ret
 
-    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history=[], **kwds) -> str:
+    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history: List = [], **kwds) -> str:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -293,10 +293,10 @@ class expertModel:
             }
             ```
         """
-        def make_system_prompt():
-            restaurant_message = kwds.get("restaurant_message", DEFAULT_RESTAURANT_MESSAGE)
-            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']
-            sys_prompt = event_msg['description'].replace("{RESTAURANT_MESSAGE}", restaurant_message)
+        def make_system_prompt(kwds):
+            restaurant_message = kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
+            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']['description'] if not kwds.get("event_msg") else kwds.get("event_msg")
+            sys_prompt = event_msg.replace("{RESTAURANT_MESSAGE}", restaurant_message)
             return sys_prompt
         
         def make_ret_item(message: str, end: bool, backend_history: List[Dict]) -> Dict:
@@ -309,40 +309,46 @@ class expertModel:
                 "intentDesc": "年夜饭共策",
                 "type": "Result"
             }
-        
         model = self.gsr.model_config['reunion_meals_restaurant_selection']
-        sys_prompt = make_system_prompt()
-        messages = [{"role":"system", "content": sys_prompt}] + backend_history
+        sys_prompt = make_system_prompt(kwds)
+        # messages = [{"role":"system", "content": sys_prompt}] + backend_history
+        messages = [{"role":"system", "content": sys_prompt}]
+        try:
+            query = ""
+            for item in history:
+                name, role, content = item.get("name"), item.get("role"), item.get("content")
+                user_input = ""
+                user_input += name
+                if role:
+                    user_input += f"({role})"
+                user_input += f": {content}\n"
+                query += user_input
+            messages.append({"role": "user", "content": query})
+            response = openai.ChatCompletion.create(model=model, messages=messages,
+                                                    temperature=0.9, top_p=0.8, top_k=-1, repetition_penalty=1.1, stream=True)
+            
+            t_st = time.time()
+            ret_content = ""
+            for i in response:
+                msg = i.choices[0].delta.to_dict()
+                text_stream = msg.get('content')
+                if text_stream:
+                    ret_content += text_stream
+                    print(text_stream, flush=True, end="")
+                    yield make_ret_item(text_stream, False, [])
+            messages.append({"role": "assistant", "content": ret_content})
 
-        query = ""
-        for item in history:
-            name, role, content = item.get("name"), item.get("role"), item.get("content")
-            user_input = ""
-            user_input += name
-            if role:
-                user_input += f"({role})"
-            user_input += f": {content}\n"
-            query += user_input
-        messages.append({"role": "user", "content": query})
-        response = openai.ChatCompletion.create(model=model, messages=messages,
-                                                temperature=0.9, top_p=0.8, top_k=-1, repetition_penalty=1.1, stream=True)
-        
-        t_st = time.time()
-        ret_content = ""
-        for i in response:
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get('content')
-            if text_stream:
-                ret_content += text_stream
-                print(text_stream, flush=True, end="")
-                yield make_ret_item(text_stream, False, [])
-        messages.append({"role": "assistant", "content": ret_content})
-
-        time_cost = round(time.time() - t_st, 1)
-        logger.success(f"Model {model} generate costs summary: " + 
-                        f"total_texts:{len(ret_content)}, "
-                        f"complete cost: {time_cost}s")
-        yield make_ret_item("", True, messages[1:])
+            time_cost = round(time.time() - t_st, 1)
+            logger.success(f"Model {model} generate costs summary: " + 
+                            f"total_texts:{len(ret_content)}, "
+                            f"complete cost: {time_cost}s")
+            yield make_ret_item("", True, messages[1:])
+        except openai.APIError as e:
+            logger.error(f"Model {model} generate error: {e}")
+            yield make_ret_item("内容过长,超出模型处理氛围", True, [])
+        except Exception as err:
+            logger.error(f"Model {model} generate error: {err}")
+            yield make_ret_item(repr(err), True, [])
 
 if __name__ == "__main__":
     expert_model = expertModel(initAllResource())
@@ -352,5 +358,8 @@ if __name__ == "__main__":
     # expert_model.__blood_pressure_trend_analysis__(param)
 
     param = testParam.param_rec_diet_reunion_meals_restaurant_selection
-    expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    while True:
+        yield_item = next(generator)
+        print(yield_item)
     
