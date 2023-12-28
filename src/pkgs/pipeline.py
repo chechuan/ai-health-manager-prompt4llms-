@@ -121,8 +121,8 @@ class Chat_v2:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
-        logger.debug('sys prompt: ' + sys_prompt)
-        logger.debug(functions)
+        # logger.debug('sys prompt: ' + sys_prompt)
+        # logger.debug(functions)
         return sys_prompt, functions
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
@@ -600,25 +600,11 @@ class Chat_v2:
 
 if __name__ == '__main__':
     chat = Chat_v2(initAllResource())
-    ori_input_param = testParam.param_bug_schedular_202311201817
+    ori_input_param = testParam.param_feat_schedular_not_today
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.pipeline(history=history, 
-                                            sys_prompt=prompt, 
-                                            verbose=True, 
-                                            intentCode=intentCode, 
-                                            customId=customId, 
-                                            orgCode=orgCode))
     while True:
-        history.append({"role": "3", "content": out_text['message']})
-        conv = history[-1]
-        history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.pipeline(history=history, 
-                                                sys_prompt=prompt, 
-                                                verbose=True, 
-                                                intentCode=intentCode, 
-                                                customId=customId, 
-                                                orgCode=orgCode))
+        out_text, mid_vars = next(chat.general_yield_result(**ori_input_param))

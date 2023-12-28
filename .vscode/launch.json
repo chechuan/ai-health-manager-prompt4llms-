@@ -12,6 +12,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
+                "--env", "local",
+                "--special_prompt_version",
                 "--use_cache"
             ]
         },
