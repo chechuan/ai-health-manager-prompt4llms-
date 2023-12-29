@@ -195,8 +195,21 @@ class expertModel:
         }
         ```
         """
+        model = self.gsr.model_config['blood_pressure_trend_analysis']
         history = []
-        sys_prompt = "请你扮演一个专业的家庭医师,结合提供的信息帮助用户分析血压和心率变化整体趋势并给出健康建议,不超过200字."
+        sys_prompt = (
+            "请你扮演一个专业的家庭医师,结合提供的信息帮助用户分析。分析维度包含：\n"
+            "1.收缩压的整体变化趋势\n"
+            "2.舒张压的整体变化趋势\n"
+            "3.心率的整体变化趋势\n"
+            "4.异常血压的提示\n"
+            "5.异常心率的提示\n"
+            "6.给出健康建议\n"
+            "7.整体输出内容不超过200字\n"
+            "收缩压正常值小于140\n"
+            "舒张压正常值小于90\n"
+            "心率正常值60至100\n"
+        )
         history.append({"role":"system", "content": sys_prompt})
         
         tst = param['ihm_health_sbp'][0]['date']
@@ -210,8 +223,16 @@ class expertModel:
             content += self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
         history.append({"role":"user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
-        content = chat_qwen(history=history, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
-        logger.debug(f"趋势分析结果: {content}")
+        response = chat_qwen(history=history, temperature=0.8, top_p=1, model=model, stream=True)
+        content = ""
+        tst = time.time()
+        for chunk in response:
+            if hasattr(chunk['choices'][0]['delta'], "content"):
+                text_stream = chunk['choices'][0]['delta']['content']
+                content += text_stream
+                print(text_stream, end="", flush=True)
+        cost = round(time.time()-tst, 2)
+        logger.debug(f"趋势分析结果 length - {len(content)}, cost - {cost}")
         return content
 
     def __food_purchasing_list_manage__(self, reply="好的-unknow reply",**kwds):

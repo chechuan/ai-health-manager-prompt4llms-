@@ -276,6 +276,7 @@ class funcCall:
 
         prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
         today_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
+        # TODO 查询非当日日程
         history = [{"role": "system", "content": prompt}]
         user_input = compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})

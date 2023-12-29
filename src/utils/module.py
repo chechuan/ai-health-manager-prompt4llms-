@@ -102,7 +102,7 @@ class initAllResource:
                     else:
                         continue
             else:
-                latest_item = [i for i in item_list if i[ikey] == curr_item_id][0]
+                latest_item = [i for i in item_list if i[ikey] == curr_item_id and i['version'] == "latest"][0]
             return latest_item
 
         data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
