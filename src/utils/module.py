@@ -232,9 +232,9 @@ def get_intent(text):
     elif '运动评价' in text:
         code = 'sport_eval'
         desc = '运动评价'
-    elif '运动推荐' in text:
+    elif '运动咨询' in text:
         code = 'sport_rec'
-        desc = '运动推荐'
+        desc = '运动咨询'
     elif '页面' in text or '打开' in text:
         code = 'open_Function'
         desc = '打开功能页面'
