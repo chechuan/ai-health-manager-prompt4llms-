@@ -11,7 +11,7 @@ import pickle
 import sys
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import AnyStr, Dict, Tuple
 from urllib import parse
@@ -574,6 +574,10 @@ def this_sunday():
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
     return datetime.strftime(today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S")
 
+def curr_weekday():
+    today = date.today().strftime('%A')
+    return today
+
 def dumpJS(obj):
     return json.dumps(obj, ensure_ascii=False)
 
@@ -590,6 +594,25 @@ def decorate_text_stream(generator):
         if yield_item['end'] is True:
             break
 
+def accept_stream_response(response, verbose=True):
+    content = ""
+    tst = time.time()
+    for chunk in response:
+        if chunk.get('object') == "text_completion":
+            if hasattr(chunk['choices'][0],'text'):
+                chunk_text = chunk['choices'][0]['text']
+                content += chunk_text
+                if verbose:
+                    print(chunk_text, end="", flush=True)
+        else:
+            if hasattr(chunk['choices'][0]['delta'], 'content'):
+                chunk_text = chunk['choices'][0]['delta']['content']
+                content += chunk_text
+                if verbose:
+                    print(chunk_text, end="", flush=True)
+    t_cost = round(time.time() - tst, 2)
+    logger.debug(f"generate {len(content)} words, cost {t_cost}s")
+    return content
 
 if __name__ == "__main__":
     initAllResource()

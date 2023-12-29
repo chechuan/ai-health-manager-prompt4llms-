@@ -15,16 +15,18 @@ import sys
 from pathlib import Path
 from typing import Any, AnyStr, Dict
 
+from pytz import timezone
 from requests import Session
 
 sys.path.append(str(Path.cwd()))
 
 from config.constrant import DEFAULT_DATA_SOURCE, ParamServer
-from config.constrant_for_task_schedule import query_schedule_template
+from config.constrant_for_task_schedule import query_schedule_template, query_schedule_template_v2
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, chat_qwen
 from src.utils.Logger import logger
-from src.utils.module import clock, curr_time, date_after_days, initAllResource, this_sunday
+from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
+                              date_after_days, initAllResource, this_sunday)
 
 
 class funcCall:
@@ -285,75 +287,55 @@ class funcCall:
         Note:
             1. 仅查询当日未完成日程
         """
-        def compose_today_schedule(schedule, **kwds):
-            """组装用户当日日程
-            "您还有5项日程需要完成\n",
-            "事项：血压测量，时间：8:00、20:00\n", 
-            "事项：三餐，时间：7：00、11：00、17：00\n", 
-            "事项：会议14：00，提前15min 提醒时间：14：00\n", 
-            "事项：用药，时间：21：00\n", 
-            "事项：慢走20min，今日完成，时间：21：00\n\n",
-            """
-            prompt = f"用户日程为：\n您还有{len(schedule)}项日程需要完成\n"
-            schedule = list(sorted(schedule, key=lambda item: item['time']))
-            task_dict = {i['task']: "" for i in schedule}
-            for sch in schedule:
-                task_dict[sch['task']] += sch['time'][11:-3]
-            prompt += "\n".join([f"事项：{task_name}，时间：{time}" for task_name, time in task_dict.items()])
-            prompt += "\n\n日程提醒:\n"
-            return prompt
         
         def confirm_query_time_range(query: str) -> Dict:
             """确定查询的时间范围
             """
-            current = curr_time()
-            sunday = this_sunday()
-            example_output = json.dumps({"startTime": current,"endTime":sunday})
+            current = curr_time() + " " + curr_weekday()
+            # sunday = this_sunday()
+            # example_output = json.dumps({"startTime": current,"endTime":sunday})
+            output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
             prompt = (
-                f"请你理解用户所说, 提取对应查询的时间范围, 以json格式返回, 请按以下格式思考:\n"
-                "Question: user input\n"
-                f"Thought: you should always thinks what to do\n"
-                f'Input: example output such as: {example_output}\n'
-                "Observation: 已生成查询时间范围\n"
-                "Begins!\n\n"
-
-                f"Question: 现在的时间是{current}, {query}\n"
-                "Thought: "
+                "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
+                "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
+                "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
+                "3. 如果说本周,则从本周一开始至周日23:59:59\n"
+                f"4. 输出的格式参考: {output_format}\n\n"
+                f"现在时间: {current}\n"
+                f"用户输入: {query}\n"
+                "输出:"
             )
-            text = chat_qwen(prompt, model=model, stop="Observation")
-            output = text[text.find("Input:") + len("Input:"):].strip()
+            # logger.debug(prompt)
+            response = chat_qwen(prompt, model=model, stop="\n\n", stream=True)
+            text = accept_stream_response(response, verbose=False)
+            output = text.strip()
             time_range = json.loads(output)
+            logger.debug(f"{output}")
             return time_range
 
         model = kwds.get("model", "Qwen-14B-Chat")
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
         query = kwds['history'][-2]['content']
+        query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
         try:
             time_range = confirm_query_time_range(query)
         except Exception as err:
-            time_range = {"startTime": curr_time(), "endTime": date_after_days(14)}
-
-        prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
+            time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
+   
         target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
-        # TODO 查询非当日日程
-        history = [{"role": "system", "content": prompt}]
-        user_input = compose_today_schedule(target_schedule)
-        history.append({"role": "user", "content": user_input})
-        raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
-        print(json.dumps(history, ensure_ascii=False, indent=4))
-        self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
-        return raw_content
+        target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
+        prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
+        prompt = prompt.replace("{{user_schedule}}", target_schedule_content)
+        prompt = prompt.replace("{{query}}", query)
 
-        # cur_time, end_time = curr_time(), date_after_days(14)
-        # prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
-        # today_schedule = [i for i in schedule if i['time'][:10]==cur_time[:10] and i['time'] > cur_time]
-        # history = [{"role": "system", "content": prompt}]
-        # user_input = compose_today_schedule(today_schedule)
-        # history.append({"role": "user", "content": user_input})
-        # raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
-        # print(json.dumps(history, ensure_ascii=False, indent=4))
-        # self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
-        # return raw_content
+        messages = [
+            {"role": "user", "content": prompt}
+        ]
+        logger.debug(prompt)
+        response = chat_qwen(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
+        content = accept_stream_response(response)
+        self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=prompt, output_text=content, model=model)
+        return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
                               score_threshold=1, temperature=0.7, top_k=3, top_p=0.8, 
