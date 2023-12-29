@@ -229,6 +229,9 @@ def get_intent(text):
     elif '医疗' in text:
         code = 'med_health'
         desc = '医疗健康'
+    elif '运动评价' in text:
+        code = 'sport_eval'
+        desc = '运动评价'
     elif '运动咨询' in text:
         code = 'sport_rec'
         desc = '运动咨询'
