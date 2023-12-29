@@ -49,7 +49,8 @@ class funcCall:
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
-        self.register_func("query_schedule",    self.call_schedule_query)
+        # self.register_func("query_schedule",    self.call_schedule_query)
+        self.register_func("query_schedule",    self.call_schedule_query_v1)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
@@ -219,8 +220,66 @@ class funcCall:
             content = "日程修改失败"
         self.update_mid_vars(kwds['mid_vars'], key="调用取消日程接口", input_text=payload, output_text=resp_js, model="算法后端")
         return content
-
+    
     def call_schedule_query(self, *args, **kwds):
+        """查询用户日程处理逻辑
+
+        Note:
+            1. 仅查询当日未完成日程
+        """
+        def compose_today_schedule(schedule, **kwds):
+            """组装用户当日日程
+            "您还有5项日程需要完成\n",
+            "事项：血压测量，时间：8:00、20:00\n", 
+            "事项：三餐，时间：7：00、11：00、17：00\n", 
+            "事项：会议14：00，提前15min 提醒时间：14：00\n", 
+            "事项：用药，时间：21：00\n", 
+            "事项：慢走20min，今日完成，时间：21：00\n\n",
+            """
+            prompt = f"用户日程为：\n您还有{len(schedule)}项日程需要完成\n"
+            schedule = list(sorted(schedule, key=lambda item: item['time']))
+            task_dict = {i['task']: "" for i in schedule}
+            for sch in schedule:
+                task_dict[sch['task']] += sch['time'][11:-3]
+            prompt += "\n".join([f"事项：{task_name}，时间：{time}" for task_name, time in task_dict.items()])
+            prompt += "\n\n日程提醒:\n"
+            return prompt
+        
+        def confirm_query_time_range(query: str) -> Dict:
+            """确定查询的时间范围
+            """
+            current = curr_time()
+            sunday = this_sunday()
+            example_output = json.dumps({"startTime": current,"endTime":sunday})
+            prompt = (
+                f"请你理解用户所说, 提取对应查询的时间范围, 以json格式返回, 请按以下格式思考:\n"
+                "Question: user input\n"
+                f"Thought: you should always thinks what to do\n"
+                f'Input: example output such as: {example_output}\n'
+                "Observation: 已生成查询时间范围\n"
+                "Begins!\n\n"
+
+                f"Question: 现在的时间是{current}, {query}\n"
+                "Thought: "
+            )
+            text = chat_qwen(prompt, model=model, stop="Observation")
+            output = text[text.find("Input:") + len("Input:"):].strip()
+            time_range = json.loads(output)
+            return time_range
+
+        model = kwds.get("model", "Qwen-14B-Chat")
+        schedule = self.funcmap["get_schedule"]['func'](**kwds)
+        cur_time, end_time = curr_time(), date_after_days(14)
+        prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
+        today_schedule = [i for i in schedule if i['time'][:10]==cur_time[:10] and i['time'] > cur_time]
+        history = [{"role": "system", "content": prompt}]
+        user_input = compose_today_schedule(today_schedule)
+        history.append({"role": "user", "content": user_input})
+        raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
+        self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
+        return raw_content
+
+    def call_schedule_query_v1(self, *args, **kwds):
         """查询用户日程处理逻辑
 
         Note:
@@ -275,10 +334,10 @@ class funcCall:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(14)}
 
         prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
-        today_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
+        target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         # TODO 查询非当日日程
         history = [{"role": "system", "content": prompt}]
-        user_input = compose_today_schedule(today_schedule)
+        user_input = compose_today_schedule(target_schedule)
         history.append({"role": "user", "content": user_input})
         raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
         print(json.dumps(history, ensure_ascii=False, indent=4))
