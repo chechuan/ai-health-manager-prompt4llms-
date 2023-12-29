@@ -8,21 +8,21 @@ local:
   schedular_time_understand: Qwen-14B-Chat
 dev:
   call_schedule_query: Qwen-14B-Chat
-  blood_pressure_trend_analysis: Qwen-1_8B-Chat
+  blood_pressure_trend_analysis: Qwen-72B-Chat
   decorate_search_prompt: Qwen-1_8B-Chat
   react_model: Qwen-14B-Chat
   food_purchasing_list_management: Qwen-14B-Chat
   reunion_meals_restaurant_selection: Yi-34B-Chat
 test:
   call_schedule_query: Qwen-14B-Chat
-  blood_pressure_trend_analysis: Qwen-1_8B-Chat
+  blood_pressure_trend_analysis: Qwen-72B-Chat
   decorate_search_prompt: Qwen-1_8B-Chat
   react_model: Qwen-14B-Chat
   food_purchasing_list_management: Qwen-14B-Chat
   reunion_meals_restaurant_selection: Yi-34B-Chat
 fat:
   call_schedule_query: Qwen-14B-Chat
-  blood_pressure_trend_analysis: Qwen-1_8B-Chat
+  blood_pressure_trend_analysis: Qwen-72B-Chat
   decorate_search_prompt: Qwen-1_8B-Chat
   react_model: Qwen-14B-Chat
   food_purchasing_list_management: Qwen-14B-Chat
