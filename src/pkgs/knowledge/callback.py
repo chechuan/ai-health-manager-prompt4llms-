@@ -246,28 +246,6 @@ class funcCall:
             prompt += "\n".join([f"事项：{task_name}，时间：{time}" for task_name, time in task_dict.items()])
             prompt += "\n\n日程提醒:\n"
             return prompt
-        
-        def confirm_query_time_range(query: str) -> Dict:
-            """确定查询的时间范围
-            """
-            current = curr_time()
-            sunday = this_sunday()
-            example_output = json.dumps({"startTime": current,"endTime":sunday})
-            prompt = (
-                f"请你理解用户所说, 提取对应查询的时间范围, 以json格式返回, 请按以下格式思考:\n"
-                "Question: user input\n"
-                f"Thought: you should always thinks what to do\n"
-                f'Input: example output such as: {example_output}\n'
-                "Observation: 已生成查询时间范围\n"
-                "Begins!\n\n"
-
-                f"Question: 现在的时间是{current}, {query}\n"
-                "Thought: "
-            )
-            text = chat_qwen(prompt, model=model, stop="Observation")
-            output = text[text.find("Input:") + len("Input:"):].strip()
-            time_range = json.loads(output)
-            return time_range
 
         model = kwds.get("model", "Qwen-14B-Chat")
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
@@ -299,7 +277,7 @@ class funcCall:
                 "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
                 "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
                 "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
-                "3. 如果说本周,则从本周一开始至周日23:59:59\n"
+                "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
                 f"4. 输出的格式参考: {output_format}\n\n"
                 f"现在时间: {current}\n"
                 f"用户输入: {query}\n"
@@ -324,6 +302,8 @@ class funcCall:
    
         target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
+        if not target_schedule_content:
+            target_schedule_content = "当前无日程"
         prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
         prompt = prompt.replace("{{user_schedule}}", target_schedule_content)
         prompt = prompt.replace("{{query}}", query)
