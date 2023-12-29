@@ -75,8 +75,7 @@ class funcCall:
         assert kwds.get("customId"), KeyError("customId is required")
 
         payload = {"orgCode": kwds.get("orgCode"),"customId": kwds.get("customId")}
-        response = self.session.post(url, json=payload, headers=self.headers).text
-        resp_js = json.loads(response)
+        resp_js = self.session.post(url, json=payload, headers=self.headers).json()
         data = resp_js['data']
         ret = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
         set_str = set([json.dumps(i, ensure_ascii=False) for i in ret])

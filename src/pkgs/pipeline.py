@@ -121,8 +121,8 @@ class Chat_v2:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
-        logger.debug('sys prompt: ' + sys_prompt)
-        logger.debug(functions)
+        # logger.debug('sys prompt: ' + sys_prompt)
+        # logger.debug(functions)
         return sys_prompt, functions
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
@@ -400,13 +400,14 @@ class Chat_v2:
         logger.debug('信息提取模型输出：' + model_output)
         content = model_output
         self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
-        if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
+        if sum([i in content for i in ["询问","提问","转移","结束", "未知","停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(mid_vars, history=history)
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
         elif content:
             content = content.split('\n')[0].split('。')[0][:20]
         content = content if content else '未知'
+        content = '未知' if 'Error' in content else content
         return content, intentCode
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
@@ -600,25 +601,11 @@ class Chat_v2:
 
 if __name__ == '__main__':
     chat = Chat_v2(initAllResource())
-    ori_input_param = testParam.param_bug_schedular_202311201817
+    ori_input_param = testParam.param_feat_schedular_not_today
     prompt = ori_input_param['prompt']
     history = ori_input_param['history']
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.pipeline(history=history, 
-                                            sys_prompt=prompt, 
-                                            verbose=True, 
-                                            intentCode=intentCode, 
-                                            customId=customId, 
-                                            orgCode=orgCode))
     while True:
-        history.append({"role": "3", "content": out_text['message']})
-        conv = history[-1]
-        history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.pipeline(history=history, 
-                                                sys_prompt=prompt, 
-                                                verbose=True, 
-                                                intentCode=intentCode, 
-                                                customId=customId, 
-                                                orgCode=orgCode))
+        out_text, mid_vars = next(chat.general_yield_result(**ori_input_param))
