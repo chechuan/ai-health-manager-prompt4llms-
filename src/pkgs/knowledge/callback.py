@@ -269,7 +269,6 @@ class funcCall:
         def confirm_query_time_range(query: str) -> Dict:
             """确定查询的时间范围
             """
-            current = curr_time() + " " + curr_weekday()
             # sunday = this_sunday()
             # example_output = json.dumps({"startTime": current,"endTime":sunday})
             output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
@@ -284,14 +283,16 @@ class funcCall:
                 "输出:"
             )
             # logger.debug(prompt)
+            model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
             response = chat_qwen(prompt, model=model, stop="\n\n", stream=True)
             text = accept_stream_response(response, verbose=False)
             output = text.strip()
             time_range = json.loads(output)
             logger.debug(f"{output}")
             return time_range
-
-        model = kwds.get("model", "Qwen-14B-Chat")
+        
+        current = curr_time() + " " + curr_weekday()
+        model = self.model_config.get('call_schedule_query', 'Qwen-14B-Chat')
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
@@ -303,8 +304,8 @@ class funcCall:
         target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
         if not target_schedule_content:
-            target_schedule_content = "当前无日程"
-        prompt = query_schedule_template.replace("{{cur_time}}", curr_time())
+            target_schedule_content = "空"
+        prompt = query_schedule_template.replace("{{cur_time}}", current)
         prompt = prompt.replace("{{user_schedule}}", target_schedule_content)
         prompt = prompt.replace("{{query}}", query)
 
@@ -312,8 +313,8 @@ class funcCall:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = chat_qwen(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
-        content = accept_stream_response(response)
+        response = chat_qwen(history=messages, top_p=0.8, temperature=0.5, model=model, stream=True)
+        content = accept_stream_response(response, verbose=False)
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=prompt, output_text=content, model=model)
         return content
 

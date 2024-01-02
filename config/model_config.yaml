@@ -1,11 +1,11 @@
 local:
-  call_schedule_query: Qwen-14B-Chat
-  blood_pressure_trend_analysis: Qwen-72B-Chat
-  decorate_search_prompt: Qwen-1_8B-Chat
-  react_model: Qwen-14B-Chat
-  food_purchasing_list_management: Qwen-14B-Chat
-  reunion_meals_restaurant_selection: Yi-34B-Chat
-  schedular_time_understand: Qwen-14B-Chat
+  blood_pressure_trend_analysis: Qwen-72B-Chat        # 血压心率趋势分析
+  decorate_search_prompt: Qwen-1_8B-Chat              # 查询知识库装饰
+  react_model: Qwen-14B-Chat                          # react模型
+  food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
+  reunion_meals_restaurant_selection: Yi-34B-Chat     # 共策决策
+  schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
+  call_schedule_query: Qwen-14B-Chat                  # 查询日程最终的组装输出
 dev:
   call_schedule_query: Qwen-14B-Chat
   blood_pressure_trend_analysis: Qwen-72B-Chat

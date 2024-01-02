@@ -13,7 +13,7 @@ import os
 
 import json5
 
-from src.utils.module import curr_time
+from src.utils.module import curr_time, curr_weekday
 
 # import torch
 
@@ -104,7 +104,7 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     tools_name_text = ', '.join([plugin_info["code"] for plugin_info in list_of_plugin_info if plugin_info.get("code")])
     _sys_prompt = _sys_prompt.replace("{tools_name_text}", tools_name_text)
     if "{current_time}" in _sys_prompt:
-        _sys_prompt = _sys_prompt.replace("{current_time}", curr_time())
+        _sys_prompt = _sys_prompt.replace("{current_time}", curr_time() + " " + curr_weekday())
     if "{current_schedule}" in _sys_prompt:
         _sys_prompt = _sys_prompt.replace("{current_schedule}", kwargs['current_schedule'])
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
