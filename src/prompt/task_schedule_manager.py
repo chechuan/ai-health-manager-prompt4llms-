@@ -9,36 +9,22 @@ import json
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import AnyStr, Dict, List
+from typing import Dict, List
 
-import openai
 import requests
-import yaml
 from langchain.prompts import PromptTemplate
 
-sys.path.append(".")
+sys.path.append(str(Path.cwd()))
 from config.constrant import task_schedule_return_demo
 from config.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
                                                 task_schedule_parameter_description,
                                                 task_schedule_parameter_description_for_qwen)
-from src.prompt.model_init import ChatCompletionRequest, ChatMessage, chat_qwen
+from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM, scheduleCreateRequest
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
-from src.utils.module import make_meta_ret
+from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
+                              date_after_days, initAllResource, make_meta_ret, this_sunday)
 
-
-def call_qwen(messages, functions=None):
-    model_name = "Qwen-14B-Chat"
-    openai.api_base = "http://10.228.67.99:26926/v1"
-    openai.api_key = "empty"
-    # logger.debug(messages)
-    if functions:
-        response = openai.ChatCompletion.create(model=model_name, messages=messages, functions=functions)
-    else:
-        response = openai.ChatCompletion.create(model=model_name, messages=messages)
-    logger.debug("Assistant:\t", response.choices[0].message.content)
-    messages.append(json.loads(json.dumps(response.choices[0].message, ensure_ascii=False)))
-    return messages
 
 class taskSchedulaManager:
     headers: Dict = {"content-type": "application/json"}
@@ -81,7 +67,7 @@ class taskSchedulaManager:
         content = self.sys_prompt + self.conv_prompt.format(input=query)
         if kwds.get("verbose"):
             logger.debug(content)
-        ret = chat_qwen(content)
+        ret = callLLM(content)
         logger.debug(eval(ret))
         return ret
 
@@ -248,7 +234,7 @@ class taskSchedulaManager:
         history = [{"role": "system", "content": prompt}]
         user_input = self.compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})
-        raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7)
+        raw_content = callLLM(history=history, top_p=0.8, temperature=0.7)
         mid_vars_item.append({"key":"总结查询到的日程", "input_text": history, "output_text": raw_content})
         return raw_content, mid_vars_item
 
@@ -328,6 +314,78 @@ class taskSchedulaManager:
                                  type="Result", 
                                  init_intent=self.prompt_meta_data['init_intent'].get(tool_name, False))
         yield meta_ret, mid_vars_item
+
+class scheduleManager:
+    """细化版日程管理模块 2024年1月2日17:56:10
+    """
+    def __init__(self, gsr) -> None:
+        self.api_config = gsr.api_config
+        self.model_config = gsr.model_config
+        self.prompt_meta_data = gsr.prompt_meta_data
+
+    def create(self, *args, **kwds):
+        """提取日程信息并创建日程，处理流程见 doc/日程管理/日程创建流程.drawio
+        """
+        def extract_event_time_pair(query: str):
+            head_str = '''[["'''
+            model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
+            prompt = (
+                "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
+                "1. 日程名称尽量简洁明了并包含用户所描述的事件信息，如果未明确，则默认为`提醒`\n"
+                "2. 事件可能是一个或多个, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
+                '3. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
+                "# 示例\n"
+                "用户输入: 3分钟后叫我一下,今晚8点提醒我们看联欢晚会, 待会儿看电视\n"
+                "输出: \n"
+                '[["提醒", "3分钟后"],["看联欢晚会", "今晚8点"],["看电视", None]]\n'
+                f"用户输入: {query}\n"
+                "输出: \n"
+                f"{head_str}"
+            )
+            response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
+            event_time_pair = head_str + accept_stream_response(response, verbose=False)
+            event_time_pair = eval(event_time_pair)
+            return event_time_pair
+        
+        query = kwds['history'][-2]['content']
+        customId = kwds.get("customId")
+        orgCode = kwds.get("orgCode")
+
+        func = self.funcmap['create_schedule']
+        url = self.api_config["ai_backend"] + func['method']
+        
+        event_time_pair = extract_event_time_pair(query)
+        except_result, unexpcept_result = [], []
+        for item in event_time_pair:
+            event, tdesc = item
+            if not (event and tdesc):
+                item.append(None)
+                unexpcept_result.append(item)
+            current_time = self.get_currct_time_from_desc(tdesc)
+            item.append(current_time)
+            except_result.append(item)
+        except_result.sort(key=lambda x: x[2])      # 对提取出的事件 - 时间 按时间排序
+
+        for task, desc, cronDate in except_result:
+            # TODO 2024年1月2日18:18:43 开发中
+            input_payload = scheduleCreateRequest(customId, orgCode, task, cronDate)
+            payload = {**input_payload}
+            response = self.session.post(url, json=payload).text
+            resp_js = json.loads(response)
+
+            if resp_js["code"] == 200:
+                msg = eval(msg.function_call['arguments'])
+                if msg.get('ask'):
+                    content = msg['ask']
+                else:
+                    content = "日程创建成功"
+                logger.info(f"Create schedule org: {orgCode} - uid: {customId}")
+            else:
+                content = "抱歉，日程创建失败，请稍后再试"
+                logger.exception(f"日程创建失败: \n{resp_js}")
+        self.update_mid_vars(kwds['mid_vars'], key="调用创建日程接口", input_text=payload, output_text=resp_js, model="算法后端")
+        return content
+
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")

@@ -18,12 +18,14 @@ from typing import Any, AnyStr, Dict
 from pytz import timezone
 from requests import Session
 
+from src.prompt.task_schedule_manager import scheduleManager
+
 sys.path.append(str(Path.cwd()))
 
 from config.constrant import DEFAULT_DATA_SOURCE, ParamServer
 from config.constrant_for_task_schedule import query_schedule_template, query_schedule_template_v2
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
-from src.prompt.model_init import ChatMessage, chat_qwen
+from src.prompt.model_init import ChatMessage, callLLM
 from src.utils.Logger import logger
 from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
                               date_after_days, initAllResource, this_sunday)
@@ -42,6 +44,7 @@ class funcCall:
         self.prompt_meta_data = gsr.prompt_meta_data
         self.register_for_all()
         self.ext_api_factory = extApiFactory(self)
+        self.scheduleManager = scheduleManager(gsr)
 
     def register_for_all(self):
         self.funcmap = {}
@@ -51,6 +54,7 @@ class funcCall:
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
+        # self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         # self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("query_schedule",    self.call_schedule_query_v1)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
@@ -70,6 +74,24 @@ class funcCall:
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
+
+    def get_currct_time_from_desc(self, time_desc: str):
+        """根据时间描述获取正确的时间
+        - Args
+            time_desc [str]: 时间的描述 如:今晚8点
+        - Return
+            target_time [str]: %Y-%m-%d %H:%M:%S格式的时间
+        """
+        model = self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat')
+        current_time = curr_time() + " " +  curr_weekday()
+        prompt = (
+                "你是一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间(%Y-%m-%d %H:%M:%S格式)\n"
+                f"现在的时间是: {current_time}\n"
+                f"{time_desc}对应的时间是: "
+            )
+        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stream=True, stop="\n")
+        target_time = accept_stream_response(response, verbose=False)[:19]
+        return target_time
 
     @clock
     def call_get_schedule(self, *args, **kwds):
@@ -255,7 +277,7 @@ class funcCall:
         history = [{"role": "system", "content": prompt}]
         user_input = compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})
-        raw_content = chat_qwen(history=history, top_p=0.8, temperature=0.7, model=model)
+        raw_content = callLLM(history=history, top_p=0.8, temperature=0.7, model=model)
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
         return raw_content
 
@@ -284,7 +306,7 @@ class funcCall:
             )
             # logger.debug(prompt)
             model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
-            response = chat_qwen(prompt, model=model, stop="\n\n", stream=True)
+            response = callLLM(prompt, model=model, stop="\n\n", stream=True)
             text = accept_stream_response(response, verbose=False)
             output = text.strip()
             time_range = json.loads(output)
@@ -313,7 +335,7 @@ class funcCall:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = chat_qwen(history=messages, top_p=0.8, temperature=0.5, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.8, temperature=0.5, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=prompt, output_text=content, model=model)
         return content
@@ -328,7 +350,7 @@ class funcCall:
         def decorate_search_prompt(query: str) -> str:
             """优化要查询的query"""
             his = [{"role":"user", "content": query}]
-            content = chat_qwen(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
+            content = callLLM(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
             return content
 
         called_method = self.funcmap['searchKB']['method']
@@ -395,7 +417,7 @@ class funcCall:
             template = template["Empty"]
         prompt = template.replace("{{ question }}", search_result)
 
-        content = chat_qwen(prompt, model_name=model_name, temperature=0.7, top_p=0.8)
+        content = callLLM(prompt, model_name=model_name, temperature=0.7, top_p=0.8)
         self.update_mid_vars(kwargs['mid_vars'], 
                              key=f"搜索引擎 -> LLM", 
                              input_text=prompt, 

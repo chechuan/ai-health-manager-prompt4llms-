@@ -18,7 +18,7 @@ from typing import Dict, List
 
 from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
-from src.prompt.model_init import chat_qwen
+from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 from src.utils.module import clock, get_intent, initAllResource
 
@@ -153,7 +153,7 @@ class expertModel:
 
         logger.debug(f"饮食点评 Prompt:\n{json.dumps(history, ensure_ascii=False)}")
         
-        content = chat_qwen(history=history, temperature=0.7, top_p=0.8)
+        content = callLLM(history=history, temperature=0.7, top_p=0.8)
         
         logger.debug(f"饮食点评 Result:\n{content}")
         
@@ -223,7 +223,7 @@ class expertModel:
             content += self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
         history.append({"role":"user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
-        response = chat_qwen(history=history, temperature=0.8, top_p=1, model=model, stream=True)
+        response = callLLM(history=history, temperature=0.8, top_p=1, model=model, stream=True)
         content = ""
         tst = time.time()
         for chunk in response:
@@ -263,12 +263,12 @@ class expertModel:
         sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
         query = sys_prompt + f"\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
         history = [{"role":"user", "content":query}]
-        content = chat_qwen(history=history, temperature=0.7, model=model, top_p=0.8)
+        content = callLLM(history=history, temperature=0.7, model=model, top_p=0.8)
         try:
             reply, purchasing_list = parse_model_response(content)
         except Exception as err:
             logger.exception(content)
-            content = chat_qwen(history=history, temperature=0.7, model=model, top_p=0.8)
+            content = callLLM(history=history, temperature=0.7, model=model, top_p=0.8)
             try:
                 reply, purchasing_list = parse_model_response(content)
             except Exception as err:

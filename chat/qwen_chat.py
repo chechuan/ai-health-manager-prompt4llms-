@@ -22,7 +22,7 @@ from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
-from src.prompt.model_init import chat_qwen
+from src.prompt.model_init import callLLM
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
 from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock, get_doc_role,
@@ -103,7 +103,7 @@ class Chat:
         # 利用Though防止生成无关信息
         prompt += "Thought: "
         logger.debug(f"辅助诊断 Input:\n{prompt}")
-        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens)
+        model_output = callLLM(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
         self.update_mid_vars(kwargs.get("mid_vars"), 
                              key="辅助诊断", 
@@ -122,7 +122,7 @@ class Chat:
                     model_output + "\n输出:\n"
             
             logger.debug('ReAct regenerate input: ' + prompt)
-            model_output = chat_qwen(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
+            model_output = callLLM(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
             
             self.update_mid_vars(kwargs.get("mid_vars"), 
                                  key="辅助诊断 改写修正", 
@@ -192,7 +192,7 @@ class Chat:
         his_prompt = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         prompt = input_prompt + "\n\n" + his_prompt + "\nThought: "
-        generate_text = chat_qwen(query=prompt, max_tokens=40, top_p=0.8,
+        generate_text = callLLM(query=prompt, max_tokens=40, top_p=0.8,
                 temperature=0.7, do_sample=False)
         logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
@@ -232,7 +232,7 @@ class Chat:
         else:
             prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
-        generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
+        generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
@@ -249,7 +249,7 @@ class Chat:
             else:
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
-            generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
+            generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])
             logger.debug('子意图模型输出：' + generate_text)
             intentIdx = generate_text.find("\nIntent: ") + 9
@@ -268,7 +268,7 @@ class Chat:
         content = backend_history[-1]['function_call']['arguments']
         # ext_info = self.prompt_meta_data['event']['闲聊']['description'] + "\n" + self.prompt_meta_data['event']['闲聊']['process']
         # input_history = [{"role":"system", "content": ext_info}] + input_history
-        # content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        # content = callLLM("", input_history, temperature=0.7, top_p=0.8)
         # self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
 
@@ -310,7 +310,7 @@ class Chat:
         ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
-        content = chat_qwen("", input_history, temperature=0.7, top_p=0.8)
+        content = callLLM("", input_history, temperature=0.7, top_p=0.8)
         if content.find('Answer') != -1:
             content = content[content.find('Answer')+7:].split('\n')[0].strip()
         elif content.find('Output') != -1:
@@ -322,7 +322,7 @@ class Chat:
         """获取用户信息
         """
         logger.debug(f'信息提取prompt:\n{prompt}')
-        model_output = chat_qwen(prompt, 
+        model_output = callLLM(prompt, 
                                  verbose=False, 
                                  temperature=0, 
                                  top_p=0.8,
@@ -342,7 +342,7 @@ class Chat:
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
-        model_output = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
+        model_output = callLLM(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
         self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=model_output, model=model)
         logger.debug('remind model output: ' + model_output)
         if model_output.startswith('（）'):

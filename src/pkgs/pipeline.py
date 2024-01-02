@@ -22,7 +22,7 @@ from config.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine
-from src.prompt.model_init import chat_qwen
+from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
 from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
@@ -73,7 +73,7 @@ class Chat_v2:
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
         logger.debug(f"ReAct Prompt:\n{prompt}")
-        model_output = chat_qwen(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat", stop=["\nObservation"])
+        model_output = callLLM(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens, model="Qwen-14B-Chat", stop=["\nObservation"])
         model_output = "\nThought: " + model_output
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -116,8 +116,6 @@ class Chat_v2:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
-        # logger.debug('sys prompt: ' + sys_prompt)
-        # logger.debug(functions)
         return sys_prompt, functions
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
@@ -172,7 +170,7 @@ class Chat_v2:
         else:
             prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
-        generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
+        generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False)
         logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = generate_text.find("\nIntent: ") + 9
@@ -188,7 +186,7 @@ class Chat_v2:
             else:
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
-            generate_text = chat_qwen(query=prompt, max_tokens=200, top_p=0.8,
+            generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False)
             intentIdx = generate_text.find("\nIntent: ") + 9
             text = generate_text[intentIdx:].split("\n")[0]
@@ -222,7 +220,7 @@ class Chat_v2:
 
         messages = [{"role":"system", "content": ext_info}] + messages
         messages = compose_func_reply(messages)
-        content = chat_qwen("", messages, temperature=0.7, top_p=0.8)
+        content = callLLM("", messages, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False), output_text=content)
         if kwargs.get("return_his"):
             messages.append({
@@ -386,7 +384,7 @@ class Chat_v2:
         """获取用户信息
         """
         logger.debug(f'信息提取prompt:\n{prompt}')
-        model_output = chat_qwen(prompt,
+        model_output = callLLM(prompt,
                                  verbose=False,
                                  temperature=0,
                                  top_p=0.8,
@@ -407,7 +405,7 @@ class Chat_v2:
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
-        content = chat_qwen(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
+        content = callLLM(query=prompt, verbose=False, do_sample=False, temperature=0.1, top_p=0.2, max_tokens=500, model=model)
         self.update_mid_vars(mid_vars, key="", input_text=prompt, output_text=content, model=model)
         logger.debug('remind model output: ' + content)
         if content.startswith('（）'):
@@ -452,7 +450,7 @@ class Chat_v2:
         ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
         input_history = [{"role":"system", "content": ext_info}]
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
-        content = chat_qwen("", input_history, temperature=0, top_p=0.8, do_sample=False)
+        content = callLLM("", input_history, temperature=0, top_p=0.8, do_sample=False)
         if content.find('Answer') != -1:
             content = content[content.find('Answer')+7:].split('\n')[0].strip()
         if content.find('Output') != -1:

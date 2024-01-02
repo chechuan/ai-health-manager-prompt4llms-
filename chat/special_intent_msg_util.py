@@ -1,5 +1,5 @@
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from src.prompt.model_init import chat_qwen
+from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 
 role_map = {

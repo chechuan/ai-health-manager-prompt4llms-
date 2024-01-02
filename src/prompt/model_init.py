@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 from src.utils.Logger import logger
 
 
-def chat_qwen(query: str = "", 
+def callLLM(query: str = "", 
               history: List[Dict] = [], 
               temperature=0.5,
               top_k=-1,
@@ -161,3 +161,11 @@ class ChatCompletionResponse(BaseModel):
         Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]
     ]
     created: Optional[int] = Field(default_factory=lambda: int(time.time()))
+
+class scheduleCreateRequest(BaseModel):
+    customId: str
+    orgCode: str
+    taskName: str
+    taskType: str = "reminder"
+    intentCode: str = "CREATE"
+    cronDate: str
