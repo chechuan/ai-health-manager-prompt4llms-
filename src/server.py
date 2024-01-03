@@ -235,14 +235,28 @@ def create_app():
         """
         try:
             param = request.get_json()
-            ret = expert_model.__blood_pressure_trend_analysis__(param)
+            ret = expert_model.__health_blood_pressure_trend_analysis__(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+    
+    @app.route('/health/warning_solutions_early', methods=['post'])
+    def _health_warning_solutions_early():
+        """预警解决方案
+        """
+        try:
+            param = request.get_json()
+            ret = expert_model.__health_warning_solutions_early__(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
     @app.route('/chat/role_play', methods=['post'])
     def _chat_role_play(request: RolePlayRequest):
         """角色扮演对话

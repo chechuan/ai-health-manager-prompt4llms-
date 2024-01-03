@@ -21,7 +21,7 @@ from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 from src.utils.module import clock, get_intent, initAllResource
-
+from datetime import datetime, timedelta
 
 class expertModel:
     def __init__(self, gsr) -> None:
@@ -166,7 +166,7 @@ class expertModel:
         return content
     
     @clock
-    def __blood_pressure_trend_analysis__(self, param: dict) -> str:
+    def __health_blood_pressure_trend_analysis__(self, param: Dict) -> str:
         """血压趋势分析
 
         通过应用端提供的血压数据，提供血压报告的分析与解读的结果，返回应用端。
@@ -233,6 +233,51 @@ class expertModel:
                 print(text_stream, end="", flush=True)
         cost = round(time.time()-tst, 2)
         logger.debug(f"趋势分析结果 length - {len(content)}, cost - {cost}")
+        return content
+
+    def __health_warning_solutions_early_continuous_check__(self, indicatorData: List[Dict]) -> bool:
+        """判断指标数据近五天是否连续
+        """
+        def get_day_before(days):
+            now = datetime.now()
+            date_after = ((now+timedelta(days=days)).strftime("%Y-%m-%d"))
+            return date_after
+        
+        date_before_map = {get_day_before(-1*i): 1 for i in range(5)}
+        
+        for data_item in indicatorData:         # 任一指标存在近五天不连续, 状态为False
+            if len(data_item['data']) < 5:
+                return False
+            date_current_map = {i['date'][:10]: 1 for i in data_item['data']}
+            for k, _ in date_before_map.items():
+                if date_current_map.get(k) is None:
+                    return False
+        return True
+        
+    def __health_warning_solutions_early__(self, param: Dict) -> str:
+        """
+        - 输入：客户的指标数据（C端客户通过手工录入、语音录入、医疗设备测量完的结果），用药情况（如果C端有用药情况）
+        - 要求: 
+            1. 如果近5天都有数据，则推出预警解决方案的内容包括，指标最近的波动情况，在饮食、运动、日常护理方面的建议。见格式一
+            2. 如果不满足连续条件（包括只有一条数据的情况）则预警方案只给出指标解读。见格式二
+        
+        - 输出：分析客户的指标数据，给出解决方案, 示例如下:
+            
+            格式一：从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。
+            
+            格式二：患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。
+        
+        prd: https://alidocs.dingtalk.com/i/nodes/KGZLxjv9VGBk7RlwHeRpRpXrW6EDybno?utm_scene=team_space
+        
+        api: https://confluence.enncloud.cn/pages/viewpage.action?pageId=850011452#:~:text=%7D-,3.4.2%20%E9%A2%84%E8%AD%A6%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88,-%E5%8A%9F%E8%83%BD%E6%8F%8F%E8%BF%B0
+        云效需求: https://devops.aliyun.com/projex/req/VOSE-3607# 《通过预警患者指标数据给出预警解决方案》
+        """
+        # 通过数据校验判断处理逻辑
+        is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])
+        if is_continuous:       # TODO 
+            content = "从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。"
+        else:
+            content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
         return content
 
     def __food_purchasing_list_manage__(self, reply="好的-unknow reply",**kwds):
@@ -378,9 +423,11 @@ if __name__ == "__main__":
     # param = testParam.param_pressure_trend
     # expert_model.__blood_pressure_trend_analysis__(param)
 
-    param = testParam.param_rec_diet_reunion_meals_restaurant_selection
-    generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
-    while True:
-        yield_item = next(generator)
-        print(yield_item)
-    
+    # param = testParam.param_rec_diet_reunion_meals_restaurant_selection
+    # generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+    # while True:
+    #     yield_item = next(generator)
+    #     print(yield_item)
+
+    param = testParam.param_health_warning_solutions_early
+    expert_model.__health_warning_solutions_early__(param)
