@@ -388,7 +388,7 @@ class scheduleManager:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.8, temperature=0.5, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.8, temperature=0.85, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content
@@ -477,11 +477,13 @@ class scheduleManager:
             "[要求]\n{query}\n\n"
             "[回复]\n"
         )
+        model = self.model_config['call_schedule_create_reply']
         created_schedule_content = "\n".join([i[0]+": "+i[1] for i in create_schedule_success])
         prompt = prompt.replace("{created_schedule_content}", created_schedule_content)
         prompt = prompt.replace("{query}", query)
-        response = callLLM(prompt, temperature=0.75, top_p=0.8, stream=True)
-        content = accept_stream_response(response)
+        message = [{"role":"user", "content": query}]
+        response = callLLM(history=message, model=model, temperature=0.8, top_p=0.8, stream=True)
+        content = accept_stream_response(response, verbose=False)
         return content
 
     def create(self, *args, **kwds):
