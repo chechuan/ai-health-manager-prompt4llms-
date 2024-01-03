@@ -461,6 +461,7 @@ class scheduleManager:
             if responseJS["code"] == 200 and responseJS['data'] is True:
                 create_schedule_success.append(item)
                 logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
+                continue
             else:
                 responseJS = self.session.post(url, json=payload).json()
                 if responseJS["code"] == 200 and responseJS['data'] is True:

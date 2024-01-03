@@ -90,7 +90,7 @@ class funcCall:
         payload = {"orgCode": kwds["orgCode"],"customId": kwds["customId"],"startTime": cur_time,"endTime":end_time}
         resp_js = self.session.post(url, json=payload, headers=self.headers).json()
         data = resp_js['data']
-        schedule = [{"task": i['taskName'], "time": i['cronDate']} for i in data]
+        schedule = [{"task": i['taskName'], "time": i['cronDate']} for i in data if i['taskName']]
         set_str = set([json.dumps(i, ensure_ascii=False) for i in schedule])
         schedule = [json.loads(i) for i in set_str]
         schedule = list(sorted(schedule, key=lambda item: item['time']))        # 增加对查到的日程按时间排序
