@@ -166,7 +166,7 @@ class customPromptEngine:
             character = event['character'] if event.get('character') else None
             if character:
                 sys_prompt += self.__join_character(character, **kwds) + "\n\n"
-            if event:
+            if event and intent_code != "schedule_qry_up":
                 sys_prompt += self.__join_event(event, **kwds)
         functions = []
         tools = self.prompt_meta_data['event'][intent_code]['tool_in_use']
