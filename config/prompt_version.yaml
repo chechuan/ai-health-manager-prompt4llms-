@@ -19,7 +19,7 @@ dev:
     auxiliary_diagnosis: 0.1.0
   character:
   tool:
-  create_schedule: 1.0.1
+    create_schedule: 1.0.1
 test:
   event:
     other: 1.0.3
