@@ -14,14 +14,15 @@ from pathlib import Path
 import openai
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from datetime import datetime, timedelta
 from typing import Dict, List
 
 from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import clock, get_intent, initAllResource
-from datetime import datetime, timedelta
+from src.utils.module import accept_stream_response, clock, get_intent, initAllResource
+
 
 class expertModel:
     def __init__(self, gsr) -> None:
@@ -197,19 +198,7 @@ class expertModel:
         """
         model = self.gsr.model_config['blood_pressure_trend_analysis']
         history = []
-        sys_prompt = (
-            "请你扮演一个专业的家庭医师,结合提供的信息帮助用户分析。分析维度包含：\n"
-            "1.收缩压的整体变化趋势\n"
-            "2.舒张压的整体变化趋势\n"
-            "3.心率的整体变化趋势\n"
-            "4.异常血压的提示\n"
-            "5.异常心率的提示\n"
-            "6.给出健康建议\n"
-            "7.整体输出内容不超过200字\n"
-            "收缩压正常值小于140\n"
-            "舒张压正常值小于90\n"
-            "心率正常值60至100\n"
-        )
+        sys_prompt = self.gsr.prompt_meta_data['event']['blood_pressure_trend_analysis']['description']
         history.append({"role":"system", "content": sys_prompt})
         
         tst = param['ihm_health_sbp'][0]['date']
@@ -224,15 +213,8 @@ class expertModel:
         history.append({"role":"user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
         response = callLLM(history=history, temperature=0.8, top_p=1, model=model, stream=True)
-        content = ""
-        tst = time.time()
-        for chunk in response:
-            if hasattr(chunk['choices'][0]['delta'], "content"):
-                text_stream = chunk['choices'][0]['delta']['content']
-                content += text_stream
-                print(text_stream, end="", flush=True)
-        cost = round(time.time()-tst, 2)
-        logger.debug(f"趋势分析结果 length - {len(content)}, cost - {cost}")
+        content = accept_stream_response(response, verbose=False)
+        logger.debug(f"趋势分析结果 length - {len(content)}")
         return content
 
     def __health_warning_solutions_early_continuous_check__(self, indicatorData: List[Dict]) -> bool:
@@ -253,7 +235,7 @@ class expertModel:
                 if date_current_map.get(k) is None:
                     return False
         return True
-        
+
     def __health_warning_solutions_early__(self, param: Dict) -> str:
         """
         - 输入：客户的指标数据（C端客户通过手工录入、语音录入、医疗设备测量完的结果），用药情况（如果C端有用药情况）
@@ -274,9 +256,11 @@ class expertModel:
         """
         # 通过数据校验判断处理逻辑
         is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])
-        if is_continuous:       # TODO 
+        if is_continuous:       # TODO 待开发
+            prompt = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
             content = "从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。"
         else:
+
             content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
         return content
 
