@@ -42,9 +42,11 @@ class funcCall:
         self.api_config = gsr.api_config
         self.model_config = gsr.model_config
         self.prompt_meta_data = gsr.prompt_meta_data
-        self.register_for_all()
-        self.ext_api_factory = extApiFactory(self)
+
         self.scheduleManager = scheduleManager(gsr)
+        self.register_for_all()
+        self.scheduleManager.__init_vars__(self.funcmap, self.session)
+        self.ext_api_factory = extApiFactory(self)
 
     def register_for_all(self):
         self.funcmap = {}
@@ -53,10 +55,10 @@ class funcCall:
         self.register_func("searchDB",          self.call_search_database)
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
-        self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
-        # self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
+        # self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
+        self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         # self.register_func("query_schedule",    self.call_schedule_query)
-        self.register_func("query_schedule",    self.call_schedule_query_v1)
+        self.register_func("query_schedule",    self.scheduleManager.query)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
@@ -75,24 +77,6 @@ class funcCall:
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
 
-    def get_currct_time_from_desc(self, time_desc: str):
-        """根据时间描述获取正确的时间
-        - Args
-            time_desc [str]: 时间的描述 如:今晚8点
-        - Return
-            target_time [str]: %Y-%m-%d %H:%M:%S格式的时间
-        """
-        model = self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat')
-        current_time = curr_time() + " " +  curr_weekday()
-        prompt = (
-                "你是一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间(%Y-%m-%d %H:%M:%S格式)\n"
-                f"现在的时间是: {current_time}\n"
-                f"{time_desc}对应的时间是: "
-            )
-        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stream=True, stop="\n")
-        target_time = accept_stream_response(response, verbose=False)[:19]
-        return target_time
-
     @clock
     def call_get_schedule(self, *args, **kwds):
         """查询用户实时日程
@@ -110,7 +94,7 @@ class funcCall:
         set_str = set([json.dumps(i, ensure_ascii=False) for i in schedule])
         schedule = [json.loads(i) for i in set_str]
         schedule = list(sorted(schedule, key=lambda item: item['time']))        # 增加对查到的日程按时间排序
-        self.update_mid_vars(kwds['mid_vars'], key="查询用户日程", input_text=payload, output_text=data, model="算法后端")
+        self.update_mid_vars(kwds['mid_vars'], key="调用查询日程接口", input_text=payload, output_text=data, model="算法后端")
         return schedule
 
     def call_schedule_create(self, *args, **kwds):
@@ -280,65 +264,6 @@ class funcCall:
         raw_content = callLLM(history=history, top_p=0.8, temperature=0.7, model=model)
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
         return raw_content
-
-    def call_schedule_query_v1(self, *args, **kwds):
-        """查询用户日程处理逻辑
-
-        Note:
-            1. 仅查询当日未完成日程
-        """
-        
-        def confirm_query_time_range(query: str) -> Dict:
-            """确定查询的时间范围
-            """
-            # sunday = this_sunday()
-            # example_output = json.dumps({"startTime": current,"endTime":sunday})
-            output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
-            prompt = (
-                "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
-                "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
-                "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
-                "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
-                f"4. 输出的格式参考: {output_format}\n\n"
-                f"现在时间: {current}\n"
-                f"用户输入: {query}\n"
-                "输出:"
-            )
-            # logger.debug(prompt)
-            model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
-            response = callLLM(prompt, model=model, stop="\n\n", stream=True)
-            text = accept_stream_response(response, verbose=False)
-            output = text.strip()
-            time_range = json.loads(output)
-            logger.debug(f"{output}")
-            return time_range
-        
-        current = curr_time() + " " + curr_weekday()
-        model = self.model_config.get('call_schedule_query', 'Qwen-14B-Chat')
-        schedule = self.funcmap["get_schedule"]['func'](**kwds)
-        query = kwds['history'][-2]['content']
-        query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
-        try:
-            time_range = confirm_query_time_range(query)
-        except Exception as err:
-            time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
-   
-        target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
-        target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
-        if not target_schedule_content:
-            target_schedule_content = "空"
-        prompt = query_schedule_template.replace("{{cur_time}}", current)
-        prompt = prompt.replace("{{user_schedule}}", target_schedule_content)
-        prompt = prompt.replace("{{query}}", query)
-
-        messages = [
-            {"role": "user", "content": prompt}
-        ]
-        logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.8, temperature=0.5, model=model, stream=True)
-        content = accept_stream_response(response, verbose=False)
-        self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=prompt, output_text=content, model=model)
-        return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
                               score_threshold=1, temperature=0.7, top_k=3, top_p=0.8, 

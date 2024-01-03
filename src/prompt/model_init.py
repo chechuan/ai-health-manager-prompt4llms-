@@ -161,11 +161,3 @@ class ChatCompletionResponse(BaseModel):
         Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]
     ]
     created: Optional[int] = Field(default_factory=lambda: int(time.time()))
-
-class scheduleCreateRequest(BaseModel):
-    customId: str
-    orgCode: str
-    taskName: str
-    taskType: str = "reminder"
-    intentCode: str = "CREATE"
-    cronDate: str
