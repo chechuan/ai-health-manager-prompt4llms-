@@ -271,7 +271,7 @@ class expertModel:
                 value_list List[int]: 真实血压值列表 收缩压or舒张压
             """
             if return_str:
-                valuemap = {0: '正常', 1: '一级', 2: '二级', 3: '三级'}
+                valuemap = {-1: "低血压", 0: '正常', 1: '高血压一级', 2: '高血压二级', 3: '高血压三级'}
                 vars = [valuemap.get(i) for i in vars]
                 return vars
             if not vars:
@@ -279,7 +279,7 @@ class expertModel:
             else:
                 new_vars = [compute_blood_pressure_level(value) for value in value_list]
                 if len(vars) == len(new_vars):
-                    vars = [max(i, j) for i, j in zip(vars, new_vars)]
+                    vars = [i if abs(i)>abs(j) else j for i, j in zip(vars, new_vars)]
             return vars
 
         model = self.gsr.model_config['health_warning_solutions_early']

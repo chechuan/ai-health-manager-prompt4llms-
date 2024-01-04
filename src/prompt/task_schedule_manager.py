@@ -330,7 +330,7 @@ class scheduleManager:
         self.funcmap = funcmap
         self.session = session
 
-    def __update_mid_vars__(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
+    def __update_mid_vars__(self, mid_vars, input_text: Any = None, output_text: Any = None, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
         """
         lth = len(mid_vars) + 1
@@ -420,9 +420,9 @@ class scheduleManager:
             "2. 事件可能是一个或多个, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
             '3. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
             "# 示例\n"
-            "用户输入: 3分钟后叫我一下,今晚8点提醒我们看联欢晚会, 半个小时后\n"
+            "用户输入: 3分钟后叫我一下,今晚8点提醒我们看联欢晚会,半个小时后提醒我喝牛奶\n"
             "输出: \n"
-            '[["提醒", "3分钟后"],["看联欢晚会", "今晚8点"], [None, "半个小时后"]]\n'
+            '[["提醒", "3分钟后"],["看联欢晚会", "今晚8点"], ["喝牛奶提醒", "半个小时后"]]\n'
             f"用户输入: {query}\n"
             "输出: \n"
             f"{head_str}"
@@ -452,7 +452,6 @@ class scheduleManager:
             except_result.append(item)
         except_result.sort(key=lambda x: x[2])      # 对提取出的事件 - 时间 按时间排序
         self.__update_mid_vars__(kwds['mid_vars'], 
-                                 input_text=event_time_pair, 
                                  output_text={"except_result": except_result, "unexpcept_result": unexpcept_result}, 
                                  key="parse_time_desc",
                                  model=self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat'))
@@ -470,7 +469,7 @@ class scheduleManager:
             responseJS = self.session.post(url, json=payload).json()
             if responseJS["code"] == 200 and responseJS['data'] is True:
                 create_schedule_success.append(item)
-                logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
+                logger.success(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 continue
             else:
                 responseJS = self.session.post(url, json=payload).json()
@@ -479,7 +478,7 @@ class scheduleManager:
                     logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 else:
                     result_unexpected.append(item)
-                    logger.exception(f"日程创建失败: \n{payload}")
+                    logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
         # TODO 回复内容待优化
         prompt = (
             "下面是已为用户创建的日程提醒及用户的要求，请结合已创建给出一句话的回复，要求回复通顺流畅，内容翔实\n\n"
