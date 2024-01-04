@@ -480,18 +480,12 @@ class scheduleManager:
                     result_unexpected.append(item)
                     logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
         # TODO 回复内容待优化
-        prompt = (
-            "下面是已为用户创建的日程提醒及用户的要求，请结合已创建给出一句话的回复，要求回复通顺流畅，内容翔实\n\n"
-            "[已创建]\n{created_schedule_content}\n\n"
-            "[要求]\n{query}\n\n"
-            "[回复]\n"
-        )
+        prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
         model = self.model_config['call_schedule_create_reply']
-        created_schedule_content = "\n".join([i[0]+": "+i[1] for i in create_schedule_success])
-        prompt = prompt.replace("{created_schedule_content}", created_schedule_content)
-        prompt = prompt.replace("{query}", query)
-        message = [{"role":"user", "content": query}]
-        response = callLLM(history=message, model=model, temperature=0.8, top_p=0.8, stream=True)
+        created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
+        prompt = prompt_template.format(created_schedule_content=created_schedule_content)
+        message = [{"role":"user", "content": prompt}]
+        response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
         return content
