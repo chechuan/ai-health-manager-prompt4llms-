@@ -17,6 +17,8 @@ sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 from datetime import datetime, timedelta
 from typing import Dict, List
 
+from langchain.prompts.prompt import PromptTemplate
+
 from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
@@ -253,15 +255,47 @@ class expertModel:
         
         api: https://confluence.enncloud.cn/pages/viewpage.action?pageId=850011452#:~:text=%7D-,3.4.2%20%E9%A2%84%E8%AD%A6%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88,-%E5%8A%9F%E8%83%BD%E6%8F%8F%E8%BF%B0
         云效需求: https://devops.aliyun.com/projex/req/VOSE-3607# 《通过预警患者指标数据给出预警解决方案》
-        """
-        # 通过数据校验判断处理逻辑
-        is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])
-        if is_continuous:       # TODO 待开发
-            prompt = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
-            content = "从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。"
-        else:
 
+        ## 沟通记录
+        1. 今天一定会有数据
+        2. 三个指标数据同步存在
+        3. 传近5天的数据 仅以此判断连续
+        """
+        model = self.gsr.model_config['health_warning_solutions_early']
+        is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])        # 通过数据校验判断处理逻辑
+        
+        time_range = {i['date'][:10] for i in param['indicatorData'][0]['data']}    # 当前的时间范围
+        if is_continuous:
+            # TODO 待修改template 2024年1月4日11:44:42
+            prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
+            prompt_template = PromptTemplate.from_template(prompt_str)
+            for i in param['indicatorData']:
+                if i['name'] == "收缩压":
+                    ihm_health_sbp = [j['value'] for j in i['data']]
+                elif i['name'] == "舒张压":
+                    ihm_health_dbp = [j['value'] for j in i['data']]
+                elif i['name'] == "心率":
+                    ihm_health_hr = [j['value'] for j in i['data']]
+            content = "从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。"
+        else:       # 非连续，只取当日指标
+            prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
+            prompt_template = PromptTemplate.from_template(prompt_str)
+            for i in param['indicatorData']:
+                if i['name'] == "收缩压":
+                    ihm_health_sbp = [i['data'][-1]['value']]
+                elif i['name'] == "舒张压":
+                    ihm_health_dbp = [i['data'][-1]['value']]
+                elif i['name'] == "心率":
+                    ihm_health_hr = [i['data'][-1]['value']]
             content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
+        prompt = prompt_template.format(time_start=min(time_range),
+                                        time_end=max(time_range),
+                                        ihm_health_sbp=ihm_health_sbp,
+                                        ihm_health_dbp=ihm_health_dbp,
+                                        ihm_health_hr=ihm_health_hr)
+        history = [{"role":"user", "content":prompt}]
+        response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
+        content = accept_stream_response(response, verbose=False)
         return content
 
     def __food_purchasing_list_manage__(self, reply="好的-unknow reply",**kwds):

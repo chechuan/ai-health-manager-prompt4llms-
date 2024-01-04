@@ -518,7 +518,7 @@ class Chat_v2:
         out_history = None
         if self.prompt_meta_data['event'].get(intentCode):
             if intentCode == "other" :
-                # TODO 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
+                # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
                 # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":

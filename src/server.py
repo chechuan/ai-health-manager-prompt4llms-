@@ -35,6 +35,12 @@ def accept_param():
     logger.info(f"Input Param: {pstr}")
     return p
 
+def accept_param_purge():
+    p = request.get_json()
+    pstr = json.dumps(p, ensure_ascii=False)
+    logger.info(f"Input Param: {pstr}")
+    return p
+
 def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
     if not items and head == 200:
         head = 600
@@ -192,7 +198,7 @@ def create_app():
         """食材采购清单管理
         """
         try:
-            param = accept_param()
+            param = accept_param_purge()
             ret = expert_model.__food_purchasing_list_manage__(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -206,7 +212,7 @@ def create_app():
         """年夜饭, 结合群组对话和餐厅信息选择偏好餐厅
         """
         try:
-            param = accept_param()
+            param = accept_param_purge()
             generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
             ret = decorate_text_stream(generator)
         except Exception as err:
@@ -220,7 +226,7 @@ def create_app():
         """膳食摄入评估
         """
         try:
-            param = accept_param()
+            param = accept_param_purge()
             ret = expert_model.__rec_diet_eval__(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -234,7 +240,7 @@ def create_app():
         """血压趋势分析
         """
         try:
-            param = request.get_json()
+            param = accept_param_purge()
             ret = expert_model.__health_blood_pressure_trend_analysis__(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -248,7 +254,7 @@ def create_app():
         """预警解决方案
         """
         try:
-            param = request.get_json()
+            param = accept_param_purge()
             ret = expert_model.__health_warning_solutions_early__(param)
             ret = make_result(items=ret)
         except Exception as err:
