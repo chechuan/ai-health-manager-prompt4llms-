@@ -411,7 +411,7 @@ class scheduleManager:
         target_time = accept_stream_response(response, verbose=False)[:19]
         return target_time
     
-    def call_create_extract_event_time_pair(self, query: str):
+    def call_create_extract_event_time_pair(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
         prompt = (
@@ -430,9 +430,14 @@ class scheduleManager:
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
         event_time_pair = head_str + accept_stream_response(response, verbose=False)
         event_time_pair = eval(event_time_pair)
+        self.__update_mid_vars__(kwds['mid_vars'], 
+                                 input_text=query, 
+                                 output_text=event_time_pair, 
+                                 key="extract_event_time_pair",
+                                 model=model)
         return event_time_pair
 
-    def call_create_parse_currect_event_time(self, event_time_pair: List):
+    def call_create_parse_currect_event_time(self, event_time_pair: List, **kwds):
         """从时间描述解析正确时间
         """
         except_result, unexpcept_result = [], []
@@ -446,6 +451,11 @@ class scheduleManager:
             item.append(current_time)
             except_result.append(item)
         except_result.sort(key=lambda x: x[2])      # 对提取出的事件 - 时间 按时间排序
+        self.__update_mid_vars__(kwds['mid_vars'], 
+                                 input_text=event_time_pair, 
+                                 output_text={"except_result": except_result, "unexpcept_result": unexpcept_result}, 
+                                 key="parse_time_desc",
+                                 model=self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat'))
         return except_result, unexpcept_result
     
     def call_create_execute_create_schedule(self, url, query, result_to_create: List, result_unexpected: List, **kwds):
@@ -484,6 +494,7 @@ class scheduleManager:
         message = [{"role":"user", "content": query}]
         response = callLLM(history=message, model=model, temperature=0.8, top_p=0.8, stream=True)
         content = accept_stream_response(response, verbose=False)
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
         return content
 
     def create(self, *args, **kwds):
@@ -493,8 +504,8 @@ class scheduleManager:
         func = self.funcmap['create_schedule']
         url = self.api_config["ai_backend"] + func['method']
         
-        event_time_pair = self.call_create_extract_event_time_pair(query)
-        result_to_create, result_unexpected = self.call_create_parse_currect_event_time(event_time_pair)
+        event_time_pair = self.call_create_extract_event_time_pair(query, **kwds)
+        result_to_create, result_unexpected = self.call_create_parse_currect_event_time(event_time_pair, **kwds)
         content = self.call_create_execute_create_schedule(url, query, result_to_create, result_unexpected, **kwds)
         return content
 

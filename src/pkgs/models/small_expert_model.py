@@ -291,13 +291,13 @@ class expertModel:
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['name'] == "收缩压":
+                if i['code'] == "lk1589863365641":      # 收缩压
                     ihm_health_sbp = [j['value'] for j in i['data']]
                     bpl = update_blood_pressure_level(bpl, ihm_health_sbp)
-                elif i['name'] == "舒张压":
+                elif i['code'] == "lk1589863365791":    # 舒张压
                     ihm_health_dbp = [j['value'] for j in i['data']]
                     bpl = update_blood_pressure_level(bpl, ihm_health_dbp)
-                elif i['name'] == "心率":
+                elif i['code'] == "XYZBXY001005":       # 心率
                     ihm_health_hr = [j['value'] for j in i['data']]
             ihm_health_blood_pressure_level = update_blood_pressure_level(bpl, return_str=True)
             prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),ihm_health_sbp=ihm_health_sbp,
