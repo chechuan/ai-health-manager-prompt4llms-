@@ -614,5 +614,19 @@ def accept_stream_response(response, verbose=True):
     logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
     return content
 
+def compute_blood_pressure_level(x: int, flag: str = "l" or "h") -> int:
+    """计算血压等级 flag区分低血压or高血压 不同level
+    """
+    if flag == "l":
+        if x < 90: return 0
+        elif x <= 90: return 1
+        elif x <= 109: return 2
+        else: return 3
+    elif flag == "h":
+        if x < 140: return 0
+        elif x <= 159: return 1
+        elif x <= 179: return 2
+        else: return 3
+
 if __name__ == "__main__":
     initAllResource()

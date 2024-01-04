@@ -23,7 +23,8 @@ from config.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import accept_stream_response, clock, get_intent, initAllResource
+from src.utils.module import (accept_stream_response, clock, compute_blood_pressure_level,
+                              get_intent, initAllResource)
 
 
 class expertModel:
@@ -261,22 +262,46 @@ class expertModel:
         2. 三个指标数据同步存在
         3. 传近5天的数据 仅以此判断连续
         """
+        def update_blood_pressure_level(vars: List[int], value_list: List[int] = [], return_str: bool = False):
+            """更新血压水平
+
+            - Args
+
+                vars List[int]: 血压等级 [] or [0,2,1,3,2]
+                value_list List[int]: 真实血压值列表 收缩压or舒张压
+            """
+            if return_str:
+                valuemap = {0: '正常', 1: '一级', 2: '二级', 3: '三级'}
+                vars = [valuemap.get(i) for i in vars]
+                return vars
+            if not vars:
+                vars = [compute_blood_pressure_level(value) for value in value_list]
+            else:
+                new_vars = [compute_blood_pressure_level(value) for value in value_list]
+                if len(vars) == len(new_vars):
+                    vars = [max(i, j) for i, j in zip(vars, new_vars)]
+            return vars
+
         model = self.gsr.model_config['health_warning_solutions_early']
         is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])        # 通过数据校验判断处理逻辑
         
         time_range = {i['date'][:10] for i in param['indicatorData'][0]['data']}    # 当前的时间范围
+        bpl = []
         if is_continuous:
-            # TODO 待修改template 2024年1月4日11:44:42
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
                 if i['name'] == "收缩压":
                     ihm_health_sbp = [j['value'] for j in i['data']]
+                    bpl = update_blood_pressure_level(bpl, ihm_health_sbp)
                 elif i['name'] == "舒张压":
                     ihm_health_dbp = [j['value'] for j in i['data']]
+                    bpl = update_blood_pressure_level(bpl, ihm_health_dbp)
                 elif i['name'] == "心率":
                     ihm_health_hr = [j['value'] for j in i['data']]
-            content = "从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。"
+            ihm_health_blood_pressure_level = update_blood_pressure_level(bpl, return_str=True)
+            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),ihm_health_sbp=ihm_health_sbp,
+                        ihm_health_dbp=ihm_health_dbp,ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, ihm_health_hr=ihm_health_hr)
         else:       # 非连续，只取当日指标
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
@@ -288,11 +313,8 @@ class expertModel:
                 elif i['name'] == "心率":
                     ihm_health_hr = [i['data'][-1]['value']]
             content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
-        prompt = prompt_template.format(time_start=min(time_range),
-                                        time_end=max(time_range),
-                                        ihm_health_sbp=ihm_health_sbp,
-                                        ihm_health_dbp=ihm_health_dbp,
-                                        ihm_health_hr=ihm_health_hr)
+            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),
+                                            ihm_health_sbp=ihm_health_sbp,ihm_health_dbp=ihm_health_dbp,ihm_health_hr=ihm_health_hr)
         history = [{"role":"user", "content":prompt}]
         response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
@@ -448,4 +470,5 @@ if __name__ == "__main__":
     #     print(yield_item)
 
     param = testParam.param_health_warning_solutions_early
+    expert_model.__health_warning_solutions_early__(param)
     expert_model.__health_warning_solutions_early__(param)
