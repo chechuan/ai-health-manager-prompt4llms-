@@ -289,6 +289,7 @@ class expertModel:
         
         time_range = {i['date'][:10] for i in param['indicatorData'][0]['data']}    # 当前的时间范围
         bpl = []
+        ihm_health_sbp, ihm_health_dbp, ihm_health_hr = [], [], []
         if is_continuous:
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
@@ -302,21 +303,27 @@ class expertModel:
                 elif i['code'] == "XYZBXY001005":       # 心率
                     ihm_health_hr = [j['value'] for j in i['data']]
             ihm_health_blood_pressure_level = self.__health_warning_update_blood_pressure_level__(bpl, return_str=True)
-            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),ihm_health_sbp=ihm_health_sbp,
-                        ihm_health_dbp=ihm_health_dbp,ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, ihm_health_hr=ihm_health_hr)
+            prompt = prompt_template.format(time_start=min(time_range),
+                                            time_end=max(time_range),
+                                            ihm_health_sbp=ihm_health_sbp,
+                                            ihm_health_dbp=ihm_health_dbp,
+                                            ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, 
+                                            ihm_health_hr=ihm_health_hr)
         else:       # 非连续，只取当日指标
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['name'] == "收缩压":
+                if i['code'] == "lk1589863365641":
                     ihm_health_sbp = [i['data'][-1]['value']]
-                elif i['name'] == "舒张压":
+                elif i['code'] == "lk1589863365791":
                     ihm_health_dbp = [i['data'][-1]['value']]
-                elif i['name'] == "心率":
+                elif i['code'] == "XYZBXY001005":
                     ihm_health_hr = [i['data'][-1]['value']]
-            content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
-            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),
-                                            ihm_health_sbp=ihm_health_sbp,ihm_health_dbp=ihm_health_dbp,ihm_health_hr=ihm_health_hr)
+            prompt = prompt_template.format(time_start=min(time_range),
+                                            time_end=max(time_range),
+                                            ihm_health_sbp=ihm_health_sbp,
+                                            ihm_health_dbp=ihm_health_dbp,
+                                            ihm_health_hr=ihm_health_hr)
         history = [{"role":"user", "content":prompt}]
         response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)

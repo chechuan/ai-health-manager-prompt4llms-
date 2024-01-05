@@ -41,6 +41,7 @@ def get_response(payload):
             reply = js['message']
     df.loc[index, 'reply'] = reply
     if time_desc:
+        df.loc[index, 'task'] = time_desc[0][0]
         df.loc[index, 'ret_date'] = time_desc[0][2][:10]
         df.loc[index, 'ret_time'] = time_desc[0][2][11:]
     if time_desc:
@@ -79,8 +80,8 @@ for index, row in df.iterrows():
     query = row['测试用例']
     input_param = copy.deepcopy(payload)
     input_param["history"][0]['content'] = query
-    if isinstance(row['reply'], str):
-        continue
+    # if isinstance(row['reply'], str):
+    #     continue
     # future1 = pool.submit(get_response, input_param)
     reply, time_desc = get_response(input_param)
     # reply, time_desc = future1.result()
@@ -88,6 +89,7 @@ for index, row in df.iterrows():
     if index % 50 == 0:
         df.to_csv(file_path, encoding='gbk', index=False)
         logger.info(f"save file index up to {index}.")
-
+df.to_csv(file_path, encoding='gbk', index=False)
+logger.info(f"save file index up to {index}.")
 # print(df.head())
 # df.to_csv(file_path, encoding='gbk', index=False)
