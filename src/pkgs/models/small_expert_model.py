@@ -28,6 +28,7 @@ from src.utils.module import (accept_stream_response, clock, compute_blood_press
 
 
 class expertModel:
+    indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率":"XYZBXY001005"}
     def __init__(self, gsr) -> None:
         self.gsr = gsr
         
@@ -281,9 +282,8 @@ class expertModel:
         1. 今天一定会有数据
         2. 三个指标数据同步存在
         3. 传近5天的数据 仅以此判断连续
+        4. 收缩压和舒张压近五天连续 格式一
         """
-        
-
         model = self.gsr.model_config['health_warning_solutions_early']
         is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])        # 通过数据校验判断处理逻辑
         
@@ -294,13 +294,13 @@ class expertModel:
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['code'] == "lk1589863365641":      # 收缩压
+                if i['code'] == self.indicatorCodeMap['收缩压']:      # 收缩压
                     ihm_health_sbp = [j['value'] for j in i['data']]
                     bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_sbp)
-                elif i['code'] == "lk1589863365791":    # 舒张压
+                elif i['code'] == self.indicatorCodeMap['舒张压']:    # 舒张压
                     ihm_health_dbp = [j['value'] for j in i['data']]
                     bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_dbp)
-                elif i['code'] == "XYZBXY001005":       # 心率
+                elif i['code'] == self.indicatorCodeMap['心率']:       # 心率
                     ihm_health_hr = [j['value'] for j in i['data']]
             ihm_health_blood_pressure_level = self.__health_warning_update_blood_pressure_level__(bpl, return_str=True)
             prompt = prompt_template.format(time_start=min(time_range),
@@ -313,11 +313,11 @@ class expertModel:
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['code'] == "lk1589863365641":
+                if i['code'] == self.indicatorCodeMap['收缩压']:
                     ihm_health_sbp = [i['data'][-1]['value']]
-                elif i['code'] == "lk1589863365791":
+                elif i['code'] == self.indicatorCodeMap['舒张压']:
                     ihm_health_dbp = [i['data'][-1]['value']]
-                elif i['code'] == "XYZBXY001005":
+                elif i['code'] == self.indicatorCodeMap['心率']:
                     ihm_health_hr = [i['data'][-1]['value']]
             prompt = prompt_template.format(time_start=min(time_range),
                                             time_end=max(time_range),
@@ -479,5 +479,4 @@ if __name__ == "__main__":
     #     print(yield_item)
 
     param = testParam.param_health_warning_solutions_early
-    expert_model.__health_warning_solutions_early__(param)
-    expert_model.__health_warning_solutions_early__(param)
+    expert_model.health_warning_solutions_early(param)
