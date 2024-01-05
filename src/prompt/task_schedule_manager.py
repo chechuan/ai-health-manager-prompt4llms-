@@ -346,7 +346,8 @@ class scheduleManager:
             "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
             "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
             "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
-            f"4. 输出的格式参考: {output_format}\n\n"
+            "4. 早晨指05:00:00-08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00"
+            f"5. 输出的格式参考: {output_format}\n\n"
             f"现在时间: {current}\n"
             f"用户输入: {query}\n"
             "输出:"
@@ -465,7 +466,7 @@ class scheduleManager:
         create_schedule_success = []
         for item in result_to_create:           # 逐一创建日程并
             task, desc, cronDate = item
-            payload = {"customId": customId, "orgCode": orgCode, "task": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
+            payload = {"customId": customId, "orgCode": orgCode, "taskName": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
             responseJS = self.session.post(url, json=payload).json()
             if responseJS["code"] == 200 and responseJS['data'] is True:
                 create_schedule_success.append(item)
