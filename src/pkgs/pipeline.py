@@ -263,10 +263,17 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode", 'other')
 
         messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
-        event_msg = self.prompt_meta_data['event'][intentCode]
-        system_prompt = event_msg['description'] + "\n" + event_msg['process']
+        
+        desc = self.prompt_meta_data['event'][intentCode].get('description', '')
+        process = self.prompt_meta_data['event'][intentCode].get('process', '')
+        if desc or process:     # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role":"system", "content": ext_info}] + messages
 
-        messages = [{"role":"system", "content": system_prompt}] + messages
+        # event_msg = self.prompt_meta_data['event'][intentCode]
+        # system_prompt = event_msg['description'] + "\n" + event_msg['process']
+
+        # messages = [{"role":"system", "content": system_prompt}] + messages
         payload = compose_func_reply(messages)
 
         response = self.session.post(url, data=json.dumps(payload)).json()
@@ -521,7 +528,8 @@ class Chat_v2:
         if self.prompt_meta_data['event'].get(intentCode):
             if intentCode == "other" :
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)                
+            elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
