@@ -60,6 +60,7 @@ class funcCall:
         # self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("query_schedule",    self.scheduleManager.query)
         self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
+        # self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
         logger.success(f"register finish.")

@@ -63,16 +63,36 @@ class initAllResource:
         self.cache_dir = Path(CACHE_DIR)
         if not self.cache_dir.exists():
             self.cache_dir.mkdir()
-        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
-        self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
-        self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
-        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        
+        self.__load_config__()
+
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
         openai.api_key = "EMPTY"
         support_model_list = [i['id'] for i in openai.Model.list()['data']]
         logger.info(f"Support model list: {support_model_list}")
+    
+    def __load_config__(self) -> None:
+        """指定env加载配置
+        """
+        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
+        self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
+        self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
+        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        self.__info_config__()
+
+    def __info_config__(self):
+        for key, value in self.api_config.items():
+            logger.debug(f"Initialize api config: {key}: {value}")
+        logger.debug(f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}")
+        for key, value in self.prompt_version.items():
+            if not value:
+                continue
+            for ik, iv in value.items():
+                logger.debug(f"Initialize prompt version {key} - {ik} - {iv}")
+        for key, model_name in self.model_config.items():
+            logger.debug(f"Initialize model {key} - {model_name}")
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:
