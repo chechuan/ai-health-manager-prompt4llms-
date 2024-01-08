@@ -109,7 +109,11 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
         _sys_prompt = _sys_prompt.replace("{current_schedule}", kwargs['current_schedule'])
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
 
+    # TODO 2024年1月8日11:16:30 日程相关内容，历史轮数?
+    # if "schedule" in intent_code:
+    #     chat_history = chat_history[-1:]
     h_len = len(chat_history)
+
     for h_idx in range(h_len):
         item = chat_history[h_idx]
         # if item.get('intentCode') != intent_code:

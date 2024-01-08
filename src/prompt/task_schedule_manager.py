@@ -490,7 +490,6 @@ class scheduleManager:
                 else:
                     result_unexpected.append(item)
                     logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
-        # TODO 回复内容待优化
         prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
         model = self.model_config['call_schedule_create_reply']
         created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
@@ -512,6 +511,11 @@ class scheduleManager:
         result_to_create, result_unexpected = self.call_create_parse_currect_event_time(event_time_pair, **kwds)
         content = self.call_create_execute_create_schedule(url, query, result_to_create, result_unexpected, **kwds)
         return content
+    
+    def cancel(self, *args, **kwds):
+        """进一步取消日程效果优化, 暂定只支持一轮?
+        """
+        query = kwds['history'][-2]['content']
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
