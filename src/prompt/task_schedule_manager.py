@@ -397,12 +397,12 @@ class scheduleManager:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.8, temperature=0.85, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.5, temperature=0.7, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content
     
-    def get_currct_time_from_desc(self, time_desc: str):
+    def __get_currct_time_from_desc__(self, time_desc: str):
         """根据时间描述获取正确的时间
         - Args
             time_desc [str]: 时间的描述 如:今晚8点
@@ -441,11 +441,7 @@ class scheduleManager:
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
         event_time_pair = head_str + accept_stream_response(response, verbose=False)
         event_time_pair = eval(event_time_pair)
-        self.__update_mid_vars__(kwds['mid_vars'], 
-                                 input_text=query, 
-                                 output_text=event_time_pair, 
-                                 key="extract_event_time_pair",
-                                 model=model)
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=event_time_pair, key="extract_event_time_pair",model=model)
         return event_time_pair
 
     def call_create_parse_currect_event_time(self, event_time_pair: List, **kwds):
@@ -458,11 +454,12 @@ class scheduleManager:
                 item.append(None)
                 unexpcept_result.append(item)
                 continue
-            current_time = self.get_currct_time_from_desc(tdesc)
-            item.append(current_time)
+            correct_time = self.__get_currct_time_from_desc__(tdesc)
+            item.append(correct_time)
             except_result.append(item)
         except_result.sort(key=lambda x: x[2])      # 对提取出的事件 - 时间 按时间排序
         self.__update_mid_vars__(kwds['mid_vars'], 
+                                 input_text=event_time_pair,
                                  output_text={"except_result": except_result, "unexpcept_result": unexpcept_result}, 
                                  key="parse_time_desc",
                                  model=self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat'))
@@ -512,10 +509,78 @@ class scheduleManager:
         content = self.call_create_execute_create_schedule(url, query, result_to_create, result_unexpected, **kwds)
         return content
     
+    def __cancel_parse_time_desc__(self, query, **kwds):
+        """解析时间点或者范围
+        """
+        model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        current: str=curr_time() + " " + curr_weekday()
+        output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
+        prompt_template = PromptTemplate.from_template(
+            (
+                "请你理解用户所说, 解析其描述的时间节点或者范围,以下是一些要求:\n"
+                "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
+                "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
+                "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
+                "4. 早晨指05:00:00至08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00\n"
+                "5. 如果指定了具体的时间节点, 则只把精确的时间节点输出到`startTime`字段\n"
+                "6. 输出的格式参考: {output_format}\n\n"
+                "现在时间: {current}\n"
+                "用户输入: {query}\n"
+                "输出:"
+            )
+        )
+        # prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
+        # prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        response = callLLM(prompt, model=model, stop="\n\n", stream=True)
+        text = accept_stream_response(response, verbose=False)
+        output = text.strip()
+        time_range = json.loads(output)
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=text, key="取消日程-解析时间描述", model=model)
+        return time_range
+    
+    def __cancel_extract_time_info__(self, query: str, **kwds) -> Dict:
+        """取消日程 - 提取时间范围描述 -> 解析为时间戳
+        """
+        model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
+        prompt_str = (
+            "请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述\n"
+            "示例1:\n"
+            "用户输入: 取消明天上午的日程安排\n"
+            "输出: 明天上午\n"
+            "示例2:\n"
+            "用户输入: 取消今天的日程安排\n"
+            "输出: 今天\n"
+            "Begins~\n\n"
+            "用户输入: {query}\n"
+            "输出: "
+        )
+        prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query)
+        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8, stop="\n\n", stream=True)
+        tdesc = accept_stream_response(response, verbose=False)
+        
+        try:
+            time_range = self.__cancel_parse_time_desc__(tdesc)
+        except Exception as e:
+            logger.exception(e)
+            time_range = None
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="extract_event_time_pair",model=model)
+        return time_range
+    
     def cancel(self, *args, **kwds):
         """进一步取消日程效果优化, 暂定只支持一轮?
         """
         query = kwds['history'][-2]['content']
+        func = self.funcmap['create_schedule']
+        url = self.api_config["ai_backend"] + func['method']
+
+        time_range = self.__cancel_extract_time_info__(query, **kwds)
+        if time_range is None:  # 如果未提取出时间范围
+            content = "请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
+        
+
+
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
