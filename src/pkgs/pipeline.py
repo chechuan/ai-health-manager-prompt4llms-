@@ -214,11 +214,13 @@ class Chat_v2:
         
         intentCode = kwargs.get("intentCode", 'other')
         messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
-        desc = self.prompt_meta_data['event'][intentCode]['description']
-        process = self.prompt_meta_data['event'][intentCode]['process']
-        ext_info = desc + "\n" + process
+        
+        desc = self.prompt_meta_data['event'][intentCode].get('description', '')
+        process = self.prompt_meta_data['event'][intentCode].get('process', '')
+        if desc or process:     # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role":"system", "content": ext_info}] + messages
 
-        messages = [{"role":"system", "content": ext_info}] + messages
         messages = compose_func_reply(messages)
         content = callLLM("", messages, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False), output_text=content)
