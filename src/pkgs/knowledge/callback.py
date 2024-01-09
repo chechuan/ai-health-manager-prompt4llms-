@@ -80,14 +80,15 @@ class funcCall:
 
     @clock
     def call_get_schedule(self, *args, **kwds):
-        """查询用户实时日程
+        """查询用户实时待办日程，默认查询未来两周
         """
         func_item = self.funcmap['get_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
         assert kwds.get("orgCode"), KeyError("orgCode is required")
         assert kwds.get("customId"), KeyError("customId is required")
 
-        cur_time, end_time = curr_time(), date_after_days(14)       # 查询未来两周的日程
+        cur_time = kwds.get("startTime") if kwds.get("startTime") else curr_time()       # 查询未来两周的日程
+        end_time = kwds.get("endTime") if kwds.get("endTime") else date_after_days(14)
         payload = {"orgCode": kwds["orgCode"],"customId": kwds["customId"],"startTime": cur_time,"endTime":end_time}
         resp_js = self.session.post(url, json=payload, headers=self.headers).json()
         data = resp_js['data']
@@ -154,7 +155,7 @@ class funcCall:
         """
         msg = ChatMessage(**kwds['out_history'][-1])
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
-        arguments = eval(msg.function_call['arguments'])
+        arguments = msg.function_call['arguments']
         task = arguments.get("task")
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")

@@ -136,7 +136,7 @@ class initAllResource:
             prompt_event = filter_format(prompt_event)
             prompt_tool = filter_format(prompt_tool)
         
-            # TODO 优先使用指定的version 否则使用latest
+            # 优先使用指定的version 否则使用latest
             if self.args.special_prompt_version:
                 for key, v in self.prompt_version.items():
                     if not v:

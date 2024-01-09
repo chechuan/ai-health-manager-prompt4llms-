@@ -66,6 +66,67 @@ class Chat_v2:
             'callout': {i:1 for i in callout_intent_code_list}
         }
 
+    def __get_default_reply__(self, intentCode):
+        """针对不同的意图提供不同的回复指导话术
+        """
+        if intentCode == "schedule_manager" or intentCode == "other_schedule":
+            content = "对不起，我没有理解您的需求，如果想进行日程提醒管理，您可以这样说: 查询一下我今天的日程, 提醒我明天下午3点去打羽毛球, 帮我把明天下午3点打羽毛球的日程改到后天下午5点, 取消今天的提醒"
+        elif intentCode == "schedule_qry_up":
+            content = "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程"
+        elif intentCode == "meeting_schedule":
+            content = "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+        elif intentCode == "auxiliary_diagnosis":
+            content = "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
+        else:
+            content = "对不起, 我没有理解您的需求, 请在问题中提供明确的信息并重新尝试."
+        return content
+    
+    def __check_query_valid__(self, query):
+        prompt = (
+            "你是一个功能强大的内容校验工具请你帮我判断下面输入的句子是否符合要求\n"
+            "1. 是一句完整的可以向用户输出的话\n"
+            "2. 不包含特殊符号\n"
+            "3. 语义完整连贯\n"
+            "要判断的句子: {query}\n\n"
+            "你的结果(yes or no):\n"
+        )
+        prompt = prompt.replace("{query}", query)
+        result = callLLM(query=prompt, temperature=0, top_p=0, max_tokens=3)
+        if "yes" in result.lower():
+            return True
+        else:
+            return False
+    
+    def __generate_content_verification__(self, out_text, list_of_plugin_info, **kwargs):
+        """ReAct生成内容的校验
+
+        1. 校验Tool
+        2. 校验Tool Parameter格式
+        """
+        thought, tool, parameter = out_text
+        possible_tool_map = {i['code']: 1 for i in list_of_plugin_info}
+
+        try:
+            parameter = json.loads(parameter)
+        except Exception as err:
+            ...
+
+        # 校验Tool
+        if not possible_tool_map.get(tool):     # 如果生成的Tool不对, parameter也必然不对
+            tool = "AskHuman"
+            parameter = self.__get_default_reply__(kwargs['intentCode'])
+        
+        if tool == "AskHuman":
+            # TODO 如果生成的工具是AskHuman但参数是dict, 1. 尝试提取dict中的内容  2. 回复默认提示话术
+            if isinstance(parameter, dict):
+                for gkey, gcontent in parameter.items():
+                    if self.__check_query_valid__(gcontent):
+                        parameter = gcontent
+                        break
+                if isinstance(parameter, dict):
+                    parameter = self.__get_default_reply__(kwargs['intentCode'])
+        return [thought, tool, parameter]
+
     def chat_react(self, *args, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
         """
@@ -79,22 +140,23 @@ class Chat_v2:
         logger.debug(f"ReAct Generate: {model_output}")
         self.update_mid_vars(kwargs.get("mid_vars"), key="Chat ReAct", input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
 
+        # model_output = """Thought: 任务名和时间都没有提供，无法创建日程。\nAction: AskHuman\nAction Input: {"message": "请提供任务名和时间。"}"""
         out_text = parse_latest_plugin_call(model_output)
-        if not self.prompt_meta_data['prompt_tool_code_map'].get(out_text[1]):
-            out_text[1] = "AskHuman"
+        # if not self.prompt_meta_data['prompt_tool_code_map'].get(out_text[1]):
+        #     out_text[1] = "AskHuman"
+        
+        # (optim) 对于react模式, 如果一个事件提供工具列表, 生成的Action不属于工具列表中, 不同的意图返回不同的话术指导和AskHuman工具 2024年1月9日15:50:18
+        out_text = self.__generate_content_verification__(out_text, list_of_plugin_info, **kwargs)
         try:
-            gen_args = json.loads(out_text[2])
+            # gen_args = json.loads(out_text[2])
             tool = out_text[1]
             tool_zh = self.prompt_meta_data['prompt_tool_code_map'].get(tool)
             tool_param_msg = self.prompt_meta_data['tool'][tool_zh].get("params")
-            if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+            # if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+            if tool_param_msg and len(tool_param_msg) == 1:
                 # 对于直接输出的,此处判断改工具设定的参数,通常只有一项 为要输出的话,此时解析对应字段
                 if tool_param_msg[0]['schema']['type'].startswith("str"):
-                    out_text[2] = gen_args[tool_param_msg[0]['name']]
-            else:
-                # 原保底逻辑
-                # out_text[2] = gen_args['query']
-                ...
+                    out_text[2] = out_text[2][tool_param_msg[0]['name']]
         except Exception as err:
             # logger.exception(err)
             ...
@@ -346,8 +408,7 @@ class Chat_v2:
         if intentCode == "schedule_qry_up" and not kwargs.get("history"):
             kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
         if "schedule" in intentCode:
-            current_schedule = self.funcall.call_get_schedule(*args, **kwargs)
-            kwargs['current_schedule'] = "\n".join([f"task: {i['task']}, time: {i['time']}" for i in current_schedule if i['task']])
+            kwargs['schedule'] = self.funcall.call_get_schedule(*args, **kwargs)
         return args, kwargs
 
     def general_yield_result(self, *args, **kwargs):
@@ -412,9 +473,9 @@ class Chat_v2:
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
         elif content:
             content = content.split('\n')[0].split('。')[0][:20]
-            #logger.debug('标签归一前提取内容：' + content)
-            #content = norm_userInfo_msg(intentCode, content)
-            #logger.debug('标签归一后提取内容：' + content)
+            logger.debug('标签归一前提取内容：' + content)
+            content = norm_userInfo_msg(intentCode, content)
+            logger.debug('标签归一后提取内容：' + content)
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
         return content, intentCode

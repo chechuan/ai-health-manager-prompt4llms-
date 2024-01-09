@@ -375,15 +375,16 @@ class scheduleManager:
         """
         current = curr_time() + " " + curr_weekday()
         model = self.model_config.get('call_schedule_query', 'Qwen-14B-Chat')
-        schedule = self.funcmap["get_schedule"]['func'](**kwds)
+        
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
         try:
             time_range = self.call_query_confirm_query_time_range(query, current, **kwds)
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
-   
-        target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
+
+        target_schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
+        # target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
         if not target_schedule_content:
             target_schedule_content = "空"
@@ -397,7 +398,7 @@ class scheduleManager:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.5, temperature=0.7, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content
@@ -427,7 +428,8 @@ class scheduleManager:
             "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
             "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
             "2. 事件可能是一个或多个, 事件中可能包含地点信息, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
-            '3. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
+            "3. 如果一个事件未提供时间, 默认为3分钟后"
+            '4. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
             "# 示例\n"
             "用户输入: 3分钟后叫我一下,今晚8点提醒我们在家看联欢晚会,半个小时后提醒我喝牛奶\n"
             "输出: \n"
@@ -561,7 +563,7 @@ class scheduleManager:
         tdesc = accept_stream_response(response, verbose=False)
         
         try:
-            time_range = self.__cancel_parse_time_desc__(tdesc)
+            time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
         except Exception as e:
             logger.exception(e)
             time_range = None
@@ -578,7 +580,7 @@ class scheduleManager:
         time_range = self.__cancel_extract_time_info__(query, **kwds)
         if time_range is None:  # 如果未提取出时间范围
             content = "请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
-        
+        ...
 
 
 
