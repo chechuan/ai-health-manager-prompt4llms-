@@ -409,9 +409,9 @@ class Chat_v2:
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
         elif content:
             content = content.split('\n')[0].split('。')[0][:20]
-            #logger.debug('标签归一前提取内容：' + content)
-            #content = norm_userInfo_msg(intentCode, content)
-            #logger.debug('标签归一后提取内容：' + content)
+            logger.debug('标签归一前提取内容：' + content)
+            content = norm_userInfo_msg(intentCode, content)
+            logger.debug('标签归一后提取内容：' + content)
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
         return content, intentCode
