@@ -408,6 +408,9 @@ def get_intent(text):
     elif '拉群共策' in text:
         code = 'shared_decision'
         desc = '拉群共策'
+    elif '新奥百科' in text:
+        code = 'enn_wiki'
+        desc = '新奥百科知识'
     else:
         code = 'other'
         desc = '日常对话'
