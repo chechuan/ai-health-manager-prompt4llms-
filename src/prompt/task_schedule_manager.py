@@ -561,7 +561,7 @@ class scheduleManager:
         tdesc = accept_stream_response(response, verbose=False)
         
         try:
-            time_range = self.__cancel_parse_time_desc__(tdesc)
+            time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
         except Exception as e:
             logger.exception(e)
             time_range = None
@@ -578,7 +578,7 @@ class scheduleManager:
         time_range = self.__cancel_extract_time_info__(query, **kwds)
         if time_range is None:  # 如果未提取出时间范围
             content = "请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
-        
+        ...
 
 
 

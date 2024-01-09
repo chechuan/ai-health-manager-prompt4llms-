@@ -59,8 +59,8 @@ class funcCall:
         self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         # self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("query_schedule",    self.scheduleManager.query)
-        self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
-        # self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
+        # self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
+        self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
         logger.success(f"register finish.")
@@ -80,7 +80,7 @@ class funcCall:
 
     @clock
     def call_get_schedule(self, *args, **kwds):
-        """查询用户实时日程
+        """查询用户实时待办日程，默认查询未来两周
         """
         func_item = self.funcmap['get_schedule']
         url = self.api_config["ai_backend"] + func_item['method']

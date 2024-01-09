@@ -342,8 +342,7 @@ class Chat_v2:
         if intentCode == "schedule_qry_up" and not kwargs.get("history"):
             kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
         if "schedule" in intentCode:
-            current_schedule = self.funcall.call_get_schedule(*args, **kwargs)
-            kwargs['current_schedule'] = "\n".join([f"task: {i['task']}, time: {i['time']}" for i in current_schedule if i['task']])
+            kwargs['schedule'] = self.funcall.call_get_schedule(*args, **kwargs)
         return args, kwargs
 
     def general_yield_result(self, *args, **kwargs):

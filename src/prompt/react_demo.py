@@ -106,7 +106,8 @@ def build_input_text(_sys_prompt, list_of_plugin_info, **kwargs) -> str:
     if "{current_time}" in _sys_prompt:
         _sys_prompt = _sys_prompt.replace("{current_time}", curr_time() + " " + curr_weekday())
     if "{current_schedule}" in _sys_prompt:
-        _sys_prompt = _sys_prompt.replace("{current_schedule}", kwargs['current_schedule'])
+        current_schedule = "\n".join([f"task: {i['task']}, time: {i['time']}" for i in kwargs['schedule'] if i['task']])
+        _sys_prompt = _sys_prompt.replace("{current_schedule}", current_schedule)
     prompt_react = PROMPT_REACT.format(tools_text=tools_text, sys_prompt=_sys_prompt) + "\n\n"
 
     # TODO 2024年1月8日11:16:30 日程相关内容，历史轮数?
