@@ -383,8 +383,8 @@ class scheduleManager:
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
 
-        schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
-        target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
+        target_schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
+        # target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
         if not target_schedule_content:
             target_schedule_content = "空"
