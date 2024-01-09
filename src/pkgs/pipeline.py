@@ -153,10 +153,13 @@ class Chat_v2:
         market_list = ['打开','集市']
         home_list = ['打开','家居']
         bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
+        inter_info_list = ['打开聊天', '打开交流', '信息交互页面']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:     
+            return '打开功能页面'
+        if sum([1 for i in inter_info_list if i in history[-1]['content']]) > 0:
             return '打开功能页面'
         if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
@@ -434,12 +437,15 @@ class Chat_v2:
         market_list = ['集市']
         personal_list = ['我的设置']
         qr_code_list = ['二维码']
+        inter_info_list = ['交流', '聊天', '信息交互']
         input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in kwargs['history']]
         input_history = input_history[-3:]
         if '血压趋势' in input_history[-1]['content']:
             return 'pagename:"bloodPressure-trend-chart"'
         elif sum([1 for i in add_bp_list if i in input_history[-1]['content']]) > 0:
             return 'pagename:"add-blood-pressure"'
+        elif sum([1 for i in inter_info_list if i in input_history[-1]['content']]) > 0:
+            return 'pagename:"interactive-information"'
         elif sum([1 for i in personal_list if i in input_history[-1]['content']]) > 0:
             return 'pagename:"personal-setting"'
         elif sum([1 for i in qr_code_list if i in input_history[-1]['content']]) > 0:
@@ -496,6 +502,8 @@ class Chat_v2:
             return 'qr-code'
         elif 'smart-home' in text and 'pagename' in text:
             return 'smart-home'
+        elif 'interactive-information' in text and 'pagename' in text:
+            return 'interactive-information'
         else:
             return 'other'
 
