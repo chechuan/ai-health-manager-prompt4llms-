@@ -16,8 +16,7 @@ def get_mmol_drug(content):
     for i in mmol_drug_list:
         if i in content:
             return i
-        else:
-            return '未知'
+    return '未知'
 
 def get_chest_pain(content):
     for i in chest_pain_list:
@@ -30,15 +29,13 @@ def get_degree_pain(content):
     for i in degree_list:
         if i in content:
             return i
-        else:
-            return '未知'
+    return '未知'
 
 def get_sport_habbit(content):
     for i in sport_habbit_list:
         if i in content:
             return i
-        else:
-            return '未知'
+    return '未知'
 
 def get_food_alergy(content):
     ret = ''
@@ -82,8 +79,7 @@ def get_nation(content):
     for nation in nation_list:
         if nation in content:
             return nation
-        else:
-            return '未知'
+    return '未知'
 
 def get_height(content):
     height = re.search(r"\d+",content).group(0)
@@ -103,8 +99,7 @@ def get_labour_intentisy(content):
     for i in labour_list:
         if i in content:
             return i
-        else:
-            return '未知'
+    return '未知'
     
 def get_disease(content):
     ret = ''
@@ -130,8 +125,7 @@ def get_goal_manage(content):
     for goal in goal_list:
         if goal in content:
             return goal
-        else:
-            return '未知'
+    return '未知'
 
 def get_name(content):
     return content if content else '未知'
@@ -150,7 +144,7 @@ def norm_userInfo_msg(intentCode, content):
         return get_height(content)
     elif intentCode == 'ask_weight':
         return get_weight(content)
-    elif intentCode == 'ask_labour_intensity':
+    elif intentCode == 'ask_labor_intensity':
         return get_labour_intentisy(content)
     elif intentCode == 'ask_disease':
         return get_disease(content)
