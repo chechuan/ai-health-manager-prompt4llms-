@@ -397,7 +397,7 @@ class scheduleManager:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.5, temperature=0.7, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content

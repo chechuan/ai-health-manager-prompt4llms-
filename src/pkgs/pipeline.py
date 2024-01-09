@@ -125,7 +125,7 @@ class Chat_v2:
                         break
                 if isinstance(parameter, dict):
                     parameter = self.__get_default_reply__(kwargs['intentCode'])
-        return thought, tool, parameter
+        return [thought, tool, parameter]
 
     def chat_react(self, *args, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
@@ -152,7 +152,8 @@ class Chat_v2:
             tool = out_text[1]
             tool_zh = self.prompt_meta_data['prompt_tool_code_map'].get(tool)
             tool_param_msg = self.prompt_meta_data['tool'][tool_zh].get("params")
-            if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+            # if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+            if tool_param_msg and len(tool_param_msg) == 1:
                 # 对于直接输出的,此处判断改工具设定的参数,通常只有一项 为要输出的话,此时解析对应字段
                 if tool_param_msg[0]['schema']['type'].startswith("str"):
                     out_text[2] = out_text[2][tool_param_msg[0]['name']]
