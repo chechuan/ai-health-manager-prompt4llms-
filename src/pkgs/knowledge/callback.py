@@ -154,7 +154,7 @@ class funcCall:
         """
         msg = ChatMessage(**kwds['out_history'][-1])
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
-        arguments = eval(msg.function_call['arguments'])
+        arguments = msg.function_call['arguments']
         task = arguments.get("task")
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
