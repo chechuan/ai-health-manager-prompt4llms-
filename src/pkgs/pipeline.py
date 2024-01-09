@@ -214,11 +214,13 @@ class Chat_v2:
         
         intentCode = kwargs.get("intentCode", 'other')
         messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
-        desc = self.prompt_meta_data['event'][intentCode]['description']
-        process = self.prompt_meta_data['event'][intentCode]['process']
-        ext_info = desc + "\n" + process
+        
+        desc = self.prompt_meta_data['event'][intentCode].get('description', '')
+        process = self.prompt_meta_data['event'][intentCode].get('process', '')
+        if desc or process:     # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role":"system", "content": ext_info}] + messages
 
-        messages = [{"role":"system", "content": ext_info}] + messages
         messages = compose_func_reply(messages)
         content = callLLM("", messages, temperature=0.7, top_p=0.8)
         self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False), output_text=content)
@@ -261,10 +263,17 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode", 'other')
 
         messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
-        event_msg = self.prompt_meta_data['event'][intentCode]
-        system_prompt = event_msg['description'] + "\n" + event_msg['process']
+        
+        desc = self.prompt_meta_data['event'][intentCode].get('description', '')
+        process = self.prompt_meta_data['event'][intentCode].get('process', '')
+        if desc or process:     # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role":"system", "content": ext_info}] + messages
 
-        messages = [{"role":"system", "content": system_prompt}] + messages
+        # event_msg = self.prompt_meta_data['event'][intentCode]
+        # system_prompt = event_msg['description'] + "\n" + event_msg['process']
+
+        # messages = [{"role":"system", "content": system_prompt}] + messages
         payload = compose_func_reply(messages)
 
         response = self.session.post(url, data=json.dumps(payload)).json()
@@ -450,14 +459,17 @@ class Chat_v2:
         if len(input_history) > 1:
             hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录：' + '\n' + '\n'.join([h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
         hi += f'Question:{input_history[-1]["content"]}\nThought:'
-        ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi
+        ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi + '\nThought:'
         input_history = [{"role":"system", "content": ext_info}]
         logger.debug('打开页面模型输入：' + json.dumps(input_history,ensure_ascii=False))
         content = callLLM("", input_history, temperature=0, top_p=0.8, do_sample=False)
         if content.find('Answer') != -1:
             content = content[content.find('Answer')+7:].split('\n')[0].strip()
         if content.find('Output') != -1:
-            content = content[content.find('Output')+6:].split('\n')[0].strip()
+            content = content[content.find('Response')+6:].split('\n')[0].strip()
+        if content.find('Response') != -1:
+            content = content[content.find('')+9:].split('\n')[0].strip()
+
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content 
 
@@ -522,7 +534,8 @@ class Chat_v2:
         if self.prompt_meta_data['event'].get(intentCode):
             if intentCode == "other" :
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)                
+            elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)

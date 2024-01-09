@@ -199,7 +199,7 @@ def create_app():
         """
         try:
             param = accept_param_purge()
-            ret = expert_model.__food_purchasing_list_manage__(**param)
+            ret = expert_model.food_purchasing_list_manage(**param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -213,7 +213,7 @@ def create_app():
         """
         try:
             param = accept_param_purge()
-            generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
+            generator = expert_model.rec_diet_reunion_meals_restaurant_selection(**param)
             ret = decorate_text_stream(generator)
         except Exception as err:
             logger.exception(err)
@@ -227,7 +227,7 @@ def create_app():
         """
         try:
             param = accept_param_purge()
-            ret = expert_model.__rec_diet_eval__(param)
+            ret = expert_model.rec_diet_eval(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -241,7 +241,7 @@ def create_app():
         """
         try:
             param = accept_param_purge()
-            ret = expert_model.__health_blood_pressure_trend_analysis__(param)
+            ret = expert_model.health_blood_pressure_trend_analysis(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -255,7 +255,7 @@ def create_app():
         """
         try:
             param = accept_param_purge()
-            ret = expert_model.__health_warning_solutions_early__(param)
+            ret = expert_model.health_warning_solutions_early(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)

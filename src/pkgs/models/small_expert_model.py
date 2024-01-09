@@ -28,6 +28,7 @@ from src.utils.module import (accept_stream_response, clock, compute_blood_press
 
 
 class expertModel:
+    indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率":"XYZBXY001005"}
     def __init__(self, gsr) -> None:
         self.gsr = gsr
         
@@ -116,7 +117,7 @@ class expertModel:
         return status
 
     @clock
-    def __rec_diet_eval__(self, param):
+    def rec_diet_eval(self, param):
         """
         ## 需求
         https://ehbl4r.axshare.com/#g=1&id=c2eydm&p=%E6%88%91%E7%9A%84%E9%A5%AE%E9%A3%9F
@@ -170,7 +171,7 @@ class expertModel:
         return content
     
     @clock
-    def __health_blood_pressure_trend_analysis__(self, param: Dict) -> str:
+    def health_blood_pressure_trend_analysis(self, param: Dict) -> str:
         """血压趋势分析
 
         通过应用端提供的血压数据，提供血压报告的分析与解读的结果，返回应用端。
@@ -239,7 +240,27 @@ class expertModel:
                     return False
         return True
 
-    def __health_warning_solutions_early__(self, param: Dict) -> str:
+    def __health_warning_update_blood_pressure_level__(self, vars: List[int], value_list: List[int] = [], return_str: bool = False):
+            """更新血压水平
+
+            - Args
+
+                vars List[int]: 血压等级 [] or [0,2,1,3,2]
+                value_list List[int]: 真实血压值列表 收缩压or舒张压
+            """
+            if return_str:
+                valuemap = {-1: "低血压", 0: '正常', 1: '高血压一级', 2: '高血压二级', 3: '高血压三级'}
+                vars = [valuemap.get(i) for i in vars]
+                return vars
+            if not vars:
+                vars = [compute_blood_pressure_level(value) for value in value_list]
+            else:
+                new_vars = [compute_blood_pressure_level(value) for value in value_list]
+                if len(vars) == len(new_vars):
+                    vars = [i if abs(i)>abs(j) else j for i, j in zip(vars, new_vars)]
+            return vars
+
+    def health_warning_solutions_early(self, param: Dict) -> str:
         """
         - 输入：客户的指标数据（C端客户通过手工录入、语音录入、医疗设备测量完的结果），用药情况（如果C端有用药情况）
         - 要求: 
@@ -261,66 +282,54 @@ class expertModel:
         1. 今天一定会有数据
         2. 三个指标数据同步存在
         3. 传近5天的数据 仅以此判断连续
+        4. 收缩压和舒张压近五天连续 格式一
         """
-        def update_blood_pressure_level(vars: List[int], value_list: List[int] = [], return_str: bool = False):
-            """更新血压水平
-
-            - Args
-
-                vars List[int]: 血压等级 [] or [0,2,1,3,2]
-                value_list List[int]: 真实血压值列表 收缩压or舒张压
-            """
-            if return_str:
-                valuemap = {0: '正常', 1: '一级', 2: '二级', 3: '三级'}
-                vars = [valuemap.get(i) for i in vars]
-                return vars
-            if not vars:
-                vars = [compute_blood_pressure_level(value) for value in value_list]
-            else:
-                new_vars = [compute_blood_pressure_level(value) for value in value_list]
-                if len(vars) == len(new_vars):
-                    vars = [max(i, j) for i, j in zip(vars, new_vars)]
-            return vars
-
         model = self.gsr.model_config['health_warning_solutions_early']
         is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])        # 通过数据校验判断处理逻辑
         
         time_range = {i['date'][:10] for i in param['indicatorData'][0]['data']}    # 当前的时间范围
         bpl = []
+        ihm_health_sbp, ihm_health_dbp, ihm_health_hr = [], [], []
         if is_continuous:
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['code'] == "lk1589863365641":      # 收缩压
+                if i['code'] == self.indicatorCodeMap['收缩压']:      # 收缩压
                     ihm_health_sbp = [j['value'] for j in i['data']]
-                    bpl = update_blood_pressure_level(bpl, ihm_health_sbp)
-                elif i['code'] == "lk1589863365791":    # 舒张压
+                    bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_sbp)
+                elif i['code'] == self.indicatorCodeMap['舒张压']:    # 舒张压
                     ihm_health_dbp = [j['value'] for j in i['data']]
-                    bpl = update_blood_pressure_level(bpl, ihm_health_dbp)
-                elif i['code'] == "XYZBXY001005":       # 心率
+                    bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_dbp)
+                elif i['code'] == self.indicatorCodeMap['心率']:       # 心率
                     ihm_health_hr = [j['value'] for j in i['data']]
-            ihm_health_blood_pressure_level = update_blood_pressure_level(bpl, return_str=True)
-            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),ihm_health_sbp=ihm_health_sbp,
-                        ihm_health_dbp=ihm_health_dbp,ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, ihm_health_hr=ihm_health_hr)
+            ihm_health_blood_pressure_level = self.__health_warning_update_blood_pressure_level__(bpl, return_str=True)
+            prompt = prompt_template.format(time_start=min(time_range),
+                                            time_end=max(time_range),
+                                            ihm_health_sbp=ihm_health_sbp,
+                                            ihm_health_dbp=ihm_health_dbp,
+                                            ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, 
+                                            ihm_health_hr=ihm_health_hr)
         else:       # 非连续，只取当日指标
             prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param['indicatorData']:
-                if i['name'] == "收缩压":
+                if i['code'] == self.indicatorCodeMap['收缩压']:
                     ihm_health_sbp = [i['data'][-1]['value']]
-                elif i['name'] == "舒张压":
+                elif i['code'] == self.indicatorCodeMap['舒张压']:
                     ihm_health_dbp = [i['data'][-1]['value']]
-                elif i['name'] == "心率":
+                elif i['code'] == self.indicatorCodeMap['心率']:
                     ihm_health_hr = [i['data'][-1]['value']]
-            content = "患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。"
-            prompt = prompt_template.format(time_start=min(time_range),time_end=max(time_range),
-                                            ihm_health_sbp=ihm_health_sbp,ihm_health_dbp=ihm_health_dbp,ihm_health_hr=ihm_health_hr)
+            prompt = prompt_template.format(time_start=min(time_range),
+                                            time_end=max(time_range),
+                                            ihm_health_sbp=ihm_health_sbp,
+                                            ihm_health_dbp=ihm_health_dbp,
+                                            ihm_health_hr=ihm_health_hr)
         history = [{"role":"user", "content":prompt}]
         response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         return content
 
-    def __food_purchasing_list_manage__(self, reply="好的-unknow reply",**kwds):
+    def food_purchasing_list_manage(self, reply="好的-unknow reply",**kwds):
         """食材采购清单管理
 
         [
@@ -375,7 +384,7 @@ class expertModel:
         }
         return ret
 
-    def __rec_diet_reunion_meals_restaurant_selection__(self, history=[], backend_history: List = [], **kwds) -> str:
+    def rec_diet_reunion_meals_restaurant_selection(self, history=[], backend_history: List = [], **kwds) -> str:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -470,5 +479,4 @@ if __name__ == "__main__":
     #     print(yield_item)
 
     param = testParam.param_health_warning_solutions_early
-    expert_model.__health_warning_solutions_early__(param)
-    expert_model.__health_warning_solutions_early__(param)
+    expert_model.health_warning_solutions_early(param)

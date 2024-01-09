@@ -330,34 +330,41 @@ class scheduleManager:
         self.funcmap = funcmap
         self.session = session
 
-    def __update_mid_vars__(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
+    def __update_mid_vars__(self, mid_vars, input_text: Any = None, output_text: Any = None, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
         """
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
     
-    def call_query_confirm_query_time_range(self, query: str, current: str=curr_time() + " " + curr_weekday()) -> Dict:
+    def call_query_confirm_query_time_range(self, query: str, current: str=curr_time() + " " + curr_weekday(), **kwds) -> Dict:
         """确定查询的时间范围
         """
         output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
-        prompt = (
-            "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
-            "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
-            "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
-            "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
-            f"4. 输出的格式参考: {output_format}\n\n"
-            f"现在时间: {current}\n"
-            f"用户输入: {query}\n"
-            "输出:"
-        )
-        # logger.debug(prompt)
+        # prompt_template = PromptTemplate.from_template(
+        #     (
+        #         "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
+        #         "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
+        #         "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
+        #         "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
+        #         "4. 早晨指05:00:00-08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00"
+        #         "5. 输出的格式参考: {output_format}\n\n"
+        #         "现在时间: {current}\n"
+        #         "用户输入: {query}\n"
+        #         "输出:"
+        #     )
+        # )
+        prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
+        prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
         output = text.strip()
         time_range = json.loads(output)
         logger.debug(f"{output}")
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=time_range, key="confirm_query_time_range", model=model)
         return time_range
 
     def query(self, *args, **kwds):
@@ -372,7 +379,7 @@ class scheduleManager:
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
         try:
-            time_range = self.call_query_confirm_query_time_range(query, current)
+            time_range = self.call_query_confirm_query_time_range(query, current, **kwds)
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
    
@@ -380,6 +387,8 @@ class scheduleManager:
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
         if not target_schedule_content:
             target_schedule_content = "空"
+        if kwds.get('debug', False):     # DEBUG
+            return str(time_range)
         prompt = query_schedule_template.replace("{{cur_time}}", current)
         prompt = prompt.replace("{{user_schedule}}", target_schedule_content)
         prompt = prompt.replace("{{query}}", query)
@@ -388,12 +397,12 @@ class scheduleManager:
             {"role": "user", "content": prompt}
         ]
         logger.debug(prompt)
-        response = callLLM(history=messages, top_p=0.8, temperature=0.85, model=model, stream=True)
+        response = callLLM(history=messages, top_p=0.5, temperature=0.7, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content
     
-    def get_currct_time_from_desc(self, time_desc: str):
+    def __get_currct_time_from_desc__(self, time_desc: str):
         """根据时间描述获取正确的时间
         - Args
             time_desc [str]: 时间的描述 如:今晚8点
@@ -414,27 +423,25 @@ class scheduleManager:
     def call_create_extract_event_time_pair(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
-        prompt = (
+        prompt_str = (
             "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
-            "1. 日程名称尽量简洁明了并包含用户所描述的事件信息，如果未明确，则默认为`提醒`\n"
-            "2. 事件可能是一个或多个, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
+            "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
+            "2. 事件可能是一个或多个, 事件中可能包含地点信息, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
             '3. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
             "# 示例\n"
-            "用户输入: 3分钟后叫我一下,今晚8点提醒我们看联欢晚会, 半个小时后\n"
+            "用户输入: 3分钟后叫我一下,今晚8点提醒我们在家看联欢晚会,半个小时后提醒我喝牛奶\n"
             "输出: \n"
-            '[["提醒", "3分钟后"],["看联欢晚会", "今晚8点"], [None, "半个小时后"]]\n'
-            f"用户输入: {query}\n"
+            '[["提醒", "3分钟后"],["在家看联欢晚会", "今晚8点"], ["喝牛奶提醒", "半个小时后"]]\n'
+            "用户输入: {query}\n"
             "输出: \n"
-            f"{head_str}"
+            "{head_str}"
         )
+        prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query, head_str=head_str)
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
         event_time_pair = head_str + accept_stream_response(response, verbose=False)
         event_time_pair = eval(event_time_pair)
-        self.__update_mid_vars__(kwds['mid_vars'], 
-                                 input_text=query, 
-                                 output_text=event_time_pair, 
-                                 key="extract_event_time_pair",
-                                 model=model)
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=event_time_pair, key="extract_event_time_pair",model=model)
         return event_time_pair
 
     def call_create_parse_currect_event_time(self, event_time_pair: List, **kwds):
@@ -447,12 +454,12 @@ class scheduleManager:
                 item.append(None)
                 unexpcept_result.append(item)
                 continue
-            current_time = self.get_currct_time_from_desc(tdesc)
-            item.append(current_time)
+            correct_time = self.__get_currct_time_from_desc__(tdesc)
+            item.append(correct_time)
             except_result.append(item)
         except_result.sort(key=lambda x: x[2])      # 对提取出的事件 - 时间 按时间排序
         self.__update_mid_vars__(kwds['mid_vars'], 
-                                 input_text=event_time_pair, 
+                                 input_text=event_time_pair,
                                  output_text={"except_result": except_result, "unexpcept_result": unexpcept_result}, 
                                  key="parse_time_desc",
                                  model=self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat'))
@@ -466,11 +473,11 @@ class scheduleManager:
         create_schedule_success = []
         for item in result_to_create:           # 逐一创建日程并
             task, desc, cronDate = item
-            payload = {"customId": customId, "orgCode": orgCode, "task": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
+            payload = {"customId": customId, "orgCode": orgCode, "taskName": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
             responseJS = self.session.post(url, json=payload).json()
             if responseJS["code"] == 200 and responseJS['data'] is True:
                 create_schedule_success.append(item)
-                logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
+                logger.success(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 continue
             else:
                 responseJS = self.session.post(url, json=payload).json()
@@ -479,20 +486,13 @@ class scheduleManager:
                     logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 else:
                     result_unexpected.append(item)
-                    logger.exception(f"日程创建失败: \n{payload}")
-        # TODO 回复内容待优化
-        prompt = (
-            "下面是已为用户创建的日程提醒及用户的要求，请结合已创建给出一句话的回复，要求回复通顺流畅，内容翔实\n\n"
-            "[已创建]\n{created_schedule_content}\n\n"
-            "[要求]\n{query}\n\n"
-            "[回复]\n"
-        )
+                    logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
+        prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
         model = self.model_config['call_schedule_create_reply']
-        created_schedule_content = "\n".join([i[0]+": "+i[1] for i in create_schedule_success])
-        prompt = prompt.replace("{created_schedule_content}", created_schedule_content)
-        prompt = prompt.replace("{query}", query)
-        message = [{"role":"user", "content": query}]
-        response = callLLM(history=message, model=model, temperature=0.8, top_p=0.8, stream=True)
+        created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
+        prompt = prompt_template.format(created_schedule_content=created_schedule_content)
+        message = [{"role":"user", "content": prompt}]
+        response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
         content = accept_stream_response(response, verbose=False)
         self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
         return content
@@ -508,6 +508,79 @@ class scheduleManager:
         result_to_create, result_unexpected = self.call_create_parse_currect_event_time(event_time_pair, **kwds)
         content = self.call_create_execute_create_schedule(url, query, result_to_create, result_unexpected, **kwds)
         return content
+    
+    def __cancel_parse_time_desc__(self, query, **kwds):
+        """解析时间点或者范围
+        """
+        model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        current: str=curr_time() + " " + curr_weekday()
+        output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
+        prompt_template = PromptTemplate.from_template(
+            (
+                "请你理解用户所说, 解析其描述的时间节点或者范围,以下是一些要求:\n"
+                "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
+                "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
+                "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
+                "4. 早晨指05:00:00至08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00\n"
+                "5. 如果指定了具体的时间节点, 则只把精确的时间节点输出到`startTime`字段\n"
+                "6. 输出的格式参考: {output_format}\n\n"
+                "现在时间: {current}\n"
+                "用户输入: {query}\n"
+                "输出:"
+            )
+        )
+        # prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
+        # prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        response = callLLM(prompt, model=model, stop="\n\n", stream=True)
+        text = accept_stream_response(response, verbose=False)
+        output = text.strip()
+        time_range = json.loads(output)
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=text, key="取消日程-解析时间描述", model=model)
+        return time_range
+    
+    def __cancel_extract_time_info__(self, query: str, **kwds) -> Dict:
+        """取消日程 - 提取时间范围描述 -> 解析为时间戳
+        """
+        model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
+        prompt_str = (
+            "请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述\n"
+            "示例1:\n"
+            "用户输入: 取消明天上午的日程安排\n"
+            "输出: 明天上午\n"
+            "示例2:\n"
+            "用户输入: 取消今天的日程安排\n"
+            "输出: 今天\n"
+            "Begins~\n\n"
+            "用户输入: {query}\n"
+            "输出: "
+        )
+        prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(query=query)
+        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8, stop="\n\n", stream=True)
+        tdesc = accept_stream_response(response, verbose=False)
+        
+        try:
+            time_range = self.__cancel_parse_time_desc__(tdesc)
+        except Exception as e:
+            logger.exception(e)
+            time_range = None
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="extract_event_time_pair",model=model)
+        return time_range
+    
+    def cancel(self, *args, **kwds):
+        """进一步取消日程效果优化, 暂定只支持一轮?
+        """
+        query = kwds['history'][-2]['content']
+        func = self.funcmap['create_schedule']
+        url = self.api_config["ai_backend"] + func['method']
+
+        time_range = self.__cancel_extract_time_info__(query, **kwds)
+        if time_range is None:  # 如果未提取出时间范围
+            content = "请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
+        
+
+
 
 if __name__ == "__main__":
     t = datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")

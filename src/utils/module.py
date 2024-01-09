@@ -63,16 +63,36 @@ class initAllResource:
         self.cache_dir = Path(CACHE_DIR)
         if not self.cache_dir.exists():
             self.cache_dir.mkdir()
-        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
-        self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
-        self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
-        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        
+        self.__load_config__()
+
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
         openai.api_key = "EMPTY"
         support_model_list = [i['id'] for i in openai.Model.list()['data']]
         logger.info(f"Support model list: {support_model_list}")
+    
+    def __load_config__(self) -> None:
+        """指定env加载配置
+        """
+        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
+        self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
+        self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
+        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        self.__info_config__()
+
+    def __info_config__(self):
+        for key, value in self.api_config.items():
+            logger.debug(f"Initialize api config: {key}: {value}")
+        logger.debug(f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}")
+        for key, value in self.prompt_version.items():
+            if not value:
+                continue
+            for ik, iv in value.items():
+                logger.debug(f"Initialize prompt version {key} - {ik} - {iv}")
+        for key, model_name in self.model_config.items():
+            logger.debug(f"Initialize model {key} - {model_name}")
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:
@@ -388,6 +408,9 @@ def get_intent(text):
     elif '拉群共策' in text:
         code = 'shared_decision'
         desc = '拉群共策'
+    elif '新奥百科' in text:
+        code = 'enn_wiki'
+        desc = '新奥百科知识'
     else:
         code = 'other'
         desc = '日常对话'
@@ -618,12 +641,14 @@ def compute_blood_pressure_level(x: int, flag: str = "l" or "h") -> int:
     """计算血压等级 flag区分低血压or高血压 不同level
     """
     if flag == "l":
-        if x < 90: return 0
+        if x < 60: return -1
+        if x <= 90: return 0
         elif x <= 90: return 1
         elif x <= 109: return 2
         else: return 3
     elif flag == "h":
-        if x < 140: return 0
+        if x < 90: return -1
+        if x <= 140: return 0
         elif x <= 159: return 1
         elif x <= 179: return 2
         else: return 3

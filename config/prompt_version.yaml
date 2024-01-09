@@ -4,49 +4,58 @@ local:
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
-    schedule_qry_up: 0.1.0
+    schedule_qry_up: 0.1.1
+    schedule_manager: 0.1.0
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
   character:
   tool:
-    create_schedule: 1.0.1
+    创建日程: 0.2.0
+    查询日程: 0.1.0
 dev:
   event:
     other: 1.0.3
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
-    schedule_qry_up: 0.1.0
+    schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
   character:
   tool:
-    create_schedule: 1.0.1
+    创建日程: 0.2.0
+    查询日程: 0.1.0
 test:
   event:
     other: 1.0.3
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
-    schedule_qry_up: 0.1.0
+    schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
   character:
   tool:
-    create_schedule: 1.0.1
+    创建日程: 0.2.0
+    查询日程: 0.1.0
 fat:
   event:
     other: 1.0.3
     drug_rec: 0.1.0
+    sport_rec: 0.1.0
     chronic_qa: 0.1.0
+    schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
+    warning_solutions_early_continuous: 0.1.0
+    warning_solutions_early_not_continuous: 0.1.0
   character:
   tool:
-    create_schedule: 1.0.1
+    创建日程: 0.2.0
+    查询日程: 0.1.0

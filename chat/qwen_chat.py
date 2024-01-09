@@ -207,11 +207,14 @@ class Chat:
         market_list = ['打开','集市']
         home_list = ['打开','家居']
         bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
+        food_purch_list = ['打开食材采购','食材采购','买什么食材','买什么食物', '买点什么食材', '买点什么食物']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
         if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:
             return '打开功能页面'
+        if sum([1 for i in food_purch_list if i in history[-1]['content']]) > 0:
+            return '生成食材采购清单'
         if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
         if sum([1 for i in market_list if i in history[-1]['content']]) >= 2:
@@ -416,13 +419,13 @@ class Chat:
                         'intentDesc':desc}
         elif self.intent_map['aiui'].get(intent):
             out_text = {'message':'', 'intentCode':intent, 'processCode':'aiui', 'intentDesc':desc}
-        elif intent in ['food_rec']:
-            if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                out_text = {'message':'', 'intentCode':intent,
-                     'processCode':'trans_back', 'intentDesc':desc}
-            else:
-                out_text = {'message':'', 'intentCode':'food_rec',
-                        'processCode':'alg', 'intentDesc':desc}
+        #elif intent in ['food_rec']:
+        #    if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
+        #        out_text = {'message':'', 'intentCode':intent,
+        #             'processCode':'alg', 'intentDesc':desc}
+        #    else:
+        #        out_text = {'message':'', 'intentCode':'food_rec',
+        #                'processCode':'alg', 'intentDesc':desc}
         #elif intent in ['sport_rec']:
         #    if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
         #        out_text = {'message':'',
