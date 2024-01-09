@@ -375,14 +375,15 @@ class scheduleManager:
         """
         current = curr_time() + " " + curr_weekday()
         model = self.model_config.get('call_schedule_query', 'Qwen-14B-Chat')
-        schedule = self.funcmap["get_schedule"]['func'](**kwds)
+        
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
         try:
             time_range = self.call_query_confirm_query_time_range(query, current, **kwds)
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
-   
+
+        schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
         target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
         target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
         if not target_schedule_content:

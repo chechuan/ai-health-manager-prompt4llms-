@@ -87,7 +87,8 @@ class funcCall:
         assert kwds.get("orgCode"), KeyError("orgCode is required")
         assert kwds.get("customId"), KeyError("customId is required")
 
-        cur_time, end_time = curr_time(), date_after_days(14)       # 查询未来两周的日程
+        cur_time = kwds.get("startTime") if kwds.get("startTime") else curr_time()       # 查询未来两周的日程
+        end_time = kwds.get("endTime") if kwds.get("endTime") else date_after_days(14)
         payload = {"orgCode": kwds["orgCode"],"customId": kwds["customId"],"startTime": cur_time,"endTime":end_time}
         resp_js = self.session.post(url, json=payload, headers=self.headers).json()
         data = resp_js['data']
