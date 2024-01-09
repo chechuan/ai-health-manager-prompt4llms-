@@ -86,14 +86,14 @@ def get_nation(content):
             return '未知'
 
 def get_height(content):
-    height = re.search(r"(\d{1,3}",content).group(0)
+    height = re.search(r"\d+",content).group(0)
     if height:
         return height
     else:
         return '未知'
     
 def get_weight(content):
-    weight = re.search(r"(\d{1,3}",content).group(0)
+    weight = re.search(r"\d+",content).group(0)
     if weight: 
         return weight
     else:   
