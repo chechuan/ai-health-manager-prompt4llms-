@@ -19,7 +19,7 @@ def get_mmol_drug(content):
         else:
             return '未知'
 
-def get_degree_pain(content):
+def get_chest_pain(content):
     for i in chest_pain_list:
         if i in content:
             return i
@@ -86,14 +86,14 @@ def get_nation(content):
             return '未知'
 
 def get_height(content):
-    height = re.search(r"(\d{1,4}",content).group(0)
+    height = re.search(r"(\d{1,3}",content).group(0)
     if height:
         return height
     else:
         return '未知'
     
 def get_weight(content):
-    weight = re.search(r"(\d{1,4}",content).group(0)
+    weight = re.search(r"(\d{1,3}",content).group(0)
     if weight: 
         return weight
     else:   
@@ -164,5 +164,13 @@ def norm_userInfo_msg(intentCode, content):
         return get_food_alergy(content)
     elif intentCode == 'ask_taste_prefer':
         return get_tast_prefer(content)
+    elif intentCode == 'ask_exercise_habbit':
+        return get_exercise_habbit(content)
+    elif intentCode == 'ask_exercise_taboo_degree':
+        return get_degree_pain(content)
+    elif intentCode == 'ask_exercise_habbit':
+        return get_sport_habbit(content)
+    elif intentCode == 'ask_exercise_taboo_xt':
+        return get_chest_pain(content)
     else:
         return '未知'
