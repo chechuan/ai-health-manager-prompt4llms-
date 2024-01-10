@@ -473,30 +473,36 @@ class scheduleManager:
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
         create_schedule_success = []
-        for item in result_to_create:           # 逐一创建日程并
+        success = 0     # 是否创建成功过
+        for item in result_to_create:           # 逐一创建日程
             task, desc, cronDate = item
             payload = {"customId": customId, "orgCode": orgCode, "taskName": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
             responseJS = self.session.post(url, json=payload).json()
-            if responseJS["code"] == 200 and responseJS['data'] is True:
+            if responseJS["code"] == 200:
+                success = 1
                 create_schedule_success.append(item)
                 logger.success(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 continue
             else:
                 responseJS = self.session.post(url, json=payload).json()
-                if responseJS["code"] == 200 and responseJS['data'] is True:
+                if responseJS["code"] == 200:
+                    success = 1
                     create_schedule_success.append(item)
                     logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 else:
                     result_unexpected.append(item)
                     logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
-        prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
-        model = self.model_config['call_schedule_create_reply']
-        created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
-        prompt = prompt_template.format(created_schedule_content=created_schedule_content)
-        message = [{"role":"user", "content": prompt}]
-        response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
-        content = accept_stream_response(response, verbose=False)
-        self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
+        if success == 0:    # 未创建成功过, 回复固定内容指导创建日程话术
+            content = "对不起, 您的日程创建失败, 请重新尝试在对话中明确您要提醒做什么及具体的时间。"
+        else:               # 创建成功, 告知
+            prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
+            model = self.model_config['call_schedule_create_reply']
+            created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
+            prompt = prompt_template.format(created_schedule_content=created_schedule_content)
+            message = [{"role":"user", "content": prompt}]
+            response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
+            content = accept_stream_response(response, verbose=False)
+            self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
         return content
 
     def create(self, *args, **kwds):

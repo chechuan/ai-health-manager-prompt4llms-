@@ -10,7 +10,7 @@ import json
 
 import requests
 
-url = "https://gate-qa.op.laikang.com/aihealthmanager-alg/alg-api/schedule"
+url = "https://gate-dev.op.laikang.com/aihealthmanager-dev/alg-api/schedule"
 
 customId = "test_songhaoyang"
 orgCode = "sf"
@@ -21,8 +21,7 @@ payload = json.dumps({
   "endTime": "2024-01-30 23:59:59"
 })
 headers = {
-  'Content-Type': 'application/json',
-  'Cookie': 'acw_tc=0f91360f-a5df-4727-8199-b699c5ec74e9cc029cf1de2cb9c3feb6fd046c056eae'
+  'Content-Type': 'application/json'
 }
 session = requests.Session()
 sch_list = session.post(url + "/query", headers=headers, data=payload).json()['data']
