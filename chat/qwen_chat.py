@@ -208,7 +208,7 @@ class Chat:
         home_list = ['打开','家居']
         bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
         food_purch_list = ['打开食材采购','食材采购','买什么食材','买什么食物', '买点什么食材', '买点什么食物']
-        inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互', '语音交互页面','查看聊天','聊天页面', '我的聊天']
+        inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互','语音交互页面','查看聊天','聊天页面', '我的聊天', '看看聊天']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
