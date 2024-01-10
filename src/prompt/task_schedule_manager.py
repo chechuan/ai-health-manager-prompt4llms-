@@ -15,6 +15,7 @@ import requests
 from click import prompt
 from httpx import head
 from langchain.prompts import PromptTemplate
+from sympy import cancel
 
 sys.path.append(str(Path.cwd()))
 from config.constrant import task_schedule_return_demo
@@ -25,7 +26,8 @@ from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
 from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
-                              date_after_days, initAllResource, make_meta_ret, this_sunday)
+                              date_after_days, initAllResource, make_meta_ret,
+                              parse_latest_plugin_call, this_sunday)
 
 
 class taskSchedulaManager:
@@ -338,7 +340,20 @@ class scheduleManager:
         mid_vars.append({"id": lth, "key":key, "input_text": input_text, "output_text":output_text, "model":model, **kwargs})
         return mid_vars
     
-    def call_query_confirm_query_time_range(self, query: str, current: str=curr_time() + " " + curr_weekday(), **kwds) -> Dict:
+    def __get_schedule_manage_payload__(self, **kwds):
+        """日程管理接口入参模板
+        """
+        payload = {
+            "customId": kwds['customId'], 
+            "orgCode": kwds['orgCode'], 
+            "taskName": kwds['taskName'], 
+            "cronDate": kwds['cronDate'], 
+            "taskType": "reminder",
+            "intentCode": kwds['intentCode']
+        }
+        return payload
+
+    def __call_query_confirm_query_time_range__(self, query: str, current: str=curr_time() + " " + curr_weekday(), **kwds) -> Dict:
         """确定查询的时间范围
         """
         output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
@@ -380,7 +395,7 @@ class scheduleManager:
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
         try:
-            time_range = self.call_query_confirm_query_time_range(query, current, **kwds)
+            time_range = self.__call_query_confirm_query_time_range__(query, current, **kwds)
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
 
@@ -422,7 +437,7 @@ class scheduleManager:
         target_time = accept_stream_response(response, verbose=False)[:19]
         return target_time
     
-    def call_create_extract_event_time_pair(self, query: str, **kwds):
+    def __call_create_extract_event_time_pair__(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
         prompt_str = (
@@ -447,7 +462,7 @@ class scheduleManager:
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=event_time_pair, key="extract_event_time_pair",model=model)
         return event_time_pair
 
-    def call_create_parse_currect_event_time(self, event_time_pair: List, **kwds):
+    def __call_create_parse_currect_event_time__(self, event_time_pair: List, **kwds):
         """从时间描述解析正确时间
         """
         except_result, unexpcept_result = [], []
@@ -468,37 +483,34 @@ class scheduleManager:
                                  model=self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat'))
         return except_result, unexpcept_result
     
-    def call_create_execute_create_schedule(self, url, query, result_to_create: List, result_unexpected: List, **kwds):
+    def __call_create_execute_create_schedule__(self, url, query, result_to_create: List, result_unexpected: List, **kwds):
         """执行创建日程接口
         """
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
-        create_schedule_success = []
-        success = 0     # 是否创建成功过
+        create_success = []
         for item in result_to_create:           # 逐一创建日程
             task, desc, cronDate = item
-            payload = {"customId": customId, "orgCode": orgCode, "taskName": task, "cronDate": cronDate, "taskType": "reminder","intentCode": "CREATE"}
+            payload = self.__get_schedule_manage_payload__(customId=customId, orgCode=orgCode, taskName=task, cronDate=cronDate, intentCode="CREATE")
             responseJS = self.session.post(url, json=payload).json()
             if responseJS["code"] == 200:
-                success = 1
-                create_schedule_success.append(item)
+                create_success.append(item)
                 logger.success(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 continue
             else:
                 responseJS = self.session.post(url, json=payload).json()
                 if responseJS["code"] == 200:
-                    success = 1
-                    create_schedule_success.append(item)
+                    create_success.append(item)
                     logger.info(f"Create schedule org: {orgCode}, uid: {customId}, task: {task}, time: {cronDate}, desc: {desc}")
                 else:
                     result_unexpected.append(item)
                     logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
-        if success == 0:    # 未创建成功过, 回复固定内容指导创建日程话术
+        if len(create_success) == 0:    # 未创建成功过, 回复固定内容指导创建日程话术
             content = "对不起, 您的日程创建失败, 请重新尝试在对话中明确您要提醒做什么及具体的时间。"
         else:               # 创建成功, 告知
             prompt_template = PromptTemplate.from_template(self.prompt_meta_data['event']['call_schedule_create_reply']['description'])
             model = self.model_config['call_schedule_create_reply']
-            created_schedule_content = [i[1]+": "+i[0] for i in create_schedule_success]
+            created_schedule_content = [i[1]+": "+i[0] for i in create_success]
             prompt = prompt_template.format(created_schedule_content=created_schedule_content)
             message = [{"role":"user", "content": prompt}]
             response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
@@ -513,9 +525,9 @@ class scheduleManager:
         func = self.funcmap['create_schedule']
         url = self.api_config["ai_backend"] + func['method']
         
-        event_time_pair = self.call_create_extract_event_time_pair(query, **kwds)
-        result_to_create, result_unexpected = self.call_create_parse_currect_event_time(event_time_pair, **kwds)
-        content = self.call_create_execute_create_schedule(url, query, result_to_create, result_unexpected, **kwds)
+        event_time_pair = self.__call_create_extract_event_time_pair__(query, **kwds)
+        result_to_create, result_unexpected = self.__call_create_parse_currect_event_time__(event_time_pair, **kwds)
+        content = self.__call_create_execute_create_schedule__(url, query, result_to_create, result_unexpected, **kwds)
         return content
     
     def __cancel_parse_time_desc__(self, query, **kwds):
@@ -583,11 +595,22 @@ class scheduleManager:
     def __cancel_extract_task_info__(self, target_schedule, query, **kwds):
         """让模型理解query, 从候选列表中提取要取消的日程
         """
-        # head_str = '[{"task":"'
+        def parse_react_generate_content(text: str) -> Dict:
+            """解析本函数中react生成的内容, 提取其中的Action Input
+            """
+            tidx = text.find("Thought: ") + len("Thought: ")
+            aidx = text.find("Action Input: ")
+            thought = text[tidx:aidx].strip()
+            action_input = text[aidx + len("Action Input: "):].strip()
+            try:
+                action_input = json.loads(action_input)
+            except Exception as e:
+                ...
+            return thought, action_input
         current_time = curr_time()
         output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
         schedule_desc = "\n".join([f"{i['time']}: {i['task']}" for i in target_schedule])
-        prompt_str = (
+        prompt_template_system = (
                 "你是一个功能强大的信息提取工具, 可以很好的理解用户的意图, 并从当前日程列表中提取符合用户描述的日程信息, 下面是一些要求:\n"
                 "1. 请你充分理解用户所说, 从下面给定的日程列表中提取日程-时间对, 用户要取消的可能是一个日程,也可能是一个时间点或者时间范围的多个日程\n"
                 "2. 请遵循以下格式回复:\n"
@@ -596,33 +619,62 @@ class scheduleManager:
                 "Action Input: 提取出的要取消的日程的信息\n"
                 "Observation: 已完成任务\n"
                 "3. Action Input输出的格式应该是一个json列表,每个item有两个字段分别是`task`:任务名, `time`:时间戳格式的任务时间, 格式示例:{output_format}, 一个或者多个item\n"
-                "4. 如果没有符合用户意图的日程要取消, Action Input输出可以为[]\n\n"
+                "4. 如果没有符合用户意图的日程要取消或者`当前日程列表`为空, Action Input输出可以为[]\n\n"
                 "当前日程列表:\n{schedule_desc}"
                 "\n现在时间是{current_time}\n"
-                "Begins!\n"
+                "Begins!\n\n"
                 "Question: {query}\n"
                 "Thought: \n"
             )
-        prompt_template = PromptTemplate.from_template(prompt_str)
-        prompt = prompt_template.format(schedule_desc=schedule_desc, query=query, output_format=output_format, current_time=current_time)
-        response = callLLM(prompt, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation", stream=True)
-        content = accept_stream_response(response, verbose=True)
-        try:
-            content = json.loads(content)
-        except json.JSONDecodeError as err:
-            logger.exception("react提取取消日程")
-        logger.debug(f"提取要取消的日程:\n{prompt}")
-        logger.debug(f"对于query: {query}, 提取到的要取消的日程: {content}")
+        sys_template = PromptTemplate.from_template(prompt_template_system)
+        sys_prompt = sys_template.format(schedule_desc=schedule_desc, output_format=output_format, current_time=current_time, query=query)
+
+        messsages = [{"role": "user", "content": sys_prompt}]
+
+        response = callLLM(history=messsages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
+        content = "Thought: " + accept_stream_response(response, verbose=True)
+        # TODO bug to fix 批量取消生成的参数格式不对
+        thought, schedule_to_cancel = parse_react_generate_content(content)
+        logger.debug(f"对于query: {query}, 提取到的要取消的日程: {schedule_to_cancel}")
+        return thought, schedule_to_cancel
+
+    def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel):
+        """调用操作日程接口取消日程
+        """
+        func = self.funcmap['cancel_schedule']
+        url = self.api_config["ai_backend"] + func['method']
+        target_schedule_map = {i['task']: i['time'] for i in target_schedule}
+
+        cancel_success, cancel_fail = [], []
+        for schedule in schedule_to_cancel:
+            task, time = schedule['task'], schedule['time']
+            payload = self.__get_schedule_manage_payload__(customId=customId, orgCode=orgCode, taskName=task, cronDate=time, intentCode="CREATE")
+            if target_schedule_map.get(task) == time:
+                r_JS = self.session.post(url, json=payload).json()
+                if r_JS['code'] != 200:
+                    r_JS = self.session.post(url, json=payload).json()
+                if r_JS['code'] == 200:
+                    cancel_success.append(schedule)
+                    logger.success(f"Cancel schedule org: {orgCode}, uid: {customId}, task: {task}, time: {time}")
+                else:
+                    cancel_fail.append(schedule)
+            else:
+                cancel_fail.append(schedule)
+        if cancel_success:
+            tasks = '、'.join([i['task'] for i in cancel_success])
+            content = f"已成功为您取消{tasks}日程"
+        else:
+            if cancel_fail:
+                content = "抱歉, 取消日程提醒失败, 请重新尝试"
+            else:
+                content = "抱歉, 取消日程提醒失败"
         return content
-        
-    
+
     def cancel(self, *args, **kwds):
         """进一步取消日程效果优化, 暂定只支持一轮?
         """
         query = kwds['history'][-2]['content']
-        func = self.funcmap['create_schedule']
-        url = self.api_config["ai_backend"] + func['method']
-
+        
         tdesc, time_range = self.__cancel_extract_time_info__(query, **kwds)
         if time_range is None:  # 如果未提取出时间范围, 直接输出
             return "抱歉, 取消日程提醒失败, 请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
@@ -631,7 +683,8 @@ class scheduleManager:
         if len(target_schedule) == 0:   # 解析出的时间段内无日程, 直接输出
             return f"抱歉, 您指定的时间({tdesc})没有可取消的日程"
         else:   # 结合已有时间范围的日程列表和用户query, 提取要取消的日程及时间
-            content = self.__cancel_extract_task_info__(target_schedule, query, **kwds)
+            thought, schedule_to_cancel = self.__cancel_extract_task_info__(target_schedule, query, **kwds)
+            content = self.__call_cancel_execute_cancel_schedule__(target_schedule, schedule_to_cancel)
         return content
 
 

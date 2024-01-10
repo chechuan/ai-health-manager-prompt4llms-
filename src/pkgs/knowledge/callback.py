@@ -17,6 +17,8 @@ from typing import Any, AnyStr, Dict
 
 from pytz import timezone
 from requests import Session
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from src.prompt.task_schedule_manager import scheduleManager
 
@@ -34,6 +36,7 @@ from src.utils.module import (accept_stream_response, clock, curr_time, curr_wee
 class funcCall:
     headers: Dict = {"content-type": "application/json"}
     session = Session()
+    session.mount('https://', HTTPAdapter(max_retries=Retry(total=2, method_whitelist=frozenset(['GET', 'POST']))))
     param_server: object = ParamServer()
 
     def __init__(self, gsr: initAllResource=None):
@@ -405,7 +408,7 @@ class funcCall:
         elif isinstance(ret_obj, dict):
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
-        history.append({"role": "user","content": content, "intentCode": kwargs['intentCode']})
+        history.append({"role": "user", "content": content, "intentCode": kwargs['intentCode']})
         logger.debug(f"Observation: {content}")
         return history, dataSource
 
