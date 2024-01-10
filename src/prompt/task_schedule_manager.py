@@ -13,6 +13,7 @@ from typing import Any, AnyStr, Dict, List
 
 import requests
 from click import prompt
+from httpx import head
 from langchain.prompts import PromptTemplate
 
 sys.path.append(str(Path.cwd()))
@@ -552,29 +553,68 @@ class scheduleManager:
         """
         model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
         prompt_str = (
-            "请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述\n"
+            "请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述, 时间描述中需要包含日期、时间段如上午下午晚上等\n"
             "示例1:\n"
             "用户输入: 取消明天上午的日程安排\n"
             "输出: 明天上午\n"
             "示例2:\n"
             "用户输入: 取消今天的日程安排\n"
             "输出: 今天\n"
+            "示例3:\n"
+            "用户输入: 晚上8点的会议取消\n"
+            "输出: 晚上8点\n"
             "Begins~\n\n"
             "用户输入: {query}\n"
             "输出: "
         )
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query)
-        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8, stop="\n\n", stream=True)
+        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
         tdesc = accept_stream_response(response, verbose=False)
         
         try:
             time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
         except Exception as e:
             logger.exception(e)
-            time_range = None
+            tdesc, time_range = None, None
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="extract_event_time_pair",model=model)
-        return time_range
+        return tdesc, time_range
+    
+    def __cancel_extract_task_info__(self, target_schedule, query, **kwds):
+        """让模型理解query, 从候选列表中提取要取消的日程
+        """
+        # head_str = '[{"task":"'
+        current_time = curr_time()
+        output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
+        schedule_desc = "\n".join([f"{i['time']}: {i['task']}" for i in target_schedule])
+        prompt_str = (
+                "你是一个功能强大的信息提取工具, 可以很好的理解用户的意图, 并从当前日程列表中提取符合用户描述的日程信息, 下面是一些要求:\n"
+                "1. 请你充分理解用户所说, 从下面给定的日程列表中提取日程-时间对, 用户要取消的可能是一个日程,也可能是一个时间点或者时间范围的多个日程\n"
+                "2. 请遵循以下格式回复:\n"
+                "Question: 用户的问题\n"
+                "Thought: 思考用户想要取消的日程是单一的，还是一个时间点的多个，还是一个时间范围的多个\n"
+                "Action Input: 提取出的要取消的日程的信息\n"
+                "Observation: 已完成任务\n"
+                "3. Action Input输出的格式应该是一个json列表,每个item有两个字段分别是`task`:任务名, `time`:时间戳格式的任务时间, 格式示例:{output_format}, 一个或者多个item\n"
+                "4. 如果没有符合用户意图的日程要取消, Action Input输出可以为[]\n\n"
+                "当前日程列表:\n{schedule_desc}"
+                "\n现在时间是{current_time}\n"
+                "Begins!\n"
+                "Question: {query}\n"
+                "Thought: \n"
+            )
+        prompt_template = PromptTemplate.from_template(prompt_str)
+        prompt = prompt_template.format(schedule_desc=schedule_desc, query=query, output_format=output_format, current_time=current_time)
+        response = callLLM(prompt, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation", stream=True)
+        content = accept_stream_response(response, verbose=True)
+        try:
+            content = json.loads(content)
+        except json.JSONDecodeError as err:
+            logger.exception("react提取取消日程")
+        logger.debug(f"提取要取消的日程:\n{prompt}")
+        logger.debug(f"对于query: {query}, 提取到的要取消的日程: {content}")
+        return content
+        
     
     def cancel(self, *args, **kwds):
         """进一步取消日程效果优化, 暂定只支持一轮?
@@ -583,10 +623,16 @@ class scheduleManager:
         func = self.funcmap['create_schedule']
         url = self.api_config["ai_backend"] + func['method']
 
-        time_range = self.__cancel_extract_time_info__(query, **kwds)
-        if time_range is None:  # 如果未提取出时间范围
-            content = "请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
-        ...
+        tdesc, time_range = self.__cancel_extract_time_info__(query, **kwds)
+        if time_range is None:  # 如果未提取出时间范围, 直接输出
+            return "抱歉, 取消日程提醒失败, 请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
+        # 查询指定时间范围的日程
+        target_schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
+        if len(target_schedule) == 0:   # 解析出的时间段内无日程, 直接输出
+            return f"抱歉, 您指定的时间({tdesc})没有可取消的日程"
+        else:   # 结合已有时间范围的日程列表和用户query, 提取要取消的日程及时间
+            content = self.__cancel_extract_task_info__(target_schedule, query, **kwds)
+        return content
 
 
 

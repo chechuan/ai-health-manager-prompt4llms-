@@ -8,6 +8,7 @@ local:
     schedule_manager: 0.1.0
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 0.1.0
+    call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
   character:
