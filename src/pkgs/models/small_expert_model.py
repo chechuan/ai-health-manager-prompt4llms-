@@ -449,11 +449,12 @@ class expertModel:
                 text_stream = msg.get('content')
                 if text_stream:
                     ret_content += text_stream
-                    print(text_stream, flush=True, end="")
+                    # print(text_stream, flush=True, end="")
                     yield make_ret_item(text_stream, False, [])
             messages.append({"role": "assistant", "content": ret_content})
 
             time_cost = round(time.time() - t_st, 1)
+            logger.debug(f"年夜饭共策餐厅选择回复: {json.dumps(ret_content, ensure_ascii=False)}")
             logger.success(f"Model {model} generate costs summary: " + 
                             f"total_texts:{len(ret_content)}, "
                             f"complete cost: {time_cost}s")
