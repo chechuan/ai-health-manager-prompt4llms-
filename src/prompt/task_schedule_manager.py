@@ -592,26 +592,27 @@ class scheduleManager:
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="extract_event_time_pair",model=model)
         return tdesc, time_range
     
+    def __cancel_parse_react_generate_content__(self, text: str) -> Dict:
+        """解析本函数中react生成的内容, 提取其中的Action Input
+        """
+        tidx = text.find("Thought: ") + len("Thought: ")
+        aidx = text.find("Action Input: ")
+        thought = text[tidx:aidx].strip()
+        action_input = text[aidx + len("Action Input: "):].strip()
+        try:
+            action_input = json.loads(action_input)
+        except Exception as e:
+            if not isinstance(action_input, list):
+                action_input = f"[{action_input}]"
+            try:
+                action_input = json.loads(action_input)
+            except Exception as err:
+                ...
+        return thought, action_input
+
     def __cancel_extract_task_info__(self, target_schedule, query, **kwds):
         """让模型理解query, 从候选列表中提取要取消的日程
         """
-        def parse_react_generate_content(text: str) -> Dict:
-            """解析本函数中react生成的内容, 提取其中的Action Input
-            """
-            tidx = text.find("Thought: ") + len("Thought: ")
-            aidx = text.find("Action Input: ")
-            thought = text[tidx:aidx].strip()
-            action_input = text[aidx + len("Action Input: "):].strip()
-            try:
-                action_input = json.loads(action_input)
-            except Exception as e:
-                if not isinstance(action_input, list):
-                    action_input = f"[{action_input}]"
-                try:
-                    action_input = json.loads(action_input)
-                except Exception as err:
-                    ...
-            return thought, action_input
         current_time = curr_time()
         output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
         schedule_desc = "\n".join([f"{i['time']}: {i['task']}" for i in target_schedule])
@@ -635,11 +636,11 @@ class scheduleManager:
         sys_prompt = sys_template.format(schedule_desc=schedule_desc, output_format=output_format, current_time=current_time, query=query)
 
         messsages = [{"role": "user", "content": sys_prompt}]
-
         response = callLLM(history=messsages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
         content = "Thought: " + accept_stream_response(response, verbose=True)
-        thought, schedule_to_cancel = parse_react_generate_content(content)
-        logger.debug(f"对于query: {query}, 提取到的要取消的日程: {schedule_to_cancel}")
+        logger.debug(f"提取要取消的日程 prompt\n{sys_prompt}")
+        logger.debug(f"提取要取消的日程 content\n{content}")
+        thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(content)
         return thought, schedule_to_cancel
 
     def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel, **kwds):
@@ -668,7 +669,7 @@ class scheduleManager:
                 cancel_fail.append(schedule)
         if cancel_success:
             tasks = '、'.join([i['task'] for i in cancel_success])
-            content = f"已成功为您取消{tasks}日程"
+            content = f"已成功为您取消{tasks}的日程"
         else:
             if cancel_fail:
                 content = "抱歉, 取消日程提醒失败, 请重新尝试"

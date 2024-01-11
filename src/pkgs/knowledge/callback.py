@@ -54,25 +54,26 @@ class funcCall:
     def register_for_all(self):
         self.funcmap = {}
         self.funcname_map = {i['name']: i['code'] for i in self.prompt_meta_data['tool'].values()}
+        self.registration_list = []
         self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
         self.register_func("searchDB",          self.call_search_database)
         self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
+        self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
+        self.register_func("askAPI",            self.call_external_api)
         # self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
         self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         # self.register_func("query_schedule",    self.call_schedule_query)
         self.register_func("query_schedule",    self.scheduleManager.query)
         # self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
         self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
-        self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
-        self.register_func("askAPI",            self.call_external_api)
-        logger.success(f"register finish.")
+        logger.success(f"Register {self.registration_list} Finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
         """注册called func funcmap
         """
         self.funcmap[func_name] = {"func": func_call, "method": method}
-        logger.success(f"register tool {func_name}.")
+        self.registration_list.append(func_name + ": " + str(func_call).split(" ")[2])
     
     def update_mid_vars(self, mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
         """更新中间变量
