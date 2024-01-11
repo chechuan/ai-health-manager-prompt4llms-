@@ -147,7 +147,7 @@ def prepare_for_all():
     parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
     parser.add_argument('--port', type=int, default=6500, help='port')
     parser.add_argument('--special_prompt_version', 
-                        action="store_true",
+                        default=True,
                         help='是否使用指定的prompt版本, Default为False,都使用lastest')
     args = parser.parse_args()
 
