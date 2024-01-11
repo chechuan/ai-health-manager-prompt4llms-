@@ -536,27 +536,14 @@ class scheduleManager:
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
         current: str=curr_time() + " " + curr_weekday()
         output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
-        prompt_template = PromptTemplate.from_template(
-            (
-                "请你理解用户所说, 解析其描述的时间节点或者范围,以下是一些要求:\n"
-                "1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59\n"
-                "2. 如果是今天,默认为今天从现在的时间开始到23:59:59\n"
-                "3. 如果说本周,则从本周一00:00:00开始至周日23:59:59\n"
-                "4. 早晨指05:00:00至08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00\n"
-                "5. 如果指定了具体的时间节点, 则只把精确的时间节点输出到`startTime`字段\n"
-                "6. 输出的格式参考: {output_format}\n\n"
-                "现在时间: {current}\n"
-                "用户输入: {query}\n"
-                "输出:"
-            )
-        )
+        prompt_str = self.prompt_meta_data['event']['cancel_parse_time_desc']['description']
+        prompt_template = PromptTemplate.from_template(prompt_str)
         # prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
         # prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query, current=current, output_format=output_format)
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
-        output = text.strip()
-        time_range = json.loads(output)
+        time_range = json.loads(text.strip())
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=text, key="取消日程-解析时间描述", model=model)
         return time_range
     
@@ -564,32 +551,17 @@ class scheduleManager:
         """取消日程 - 提取时间范围描述 -> 解析为时间戳
         """
         model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
-        prompt_str = (
-            "请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述, 时间描述中需要包含日期、时间段如上午下午晚上等\n"
-            "示例1:\n"
-            "用户输入: 取消明天上午的日程安排\n"
-            "输出: 明天上午\n"
-            "示例2:\n"
-            "用户输入: 取消今天的日程安排\n"
-            "输出: 今天\n"
-            "示例3:\n"
-            "用户输入: 晚上8点的会议取消\n"
-            "输出: 晚上8点\n"
-            "Begins~\n\n"
-            "用户输入: {query}\n"
-            "输出: "
-        )
+        prompt_str = self.prompt_meta_data['event']['cancel_extract_time_info']['description']
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query)
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
         tdesc = accept_stream_response(response, verbose=False)
-        
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="取消日程-提取时间描述",model=model)
         try:
             time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
         except Exception as e:
             logger.exception(e)
             tdesc, time_range = None, None
-        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="extract_event_time_pair",model=model)
         return tdesc, time_range
     
     def __cancel_parse_react_generate_content__(self, text: str) -> Dict:
@@ -616,30 +588,16 @@ class scheduleManager:
         current_time = curr_time()
         output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
         schedule_desc = "\n".join([f"{i['time']}: {i['task']}" for i in target_schedule])
-        prompt_template_system = (
-                "你是一个功能强大的信息提取工具, 可以很好的理解用户的意图, 并从当前日程列表中提取符合用户描述的日程信息, 下面是一些要求:\n"
-                "1. 请你充分理解用户所说, 从下面给定的日程列表中提取日程-时间对, 用户要取消的可能是一个日程,也可能是一个时间点或者时间范围的多个日程\n"
-                "2. 请遵循以下格式回复:\n"
-                "Question: 用户的问题\n"
-                "Thought: 思考用户想要取消的日程是单一的，还是一个时间点的多个，还是一个时间范围的多个\n"
-                "Action Input: 提取出的要取消的日程的信息\n"
-                "Observation: 已完成任务\n"
-                "3. Action Input输出的格式应该是一个json列表,每个item有两个字段分别是`task`:任务名, `time`:时间戳格式的任务时间, 格式示例:{output_format}, 一个或者多个item\n"
-                "4. 如果没有符合用户意图的日程要取消或者`当前日程列表`为空, Action Input输出可以为[]\n\n"
-                "当前日程列表:\n{schedule_desc}"
-                "\n现在时间是{current_time}\n"
-                "Begins!\n\n"
-                "Question: {query}\n"
-                "Thought: \n"
-            )
-        sys_template = PromptTemplate.from_template(prompt_template_system)
+        prompt_str = self.prompt_meta_data['event']['cancel_extract_task_info']['description']
+        sys_template = PromptTemplate.from_template(prompt_str)
         sys_prompt = sys_template.format(schedule_desc=schedule_desc, output_format=output_format, current_time=current_time, query=query)
 
         messsages = [{"role": "user", "content": sys_prompt}]
-        response = callLLM(history=messsages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
-        content = "Thought: " + accept_stream_response(response, verbose=True)
+        response = callLLM(history=messsages, temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
+        content = "Thought: " + accept_stream_response(response, verbose=False)
         logger.debug(f"提取要取消的日程 prompt\n{sys_prompt}")
         logger.debug(f"提取要取消的日程 content\n{content}")
+        self.__update_mid_vars__(kwds['mid_vars'], input_text=messsages, output_text=content, model="Qwen-14B-Chat", key="取消日程-提取目标日程")
         thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(content)
         return thought, schedule_to_cancel
 

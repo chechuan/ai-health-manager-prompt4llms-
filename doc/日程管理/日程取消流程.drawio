@@ -1,0 +1,98 @@
+<mxfile host="Electron" modified="2024-01-11T06:08:46.788Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.1 Chrome/112.0.5615.204 Electron/24.6.1 Safari/537.36" etag="Q6P_aMgUzSvvefjQCBW1" version="21.6.1" type="device">
+  <diagram name="第 1 页" id="myKFbSLdeXqDhdsps-h7">
+    <mxGraphModel dx="2634" dy="1287" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-2" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;entryX=0;entryY=0.5;entryDx=0;entryDy=0;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-26" target="Ct9IK7NDdIwvGaH6qSSA-3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-443" y="-27.333343505859375" as="targetPoint" />
+            <mxPoint x="-331" y="-66" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-16" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;align=left;exitX=0.646;exitY=0.99;exitDx=0;exitDy=0;exitPerimeter=0;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-1" target="Ct9IK7NDdIwvGaH6qSSA-15" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-166" y="-179" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-1" value="&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;今天下午的日程取消(提供时间范围,范围的所有事件)&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;今天下午三点的日程取消(指定精确时间,该时间点的事件)&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;今天的吃药提醒取消(指定事件名,匹配所有事件(不限时间))&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;今天下午三点下午茶提醒取消(指定精确时间和时间)&lt;/span&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-441" y="-284" width="435.87" height="103" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-21" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-3" target="Ct9IK7NDdIwvGaH6qSSA-20" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-376.75" y="86" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-3" value="今天" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-227" y="-40" width="120" height="39.56" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-24" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-5" target="Ct9IK7NDdIwvGaH6qSSA-23" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-5" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;2024-01-08 00:00:00&lt;/font&gt;&lt;div style=&quot;font-family: IBMPlexMono, &amp;quot;Courier New&amp;quot;, monospace, Consolas, &amp;quot;Courier New&amp;quot;, monospace; line-height: 18px; font-size: 12px;&quot;&gt;&lt;span style=&quot;background-color: rgb(255, 255, 255);&quot;&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;&amp;nbsp;-&amp;nbsp;&lt;/font&gt;&lt;/span&gt;&lt;/div&gt;&lt;font style=&quot;font-size: 12px;&quot;&gt;2024-01-08 23:59:59&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-242.75" y="117" width="169.5" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-43" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-7" target="Ct9IK7NDdIwvGaH6qSSA-42" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-7" value="&lt;div style=&quot;&quot;&gt;&lt;div&gt;[&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; [&quot;开会&quot;, &quot;2024-01-08 17:00:00&quot;],&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; [&quot;下班&quot;, &quot;2024-01-08 18:00:00&quot;]&lt;/div&gt;&lt;div&gt;]&lt;/div&gt;&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-285.5" y="282" width="255" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-15" value="react -&amp;gt; 取消日程" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-245.5" y="-128" width="175" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-3" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" edge="1" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-20" target="knp1C97iXwfgV3qYOqxX-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-20" value="解析时间描述为时间戳范围&lt;br&gt;（LLM）" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-294" y="41" width="254" height="46" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-25" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-23" target="Ct9IK7NDdIwvGaH6qSSA-7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-23" value="查询指定范围的日程&lt;br&gt;（调用api）" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-281" y="204" width="246" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-27" value="" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fontSize=12;startSize=8;endSize=8;align=left;" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-15" target="Ct9IK7NDdIwvGaH6qSSA-26" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-346" y="-30" as="targetPoint" />
+            <mxPoint x="-259" y="-93" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-26" value="&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;请你扮演一个功能强大的信息提取工具，帮用户提取输入中的时间描述, 时间描述中需要包含日期、时间段如上午下午晚上等&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;示例1:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;用户输入: 取消明天上午的日程安排&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;输出: 明天上午&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;示例2:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;用户输入: 取消今天的日程安排&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;输出: 今天&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;示例3:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;用户输入: 晚上8点的会议取消&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;输出: 晚上8点&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Begins~&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;用户输入: {query}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;输出:&amp;nbsp;&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-773" y="-145" width="414" height="148" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-33" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;case 1&lt;br&gt;提供单一时间和事件&lt;br&gt;(今天下午三点下午茶提醒取消)&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="111.00000000000006" y="-20" width="180.07" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-35" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;case 2&lt;br&gt;提供时间范围和事件(多时间)&lt;br&gt;(今天下午的提醒取消)&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="111" y="57" width="176" height="56.5" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-36" value="&lt;font style=&quot;font-size: 12px;&quot;&gt;case 3&lt;br&gt;提供时间范围&lt;br&gt;(今天的日程取消)&lt;/font&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="111" y="144" width="112" height="57" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-9" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="Ct9IK7NDdIwvGaH6qSSA-42" target="knp1C97iXwfgV3qYOqxX-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="Ct9IK7NDdIwvGaH6qSSA-42" value="提取符合条件的任务名称" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" parent="1" vertex="1">
+          <mxGeometry x="-277" y="396" width="238" height="29" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-4" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;align=left;" edge="1" parent="1" source="knp1C97iXwfgV3qYOqxX-2" target="Ct9IK7NDdIwvGaH6qSSA-5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-2" value="&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;请你理解用户所说, 解析其描述的时间节点或者范围,以下是一些要求:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;1. 如果未指明范围但说了日期,默认为当天的00:00:00到23:59:59&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;2. 如果是今天,默认为今天从现在的时间开始到23:59:59&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;3. 如果说本周,则从本周一00:00:00开始至周日23:59:59&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;4. 早晨指05:00:00至08:00:00, 上午指08:00:00至11:00:00, 中午指11:00:00至13:00:00, 下午指13:00:00至18:00:00, 晚上指18:00:00至24:00:00&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;5. 如果指定了具体的时间节点, 则只把精确的时间节点输出到`startTime`字段&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;6. 输出的格式参考: {output_format}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;现在时间: {current}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;用户输入: {query}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;输出:&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" vertex="1" parent="1">
+          <mxGeometry x="-732" y="39" width="357" height="121" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-8" style="edgeStyle=none;curved=1;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.75;exitDx=0;exitDy=0;entryX=0;entryY=0.25;entryDx=0;entryDy=0;fontSize=12;startSize=8;endSize=8;" edge="1" parent="1" source="knp1C97iXwfgV3qYOqxX-5" target="knp1C97iXwfgV3qYOqxX-7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-5" value="&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;你是一个功能强大的信息提取工具, 可以很好的理解用户的意图, 并从当前日程列表中提取符合用户描述的日程信息, 下面是一些要求:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;1. 请你充分理解用户所说, 从下面给定的日程列表中提取日程-时间对, 用户要取消的可能是一个日程,也可能是一个时间点或者时间范围的多个日程&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;2. 请遵循以下格式回复:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Question: 用户的问题&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Thought: 思考用户想要取消的日程是单一的，还是一个时间点的多个，还是一个时间范围的多个&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Action Input: 提取出的要取消的日程的信息&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Observation: 已完成任务&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;3. Action Input输出的格式应该是一个json列表,每个item有两个字段分别是`task`:任务名, `time`:时间戳格式的任务时间, 格式示例:{output_format}, 一个或者多个item&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;4. 如果没有符合用户意图的日程要取消或者`当前日程列表`为空, Action Input输出可以为[]&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;当前日程列表:&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;{schedule_desc}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;现在时间是{current_time}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Begins!&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Question: {query}&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 8px;&quot;&gt;&lt;font style=&quot;font-size: 8px;&quot;&gt;Thought:&amp;nbsp;&lt;/font&gt;&lt;/div&gt;" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fontSize=16;align=left;" vertex="1" parent="1">
+          <mxGeometry x="-829" y="362" width="473" height="201" as="geometry" />
+        </mxCell>
+        <mxCell id="knp1C97iXwfgV3qYOqxX-7" value="&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;[&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;&amp;nbsp; &amp;nbsp; [&quot;开会&quot;, &quot;2024-01-08 17:00:00&quot;],&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;&amp;nbsp; &amp;nbsp; [&quot;下班&quot;, &quot;2024-01-08 18:00:00&quot;]&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;]&lt;/div&gt;" style="whiteSpace=wrap;html=1;fontSize=16;align=left;" vertex="1" parent="1">
+          <mxGeometry x="-304.13" y="481" width="299" height="114" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
