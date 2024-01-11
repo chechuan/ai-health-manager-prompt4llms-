@@ -562,6 +562,7 @@ class scheduleManager:
         except Exception as e:
             logger.exception(e)
             tdesc, time_range = None, None
+        logger.debug(f"取消日程 tdesc: {query}, trange: {time_range}")
         return tdesc, time_range
     
     def __cancel_parse_react_generate_content__(self, text: str) -> Dict:
@@ -600,6 +601,15 @@ class scheduleManager:
         self.__update_mid_vars__(kwds['mid_vars'], input_text=messsages, output_text=content, model="Qwen-14B-Chat", key="取消日程-提取目标日程")
         thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(content)
         return thought, schedule_to_cancel
+    
+    def __cancel_check_extract_schedule_to_cancel__(self, schedule, target_schedule):
+        """检查提取的日程是否正确
+        """
+        task, time = schedule['task'], schedule['time']
+        for item in target_schedule:
+            if item['task'] == task and item['time'] == time:
+                return True
+        return False
 
     def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel, **kwds):
         """调用操作日程接口取消日程
@@ -608,13 +618,13 @@ class scheduleManager:
         orgCode = kwds.get("orgCode")
         func = self.funcmap['cancel_schedule']
         url = self.api_config["ai_backend"] + func['method']
-        target_schedule_map = {i['task']: i['time'] for i in target_schedule}
 
         cancel_success, cancel_fail = [], []
         for schedule in schedule_to_cancel:
             task, time = schedule['task'], schedule['time']
             payload = self.__get_schedule_manage_payload__(customId=customId, orgCode=orgCode, taskName=task, cronDate=time, intentCode="CANCEL")
-            if target_schedule_map.get(task) == time:
+            
+            if self.__cancel_check_extract_schedule_to_cancel__(schedule, target_schedule):     # 提取出的日程和时间是否存在于查到的列表中
                 r_JS = self.session.post(url, json=payload).json()
                 if r_JS['code'] != 200:
                     r_JS = self.session.post(url, json=payload).json()
@@ -626,7 +636,7 @@ class scheduleManager:
             else:
                 cancel_fail.append(schedule)
         if cancel_success:
-            tasks = '、'.join([i['task'] for i in cancel_success])
+            tasks = '、'.join(list(set([i['task'] for i in cancel_success])))
             content = f"已成功为您取消{tasks}的日程"
         else:
             if cancel_fail:
@@ -639,7 +649,6 @@ class scheduleManager:
         """进一步取消日程效果优化, 暂定只支持一轮?
         """
         query = kwds['history'][-2]['content']
-        
         tdesc, time_range = self.__cancel_extract_time_info__(query, **kwds)
         if time_range is None:  # 如果未提取出时间范围, 直接输出
             return "抱歉, 取消日程提醒失败, 请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
