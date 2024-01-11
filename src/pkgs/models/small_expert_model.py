@@ -432,10 +432,18 @@ class expertModel:
             query = ""
             for item in history:
                 name, role, content = item.get("name"), item.get("role"), item.get("content")
+                # {"name": "管家","role": "hb_qa@39238","content": "欢迎韩伟娜进入本群，您可以在这里畅所欲言了。"}  管家的信息无用, 过滤    2024年1月11日10:41:02
+                if name == "管家":      
+                    continue
                 user_input = ""
                 user_input += name
-                if role:
-                    user_input += f"({role})"
+                # TODO 当前role传的是hb_qa@39238这种信息，会导致生成内容中出现这样的信息, 取消把role信息传入提示中  2024年1月11日10:41:07
+                # if role:
+                #     user_input += f"({role})"
+                
+                # {"name": "郭燕","role": "hb_qa@39541","content": "@管家 今天晚上朋友聚餐，大概10人，想找一个热热闹闹，有表演的餐厅"}  
+                # 用户的输入信息中包含@管家, 进行过滤        2024年1月11日10:41:11
+                content = content.replace("@管家 ", "")
                 user_input += f": {content}\n"
                 query += user_input
             messages.append({"role": "user", "content": query})
@@ -449,12 +457,11 @@ class expertModel:
                 text_stream = msg.get('content')
                 if text_stream:
                     ret_content += text_stream
-                    # print(text_stream, flush=True, end="")
                     yield make_ret_item(text_stream, False, [])
             messages.append({"role": "assistant", "content": ret_content})
 
             time_cost = round(time.time() - t_st, 1)
-            logger.debug(f"年夜饭共策餐厅选择回复: {json.dumps(ret_content, ensure_ascii=False)}")
+            logger.debug(f"年夜饭共策餐厅选择回复: {ret_content}")
             logger.success(f"Model {model} generate costs summary: " + 
                             f"total_texts:{len(ret_content)}, "
                             f"complete cost: {time_cost}s")
