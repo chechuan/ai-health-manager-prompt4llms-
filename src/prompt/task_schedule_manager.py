@@ -605,7 +605,12 @@ class scheduleManager:
             try:
                 action_input = json.loads(action_input)
             except Exception as e:
-                ...
+                if not isinstance(action_input, list):
+                    action_input = f"[{action_input}]"
+                try:
+                    action_input = json.loads(action_input)
+                except Exception as err:
+                    ...
             return thought, action_input
         current_time = curr_time()
         output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
@@ -633,14 +638,15 @@ class scheduleManager:
 
         response = callLLM(history=messsages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
         content = "Thought: " + accept_stream_response(response, verbose=True)
-        # TODO bug to fix 批量取消生成的参数格式不对
         thought, schedule_to_cancel = parse_react_generate_content(content)
         logger.debug(f"对于query: {query}, 提取到的要取消的日程: {schedule_to_cancel}")
         return thought, schedule_to_cancel
 
-    def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel):
+    def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel, **kwds):
         """调用操作日程接口取消日程
         """
+        customId = kwds.get("customId")
+        orgCode = kwds.get("orgCode")
         func = self.funcmap['cancel_schedule']
         url = self.api_config["ai_backend"] + func['method']
         target_schedule_map = {i['task']: i['time'] for i in target_schedule}
@@ -648,7 +654,7 @@ class scheduleManager:
         cancel_success, cancel_fail = [], []
         for schedule in schedule_to_cancel:
             task, time = schedule['task'], schedule['time']
-            payload = self.__get_schedule_manage_payload__(customId=customId, orgCode=orgCode, taskName=task, cronDate=time, intentCode="CREATE")
+            payload = self.__get_schedule_manage_payload__(customId=customId, orgCode=orgCode, taskName=task, cronDate=time, intentCode="CANCEL")
             if target_schedule_map.get(task) == time:
                 r_JS = self.session.post(url, json=payload).json()
                 if r_JS['code'] != 200:
@@ -684,7 +690,7 @@ class scheduleManager:
             return f"抱歉, 您指定的时间({tdesc})没有可取消的日程"
         else:   # 结合已有时间范围的日程列表和用户query, 提取要取消的日程及时间
             thought, schedule_to_cancel = self.__cancel_extract_task_info__(target_schedule, query, **kwds)
-            content = self.__call_cancel_execute_cancel_schedule__(target_schedule, schedule_to_cancel)
+            content = self.__call_cancel_execute_cancel_schedule__(target_schedule, schedule_to_cancel, **kwds)
         return content
 
 
