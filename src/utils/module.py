@@ -23,7 +23,7 @@ import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
 
-from config.constrant import CACHE_DIR
+from data.constrant import CACHE_DIR
 
 try:
     from src.utils.Logger import logger
@@ -69,7 +69,7 @@ class initAllResource:
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
-        openai.api_key = "EMPTY"
+        openai.api_key = self.api_config['llm_token']
         support_model_list = [i['id'] for i in openai.Model.list()['data']]
         logger.info(f"Support model list: {support_model_list}")
     

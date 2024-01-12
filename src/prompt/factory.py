@@ -16,7 +16,7 @@ import argparse
 from langchain.prompts.prompt import PromptTemplate
 from typing_extensions import Dict
 
-from config.constrant import PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN, TEMPLATE_ROLE, TEMPLATE_SENCE
+from data.constrant import PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN, TEMPLATE_ROLE, TEMPLATE_SENCE
 from src.utils.Logger import logger
 from src.utils.module import initAllResource
 

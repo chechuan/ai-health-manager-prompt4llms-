@@ -24,8 +24,8 @@ from src.prompt.task_schedule_manager import scheduleManager
 
 sys.path.append(str(Path.cwd()))
 
-from config.constrant import DEFAULT_DATA_SOURCE, ParamServer
-from config.constrant_for_task_schedule import query_schedule_template, query_schedule_template_v2
+from data.constrant import DEFAULT_DATA_SOURCE, ParamServer
+from data.constrant_for_task_schedule import query_schedule_template, query_schedule_template_v2
 from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, callLLM
 from src.utils.Logger import logger

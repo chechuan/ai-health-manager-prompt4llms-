@@ -19,7 +19,7 @@ from langchain.prompts import PromptTemplate
 
 from chat.constant import *
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from config.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
+from data.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import callLLM

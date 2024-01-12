@@ -12,7 +12,7 @@ from typing import Dict, List
 from fastapi import FastAPI, HTTPException
 
 sys.path.append(".")
-from config.constrant_for_task_schedule import REACT_INSTRUCTION, TOOL_DESC
+from data.constrant_for_task_schedule import REACT_INSTRUCTION, TOOL_DESC
 from src.prompt.model_init import (ChatCompletionRequest, ChatCompletionResponse,
                                    ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice,
                                    ChatMessage, DeltaMessage, ModelCard, ModelList, callLLM)

@@ -19,7 +19,7 @@ from typing import Dict, List
 
 from langchain.prompts.prompt import PromptTemplate
 
-from config.constrant import DEFAULT_RESTAURANT_MESSAGE
+from data.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger

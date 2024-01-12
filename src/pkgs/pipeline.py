@@ -17,9 +17,9 @@ from requests import Session
 
 from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
 from chat.util import norm_userInfo_msg
-from config.constrant import DEFAULT_DATA_SOURCE
-from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
-from config.constrant import role_map
+from data.constrant import DEFAULT_DATA_SOURCE
+from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
+from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import funcCall
 from src.prompt.factory import customPromptEngine

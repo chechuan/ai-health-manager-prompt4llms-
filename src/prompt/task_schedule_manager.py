@@ -18,8 +18,8 @@ from langchain.prompts import PromptTemplate
 from sympy import cancel
 
 sys.path.append(str(Path.cwd()))
-from config.constrant import task_schedule_return_demo
-from config.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
+from data.constrant import task_schedule_return_demo
+from data.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
                                                 task_schedule_parameter_description,
                                                 task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM

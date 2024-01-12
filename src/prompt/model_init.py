@@ -6,17 +6,15 @@
 @Contact :   1627635056@qq.com
 '''
 import time
-from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import openai
-import yaml
 from pydantic import BaseModel, Field
 
 from src.utils.Logger import logger
 
 
-def     callLLM(query: str = "", 
+def callLLM(query: str = "", 
               history: List[Dict] = [], 
               temperature=0.5,
               top_k=-1,
@@ -54,22 +52,34 @@ def     callLLM(query: str = "",
             Whether or not to use sampling ; use greedy decoding otherwise.
     """
     t_st = time.time()
+    kwds = {
+        "model": model,
+        "top_p": top_p,
+        "top_k": top_k,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "do_sample": do_sample,
+        "stop": stop,
+        "stream": stream,
+        "repetition_penalty": repetition_penalty
+    }
     if not history:
-        completion = openai.Completion.create(
-            model=model,
-            prompt=query,
-            top_p=top_p,
-            top_k=top_k,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            do_sample=do_sample,
-            stop=stop,
-            stream=stream
-        )
+        # completion = openai.Completion.create(
+        #     model=model,
+        #     prompt=query,
+        #     top_p=top_p,
+        #     top_k=top_k,
+        #     temperature=temperature,
+        #     max_tokens=max_tokens,
+        #     do_sample=do_sample,
+        #     stop=stop,
+        #     stream=stream
+        # )
+        kwds['prompt'] = query
+        completion = openai.Completion.create(**kwds)
         if stream:
             return completion
-        ret = completion['choices'][0]['text']
-        
+        ret = completion['choices'][0]['text']    
     else:
         if query and not isinstance(query, object):
             history += [{"role": "user", "content": query}]
@@ -81,27 +91,29 @@ def     callLLM(query: str = "",
                 break
             else:
                 h = history
-        completion = openai.ChatCompletion.create(
-            model=model,
-            messages=h,
-            top_k=top_k, 
-            top_p=top_p, 
-            repetition_penalty=repetition_penalty,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            do_sample=do_sample,
-            stop=stop,
-            stream=stream
-        )
+        # completion = openai.ChatCompletion.create(
+        #     model=model,
+        #     messages=h,
+        #     top_k=top_k, 
+        #     top_p=top_p, 
+        #     repetition_penalty=repetition_penalty,
+        #     temperature=temperature,
+        #     max_tokens=max_tokens,
+        #     do_sample=do_sample,
+        #     stop=stop,
+        #     stream=stream
+        # )
+        kwds['messages'] = h
+        completion = openai.ChatCompletion.create(**kwds)
         if stream:
             return completion
         ret = completion['choices'][0]['message']['content'].strip()
     time_cost = round(time.time() - t_st, 1)
     logger.success(f"Model {model} generate costs summary: " + 
-                f"prompt_tokens:{completion['usage']['prompt_tokens']}, " + 
-                f"completion_tokens:{completion['usage']['completion_tokens']}, " + 
-                f"total_tokens:{completion['usage']['total_tokens']}, "
-                f"cost: {time_cost}s")
+                   f"prompt_tokens:{completion['usage']['prompt_tokens']}, " + 
+                   f"completion_tokens:{completion['usage']['completion_tokens']}, " + 
+                   f"total_tokens:{completion['usage']['total_tokens']}, "
+                   f"cost: {time_cost}s")
     return ret       
 
 class ModelCard(BaseModel):
