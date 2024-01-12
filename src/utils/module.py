@@ -69,17 +69,19 @@ class initAllResource:
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
         openai.api_base = self.api_config['llm'] + "/v1"
-        openai.api_key = "EMPTY"
+        openai.api_key = self.api_config['llm_token']
         support_model_list = [i['id'] for i in openai.Model.list()['data']]
         logger.info(f"Support model list: {support_model_list}")
     
     def __load_config__(self) -> None:
         """指定env加载配置
         """
-        self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
+        # self.api_config = load_yaml(Path("config","api_config.yaml"))[self.args.env]
+        self.api_config = load_yaml(Path("config","api_config.bak.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
-        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        # self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
         self.__info_config__()
 
     def __info_config__(self):
