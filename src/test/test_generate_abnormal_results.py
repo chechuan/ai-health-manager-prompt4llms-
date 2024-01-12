@@ -80,8 +80,8 @@ def post(text, intentCode):
     }
     payload['history'][0]['content'] = text
     url = "localhost:6500/chat_gen"
-    response = session.post(url, data=json.dumps(payload))
-    print(response.text)
+    r_txt = session.post(url, data=json.dumps(payload)).text
+    r_parse = [i for i in r_txt.split("event: delta\ndata: ") if i]
     return ...
 
 if __name__ == '__main__':
