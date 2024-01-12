@@ -66,6 +66,7 @@ def get_sex(content):
         return '未知'
     
 def get_age(content):
+    return content
     if re.search(r"(\d{4}-\d{1,2}-\d{1,2})",content):
         return re.search(r"(\d{4}-\d{1,2}-\d{1,2})",content).group(0)
     elif re.search(r"(\d{4}-\d{1,2})",content):
