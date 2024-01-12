@@ -1,7 +1,7 @@
 local:
   react_model: Qwen-14B-Chat                          # react模型
   blood_pressure_trend_analysis: Qwen-72B-Chat        # 血压心率趋势分析
-  decorate_search_prompt: Qwen-1_8B-Chat              # 查询知识库装饰
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
   food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
   reunion_meals_restaurant_selection: Yi-34B-Chat     # 共策决策
   schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
@@ -12,7 +12,7 @@ local:
 dev:
   react_model: Qwen-14B-Chat                          # react模型
   blood_pressure_trend_analysis: Qwen-72B-Chat        # 血压心率趋势分析
-  decorate_search_prompt: Qwen-1_8B-Chat              # 查询知识库装饰
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
   food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
   reunion_meals_restaurant_selection: Yi-34B-Chat     # 共策决策
   schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
@@ -23,7 +23,7 @@ dev:
 test:
   react_model: Qwen-14B-Chat                          # react模型
   blood_pressure_trend_analysis: Qwen-72B-Chat        # 血压心率趋势分析
-  decorate_search_prompt: Qwen-1_8B-Chat              # 查询知识库装饰
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
   food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
   reunion_meals_restaurant_selection: Yi-34B-Chat     # 共策决策
   schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
@@ -34,7 +34,7 @@ test:
 fat:
   react_model: Qwen-14B-Chat                          # react模型
   blood_pressure_trend_analysis: Qwen-72B-Chat        # 血压心率趋势分析
-  decorate_search_prompt: Qwen-1_8B-Chat              # 查询知识库装饰
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
   food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
   reunion_meals_restaurant_selection: Yi-34B-Chat     # 共策决策
   schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
