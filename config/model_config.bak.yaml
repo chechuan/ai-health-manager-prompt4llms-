@@ -1,0 +1,44 @@
+local:
+  react_model: Qwen-14B-Chat                          # react模型
+  blood_pressure_trend_analysis: Qwen-14B-Chat        # 血压心率趋势分析
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
+  food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
+  reunion_meals_restaurant_selection: Qwen-14B-Chat     # 共策决策
+  schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
+  call_schedule_query: Qwen-14B-Chat                  # 查询日程最终的组装输出
+  call_schedule_create_extract_event_time_pair: Qwen-14B-Chat   # 日程创建 提取事件-时间描述pair
+  call_schedule_create_reply: Qwen-14B-Chat             # 创建日程的回复
+  health_warning_solutions_early: Qwen-14B-Chat       # 预警解决方案
+dev:
+  react_model: Qwen-14B-Chat                          # react模型
+  blood_pressure_trend_analysis: Qwen-14B-Chat        # 血压心率趋势分析
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
+  food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
+  reunion_meals_restaurant_selection: Qwen-14B-Chat     # 共策决策
+  schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
+  call_schedule_query: Qwen-14B-Chat                  # 查询日程最终的组装输出
+  call_schedule_create_extract_event_time_pair: Qwen-14B-Chat   # 日程创建 提取事件-时间描述pair
+  call_schedule_create_reply: Qwen-14B-Chat             # 创建日程的回复
+  health_warning_solutions_early: Qwen-14B-Chat       # 预警解决方案
+test:
+  react_model: Qwen-14B-Chat                          # react模型
+  blood_pressure_trend_analysis: Qwen-14B-Chat        # 血压心率趋势分析
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
+  food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
+  reunion_meals_restaurant_selection: Qwen-14B-Chat     # 共策决策
+  schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
+  call_schedule_query: Qwen-14B-Chat                  # 查询日程最终的组装输出
+  call_schedule_create_extract_event_time_pair: Qwen-14B-Chat   # 日程创建 提取事件-时间描述pair
+  call_schedule_create_reply: Qwen-14B-Chat             # 创建日程的回复
+  health_warning_solutions_early: Qwen-14B-Chat       # 预警解决方案
+fat:
+  react_model: Qwen-14B-Chat                          # react模型
+  blood_pressure_trend_analysis: Qwen-14B-Chat        # 血压心率趋势分析
+  decorate_search_prompt: Qwen-14B-Chat              # 查询知识库装饰
+  food_purchasing_list_management: Qwen-14B-Chat      # 食材清单管理
+  reunion_meals_restaurant_selection: Qwen-14B-Chat     # 共策决策
+  schedular_time_understand: Qwen-14B-Chat            # 日程时间理解
+  call_schedule_query: Qwen-14B-Chat                  # 查询日程最终的组装输出
+  call_schedule_create_extract_event_time_pair: Qwen-14B-Chat   # 日程创建 提取事件-时间描述pair
+  call_schedule_create_reply: Qwen-14B-Chat             # 创建日程的回复
+  health_warning_solutions_early: Qwen-14B-Chat       # 预警解决方案
