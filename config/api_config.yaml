@@ -1,6 +1,7 @@
 local:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
+  llm_token: sk-laikang-aihealthmanager-local
   graph: http://10.4.164.240:26925
   # ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-alg    # 算法后端环境变更, 暂用dev
   ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -8,6 +9,7 @@ local:
 dev:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
+  llm_token: sk-laikang-aihealthmanager-dev
   graph: http://10.4.164.240:26925
   # ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-alg    # 算法后端环境变更, 暂用dev
   ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -15,12 +17,14 @@ dev:
 test:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
+  llm_token: sk-laikang-aihealthmanager-test
   graph: http://10.4.164.240:26925
   ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
   algo_rec: http://aimp-algo-psc-diet-v5.ef.laikang.com
 fat:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
+  llm_token: sk-laikang-aihealthmanager-fat
   graph: http://10.4.164.240:26925
   ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
   algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
