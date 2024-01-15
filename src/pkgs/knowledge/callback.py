@@ -279,8 +279,9 @@ class funcCall:
         """
         def decorate_search_prompt(query: str) -> str:
             """优化要查询的query"""
+            model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
             his = [{"role":"user", "content": query}]
-            content = callLLM(history=his, temperature=0.7, top_p=0.8, model="Qwen-1_8B-Chat")
+            content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
             return content
 
         called_method = self.funcmap['searchKB']['method']
