@@ -306,10 +306,16 @@ class funcCall:
         payload["top_p"] = top_p
         payload["prompt_name"] = prompt_name
         
-        url = self.api_config['langchain'] + called_method
-        response = self.session.post(url, json=payload, headers=self.headers)
-        msg = eval(response.text)
         dataSource = None
+        url = self.api_config['langchain'] + called_method
+        try:
+            response = self.session.post(url, json=payload, headers=self.headers)
+            msg = eval(response.text)
+        except Exception as e:
+            logger.error(e)
+            content = "抱歉, 知识库连接异常, 请联系开发人员"
+            ret = {"content": content, "dataSource": dataSource}
+            return ret
 
         if "未找到相关文档" in msg['answer'] or '无法回答' in msg['answer'] or not msg['docs']:
             content = msg['answer']
