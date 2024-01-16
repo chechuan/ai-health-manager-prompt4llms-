@@ -1,3 +1,5 @@
+from langchain.prompts.prompt import PromptTemplate
+
 # prompt模板使用Jinja2语法，简单点就是用双大括号代替f-string的单大括号
 # 本配置文件支持热加载，修改prompt模板后无需重启服务。
 
@@ -59,14 +61,14 @@ PROMPT_TEMPLATES = {
             """,
         "search":
             """
-        <指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 </指令>
-        <已知信息>{{ context }}</已知信息>、
-        <问题>{{ question }}</问题>
+            <指令>根据已知信息，简洁和专业的来回答问题。如果无法从中得到答案，请说 “根据已知信息无法回答该问题”，答案请使用中文。 </指令>
+            <已知信息>{{ context }}</已知信息>、
+            <问题>{{ question }}</问题>
         """,
         "Empty":  # 搜不到内容的时候调用，此时没有已知信息，这个Empty可以更改，但不能删除，会影响程序使用
             """
-        <指令>请根据用户的问题，进行简洁明了的回答</指令>
-        <问题>{{ question }}</问题>
+            <指令>请根据用户的问题，进行简洁明了的回答</指令>
+            <问题>{{ question }}</问题>
         """,
     },
 
@@ -153,3 +155,23 @@ PROMPT_TEMPLATES = {
         """,
     },
 }
+
+_DEFAULT_SEARCH_QA_TEMPLATE = """请你根据我搜索到的`互联网信息`, 提取其中的知识, 过滤掉称谓, 有条理、简洁的回答`用户的问题`。如果无法从中得到答案，请说 “无法搜索到能回答问题的内容”。 </指令>
+# 互联网信息
+{context}
+
+# 用户的问题
+{question}
+
+# 回答
+"""
+SEARCH_QA_PROMPT = PromptTemplate(
+    template=_DEFAULT_SEARCH_QA_TEMPLATE, input_variables=["context", "question"]
+)
+_DEFAULT_SEARCH_HISTORY_TEMPLATE = """<指令>这是我搜索到的互联网信息，请你根据这些信息进行提取并有条理的回答问题。如果无法从中得到答案，请说 “无法搜索到能回答问题的内容”。 </指令>
+<已知信息>\n{context}\n</已知信息>
+<历史会话>\n{history}\n</历史会话>
+<问题>\n{question}\n</问题>"""
+SEARCH_QA_HISTORY_PROMPT = PromptTemplate(
+    template=_DEFAULT_SEARCH_HISTORY_TEMPLATE, input_variables=["context", "history", "question"]
+)

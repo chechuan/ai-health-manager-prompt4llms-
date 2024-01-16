@@ -80,11 +80,13 @@ class initAllResource:
         # self.api_config = load_yaml(Path("config","api_config.bak.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config","mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config","prompt_version.yaml"))[self.args.env]
-        self.model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
-        # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
-        self.__info_config__()
+        model_config = load_yaml(Path("config","model_config.yaml"))[self.args.env]
+        self.model_config = {event: model for model, event_list in model_config.items() for event in event_list}
 
-    def __info_config__(self):
+        # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
+        self.__info_config__(model_config)
+
+    def __info_config__(self, model_config):
         for key, value in self.api_config.items():
             logger.debug(f"Initialize api config: {key}: {value}")
         logger.debug(f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}")
@@ -93,8 +95,8 @@ class initAllResource:
                 continue
             for ik, iv in value.items():
                 logger.debug(f"Initialize prompt version {key} - {ik} - {iv}")
-        for key, model_name in self.model_config.items():
-            logger.debug(f"Initialize model {key} - {model_name}")
+        for key, model_list in model_config.items():
+            logger.debug(f"Model Usage: {key} - {model_list}")
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:

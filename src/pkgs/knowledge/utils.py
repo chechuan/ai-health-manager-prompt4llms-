@@ -7,19 +7,32 @@
 '''
 import asyncio
 import json
+import os
 import re
 import sys
 from pathlib import Path
+from tabnanny import verbose
+
+from torch import topk
 
 sys.path.append(str(Path.cwd().absolute()))
-from typing import Any, AnyStr, Dict, List, Optional
+from typing import Any, AnyStr, Dict, List, Optional, Union
 
 import requests
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
+from duckduckgo_search import DDGS
+from langchain.callbacks.manager import CallbackManagerForChainRun
+# from langchain.chains.base import Chain
+from src.pkgs._langchain.chains.base import Chain
+from langchain.chains.llm import LLMChain
+from langchain.llms import openai
+from langchain.schema import BasePromptTemplate
+from langchain.schema.language_model import BaseLanguageModel
 from lxml import etree
 
-from src.pkgs.knowledge.config.prompt_config import PROMPT_TEMPLATES
+from src.pkgs.knowledge.config.prompt_config import (PROMPT_TEMPLATES, SEARCH_QA_HISTORY_PROMPT,
+                                                     SEARCH_QA_PROMPT)
 from src.utils.Logger import logger
 
 headers = {
@@ -144,9 +157,148 @@ async def search_engine_chat(query: str,
     if len(content) > max_length + 200:
         content = content[:max_length+200]
     return content
+
+class DDGSearchChain():
+    proxies: Union[dict, str] = "http://127.0.0.1:7890"
+    input_key: str = "query"
+    output_key: str = "answer"
     
+    def __init__(self, proxies) -> None:
+        """duckduckgo search 封装
+        
+        Args:
+            proxies (Union[dict, str], optional): Proxies for the HTTP client (can be dict or str). Defaults to None.
+        """
+        self.proxies = proxies
+        self.engine = DDGS(proxies=proxies)
+    
+    def call(
+        self, 
+        keywords: str,
+        region: str = "cn-zh",
+        safesearch: str = "moderate",
+        timelimit: Optional[str] = None,
+        max_results: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """
+        DuckDuckGo text search generator. Query params: https://duckduckgo.com/params.
+
+        Args:
+            keywords: keywords for query.
+            region: wt-wt, us-en, uk-en, ru-ru, etc. Defaults to "wt-wt".
+            safesearch: on, moderate, off. Defaults to "moderate".
+            timelimit: d, w, m, y. Defaults to None.
+            backend: api, html, lite. Defaults to api.
+                api - collect data from https://duckduckgo.com,
+                html - collect data from https://html.duckduckgo.com,
+                lite - collect data from https://lite.duckduckgo.com.
+            max_results: max number of results. If None, returns results only from the first response. Defaults to None.
+
+        Returns:
+            List[Dict[str, Any]]: list of search results.
+        """
+        result = []
+        try:
+            for i in self.engine.text(keywords, 
+                                      region=region, 
+                                      safesearch=safesearch, 
+                                      timelimit=timelimit, 
+                                      max_results=max_results
+                                      ):
+                result.append(i)
+        except Exception as e:
+            logger.exception(f"DDGSearch error: {e}")
+            self.engine = DDGS(proxies=self.proxies)
+            for i in self.engine.text(keywords, region=region, safesearch=safesearch, timelimit=timelimit, max_results=max_results):
+                result.append(i)
+        return result
+
+class SearchQAChain(Chain):
+    """Chain for search engine and QA system.
+    """
+    qa_chain: LLMChain
+    ddg_search_chain: DDGSearchChain
+    input_key: str = "query"
+    output_key: str = "answer"
+
+    @property
+    def input_keys(self) -> List[str]:
+        return [self.input_key]
+
+    @property
+    def output_keys(self) -> List[str]:
+        return [self.output_key]
+    
+    @classmethod
+    def from_llm(
+        cls, 
+        llm: BaseLanguageModel, 
+        qa_prompt: BasePromptTemplate = SEARCH_QA_PROMPT,
+        proxies: Union[dict, str] = "http://127.0.0.1:7890",
+        **kwargs: Any
+    ) -> "SearchQAChain":
+        """Initialize from LLM."""
+        qa_chain = LLMChain(llm=llm, prompt=qa_prompt, return_final_only=False, verbose=kwargs.get("verbose", False))
+        ddg_search_chain = DDGSearchChain(proxies=proxies)
+        return cls(
+            qa_chain=qa_chain,
+            ddg_search_chain=ddg_search_chain,
+            **kwargs
+        )
+
+    def _call(
+        self,
+        inputs: Dict[str, Any],
+        run_manager: Optional[CallbackManagerForChainRun] = None,
+        max_results: int = 3,
+        **kwargs: Any
+    ) -> Dict[str, str]:
+        """search query with web and answer question.
+        
+        Args:
+            inputs (Dict[str, Any]): input data.
+            max_results (int, optional): top k search results. Defaults to 3.
+
+        Returns:
+            Dict[str, str]: output data.
+        """
+        return_vars = {}
+        _run_manager = run_manager or CallbackManagerForChainRun.get_noop_manager()
+        question = inputs[self.input_key]
+        return_vars["query"] = question
+        # search engine
+        search_results = self.ddg_search_chain.call(question, max_results=max_results)
+        return_vars['search_results'] = search_results
+        if not search_results:
+            _run_manager.on_text(
+                f"no search results: {question}", 
+                color="red", 
+                end="\n", 
+                verbose=self.verbose
+            )
+            return_vars[self.output_key] = "对不起, 未查询到相关内容"
+            return return_vars
+        _run_manager.on_text(f"search results num: {len(search_results)}", end="\n", color="green", verbose=self.verbose)
+        # qa system
+        content = "\n\n".join([f"{i['title']}\n{i['body']}" for i in search_results])
+        qa_inputs = {"question": question,"context": content}
+
+        qa_outputs = self.qa_chain(qa_inputs, callbacks=_run_manager.get_child())
+        return_vars['qa_content'] = content
+        # qa_result = re.findall("<回答>\n(.*?)\n</回答>", "<回答>\n" + qa_outputs['text'])
+        return_vars[self.output_key] = qa_outputs['text']
+        _run_manager.on_text(f"search qa answer: {qa_outputs['text']}", end="\n", color="green", verbose=self.verbose)
+        return return_vars
+
 if __name__ == '__main__':
-    query = '高血压可能是什么原因造成的'
+    query = '糖尿病可以吃哪些食物？'
     # query = '早起头疼是什么原因'
-    text = asyncio.run(search_engine_chat(query))
-    print(text)
+    # text = asyncio.run(search_engine_chat(query))
+    # print(text)
+    llm = openai.OpenAI(
+        model_name = "Baichuan2-7B-Chat",
+        openai_api_base=os.getenv("OPENAI_API_BASE") + "/v1", 
+        openai_api_key=os.getenv("OPENAI_API_KEY")
+    )
+    qa_chain = SearchQAChain.from_llm(llm=llm, return_final_only=False, verbose=True)
+    qa_outputs = qa_chain.run(query=query, max_results=3)

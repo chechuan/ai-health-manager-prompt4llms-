@@ -13,6 +13,7 @@ import random
 import re
 import sys
 from pathlib import Path
+from tabnanny import verbose
 from typing import Any, AnyStr, Dict
 
 from pytz import timezone
@@ -26,7 +27,7 @@ sys.path.append(str(Path.cwd()))
 
 from data.constrant import DEFAULT_DATA_SOURCE, ParamServer
 from data.constrant_for_task_schedule import query_schedule_template, query_schedule_template_v2
-from src.pkgs.knowledge.utils import check_task, get_template, search_engine_chat
+from src.pkgs.knowledge.utils import SearchQAChain, check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, callLLM
 from src.utils.Logger import logger
 from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
@@ -50,6 +51,17 @@ class funcCall:
         self.register_for_all()
         self.scheduleManager.__init_vars__(self.funcmap, self.session)
         self.ext_api_factory = extApiFactory(self)
+        self._prepare_for_search_qa_chain()
+    
+    def _prepare_for_search_qa_chain(self) -> None:
+        """Initlization 搜索qachain"""
+        from langchain.llms import openai
+        llm = openai.OpenAI(
+            model_name=self.model_config.get('call_llm_with_search_engine', "Baichuan2-7B-Chat"),
+            openai_api_base=self.api_config['llm'] + '/v1', 
+            openai_api_key=self.api_config['llm_token']
+        )
+        self.search_qa_chain = SearchQAChain.from_llm(llm=llm, return_only_outputs=False, verbose=False)
 
     def register_for_all(self):
         self.funcmap = {}
@@ -57,16 +69,18 @@ class funcCall:
         self.registration_list = []
         self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
         self.register_func("searchDB",          self.call_search_database)
-        self.register_func("searchEngine",      self.call_llm_with_search_engine)
+        # self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
         # self.register_func("create_schedule",   self.call_schedule_create,          "/alg-api/schedule/manage")
-        self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         # self.register_func("query_schedule",    self.call_schedule_query)
-        self.register_func("query_schedule",    self.scheduleManager.query)
         # self.register_func("cancel_schedule",   self.call_schedule_cancel,          "/alg-api/schedule/manage")
+
+        self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
+        self.register_func("query_schedule",    self.scheduleManager.query)
         self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
+        self.register_func("searchEngine",      self.call_llm_with_search_engine_v1)
         logger.success(f"Register {self.registration_list} Finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
@@ -322,7 +336,7 @@ class funcCall:
             self.update_mid_vars(kwargs['mid_vars'], key=f"查询知识库", input_text=query, output_text=msg, model=model_name)
             # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
             try:
-                content = self.call_llm_with_search_engine(query, **kwargs).strip()
+                content = self.funcmap['searchEngine']['func'](query, **kwargs).strip()
                 dataSource = "搜索引擎"
             except:
                 content = "抱歉, 没有搜索到相关答案, 请重试"
@@ -349,11 +363,7 @@ class funcCall:
         template = get_template("search_engine_chat")
         if search_result:
             template = template["search"].strip().replace("{{ context }}", "\n"+search_result+"\n")
-            self.update_mid_vars(kwargs['mid_vars'], 
-                                 key=f"查询搜索引擎", 
-                                 input_text=query, 
-                                 output_text=search_result, 
-                                 model="baidu crawler")
+            self.update_mid_vars(kwargs['mid_vars'], key=f"查询搜索引擎", input_text=query, output_text=search_result, model="baidu crawler")
         else:
             template = template["Empty"]
         prompt = template.replace("{{ question }}", search_result)
@@ -364,6 +374,27 @@ class funcCall:
                              input_text=prompt, 
                              output_text=content, 
                              model=model_name)
+        ret_obj = {"content": content, "dataSource": "搜索引擎"}
+        return ret_obj
+    
+    def call_llm_with_search_engine_v1(self, *args, **kwargs) -> AnyStr:
+        """自定义SearchQAChain实现搜索引擎问答
+        """
+        qa_outputs = self.search_qa_chain.run(query=args[0], max_results=3)
+        content = qa_outputs[self.search_qa_chain.output_key]
+        self.update_mid_vars(
+            kwargs['mid_vars'], 
+            key=f"搜索引擎", input_text=args[0], 
+            output_text=qa_outputs['search_results'], 
+            model="duckduckgo"
+        )
+        self.update_mid_vars(
+            kwargs['mid_vars'],
+            key=f"search_qa_chain",
+            input_text=qa_outputs['qa_content'],
+            output_text=content
+        )
+
         ret_obj = {"content": content, "dataSource": "搜索引擎"}
         return ret_obj
     
