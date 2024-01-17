@@ -482,9 +482,9 @@ class Chat_v2:
                     break
             if not content:
                 content = model_output.strip().split('\n')[0]
-            #logger.debug('标签归一前提取内容：' + content)
-            #content = norm_userInfo_msg(intentCode, content)
-            #logger.debug('标签归一后提取内容：' + content)
+            logger.debug('标签归一前提取内容：' + content)
+            content = norm_userInfo_msg(intentCode, content)
+            logger.debug('标签归一后提取内容：' + content)
             content = self.clean_userInfo(content)
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
@@ -492,7 +492,8 @@ class Chat_v2:
         return content, intentCode
 
     def clean_userInfo(self, content):
-        content = content.replace("'", '').replace("{", '').replace('}', '').replace('[', '').replace(']', '')
+        content = content.replace("'", '').replace("{", '').replace('}',
+                '').replace('[', '').replace(']', '').replace('。','')
         content = content.replace('用户昵称：', '').replace('输出：','').replace('标签值为：', '')
         return content
 
