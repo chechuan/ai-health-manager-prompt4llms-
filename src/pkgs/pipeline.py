@@ -491,7 +491,7 @@ class Chat_v2:
 
         return content, intentCode
 
-    def clean_userInfo(content):
+    def clean_userInfo(self, content):
         content = content.replace("'", '').replace("{", '').replace('}', '').replace('[', '').replace(']', '')
         content = content.replace('用户昵称：', '').replace('输出：','').replace('标签值为：', '')
         return content
