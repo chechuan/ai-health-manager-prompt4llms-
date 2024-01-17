@@ -465,20 +465,36 @@ class Chat_v2:
                                  max_tokens=200,
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
-        content = model_output
-        self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
-        if sum([i in content for i in ["询问","提问","转移","结束", "未知","停止"]]) != 0:
+        #content = model_output
+        self.update_mid_vars(mid_vars, key="获取用户信息 01",
+                input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
+        
+        if sum([i in model_output for i in ["询问","提问","转移","结束", "未知","停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(mid_vars, history=history)
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
-        elif content:
-            content = content.strip().split('\n')[0]
-            logger.debug('标签归一前提取内容：' + content)
-            content = norm_userInfo_msg(intentCode, content)
-            logger.debug('标签归一后提取内容：' + content)
+        
+        else:
+            content = ''
+            for i in model_output.strip().split('\n'):
+                if i.startswith('标签值为：'):
+                    content = i
+                    break
+            if not content:
+                content = model_output.strip().split('\n')[0]
+            #logger.debug('标签归一前提取内容：' + content)
+            #content = norm_userInfo_msg(intentCode, content)
+            #logger.debug('标签归一后提取内容：' + content)
+            content = self.clean_userInfo(content)
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
+
         return content, intentCode
+
+    def clean_userInfo(content):
+        content = content.replace("'", '').replace("{", '').replace('}', '').replace('[', '').replace(']', '')
+        content = content.replace('用户昵称：', '').replace('输出：','').replace('标签值为：', '')
+        return content
 
     def get_reminder_tips(self, prompt, history, intentCode, model='Baichuan2-7B-Chat', mid_vars=None):
         logger.debug('remind prompt: ' + prompt)
