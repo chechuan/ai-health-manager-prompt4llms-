@@ -472,7 +472,7 @@ class Chat_v2:
             content = self.chatter_gaily(mid_vars, history=history)
             intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
         elif content:
-            content = content.split('\n')[0].split('。')[0][:20]
+            content = content.strip().split('\n')[0]
             logger.debug('标签归一前提取内容：' + content)
             content = norm_userInfo_msg(intentCode, content)
             logger.debug('标签归一后提取内容：' + content)
