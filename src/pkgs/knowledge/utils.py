@@ -300,5 +300,5 @@ if __name__ == '__main__':
         openai_api_base=os.getenv("OPENAI_API_BASE") + "/v1", 
         openai_api_key=os.getenv("OPENAI_API_KEY")
     )
-    qa_chain = SearchQAChain.from_llm(llm=llm, return_final_only=False, verbose=True)
+    qa_chain = SearchQAChain.from_llm(llm=llm, return_final_only=False, proxies=None, verbose=True)
     qa_outputs = qa_chain.run(query=query, max_results=3)
