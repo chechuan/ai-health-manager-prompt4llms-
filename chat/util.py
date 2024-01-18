@@ -135,37 +135,35 @@ def get_name(content):
 def norm_userInfo_msg(intentCode, content):
     if intentCode == 'ask_six':
         return get_sex(content)
-    elif intentCode == 'ask_name':
+    if intentCode == 'ask_name':
         return get_name(content)
-    elif intentCode == 'ask_age':
-        return get_age(content)
-    elif intentCode == 'ask_nation':
+    #if intentCode == 'ask_age':
+    #    return get_age(content)
+    if intentCode == 'ask_nation':
         return get_nation(content)
-    elif intentCode == 'ask_height':
-        return get_height(content)
-    elif intentCode == 'ask_weight':
-        return get_weight(content)
-    elif intentCode == 'ask_labor_intensity':
+    #if intentCode == 'ask_height':
+    #    return get_height(content)
+    #if intentCode == 'ask_weight':
+    #    return get_weight(content)
+    if intentCode == 'ask_labor_intensity':
         return get_labour_intentisy(content)
-    elif intentCode == 'ask_disease':
-        return get_disease(content)
-    elif intentCode == 'ask_family_history':
-        return get_family_disease(content)
-    elif intentCode == 'ask_goal_manage':
-        return get_goal_manage(content)
-    elif intentCode == 'ask_mmol_drug':
-        return get_mmol_drug(content)
-    elif intentCode == 'ask_food_alergy':
-        return get_food_alergy(content)
-    elif intentCode == 'ask_taste_prefer':
-        return get_tast_prefer(content)
-    elif intentCode == 'ask_exercise_habbit':
-        return get_exercise_habbit(content)
-    elif intentCode == 'ask_exercise_taboo_degree':
-        return get_degree_pain(content)
-    elif intentCode == 'ask_exercise_habbit':
-        return get_sport_habbit(content)
-    elif intentCode == 'ask_exercise_taboo_xt':
-        return get_chest_pain(content)
+    #if intentCode == 'ask_disease':
+    #    return get_disease(content)
+    #if intentCode == 'ask_family_history':
+    #    return get_family_disease(content)
+    #if intentCode == 'ask_goal_manage':
+    #    return get_goal_manage(content)
+    #if intentCode == 'ask_mmol_drug':
+    #    return get_mmol_drug(content)
+    #if intentCode == 'ask_food_alergy':
+    #    return get_food_alergy(content)
+    #if intentCode == 'ask_taste_prefer':
+    #    return get_tast_prefer(content)
+    #if intentCode == 'ask_exercise_taboo_degree':
+    #    return get_degree_pain(content)
+    #if intentCode == 'ask_exercise_habbit':
+    #    return get_sport_habbit(content)
+    #if intentCode == 'ask_exercise_taboo_xt':
+    #    return get_chest_pain(content)
     else:
-        return '未知'
+        return content
