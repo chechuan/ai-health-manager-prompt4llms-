@@ -69,7 +69,7 @@ class funcCall:
         self.registration_list = []
         self.register_func("searchKB",          self.call_search_knowledge,         "/chat/knowledge_base_chat")
         self.register_func("searchDB",          self.call_search_database)
-        # self.register_func("searchEngine",      self.call_llm_with_search_engine)
+        self.register_func("searchEngine",      self.call_llm_with_search_engine)
         self.register_func("get_schedule",      self.call_get_schedule,             "/alg-api/schedule/query")
         self.register_func("modify_schedule",   self.call_schedule_modify,          "/alg-api/schedule/manage")
         self.register_func("askAPI",            self.call_external_api)
@@ -79,8 +79,8 @@ class funcCall:
 
         self.register_func("create_schedule",   self.scheduleManager.create,          "/alg-api/schedule/manage")
         self.register_func("query_schedule",    self.scheduleManager.query)
-        self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")        # 取消日程优化
-        self.register_func("searchEngine",      self.call_llm_with_search_engine_v1)
+        self.register_func("cancel_schedule",   self.scheduleManager.cancel,        "/alg-api/schedule/manage")
+        # self.register_func("searchEngine",      self.call_llm_with_search_engine_v1)
         logger.success(f"Register {self.registration_list} Finish.")
 
     def register_func(self, func_name: AnyStr, func_call: Any, method: AnyStr="") -> None:
@@ -366,14 +366,10 @@ class funcCall:
             self.update_mid_vars(kwargs['mid_vars'], key=f"查询搜索引擎", input_text=query, output_text=search_result, model="baidu crawler")
         else:
             template = template["Empty"]
-        prompt = template.replace("{{ question }}", search_result)
+        messages = [{"role": "system", "content": template}, {"role": "user", "content": query}]
 
-        content = callLLM(prompt, model_name=model_name, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(kwargs['mid_vars'], 
-                             key=f"搜索引擎 -> LLM", 
-                             input_text=prompt, 
-                             output_text=content, 
-                             model=model_name)
+        content = callLLM(history=messages, model_name=model_name, temperature=0.7, top_p=0.8)
+        self.update_mid_vars(kwargs['mid_vars'], key=f"搜索引擎 -> LLM", input_text=messages, output_text=content, model=model_name)
         ret_obj = {"content": content, "dataSource": "搜索引擎"}
         return ret_obj
     
