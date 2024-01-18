@@ -52,9 +52,11 @@ class initAllResource:
         parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
         parser.add_argument('--port', type=int, default=6500, help='port')
         parser.add_argument('--use_cache', action="store_true", help='是否使用缓存, Default为False')
-        parser.add_argument('--special_prompt_version', 
-                            action="store_true",
-                            help='是否使用指定的prompt版本, Default为False,都使用lastest')
+        parser.add_argument(
+            '--special_prompt_version', 
+            action="store_true",
+            help='是否使用指定的prompt版本, Default为False,都使用lastest'
+        )
         self.args = parser.parse_args()
         logger.info(f"Initialize args: {self.args}")
 
