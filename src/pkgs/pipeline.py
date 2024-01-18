@@ -52,9 +52,10 @@ class Chat_v2:
             'default_reminder', 'broadcast_bp_up'
         ]
         useinfo_intent_code_list = [
-            'ask_name','ask_age','ask_exercise_taboo','sk_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
+            'ask_name','ask_age','ask_exercise_taboo','ask_exercise_habbit','ask_food_alergy','ask_food_habbit','ask_taste_prefer',
             'ask_family_history','ask_labor_intensity','ask_nation','ask_disease','ask_weight','ask_height', 
-            'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
+            'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree',
+            'ask_exercise_taboo_xt', 'ask_goal_manage'
         ]
         aiui_intent_code_list = ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro', 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro', 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym', 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling', 'AIUI.audioBook', 'musicX', 'news', 'joke']
         callout_intent_code_list = ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista', 'call_health_manager']
