@@ -467,7 +467,7 @@ class Chat_v2:
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
         #content = model_output
-        #model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
+        model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="获取用户信息 01",
                 input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
         '''
@@ -491,6 +491,7 @@ class Chat_v2:
         '''
 
         content = model_output
+        content = self.clean_userInfo(content)
 
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
