@@ -466,16 +466,15 @@ class Chat_v2:
                                  max_tokens=200,
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
-        #content = model_output
-        model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
+        content = model_output
+        #model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="获取用户信息 01",
                 input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
-        '''
+        
         if sum([i in model_output for i in ["询问","提问","转移","结束", "未知","停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(mid_vars, history=history)
-            intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
-        
+            intentCode = EXT_USRINFO_TRANSFER_INTENTCODE       
         else:
             content = ''
             for i in model_output.strip().split('\n'):
@@ -488,10 +487,10 @@ class Chat_v2:
             content = norm_userInfo_msg(intentCode, content)
             logger.debug('标签归一后提取内容：' + content)
             content = self.clean_userInfo(content)
-        '''
+        
 
-        content = model_output
-        content = self.clean_userInfo(content)
+        #content = model_output
+        #content = self.clean_userInfo(content)
 
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
