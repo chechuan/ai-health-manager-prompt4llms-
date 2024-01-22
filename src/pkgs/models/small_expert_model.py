@@ -229,6 +229,8 @@ class expertModel:
             date_after = ((now+timedelta(days=days)).strftime("%Y-%m-%d"))
             return date_after
         
+        if not indicatorData:
+            raise ValueError("indicatorData can't be empty")
         date_before_map = {get_day_before(-1*i): 1 for i in range(5)}
         
         for data_item in indicatorData:         # 任一指标存在近五天不连续, 状态为False
