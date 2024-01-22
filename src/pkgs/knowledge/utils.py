@@ -23,14 +23,14 @@ from aiohttp import ClientSession
 from bs4 import BeautifulSoup
 from duckduckgo_search import DDGS
 from langchain.callbacks.manager import CallbackManagerForChainRun
-# from langchain.chains.base import Chain
-from src.pkgs._langchain.chains.base import Chain
 from langchain.chains.llm import LLMChain
 from langchain.llms import openai
 from langchain.schema import BasePromptTemplate
 from langchain.schema.language_model import BaseLanguageModel
 from lxml import etree
 
+# from langchain.chains.base import Chain
+from src.pkgs._langchain.chains.base import Chain
 from src.pkgs.knowledge.config.prompt_config import (PROMPT_TEMPLATES, SEARCH_QA_HISTORY_PROMPT,
                                                      SEARCH_QA_PROMPT)
 from src.utils.Logger import logger
@@ -175,7 +175,7 @@ class DDGSearchChain():
     def call(
         self, 
         keywords: str,
-        region: str = "cn-zh",
+        region: str = "wt-wt",
         safesearch: str = "moderate",
         timelimit: Optional[str] = None,
         max_results: Optional[int] = None
@@ -239,6 +239,7 @@ class SearchQAChain(Chain):
     ) -> "SearchQAChain":
         """Initialize from LLM."""
         qa_chain = LLMChain(llm=llm, prompt=qa_prompt, return_final_only=False, verbose=kwargs.get("verbose", False))
+        logger.info(f"Initialize DDGSearchChain with proxies: {proxies}")
         ddg_search_chain = DDGSearchChain(proxies=proxies)
         return cls(
             qa_chain=qa_chain,
@@ -291,8 +292,8 @@ class SearchQAChain(Chain):
         return return_vars
 
 if __name__ == '__main__':
-    query = '糖尿病可以吃哪些食物？'
-    # query = '早起头疼是什么原因'
+    # query = '糖尿病可以吃哪些食物？'
+    query = '今天北京天气怎么样?'
     # text = asyncio.run(search_engine_chat(query))
     # print(text)
     llm = openai.OpenAI(
@@ -300,5 +301,5 @@ if __name__ == '__main__':
         openai_api_base=os.getenv("OPENAI_API_BASE") + "/v1", 
         openai_api_key=os.getenv("OPENAI_API_KEY")
     )
-    qa_chain = SearchQAChain.from_llm(llm=llm, return_final_only=False, proxies=None, verbose=True)
+    qa_chain = SearchQAChain.from_llm(llm=llm, return_final_only=False, verbose=True)
     qa_outputs = qa_chain.run(query=query, max_results=3)
