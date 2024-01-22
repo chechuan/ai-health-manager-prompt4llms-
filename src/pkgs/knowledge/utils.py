@@ -12,6 +12,8 @@ import re
 import sys
 from pathlib import Path
 from tabnanny import verbose
+from uu import Error
+from pydantic import ValidationError
 
 from torch import topk
 
@@ -174,11 +176,12 @@ class DDGSearchChain():
     
     def call(
         self, 
-        keywords: str,
-        region: str = "wt-wt",
+        keywords: str = "",
+        region: str = "us-en",      # 语言区域, 使用zh-cn 报错DuckDuckGoSearchException: Ratelimit
         safesearch: str = "moderate",
         timelimit: Optional[str] = None,
-        max_results: Optional[int] = None
+        max_results: Optional[int] = 3,
+        **kwargs
     ) -> List[Dict[str, Any]]:
         """
         DuckDuckGo text search generator. Query params: https://duckduckgo.com/params.
@@ -197,6 +200,8 @@ class DDGSearchChain():
         Returns:
             List[Dict[str, Any]]: list of search results.
         """
+        if not keywords and not kwargs.get('keywords'):
+            raise ValidationError("keywords is required")
         result = []
         try:
             for i in self.engine.text(keywords, 
@@ -234,7 +239,7 @@ class SearchQAChain(Chain):
         cls, 
         llm: BaseLanguageModel, 
         qa_prompt: BasePromptTemplate = SEARCH_QA_PROMPT,
-        proxies: Union[dict, str] = "http://127.0.0.1:7890",
+        proxies: Union[dict, str] = "socks://127.0.0.1:7891",
         **kwargs: Any
     ) -> "SearchQAChain":
         """Initialize from LLM."""

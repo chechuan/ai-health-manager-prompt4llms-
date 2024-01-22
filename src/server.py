@@ -83,27 +83,6 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
 
 def create_app():
     app = Flask(__name__)
-    
-    # @app.route('/chat_gen', methods=['post'])
-    # def get_chat_gen():
-    #     try:
-    #         param = accept_param()
-    #         task = param.get('task', 'chat')
-    #         if task == 'chat':
-    #             result = chat.yield_result(sys_prompt=param.get('prompt'), 
-    #                                        return_mid_vars=False, 
-    #                                        use_sys_prompt=False, 
-    #                                        mid_vars=[],
-    #                                        **param)
-    #     except AssertionError as err:
-    #         logger.exception(err)
-    #         result = yield_result(head=601, msg=repr(err), items=param)
-    #     except Exception as err:
-    #         logger.exception(err)
-    #         logger.error(traceback.format_exc())
-    #         result = yield_result(msg=repr(err), items=param)
-    #     finally:
-    #         return Response(decorate(result), mimetype='text/event-stream')
 
     @app.route('/chat_gen', methods=['post'])
     def get_chat_gen():
@@ -144,6 +123,26 @@ def create_app():
         finally:
             return Response(result, mimetype='text/event-stream')
 
+    @app.route('/chat/role_play', methods=['post'])
+    def _chat_role_play(request: RolePlayRequest):
+        """角色扮演对话
+        """
+        try:
+            param = accept_param()
+            generator = chat_v2.general_yield_result(sys_prompt=param.get('prompt'), 
+                                                  mid_vars=[], 
+                                                  use_sys_prompt=True, 
+                                                  **param)
+            result = decorate_chat_complete(generator, 
+                                            return_mid_vars=True,
+                                            return_backend_history=True
+                                            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return Response(result, mimetype='text/event-stream')
+    
     @app.route('/intent/query', methods=['post'])
     def intent_query():
         global chat
@@ -263,29 +262,23 @@ def create_app():
         finally:
             return ret
 
-    @app.route('/chat/role_play', methods=['post'])
-    def _chat_role_play(request: RolePlayRequest):
-        """角色扮演对话
+    @app.route('/search/duckduckgo', methods=['post'])
+    def _search_duckduckgo():
+        """DuckDuckGo搜索
         """
         try:
-            param = accept_param()
-            generator = chat_v2.general_yield_result(sys_prompt=param.get('prompt'), 
-                                                  mid_vars=[], 
-                                                  use_sys_prompt=True, 
-                                                  **param)
-            result = decorate_chat_complete(generator, 
-                                            return_mid_vars=True,
-                                            return_backend_history=True
-                                            )
+            param = accept_param_purge()
+            ret = chat_v2.funcall.search_qa_chain.ddg_search_chain.call(**param)
+            ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
+            ret = make_result(head=500, msg=repr(err))
         finally:
-            return Response(result, mimetype='text/event-stream')
-        
+            return ret
+
     @app.route('/test/sync', methods=['post'])
     def _test_sync():
-        """获取意图代码
+        """异步测试
         """
         t1 = curr_time()
         time.sleep(2)
