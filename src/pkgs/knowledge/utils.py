@@ -40,13 +40,13 @@ from src.utils.Logger import logger
 headers = {
 	"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
 	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-	"Accept-Language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
+	"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
 	"Connection": "keep-alive",
 	"Accept-Encoding": "gzip, deflate, br",
     "Content-Type": "text/html; charset=utf-8",
 	"Host": "www.baidu.com",
 	# 需要更换Cookie
-	# "Cookie": """BIDUPSID=439EE448EACEE1F6F7990558471F74E8; PSTM=1691026709; H_WISE_SIDS=234020_131861_213350_214789_110085_244714_236312_262914_256419_265881_266361_265615_267072_268592_268031_259642_269236_256154_269731_269832_269328_269904_267066_256739_270460_270548_271172_263618_256957_267659_271322_271268_257179_271477_266028_270102_271812_271935_271254_234296_234208_269297_272279_272465_253022_271688_272840_260335_272989_272556_273062_267559_273164_273139_273235_273300_273374_273399_273380_271158_273451_270055_273519_272225_271562_271146_273671_273705_273318_264170_270186_273902_274080_273931_273966_274140_269609_274209_273917_273786_273043_273594_274300_256223_272806_274279_272319_272685_274441_272331_274256_197096_274765_274760_270142_274844_274854_274856_274847_270158_274871_275070_272801_274450_275097_272324_267806_267547; H_WISE_SIDS_BFESS=234020_131861_213350_214789_110085_244714_236312_262914_256419_265881_266361_265615_267072_268592_268031_259642_269236_256154_269731_269832_269328_269904_267066_256739_270460_270548_271172_263618_256957_267659_271322_271268_257179_271477_266028_270102_271812_271935_271254_234296_234208_269297_272279_272465_253022_271688_272840_260335_272989_272556_273062_267559_273164_273139_273235_273300_273374_273399_273380_271158_273451_270055_273519_272225_271562_271146_273671_273705_273318_264170_270186_273902_274080_273931_273966_274140_269609_274209_273917_273786_273043_273594_274300_256223_272806_274279_272319_272685_274441_272331_274256_197096_274765_274760_270142_274844_274854_274856_274847_270158_274871_275070_272801_274450_275097_272324_267806_267547; Hm_lvt_aec699bb6442ba076c8981c6dc490771=1694682757; Hm_lpvt_aec699bb6442ba076c8981c6dc490771=1694682757; COOKIE_SESSION=109027_0_1_0_2_1_1_0_1_1_0_0_69_0_73_0_1694682760_0_1694682687%7C2%230_0_1694682687%7C1; delPer=0; BD_CK_SAM=1; ZFY=xscdHGcRiKqtiy:Bzq0CMjcEqySzF3nh9R:Ao025lMpTk:C; BDRCVFR[feWj1Vr5u3D]=I67x6TjHwwYf0; PSINO=1; __bid_n=189a9c64a3f74561fe3291; BAIDUID=24F27377269B91FC7119DDADA7C1DC24:FG=1; BAIDUID_BFESS=24F27377269B91FC7119DDADA7C1DC24:FG=1; BDRCVFR[BIMQ49Drrdf]=mk3SLVN4HKm; BD_UPN=12314753; BDUSS=FhLXQzLWF-NVVDUmhsYS1iNTZFbkNuczlzSVJVVUtEQTlCaGdPZkIxWHF-cFJsRVFBQUFBJCQAAAAAAAAAAAEAAACy1YNOdGljb0FnAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOpxbWXqcW1lVW; BDUSS_BFESS=FhLXQzLWF-NVVDUmhsYS1iNTZFbkNuczlzSVJVVUtEQTlCaGdPZkIxWHF-cFJsRVFBQUFBJCQAAAAAAAAAAAEAAACy1YNOdGljb0FnAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOpxbWXqcW1lVW; ZD_ENTRY=bing; RT="z=1&dm=baidu.com&si=c1e335f4-496b-4aea-9fff-7ecbb197ce4d&ss=lpvzk3ax&sl=z&tt=i2s&bcn=https%3A%2F%2Ffclog.baidu.com%2Flog%2Fweirwood%3Ftype%3Dperf&ld=9yot&ul=a1lv&hd=a1lz"; H_PS_PSSID=39713_39730_39779_39703_39686_39679_39783_39842_39904_39819_39909_39935_39937_39933_39945_39940_39939_39931; BA_HECTOR=ak8521a1a0ah818l200ga58n1inarmn1r; BDORZ=B490B5EBF6F3CD402E515D22BCDA1598"""
+	"Cookie": """BAIDUID=24F27377269B91FC7119DDADA7C1DC24:FG=1; BAIDUID_BFESS=24F27377269B91FC7119DDADA7C1DC24:FG=1; channel=bing; ab_sr=1.0.1_NGI0MTBkMjc0Yzg4Yjc5MTAwZDY1NTY0Y2QwMmEyZjM3NTczYzY1NjJjMWU3N2FlMTZhYTc1YWU3NDJhZDM5OTA0ZThmOTNhMjRjMzNiN2QzYzU1ODQ2NDY4OGI5OGUzZDViM2Q0ZTYyZDI2MTlmNTgwMDMxM2Q1NTE5YmU1MDZkZDMxYzRmYzVkZmM5MDYwY2M4MDIzYTQwOWI5ZGI4Mw=="""
 }
 
 def check_task(task: Any) -> str or None:
@@ -99,6 +99,21 @@ def parse_diff_pages(url: str, _html: str) -> (str, str):
         html = etree.HTML(_html)
         title = html.xpath('//*[@class="v_title"]/text()')[0]
         text = html.xpath('//*[@class="text"]/text()')[0].strip()
+    elif 'baike.baidu.com' in url:
+        html = etree.HTML(_html)
+        title = html.xpath('//*[@class="lemmaTitle_pjifB J-lemma-title"]/text()')[0]
+        text = html.xpath('//*[@class="lemmaSummary_VQxNY J-summary"]//text()')
+        text = "".join(text)
+    elif 'lemon.baidu.com' in url:
+        html = etree.HTML(_html)
+        if '/ec/article/' in url:
+            title = html.xpath('//*[@class="ArticleDetail_detailTitle__2ti6K undefined ArticleDetail_biggerTitle__3RZK1"]/text()')[0]
+            text = html.xpath('//*[@class="article-detail"]//text()')
+            text = "".join(text)
+        elif '/ec/question' in url:
+            title = html.xpath('//*[@class="Title_detailTitle__3GfU7"]/text()')[0]
+            text = html.xpath('//*[@class="QuestionDetail_questionDetailWrapper__3QH5b"]//text()')
+            text = "".join(text)
     else:
         title, text = None, None
     return title, text
@@ -116,6 +131,10 @@ async def parse_detail_page(d_url):
     
     try:
         title, text = parse_diff_pages(d_url, _html)
+        if title and text:
+            logger.debug(f"url: {d_url}\ntitle: {title}\ntext: {text}")
+        else:
+            logger.debug(f"url: fail to parse {d_url}")
         return title, text
     except TypeError as terr:
         logger.debug(f"error to parse {d_url}")
@@ -132,7 +151,8 @@ async def search_engine_chat(query: str,
                              max_length = 800,
                              **kwargs) -> str:
     url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k + backup_nums}&tn=baidurt"
-    response = session.get(url, headers=headers, )
+    # url = f"https://duckduckgo.com/?t=h_&q=DuckDuckGo比google好在哪儿"
+    response = session.get(url, headers=headers)
     res = etree.HTML(response.text)
     detail_urls = res.xpath('//h3[@class="t"]/a/@href')
     
@@ -295,6 +315,17 @@ class SearchQAChain(Chain):
         return_vars[self.output_key] = qa_outputs['text']
         _run_manager.on_text(f"search qa answer: {qa_outputs['text']}", end="\n", color="green", verbose=self.verbose)
         return return_vars
+
+class LangChainDDGSResults:
+    def __init__(self) -> None:
+        from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
+        from langchain.tools import DuckDuckGoSearchResults
+        self.wrapper = DuckDuckGoSearchAPIWrapper(max_results=2, )
+        self.search = DuckDuckGoSearchResults(wrapper=self.wrapper)
+
+    def call(self, query: str):
+        results = self.search.search(query)
+        return results
 
 if __name__ == '__main__':
     # query = '糖尿病可以吃哪些食物？'
