@@ -11,6 +11,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from unittest import result
 
 from pydantic import ValidationError
 from torch import topk
@@ -79,6 +80,7 @@ def get_template(key: str) -> str:
 def parse_diff_pages(url: str, _html: str) -> (str, str):
     """解析不同的域名
     """
+    html = etree.HTML(_html)
     if 'www.zhihu.com' in url:
         soup = BeautifulSoup(_html, 'html.parser')
         title = soup.find('h1', class_='QuestionHeader-title').text
@@ -92,32 +94,40 @@ def parse_diff_pages(url: str, _html: str) -> (str, str):
             if div.get('class') and "RichText" in div['class']:
                 text = "\n".join([p.text for p in div.find_all('p')])
     elif 'health.baidu.com' in url:
-        html = etree.HTML(_html)
         title = html.xpath("//p[contains(@class, 'hc-line-clamp2')]/text()")[0]
         p_str_list = html.xpath("//div[contains(@class, 'index_textContent ')]//p//text()")
         text = "\n".join(p_str_list)
     elif 'm.baidu.com' in url:
-        html = etree.HTML(_html)
         _data = html.xpath("//script[@id='__NEXT_DATA__']//text()")[0]
         data = json.loads(_data)
         title = data['props']['pageProps']['commonData']['title']
         text = data['props']['pageProps']['contentData']['content'][0]
     elif 'youlai.cn' in url:
-        html = etree.HTML(_html)
-        title = html.xpath('//*[@class="v_title"]/text()')[0]
-        text = html.xpath('//div[@class="text"]//text()')
+        if "video/article/" in url:
+            # title = html.xpath('//h1[@class="title"]/text()')[0]
+            title = html.xpath('//h3[@class="v_title"]/text()')[0]
+            text = html.xpath('//div[@class="p_text_box hidden_auto"]//p//text()')
+        else:
+            title = html.xpath('//*[@class="v_title"]/text()')[0]
+            text = html.xpath('//div[@class="text"]//text()')
     elif 'baike.baidu.com' in url:
-        html = etree.HTML(_html)
         title = html.xpath('//*[@class="lemmaTitle_pjifB J-lemma-title"]/text()')[0]
         text = html.xpath('//*[@class="lemmaSummary_VQxNY J-summary"]//text()')
     elif 'lemon.baidu.com' in url:
-        html = etree.HTML(_html)
         if '/ec/article/' in url:
             title = html.xpath('//*[@class="ArticleDetail_detailTitle__2ti6K undefined ArticleDetail_biggerTitle__3RZK1"]/text()')[0]
             text = html.xpath('//*[@class="article-detail"]//text()')
         elif '/ec/question' in url:
             title = html.xpath('//*[@class="Title_detailTitle__3GfU7"]/text()')[0]
             text = html.xpath('//*[@class="QuestionDetail_questionDetailWrapper__3QH5b"]//text()')
+    elif 'songbai.cn' in url:
+        if 'pcs/qa/answers' in url:
+            title = html.xpath('//section[@class="qa-summary"]/h1[@class="title"]//text()')[0]
+            text = html.xpath('//div[@class="answer-item"]//text()')
+    elif 'www.kedaifu.com' in url:
+        if '/ask/audio' in url:
+            title = html.xpath('//p[@class="audioTitle"]/text()')[0]
+            text = html.xpath('//div[@class="audioData"]//div[@class="frame"]//p//text()')
     else:
         title, text = None, None
     if isinstance(text, list):
@@ -133,7 +143,7 @@ async def parse_detail_page(d_url):
             async with session.get(d_url, headers=headers) as response:
                 _html = await response.text()
     except Exception as e:
-        return None, None
+        return None, None, None
     
     try:
         title, text = parse_diff_pages(d_url, _html)
@@ -141,14 +151,11 @@ async def parse_detail_page(d_url):
             logger.debug(f"url: {d_url}\ntitle: {title}\ntext: {text}")
         else:
             logger.debug(f"url: fail to parse {d_url}")
-        return title, text
-    except TypeError as terr:
-        logger.debug(f"error to parse {d_url}")
-        return None, None
+        return title, text, d_url
     except Exception as err:
         logger.error(f"解析网页出错: {err}")
         logger.error(f"parse err url {d_url}")
-        return None, None 
+        return None, None, None
 
 async def search_engine_chat(query: str,
                              top_k: int = 3,
@@ -161,6 +168,7 @@ async def search_engine_chat(query: str,
     # url = f"view-source:https://www.startpage.com/do/search?cmd=process_search&query={query}"
     url = f"https://www.sogou.com/web?query={query}"
     # url = f"https://quark.sm.cn/s?q={query}"
+    response = None
 
     if url.startswith("https://www.startpage.com/do/search?"):
         response = session.get(url)
@@ -171,17 +179,15 @@ async def search_engine_chat(query: str,
         res = etree.HTML(response.text)
         detail_urls = res.xpath('//h3[@class="t"]/a/@href')
     elif url.startswith("https://www.sogou.com/web?"):
-        response = session.get(url, headers=headers)
-        res = etree.HTML(response.text)
-        detail_urls = res.xpath('//h3[@class="vr-title  "]/a/@href')
+        def fetch_url_list(url):
+            response = session.get(url, headers=headers)
+            res = etree.HTML(response.text)
+            detail_urls = res.xpath('//h3[@class="vr-title  "]/a/@href')
+            return detail_urls
+        detail_urls = [i for j in [fetch_url_list(url + f"&page={page}&ie=utf8") for page in range(1,3)] for i in j]
         detail_urls = [(i if i.startswith("http") else "https://www.sogou.com" + i) for i in detail_urls]
-    elif url.startswith("https://quark.sm.cn/s"):
-        response = session.get(url, headers=headers)
-        res = etree.HTML(response.text)
-        detail_urls = res.xpath('//a[@class="c-header-inner c-flex-1"]/@href')
-        ...
-    
-    if response.status_code != 200:
+
+    if isinstance(response, requests.Response) and response.status_code != 200:
         logger.error(f"Err to get url: {url}, status_code: {response.status_code}")
         return "对不起, 网络连接异常, 未检索到相关内容"
     if not detail_urls:
@@ -194,19 +200,24 @@ async def search_engine_chat(query: str,
     
     content = ""
     i = 0
+    result_list = []
     for done_task in done:
-        title, text = done_task.result()
-        if title and i < 3:
+        title, text, d_url = done_task.result()
+        if not title or not text:
+            continue
+        result_list.append({"title": title, "body": text, "url": d_url})
+        if title and i < 3 and len(content) < max_length:
             content += f"{title}\n{text}\n\n"
-            if len(content) > max_length:
-                break
             i += 1
     content = content.replace("<img(.*?)>", "")
     content = content.replace("</p><p>", "\n").replace("<br>", "\n").replace("<br/>", "\n")
     content = content.replace("<p>", "").replace("</p>", "").replace("<span >", "").replace("</span>", "")
     if len(content) > max_length + 200:
         content = content[:max_length+200]
-    return content
+    if kwargs.get("return_list", False):
+        return result_list
+    else:
+        return content
 
 class DDGSearchChain():
     proxies: Union[dict, str] = "http://127.0.0.1:7890"

@@ -366,7 +366,8 @@ class funcCall:
                 query, 
                 top_k=kwargs.get("top_k", 3), 
                 max_length=kwargs.get("max_length", 500),
-                session=self.session
+                session=self.session,
+                return_list=True
             )
         )
         return search_result
