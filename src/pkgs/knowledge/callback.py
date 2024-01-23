@@ -352,6 +352,20 @@ class funcCall:
         ret = {"content": content, "dataSource": dataSource}
         return ret
 
+    def call_search_engine(self, *args, **kwargs) -> AnyStr:
+        """调用搜索引擎
+        """
+        query = args[0] if args else kwargs.get("query")
+        search_result = asyncio.run(
+            search_engine_chat(
+                query, 
+                top_k=kwargs.get("top_k", 3), 
+                max_length=kwargs.get("max_length", 500),
+                session=self.session
+            )
+        )
+        return search_result
+
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """llm + 搜索引擎
         

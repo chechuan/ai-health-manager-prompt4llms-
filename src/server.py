@@ -275,6 +275,20 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route('/search/baidurt/crawler', methods=['post'])
+    def _search_baidurt_crawler():
+        """百度高级搜索
+        """
+        try:
+            param = accept_param_purge()
+            ret = chat_v2.funcall.call_search_engine(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
     @app.route('/test/sync', methods=['post'])
     def _test_sync():
