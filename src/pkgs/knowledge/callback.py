@@ -36,6 +36,7 @@ from src.utils.module import (accept_stream_response, clock, curr_time, curr_wee
 
 class funcCall:
     headers: Dict = {"content-type": "application/json"}
+    proxies = {"http": "socks5://127.0.0.1:7891", "https": "socks5://127.0.0.1:7891"}
     session = Session()
     session.mount('https://', HTTPAdapter(max_retries=Retry(total=2, method_whitelist=frozenset(['GET', 'POST']))))
     param_server: object = ParamServer()
@@ -47,6 +48,9 @@ class funcCall:
         self.model_config = gsr.model_config
         self.prompt_meta_data = gsr.prompt_meta_data
 
+        if gsr.args.use_proxy:
+            self.session.proxies = self.proxies
+            logger.info("funcCall.session use proxy: " + str(self.proxies))
         self.scheduleManager = scheduleManager(gsr)
         self.register_for_all()
         self.scheduleManager.__init_vars__(self.funcmap, self.session)

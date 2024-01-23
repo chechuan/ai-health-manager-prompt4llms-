@@ -51,7 +51,7 @@ class initAllResource:
         parser.add_argument('--env', type=str, default="local", help='env: local, dev, test, prod')
         parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
         parser.add_argument('--port', type=int, default=6500, help='port')
-        parser.add_argument('--proxy', type=str, default="http://127.0.0.1:7890", help='proxy')
+        parser.add_argument('--use_proxy', action="store_true", help='whether use proxy')
         parser.add_argument('--use_cache', action="store_true", help='是否使用缓存, Default为False')
         parser.add_argument(
             '--special_prompt_version', 
