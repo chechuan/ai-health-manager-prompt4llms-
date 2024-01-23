@@ -495,7 +495,7 @@ class Chat_v2:
 
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
-        logger.debug('信息提取返回内容数据：' + content, '     返回意图码：' + intentCode)
+        logger.debug('信息提取返回内容数据：' + content + '     返回意图码：' + intentCode)
 
         return content, intentCode
 
