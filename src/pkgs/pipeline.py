@@ -466,7 +466,13 @@ class Chat_v2:
                                  max_tokens=200,
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
-        content = model_output.strip()
+        content = model_output.replace('___', '').strip()
+        cnt = []
+        for i in content.split('\n'):
+            if i.startswith('问题') or not i.strip():
+                continue
+            cnt.append(i)
+        content = cnt[0]
         #model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="获取用户信息 01",
                 input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
