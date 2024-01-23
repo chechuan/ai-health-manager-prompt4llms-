@@ -466,7 +466,7 @@ class Chat_v2:
                                  max_tokens=200,
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
-        content = model_output.strip().split('\n')[0]
+        content = model_output.strip()
         #model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="获取用户信息 01",
                 input_text=prompt, output_text=model_output, model="Qwen-14B-Chat")
@@ -495,6 +495,7 @@ class Chat_v2:
 
         content = content if content else '未知'
         content = '未知' if 'Error' in content else content
+        logger.debug('信息提取返回内容数据：' + content, '     返回意图码：' + intentCode)
 
         return content, intentCode
 
