@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from tabnanny import verbose
 from typing import Any, AnyStr, Dict
+from weakref import proxy
 
 from pytz import timezone
 from requests import Session

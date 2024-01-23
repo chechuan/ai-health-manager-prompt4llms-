@@ -11,10 +11,8 @@ import os
 import re
 import sys
 from pathlib import Path
-from tabnanny import verbose
-from uu import Error
-from pydantic import ValidationError
 
+from pydantic import ValidationError
 from torch import topk
 
 sys.path.append(str(Path.cwd().absolute()))
@@ -37,16 +35,25 @@ from src.pkgs.knowledge.config.prompt_config import (PROMPT_TEMPLATES, SEARCH_QA
                                                      SEARCH_QA_PROMPT)
 from src.utils.Logger import logger
 
+# headers = {
+# 	"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
+# 	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+# 	"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+# 	"Connection": "keep-alive",
+# 	"Accept-Encoding": "gzip, deflate, br",
+#     "Content-Type": "text/html; charset=utf-8",
+# 	# "Host": "www.baidu.com",
+# 	# 需要更换Cookie
+# 	"Cookie": """BAIDUID=24F27377269B91FC7119DDADA7C1DC24:FG=1; BAIDUID_BFESS=24F27377269B91FC7119DDADA7C1DC24:FG=1; channel=bing; ab_sr=1.0.1_NGI0MTBkMjc0Yzg4Yjc5MTAwZDY1NTY0Y2QwMmEyZjM3NTczYzY1NjJjMWU3N2FlMTZhYTc1YWU3NDJhZDM5OTA0ZThmOTNhMjRjMzNiN2QzYzU1ODQ2NDY4OGI5OGUzZDViM2Q0ZTYyZDI2MTlmNTgwMDMxM2Q1NTE5YmU1MDZkZDMxYzRmYzVkZmM5MDYwY2M4MDIzYTQwOWI5ZGI4Mw=="""
+# }
+
 headers = {
-	"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
-	"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
-	"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
-	"Connection": "keep-alive",
-	"Accept-Encoding": "gzip, deflate, br",
-    "Content-Type": "text/html; charset=utf-8",
-	"Host": "www.baidu.com",
-	# 需要更换Cookie
-	"Cookie": """BAIDUID=24F27377269B91FC7119DDADA7C1DC24:FG=1; BAIDUID_BFESS=24F27377269B91FC7119DDADA7C1DC24:FG=1; channel=bing; ab_sr=1.0.1_NGI0MTBkMjc0Yzg4Yjc5MTAwZDY1NTY0Y2QwMmEyZjM3NTczYzY1NjJjMWU3N2FlMTZhYTc1YWU3NDJhZDM5OTA0ZThmOTNhMjRjMzNiN2QzYzU1ODQ2NDY4OGI5OGUzZDViM2Q0ZTYyZDI2MTlmNTgwMDMxM2Q1NTE5YmU1MDZkZDMxYzRmYzVkZmM5MDYwY2M4MDIzYTQwOWI5ZGI4Mw=="""
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0",
+    "Cookie": "sm_diu=d8b432a1faac5bb75333878e8aab9966%7C%7C11eef1ee74be5e53b9%7C1705987906; XSRF-TOKEN=42cb2151-94a0-4960-bb81-a24defa0b371; sm_uuid=49ae3193ba8848e89163950d2a16e2c1|||1705989325; cna=8HgxHsrNU2ACAS/sHe96a39i; __itrace_wid=35857b25-eba3-4be0-874b-ab0a7d40bf2f; lsmap2=2f03M94U07S1AA0CE2Dq0Go1Nn0Ps0Tx0Y20Yw0hi0hj0qy2qz1su3sv2sw4sx3ti1tj1; sm_ruid=b838f22edd52d937a954a350d2d11ddf%7C%7C%7C1705989607; phid=44e82806fad9454ead850c51fd534f15; isg=BPDwLxbtYVzz4D1YzuUfWxtowb5COdSDKOGkkepFI8sOpZJPlEhoEuSH--1gLoxb; sm_sid=5f2293b1e93d4da4bb0341b6ad8d3441",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+    "Accept-Encoding":"gzip, deflate, br",
+    "Accept-Language":"zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+    "Cache-Control": "max-age=0"
 }
 
 def check_task(task: Any) -> str or None:
@@ -98,24 +105,23 @@ def parse_diff_pages(url: str, _html: str) -> (str, str):
     elif 'youlai.cn' in url:
         html = etree.HTML(_html)
         title = html.xpath('//*[@class="v_title"]/text()')[0]
-        text = html.xpath('//*[@class="text"]/text()')[0].strip()
+        text = html.xpath('//div[@class="text"]//text()')
     elif 'baike.baidu.com' in url:
         html = etree.HTML(_html)
         title = html.xpath('//*[@class="lemmaTitle_pjifB J-lemma-title"]/text()')[0]
         text = html.xpath('//*[@class="lemmaSummary_VQxNY J-summary"]//text()')
-        text = "".join(text)
     elif 'lemon.baidu.com' in url:
         html = etree.HTML(_html)
         if '/ec/article/' in url:
             title = html.xpath('//*[@class="ArticleDetail_detailTitle__2ti6K undefined ArticleDetail_biggerTitle__3RZK1"]/text()')[0]
             text = html.xpath('//*[@class="article-detail"]//text()')
-            text = "".join(text)
         elif '/ec/question' in url:
             title = html.xpath('//*[@class="Title_detailTitle__3GfU7"]/text()')[0]
             text = html.xpath('//*[@class="QuestionDetail_questionDetailWrapper__3QH5b"]//text()')
-            text = "".join(text)
     else:
         title, text = None, None
+    if isinstance(text, list):
+        text = "".join([i.replace("\n", "").replace("\r", "").replace("\t", "").replace(" ", "") for i in text])
     return title, text
 
 async def parse_detail_page(d_url):
@@ -150,12 +156,34 @@ async def search_engine_chat(query: str,
                              backup_nums = 5,
                              max_length = 800,
                              **kwargs) -> str:
-    url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k + backup_nums}&tn=baidurt"
-    # url = f"https://duckduckgo.com/?t=h_&q=DuckDuckGo比google好在哪儿"
-    response = session.get(url, headers=headers)
-    res = etree.HTML(response.text)
-    detail_urls = res.xpath('//h3[@class="t"]/a/@href')
+    # url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k + backup_nums}&tn=baidurt"
+    # url = f"https://duckduckgo.com/?t=h_&q={query}"
+    # url = f"view-source:https://www.startpage.com/do/search?cmd=process_search&query={query}"
+    url = f"https://www.sogou.com/web?query={query}"
+    # url = f"https://quark.sm.cn/s?q={query}"
+
+    if url.startswith("https://www.startpage.com/do/search?"):
+        response = session.get(url)
+        res = etree.HTML(response.text)
+        detail_urls = res.xpath('//div[@class="w-gl__result-title result-link"]/@href')
+    elif url.startswith("https://www.baidu.com/s?"):
+        response = session.get(url, headers=headers)
+        res = etree.HTML(response.text)
+        detail_urls = res.xpath('//h3[@class="t"]/a/@href')
+    elif url.startswith("https://www.sogou.com/web?"):
+        response = session.get(url, headers=headers)
+        res = etree.HTML(response.text)
+        detail_urls = res.xpath('//h3[@class="vr-title  "]/a/@href')
+        detail_urls = [(i if i.startswith("http") else "https://www.sogou.com" + i) for i in detail_urls]
+    elif url.startswith("https://quark.sm.cn/s"):
+        response = session.get(url, headers=headers)
+        res = etree.HTML(response.text)
+        detail_urls = res.xpath('//a[@class="c-header-inner c-flex-1"]/@href')
+        ...
     
+    if response.status_code != 200:
+        logger.error(f"Err to get url: {url}, status_code: {response.status_code}")
+        return "对不起, 网络连接异常, 未检索到相关内容"
     if not detail_urls:
         logger.error(f"Err to parse url: {url}\n")
         return "对不起, searchEngine未查询到相关内容"
@@ -318,8 +346,8 @@ class SearchQAChain(Chain):
 
 class LangChainDDGSResults:
     def __init__(self) -> None:
-        from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
         from langchain.tools import DuckDuckGoSearchResults
+        from langchain_community.utilities import DuckDuckGoSearchAPIWrapper
         self.wrapper = DuckDuckGoSearchAPIWrapper(max_results=2, )
         self.search = DuckDuckGoSearchResults(wrapper=self.wrapper)
 
