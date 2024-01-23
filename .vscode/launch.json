@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             "args": [
                 "--env", "local",
                 "--use_cache"
@@ -29,6 +29,7 @@
             "args": [
                 "--env", "local",
                 "--use_cache"
+                // "--use_proxy"
             ]
         },
         {

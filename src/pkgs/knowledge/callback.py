@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 from tabnanny import verbose
 from typing import Any, AnyStr, Dict
+from weakref import proxy
 
 from pytz import timezone
 from requests import Session
@@ -36,6 +37,7 @@ from src.utils.module import (accept_stream_response, clock, curr_time, curr_wee
 
 class funcCall:
     headers: Dict = {"content-type": "application/json"}
+    proxies = {"http": "socks5://127.0.0.1:7891", "https": "socks5://127.0.0.1:7891"}
     session = Session()
     session.mount('https://', HTTPAdapter(max_retries=Retry(total=2, method_whitelist=frozenset(['GET', 'POST']))))
     param_server: object = ParamServer()
@@ -47,6 +49,9 @@ class funcCall:
         self.model_config = gsr.model_config
         self.prompt_meta_data = gsr.prompt_meta_data
 
+        if gsr.args.use_proxy:
+            self.session.proxies = self.proxies
+            logger.info("funcCall.session use proxy: " + str(self.proxies))
         self.scheduleManager = scheduleManager(gsr)
         self.register_for_all()
         self.scheduleManager.__init_vars__(self.funcmap, self.session)
@@ -351,6 +356,21 @@ class funcCall:
 
         ret = {"content": content, "dataSource": dataSource}
         return ret
+
+    def call_search_engine(self, *args, **kwargs) -> AnyStr:
+        """调用搜索引擎
+        """
+        query = args[0] if args else kwargs.get("query")
+        search_result = asyncio.run(
+            search_engine_chat(
+                query, 
+                top_k=kwargs.get("top_k", 3), 
+                max_length=kwargs.get("max_length", 500),
+                session=self.session,
+                return_list=True
+            )
+        )
+        return search_result
 
     def call_llm_with_search_engine(self, *args, model_name="Qwen-14B-Chat", **kwargs) -> AnyStr:
         """llm + 搜索引擎
