@@ -165,7 +165,7 @@ async def search_engine_chat(query: str,
                              **kwargs) -> str:
     # url = f"http://www.baidu.com/s?wd={query}&cl=3&pn=1&ie=utf-8&rn={top_k + backup_nums}&tn=baidurt"
     # url = f"https://duckduckgo.com/?t=h_&q={query}"
-    # url = f"view-source:https://www.startpage.com/do/search?cmd=process_search&query={query}"
+    # url = f"https://www.startpage.com/do/search?cmd=process_search&query={query}"
     url = f"https://www.sogou.com/web?query={query}"
     # url = f"https://quark.sm.cn/s?q={query}"
     response = None
