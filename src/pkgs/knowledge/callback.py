@@ -237,7 +237,8 @@ class funcCall:
         except Exception as err:
             logger.exception(err)
             logger.error(f"日程修改失败, 目标操作日程 `{task}` not in current schedule {schedule}")
-            return f"{task}日程修改失败"
+            # return f"{task}日程修改失败"
+            return f"对不起, 我没有理解您的意思, 请完善信息并重新尝试"
 
         func_item = self.funcmap['modify_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
