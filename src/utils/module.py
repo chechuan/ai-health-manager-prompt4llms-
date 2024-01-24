@@ -191,7 +191,8 @@ class initAllResource:
             func['params'] = json.loads(func['params']) if func['params'] else func['params']
         intent_desc_map = {code: item['intent_desc'] for code, item in prompt_meta_data['event'].items()}
         default_desc_map = loadJS(Path("data","intent_desc_map.json"))
-        self.intent_desc_map = {**default_desc_map, **intent_desc_map}
+        # 以intent_desc_map.json定义的intent_desc优先
+        self.intent_desc_map = {**intent_desc_map, **default_desc_map}
         return prompt_meta_data
 
 def make_meta_ret(end=False, msg="", code=None,type="Result", init_intent: bool=False, **kwargs):
