@@ -375,11 +375,12 @@ class scheduleManager:
         prompt = prompt_template.format(query=query, current=current, output_format=output_format)
         
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        logger.debug(f"日程查询-提取时间范围LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
         output = text.strip()
+        logger.debug(f"日程查询-提取时间范围LLM Output: \n{output}")
         time_range = json.loads(output)
-        logger.debug(f"{output}")
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=time_range, key="confirm_query_time_range", model=model)
         return time_range
 
@@ -394,6 +395,7 @@ class scheduleManager:
         
         query = kwds['history'][-2]['content']
         query_schedule_template = self.prompt_meta_data['event']['schedule_qry_up']['description']
+
         try:
             time_range = self.__call_query_confirm_query_time_range__(query, current, **kwds)
         except Exception as err:
@@ -413,9 +415,10 @@ class scheduleManager:
         messages = [
             {"role": "user", "content": prompt}
         ]
-        logger.debug(prompt)
+        logger.debug(f"日程查询-回复 LLM Input: \n{prompt}")
         response = callLLM(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
+        logger.debug(f"日程查询-回复 LLM Output: \n{content}")
         self.__update_mid_vars__(kwds['mid_vars'], key=f"LLM回答查询query", input_text=prompt, output_text=content, model=model)
         return content
     
@@ -429,12 +432,14 @@ class scheduleManager:
         model = self.model_config.get('schedular_time_understand', 'Qwen-14B-Chat')
         current_time = curr_time() + " " +  curr_weekday()
         prompt = (
-                "你是一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间(%Y-%m-%d %H:%M:%S格式)\n"
-                f"现在的时间是: {current_time}\n"
-                f"{time_desc}对应的时间是: "
-            )
+            "你是一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间(%Y-%m-%d %H:%M:%S格式)\n"
+            f"现在的时间是: {current_time}\n"
+            f"{time_desc}对应的时间是: "
+        )
+        logger.debug(f"日程创建-时间描述->时间点 LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stream=True, stop="\n")
         target_time = accept_stream_response(response, verbose=False)[:19]
+        logger.debug(f"日程创建-时间描述->时间点 LLM Output: {target_time}")
         return target_time
     
     def __call_create_extract_event_time_pair__(self, query: str, **kwds):
@@ -456,8 +461,10 @@ class scheduleManager:
         )
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query, head_str=head_str)
+        logger.debug(f"日程创建-提取事件-时间对 LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
         event_time_pair = head_str + accept_stream_response(response, verbose=False)
+        logger.debug(f"日程创建-提取事件-时间对 LLM Output: \n{event_time_pair}")
         event_time_pair = eval(event_time_pair)
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=event_time_pair, key="extract_event_time_pair",model=model)
         return event_time_pair
@@ -513,8 +520,10 @@ class scheduleManager:
             created_schedule_content = [i[1]+": "+i[0] for i in create_success]
             prompt = prompt_template.format(created_schedule_content=created_schedule_content)
             message = [{"role":"user", "content": prompt}]
+            logger.debug(f"日程创建-回复 LLM Input: \n{prompt}")
             response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
             content = accept_stream_response(response, verbose=False)
+            logger.debug(f"日程创建-回复 LLM Output: \n{content}")
             self.__update_mid_vars__(kwds['mid_vars'], input_text=message, output_text=content, key="schedule_create_reply", model=model)
         return content
 
@@ -541,8 +550,10 @@ class scheduleManager:
         # prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
         # prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        logger.debug(f"取消日程-解析时间点 LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
+        logger.debug(f"取消日程-解析时间点 LLM Output: \n{text}")
         time_range = json.loads(text.strip())
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=text, key="取消日程-解析时间描述", model=model)
         return time_range
@@ -554,8 +565,10 @@ class scheduleManager:
         prompt_str = self.prompt_meta_data['event']['cancel_extract_time_info']['description']
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query)
+        logger.debug(f"取消日程-提取时间范围描述 LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
         tdesc = accept_stream_response(response, verbose=False)
+        logger.debug(f"取消日程-提取时间范围描述 LLM Output: \n{tdesc}")
         self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="取消日程-提取时间描述",model=model)
         try:
             time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
@@ -594,10 +607,10 @@ class scheduleManager:
         sys_prompt = sys_template.format(schedule_desc=schedule_desc, output_format=output_format, current_time=current_time, query=query)
 
         messsages = [{"role": "user", "content": sys_prompt}]
+        logger.debug(f"提取要取消的日程 LLM Input:\n{messsages}")
         response = callLLM(history=messsages, temperature=0.7, top_p=0.5, stop="\nObservation:", stream=True)
         content = "Thought: " + accept_stream_response(response, verbose=False)
-        logger.debug(f"提取要取消的日程 prompt\n{sys_prompt}")
-        logger.debug(f"提取要取消的日程 content\n{content}")
+        logger.debug(f"提取要取消的日程 LLM Output:\n{content}")
         self.__update_mid_vars__(kwds['mid_vars'], input_text=messsages, output_text=content, model="Qwen-14B-Chat", key="取消日程-提取目标日程")
         thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(content)
         return thought, schedule_to_cancel
@@ -643,6 +656,7 @@ class scheduleManager:
                 content = "抱歉, 取消日程提醒失败, 请重新尝试"
             else:
                 content = "抱歉, 取消日程提醒失败"
+        logger.debug(f"取消日程-执行结果: \ncanncel_success: {cancel_success}\ncancel_fail: {cancel_fail}")
         return content
 
     def cancel(self, *args, **kwds):
@@ -651,7 +665,9 @@ class scheduleManager:
         query = kwds['history'][-2]['content']
         tdesc, time_range = self.__cancel_extract_time_info__(query, **kwds)
         if time_range is None:  # 如果未提取出时间范围, 直接输出
-            return "抱歉, 取消日程提醒失败, 请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
+            logger.error(f"取消日程-解析时间点失败, query: {query}")
+            content = "抱歉, 取消日程提醒失败, 请进一步明确要取消的日程信息, 建议包含时间和任务名, 例: 取消今天下午5点的会议提醒"
+            return content
         # 查询指定时间范围的日程
         target_schedule = self.funcmap["get_schedule"]['func'](**time_range, **kwds)
         if len(target_schedule) == 0:   # 解析出的时间段内无日程, 直接输出

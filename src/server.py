@@ -317,7 +317,7 @@ def prepare_for_all():
 def server_forever():
     global app
     server = pywsgi.WSGIServer((args.ip, args.port), app)
-    logger.success(f"serve at {args.ip}:{args.port}")
+    logger.success(f"serve at http://{args.ip}:{args.port}")
     server.serve_forever()
 
 if __name__ == '__main__':

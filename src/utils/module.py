@@ -38,8 +38,10 @@ def clock(func):
         start_time = time.time()
         result = func(*args, **kwargs)  # --> 2
         time_cost = time.time() - start_time
-        if time_cost > 0.0:
-            logger.info(func.__name__ + " -> {} ms".format(int(1000*time_cost)))
+        if time_cost < 1:
+            logger.debug(func.__name__ + " -> {} ms".format(int(1000*time_cost)))
+        else:
+            logger.info(func.__name__ + " -> {} s".format(int(time_cost)))
         return result
     return clocked
 

@@ -221,13 +221,16 @@ class funcCall:
         """
         msg = ChatMessage(**kwds['out_history'][-1])
         schedule = self.funcmap["get_schedule"]['func'](**kwds)
-        arguments = eval(msg.function_call['arguments'])
+        if isinstance(msg.function_call['arguments'], str):
+            arguments = eval(msg.function_call['arguments'])
+        elif isinstance(msg.function_call['arguments'], dict):
+            arguments = msg.function_call['arguments']
         task = arguments.get("task")
         cur_time = arguments.get("time")
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
-        assert task, "task name is None"
-        assert cur_time, "time is None"
+        assert task, ValueError("修改日程 task can't be none")
+        assert cur_time, ValueError("修改日程 time can't be none")
 
         try:
             task_time_ori = [i for i in schedule if i['task']==task][0]['time']
@@ -239,14 +242,16 @@ class funcCall:
         func_item = self.funcmap['modify_schedule']
         url = self.api_config["ai_backend"] + func_item['method']
         payload = {
-                "customId": kwds.get("customId"),
-                "orgCode": kwds.get("orgCode"),
-                "taskName": task,
-                "intentCode": "CHANGE",
-                "fromTime": task_time_ori,
-                "toTime": cur_time
-            }
+            "customId": kwds.get("customId"),
+            "orgCode": kwds.get("orgCode"),
+            "taskName": task,
+            "intentCode": "CHANGE",
+            "fromTime": task_time_ori,
+            "toTime": cur_time
+        }
+        logger.debug(f"修改日程 call api Input:\n{payload}")
         response = self.session.post(url, json=payload, headers=self.headers).text
+        logger.debug(f"修改日程 call api Output:\n{response}")
         resp_js = json.loads(response)
         if resp_js["code"] == 200:
             changed_time = cur_time[11:]
@@ -289,9 +294,20 @@ class funcCall:
         history = [{"role": "system", "content": prompt}]
         user_input = compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})
+        logger.debug(f"查询用户日程 LLM Input:\n{history}")
         raw_content = callLLM(history=history, top_p=0.8, temperature=0.7, model=model)
+        logger.debug(f"查询用户日程 LLM Output:\n{raw_content}")
         self.update_mid_vars(kwds['mid_vars'], key=f"查询用户日程", input_text=history, output_text=raw_content, model=model)
         return raw_content
+
+    def call_search_knowledge_decorate_query(self, query: str) -> str:
+        """优化要查询的query"""
+        logger.debug(f"decorate_search_prompt Input:\n{his}")
+        model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
+        his = [{"role":"user", "content": query}]
+        content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
+        logger.debug(f"decorate_search_prompt Output:\n{content}")
+        return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
                               score_threshold=1, temperature=0.7, top_k=3, top_p=0.8, 
@@ -300,13 +316,6 @@ class funcCall:
                               **kwargs) -> AnyStr:
         """使用默认参数调用知识库
         """
-        def decorate_search_prompt(query: str) -> str:
-            """优化要查询的query"""
-            model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
-            his = [{"role":"user", "content": query}]
-            content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
-            return content
-
         called_method = self.funcmap['searchKB']['method']
         try:
             query = json.loads(args[0])['query']
@@ -314,7 +323,7 @@ class funcCall:
             query = args[0]
     
         payload = {}
-        payload['query'] = query + "\n" + decorate_search_prompt(query)
+        payload['query'] = query + "\n" + self.call_search_knowledge_decorate_query(query)
         payload["knowledge_base_name"] = knowledge_base_name    # TODO 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
@@ -328,11 +337,13 @@ class funcCall:
         dataSource = None
         url = self.api_config['langchain'] + called_method
         try:
+            logger.debug(f"Call 知识库问答 with payload\n{payload}")
             response = self.session.post(url, json=payload, headers=self.headers)
             msg = eval(response.text)
+            logger.debug(f"知识库问答 Response\n{msg}")
         except Exception as e:
             logger.error(e)
-            content = "抱歉, 知识库连接异常, 请联系开发人员"
+            content = "对不起,当前知识服务连接存在一些小问题,请稍后再试"
             ret = {"content": content, "dataSource": dataSource}
             return ret
 
@@ -344,7 +355,7 @@ class funcCall:
                 content = self.funcmap['searchEngine']['func'](query, **kwargs).strip()
                 dataSource = "搜索引擎"
             except:
-                content = "抱歉, 没有搜索到相关答案, 请重试"
+                content = "对不起,没有检索到相关答案,请稍后再试"
                 dataSource = "语言模型"
             self.update_mid_vars(kwargs['mid_vars'], key=f"搜索引擎", input_text=query, output_text=content, model="baidu crawler")
         else:
@@ -378,8 +389,9 @@ class funcCall:
         使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
         query = args[0]
+        logger.debug(f"搜索引擎 Input: {query}")
         search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
-
+        logger.debug(f"搜索引擎检索 Output:\n{search_result}")
         template = get_template("search_engine_chat")
         if search_result:
             template = template["search"].strip().replace("{{ context }}", "\n"+search_result+"\n")
@@ -388,7 +400,9 @@ class funcCall:
             template = template["Empty"]
         messages = [{"role": "system", "content": template}, {"role": "user", "content": query}]
 
+        logger.debug(f"结合搜索内容 LLM Input: {messages}")
         content = callLLM(history=messages, model_name=model_name, temperature=0.7, top_p=0.8)
+        logger.debug(f"结合搜索内容 LLM Output:\n{content}")
         self.update_mid_vars(kwargs['mid_vars'], key=f"搜索引擎 -> LLM", input_text=messages, output_text=content, model=model_name)
         ret_obj = {"content": content, "dataSource": "搜索引擎"}
         return ret_obj
@@ -464,7 +478,7 @@ class funcCall:
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
         history.append({"role": "user", "content": content, "intentCode": kwargs['intentCode']})
-        logger.debug(f"Observation: {content}")
+        # logger.debug(f"Observation: {content}")
         return history, dataSource
 
 

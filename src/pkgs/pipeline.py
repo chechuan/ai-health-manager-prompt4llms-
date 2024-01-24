@@ -450,9 +450,9 @@ class Chat_v2:
         tool = history[-1]['function_call']['name']
         content = history[-1]['function_call']['arguments']
         thought = history[-1]['content']
-        logger.debug(f"Action: {tool}")
-        logger.debug(f"Thought: {thought}")
-        logger.debug(f"Action Input: {content}")
+        # logger.debug(f"Action: {tool}")
+        # logger.debug(f"Thought: {thought}")
+        # logger.debug(f"Action Input: {content}")
         return tool, content, thought
 
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
