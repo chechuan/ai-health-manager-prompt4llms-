@@ -302,11 +302,11 @@ class funcCall:
 
     def call_search_knowledge_decorate_query(self, query: str) -> str:
         """优化要查询的query"""
-        logger.debug(f"decorate_search_prompt Input:\n{his}")
         model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
         his = [{"role":"user", "content": query}]
+        logger.debug(f"decorate_search_prompt LLM Input:\n{his}")
         content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
-        logger.debug(f"decorate_search_prompt Output:\n{content}")
+        logger.debug(f"decorate_search_prompt LLM Output:\n{content}")
         return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
