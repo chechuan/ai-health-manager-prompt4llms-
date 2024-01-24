@@ -226,7 +226,7 @@ class Chat:
             return '打开功能页面'
         if len(history) > 1:
             h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
-                + f": {i['content']}" for i in history[-3:-1]])
+                + f": {i['content']}" for i in history[-5:-1]])
         else:
             h_p = "无"
         prefix = "Question" if history[-1]['role'] == "user" else "Answer"
