@@ -115,8 +115,8 @@ if prompt := st.chat_input("Your message"):
             full_response += response.choices[0].delta.content
             message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)
-    st.session_state.messages.append(
-        {"role": "assistant", "content": full_response})
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
+    logger.debug(f"curr params {args.__dict__}")
     logger.debug(f"curr messages {st.session_state.messages}")
 
 
