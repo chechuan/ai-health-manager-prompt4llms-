@@ -14,8 +14,7 @@ from loguru import logger
 from openai import OpenAI
 
 logger.add(
-    Path("logs", "chatbot.log"), 
-    rotation="10 MB", 
+    Path("logs", "chatbot.log"),
     encoding="utf-8",
     rotation="00:00",
     retention="10 days",
@@ -61,10 +60,8 @@ def prepare_parameters():
 def initlize_system_prompt():
     """Initialize the system prompt"""
     st.session_state.messages = []
-    st.session_state.messages.append(
-        {"role": "system", "content": st.session_state.system_prompt})
-    logger.debug("update system_prompt to messages")
-
+    st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
+    logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
 with st.sidebar:
     client.base_url = st.text_input(
