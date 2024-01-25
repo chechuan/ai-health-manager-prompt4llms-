@@ -35,7 +35,7 @@ default_system_prompt = """你是一个经验丰富的医生，同时又是一�
 
 Question: 用户的问题
 Thought: 思考针对当前问题应该做什么
-Doctor: 结合思考分析，提出当前想问的问题，当所获取信息足够给出诊断时，给出病因分析、诊断结果和处理建议
+Doctor: 结合思考分析，提出当前想问的问题
 Observation: 我对问题的回复
 ...(Thought/Doctor/Observation 可能会循环一次或多次直到医生能判断病情)
 Thought: 获取信息足够给出诊断
