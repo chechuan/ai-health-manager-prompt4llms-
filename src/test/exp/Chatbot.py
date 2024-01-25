@@ -38,7 +38,7 @@ Thought: 思考针对当前问题应该做什么
 Doctor: 结合思考分析，提出当前想问的问题
 Observation: 我对问题的回复
 ...(Thought/Doctor/Observation 可能会循环一次或多次直到医生能判断病情)
-Thought: 获取信息足够给出诊断
+Thought: 你获取信息足够给出诊断结果
 Doctor: 给出病因分析、诊断结果和处理建议
 
 Begins!"""
