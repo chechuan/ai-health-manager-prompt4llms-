@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 '''
 
+import json
 import os
 from pathlib import Path
 
@@ -29,7 +30,18 @@ default_system_prompt = """你是一个经验丰富的医生，同时又是一�
 1. 在多轮的对话中我会提供我的个人信息和感受，请你根据自身经验分析，针对我的个人情况提出相应的问题，但是每次只能问一个问题
 2. 问题关键点可以包括：持续时间、发生时机、诱因或症状发生部位等, 注意同类问题可以总结在一起问
 3. 最后请你结合获取到的信息给出我的诊断结果，可以是某种疾病，或者符合描述的中医症状，并解释给出这个诊断结果的原因，以及对应的处理方案
-"""
+
+请遵循以下格式回复:
+
+Question: 用户的问题
+Thought: 思考针对当前问题应该做什么
+Doctor: 结合思考分析，提出当前想问的问题，当所获取信息足够给出诊断时，给出病因分析、诊断结果和处理建议
+Observation: 我对问题的回复
+...(Thought/Doctor/Observation 可能会循环一次或多次直到医生能判断病情)
+Thought: 获取信息足够给出诊断
+Doctor: 给出病因分析、诊断结果和处理建议
+
+Begins!"""
 
 
 class Args:
@@ -37,6 +49,10 @@ class Args:
 
 
 args = Args()
+
+
+def dumpJS(obj):
+    return json.dumps(obj, ensure_ascii=False)
 
 
 def prepare_parameters():
@@ -54,14 +70,17 @@ def prepare_parameters():
         "Presence penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
     args.frequency_penalty = st.sidebar.slider(
         "Frequency penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1)
-    args.stop = st.sidebar.text_input("Stop words(split with `,`)", value="")
+    args.stop = st.sidebar.text_input(
+        "Stop words(split with `,`)", value="\nObservation")
 
 
 def initlize_system_prompt():
     """Initialize the system prompt"""
     st.session_state.messages = []
-    st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
+    st.session_state.messages.append(
+        {"role": "system", "content": st.session_state.system_prompt})
     logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
+
 
 with st.sidebar:
     client.base_url = st.text_input(
@@ -102,6 +121,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Your message"):
+    prompt = f"Observation: {prompt}"
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -115,9 +135,10 @@ if prompt := st.chat_input("Your message"):
             full_response += response.choices[0].delta.content
             message_placeholder.markdown(full_response + "▌")
         message_placeholder.markdown(full_response)
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
-    logger.debug(f"curr params {args.__dict__}")
-    logger.debug(f"curr messages {st.session_state.messages}")
+    st.session_state.messages.append(
+        {"role": "assistant", "content": full_response})
+    logger.debug(f"curr params {dumpJS(args.__dict__)}")
+    logger.debug(f"curr messages {dumpJS(st.session_state.messages)}")
 
 
 # pip install openai --upgrade
