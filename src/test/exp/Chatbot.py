@@ -9,13 +9,16 @@
 import copy
 import json
 import os
+import sys
 from pathlib import Path
+
+sys.path.append(Path(__file__).parent.as_posix())
 
 import streamlit as st
 from loguru import logger
 from openai import OpenAI
 
-from src.test.exp.data.prompts import AuxiliaryDiagnosisPrompt
+from data.prompts import AuxiliaryDiagnosisPrompt
 
 logger.add(
     Path("logs", "chatbot.log"),
