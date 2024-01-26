@@ -5,6 +5,20 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "streamlit",
+            "type": "python",
+            "request": "launch",
+            "module": "streamlit.web.cli",
+            "console": "integratedTerminal",
+            "env": {
+                "STREAMLIT_ENABLE_COLAB_BACKEND": "true"
+            },
+            "args": [
+                "run",
+                "${file}"
+            ]
+        },
+        {
             "name": "Python: 当前文件",
             "type": "python",
             "request": "launch",
@@ -12,7 +26,8 @@
             "console": "integratedTerminal",
             "justMyCode": false,
             "args": [
-                "--env", "local",
+                "--env",
+                "local",
                 "--use_cache"
             ]
         },
@@ -27,8 +42,9 @@
                 "GEVENT_SUPPORT": "True"
             },
             "args": [
-                "--env", "local",
-                "--use_cache"
+                "--env",
+                "local",
+                // "--use_cache"
             ]
         },
         {
@@ -39,7 +55,9 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env", "local", "--use_cache"
+                "--env",
+                "local",
+                "--use_cache"
             ]
         },
         {
@@ -50,10 +68,14 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env", "居家",
-                "--scene", "一般用户",
-                "--role", "医师",
-                "--plan", "辅助诊断"
+                "--env",
+                "居家",
+                "--scene",
+                "一般用户",
+                "--role",
+                "医师",
+                "--plan",
+                "辅助诊断"
             ]
         }
     ]

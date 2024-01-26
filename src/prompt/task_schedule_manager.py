@@ -20,8 +20,8 @@ from sympy import cancel
 sys.path.append(str(Path.cwd()))
 from data.constrant import task_schedule_return_demo
 from data.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
-                                                task_schedule_parameter_description,
-                                                task_schedule_parameter_description_for_qwen)
+                                              task_schedule_parameter_description,
+                                              task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
