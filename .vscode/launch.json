@@ -46,7 +46,7 @@
             "args": [
                 "--env",
                 "local",
-                "--use_cache"
+                // "--use_cache"
             ]
         },
         {
