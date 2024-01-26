@@ -11,9 +11,7 @@
             "module": "streamlit.web.cli",
             "console": "integratedTerminal",
             "env": {
-                "STREAMLIT_ENABLE_COLAB_BACKEND": "true",
-                "OPENAI_BASE_URL": "http://10.228.67.99:26921/v1/",
-                "OPENAI_API_KEY": "sk-laikang-aihealthmanager-local"
+                "STREAMLIT_ENABLE_COLAB_BACKEND": "true"
             },
             "args": [
                 "run",

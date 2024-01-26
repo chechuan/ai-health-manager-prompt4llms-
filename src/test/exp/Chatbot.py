@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,8 @@ from pathlib import Path
 import streamlit as st
 from loguru import logger
 from openai import OpenAI
+
+from src.test.exp.data.prompts import AuxiliaryDiagnosisPrompt
 
 logger.add(
     Path("logs", "chatbot.log"),
@@ -25,23 +28,7 @@ logger.add(
 )
 
 client = OpenAI()
-
-default_system_prompt = """你是一个经验丰富的医生，同时又是一个营养运动学专家，请你协助我进行疾病的诊断，下面是对诊断流程的描述
-1. 在多轮的对话中我会提供我的个人信息和感受，请你根据自身经验分析，针对我的个人情况提出相应的问题，但是每次只能问一个问题
-2. 问题关键点可以包括：持续时间、发生时机、诱因或症状发生部位等, 注意同类问题可以总结在一起问
-3. 最后请你结合获取到的信息给出我的诊断结果，可以是某种疾病，或者符合描述的中医症状，并解释给出这个诊断结果的原因，以及对应的处理方案
-
-请遵循以下格式回复:
-
-Question: 用户的问题
-Thought: 思考针对当前问题应该做什么
-Doctor: 结合思考分析，提出当前想问的问题
-Observation: 我对问题的回复
-...(Thought/Doctor/Observation 可能会循环一次或多次直到医生能判断病情)
-Thought: 你获取信息足够给出诊断结果
-Doctor: 给出病因分析、诊断结果和处理建议
-
-Begins!"""
+default_system_prompt = AuxiliaryDiagnosisPrompt.system_prompt_v2
 
 
 class Args:
@@ -53,6 +40,32 @@ args = Args()
 
 def dumpJS(obj):
     return json.dumps(obj, ensure_ascii=False)
+
+
+def place_sidebar():
+    with st.sidebar:
+        client.base_url = st.text_input(
+            "api base",
+            key="openai_api_base",
+            value=os.environ.get("OPENAI_API_BASE", ""),
+        )
+        api_key = st.text_input("api key", key="openai_api_key", value=None)
+        client.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
+
+        model_list = [i.id for i in client.models.list().data]
+        args.model = st.selectbox("Choose your model", model_list, index=1)
+
+        st.text_area(
+            "system prompt",
+            default_system_prompt,
+            height=400,
+            key="system_prompt",
+            on_change=initlize_system_prompt,
+        )
+        prepare_parameters()
+        # "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
+        "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
+        # "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)"
 
 
 def prepare_parameters():
@@ -75,9 +88,7 @@ def prepare_parameters():
     args.frequency_penalty = st.sidebar.slider(
         "Frequency penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1
     )
-    args.stop = st.sidebar.text_input(
-        "Stop words(split with `,`)", value="\nObservation"
-    )
+    args.stop = ["\nObservation", "\nFinally"]
 
 
 def initlize_system_prompt():
@@ -89,37 +100,19 @@ def initlize_system_prompt():
     logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
 
-with st.sidebar:
-    client.base_url = st.text_input(
-        "api base", key="openai_api_base", value=os.environ.get("OPENAI_API_BASE", "")
-    )
-    api_key = st.text_input("api key", key="openai_api_key", value=None)
-    client.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
-
-    model_list = [i.id for i in client.models.list().data]
-    args.model = st.selectbox("Choose your model", model_list, index=1)
-
-    st.text_area(
-        "system prompt",
-        default_system_prompt,
-        height=400,
-        key="system_prompt",
-        on_change=initlize_system_prompt,
-    )
-    prepare_parameters()
-    # "[Get an OpenAI API key](https://platform.openai.com/account/api-keys)"
-    "[View the source code](https://github.com/streamlit/llm-examples/blob/main/Chatbot.py)"
-    # "[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/streamlit/llm-examples?quickstart=1)"
-
 def parse_response(text):
     # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
     thought_index = text.find("Thought:")
-    doctor_index = text.find("Doctor:")
+    doctor_index = text.find("\nDoctor:")
     if thought_index == -1 or doctor_index == -1:
         return None, None
     thought = text[thought_index + 8 : doctor_index].strip()
-    doctor = text[doctor_index + 7 :].strip()
+    doctor = text[doctor_index + 8 :].strip()
     return thought, doctor
+
+
+place_sidebar()
+
 
 st.title("💬 Chatbot")
 st.caption("🚀 A streamlit chatbot powered by OpenSource LLM")
@@ -141,11 +134,12 @@ if prompt := st.chat_input("Your message"):
     prompt = f"Observation: {prompt}"
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(prompt)
+        st.markdown(f"{prompt}")
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
+        logger.debug(f"{dumpJS(args.__dict__)}")
         for response in client.chat.completions.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
@@ -153,11 +147,16 @@ if prompt := st.chat_input("Your message"):
                 continue
             full_response += response.choices[0].delta.content
             message_placeholder.markdown(full_response + "▌")
-        message_placeholder.markdown(full_response)
-    thought, doctor_output = parse_response(full_response)
-    st.session_state.messages.append({"role": "assistant", "content": doctor_output})
-    logger.debug(f"curr params {dumpJS(args.__dict__)}")
-    logger.debug(f"curr messages {dumpJS(st.session_state.messages)}")
+        logger.debug(f"full_response:\n{full_response}")
+        thought, doctor_output = parse_response(full_response)
+        message_placeholder.markdown(
+            f"~~Thought: {thought}~~ \nDoctor: {doctor_output}"
+        )
+    st.session_state.messages.append(
+        {"role": "assistant", "content": f"Doctor: {doctor_output}"}
+    )
+    messages = copy.deepcopy(st.session_state.messages)
+    logger.debug(f"Messages:\n{[dumpJS(i) for i in messages]}")
 
 
 # pip install openai --upgrade
