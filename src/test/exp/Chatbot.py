@@ -20,6 +20,8 @@ from openai import OpenAI
 
 from data.prompts import AuxiliaryDiagnosisPrompt
 
+logger.remove()
+logger.add(sink=sys.stderr, level="TRACE", backtrace=True, diagnose=True)
 logger.add(
     Path("logs", "chatbot.log"),
     encoding="utf-8",
@@ -31,7 +33,9 @@ logger.add(
 )
 
 client = OpenAI()
-default_system_prompt = AuxiliaryDiagnosisPrompt.system_prompt_v2
+default_system_prompt = AuxiliaryDiagnosisPrompt.system_prompt
+system_prompt_version_list = AuxiliaryDiagnosisPrompt.version_list
+system_prompt_dict = AuxiliaryDiagnosisPrompt.system_prompt_dict
 
 
 class Args:
@@ -58,9 +62,18 @@ def place_sidebar():
         model_list = [i.id for i in client.models.list().data]
         args.model = st.selectbox("Choose your model", model_list, index=1)
 
+        _system_prompt_version = st.selectbox(
+            "Choose your model",
+            system_prompt_version_list,
+            index=2,
+            on_change=initlize_system_prompt,
+        )
+
         st.text_area(
             "system prompt",
-            default_system_prompt,
+            system_prompt_dict.get(_system_prompt_version)
+            if _system_prompt_version
+            else default_system_prompt,
             height=400,
             key="system_prompt",
             on_change=initlize_system_prompt,
@@ -100,7 +113,7 @@ def initlize_system_prompt():
     st.session_state.messages.append(
         {"role": "system", "content": st.session_state.system_prompt}
     )
-    logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
+    # logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
 
 def parse_response(text):
@@ -127,7 +140,7 @@ if "messages" not in st.session_state:
         st.session_state.messages.append(
             {"role": "system", "content": st.session_state.system_prompt}
         )
-        logger.debug("update system_prompt to messages")
+        # logger.debug("update system_prompt to messages")
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -160,6 +173,7 @@ if prompt := st.chat_input("Your message"):
     )
     messages = copy.deepcopy(st.session_state.messages)
     logger.debug(f"Messages:\n{[dumpJS(i) for i in messages]}")
+    logger.info("".center(80, "="))
 
 
 # pip install openai --upgrade

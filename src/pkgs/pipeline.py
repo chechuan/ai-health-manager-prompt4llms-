@@ -615,6 +615,8 @@ class Chat_v2:
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
             logger.debug('页面Code: ' + intentCode)
+        # elif intentCode == "auxiliary_diagnosis":
+        #     ...
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
         
