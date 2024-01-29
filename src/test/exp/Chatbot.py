@@ -23,8 +23,8 @@ from data.prompts import AuxiliaryDiagnosisPrompt
 logger.add(
     Path("logs", "chatbot.log"),
     encoding="utf-8",
-    rotation="00:00",
-    retention="10 days",
+    rotation="100 MB",
+    retention="5 days",
     compression="gz",
     backtrace=True,
     diagnose=True,
