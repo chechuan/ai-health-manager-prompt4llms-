@@ -371,7 +371,7 @@ class funcCall:
     def call_search_engine(self, *args, **kwargs) -> AnyStr:
         """调用搜索引擎
         """
-        query = args[0] if args else kwargs.get("query")
+        query = args[0] if args else kwargs.get("keywords")
         search_result = asyncio.run(
             search_engine_chat(
                 query, 

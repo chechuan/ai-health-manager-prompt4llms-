@@ -3,12 +3,13 @@ gevent
 flask_cors
 openai==0.28.1
 langchain==0.0.330
-SQLAlchemy==1.4.50
+langchain_community
+SQLAlchemy==1.4.49
 json5
 loguru
-pandas
+pandas==2.1.2
 fastapi
-pymysql
+pymysql==1.1.0
 Cython
 cchardet
 chardet

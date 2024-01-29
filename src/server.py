@@ -276,9 +276,9 @@ def create_app():
         finally:
             return ret
         
-    @app.route('/search/baidurt/crawler', methods=['post'])
-    def _search_baidurt_crawler():
-        """百度高级搜索
+    @app.route('/search/crawler/sougou', methods=['post'])
+    def _search_crawler_sougou():
+        """爬虫 - 搜狗搜索
         """
         try:
             param = accept_param_purge()
