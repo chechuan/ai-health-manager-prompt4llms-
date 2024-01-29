@@ -24,6 +24,7 @@ logger.remove()
 logger.add(sink=sys.stderr, level="TRACE", backtrace=True, diagnose=True)
 logger.add(
     Path("logs", "chatbot.log"),
+    level="TRACE",
     encoding="utf-8",
     rotation="100 MB",
     retention="5 days",
@@ -99,10 +100,20 @@ def prepare_parameters():
     # args.top_k = st.sidebar.slider("Top k", min_value=-1, max_value=100, value=-1, step=1)
     args.n = st.sidebar.slider("N", min_value=1, max_value=50, value=1, step=1)
     args.presence_penalty = st.sidebar.slider(
-        "Presence penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1
+        "Presence penalty",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.0,
+        step=0.1,
+        help="此参数用于阻止模型在生成的文本中过于频繁地重复相同的单词或短语。它是每次在生成的文本中出现时都会添加到标记的对数概率中的值。较高的Frequency_penalty值将导致模型在使用重复标记时更加保守。",
     )
     args.frequency_penalty = st.sidebar.slider(
-        "Frequency penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1
+        "Frequency penalty",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.5,
+        step=0.1,
+        help="This parameter is used to encourage the model to include a diverse range of tokens in the generated text. It is a value that is subtracted from the log-probability of a token each time it is generated. A higher presence_penalty value will result in the model being more likely to generate tokens that have not yet been included in the generated text.",
     )
     args.stop = ["\nObservation", "\nFinally"]
 
@@ -118,13 +129,17 @@ def initlize_system_prompt():
 
 def parse_response(text):
     # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
-    thought_index = text.find("Thought:")
-    doctor_index = text.find("\nDoctor:")
-    if thought_index == -1 or doctor_index == -1:
-        return None, None
-    thought = text[thought_index + 8 : doctor_index].strip()
-    doctor = text[doctor_index + 8 :].strip()
-    return thought, doctor
+    try:
+        thought_index = text.find("Thought:")
+        doctor_index = text.find("\nDoctor:")
+        if thought_index == -1 or doctor_index == -1:
+            return "None", text
+        thought = text[thought_index + 8 : doctor_index].strip()
+        doctor = text[doctor_index + 8 :].strip()
+        return thought, doctor
+    except Exception as err:
+        logger.error(text)
+        return "None", text
 
 
 place_sidebar()
@@ -156,6 +171,7 @@ if prompt := st.chat_input("Your message"):
         message_placeholder = st.empty()
         full_response = ""
         logger.debug(f"{dumpJS(args.__dict__)}")
+        logger.debug(f"Input: \n{prompt}")
         for response in client.chat.completions.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
@@ -163,14 +179,13 @@ if prompt := st.chat_input("Your message"):
                 continue
             full_response += response.choices[0].delta.content
             message_placeholder.markdown(full_response + "▌")
-        logger.debug(f"full_response:\n{full_response}")
+        logger.debug(f"Full response:\n{full_response}")
         thought, doctor_output = parse_response(full_response)
         message_placeholder.markdown(
             f"~~Thought: {thought}~~ \nDoctor: {doctor_output}"
         )
-    st.session_state.messages.append(
-        {"role": "assistant", "content": f"Doctor: {doctor_output}"}
-    )
+    content = f"Doctor: {doctor_output}" if thought == "None" else full_response
+    st.session_state.messages.append({"role": "assistant", "content": content})
     messages = copy.deepcopy(st.session_state.messages)
     logger.debug(f"Messages:\n{[dumpJS(i) for i in messages]}")
     logger.info("".center(80, "="))

@@ -598,11 +598,28 @@ class Chat_v2:
             return 'interactive-information'
         else:
             return 'other'
+        
+    def __custom_chat_react_auxiliary_diagnosis__(self, mid_vars, **kwargs):
+        """自定义对话-辅助诊断
+
+            - Args:
+                mid_vars (List[Dict])
+                    中间变量
+                history (List[Dict[str, str]]) required 
+                    对话历史信息
+                intentCode (str)
+                    意图编码,直接根据传入的intentCode进入对应的处理子流程
+
+            - Return:
+                message (str)
+                    自定义对话返回的消息
+        """
+        ...
 
     def complete(self, mid_vars: List[object], **kwargs):
         """only prompt模式的生成及相关逻辑
         """
-        assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         prompt = kwargs['prompt']
         chat_history = kwargs['history']
         intentCode = kwargs['intentCode']
@@ -615,8 +632,9 @@ class Chat_v2:
             content = '稍等片刻，页面即将打开' if self.get_pageName_code(output_text) != 'other' else output_text
             intentCode = self.get_pageName_code(output_text)
             logger.debug('页面Code: ' + intentCode)
-        # elif intentCode == "auxiliary_diagnosis":
-        #     ...
+        elif intentCode == "auxiliary_diagnosis":
+            # TODO 自定义对话-辅助诊断
+            message = self.__custom_chat_react_auxiliary_diagnosis__(mid_vars=mid_vars, **kwargs)
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
         

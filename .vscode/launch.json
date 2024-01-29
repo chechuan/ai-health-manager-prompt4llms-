@@ -1,82 +1,71 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "streamlit",
-            "type": "python",
-            "request": "launch",
-            "module": "streamlit.web.cli",
-            "console": "integratedTerminal",
-            "env": {
-                "STREAMLIT_ENABLE_COLAB_BACKEND": "true"
-            },
-            "args": [
-                "run",
-                "${file}"
-            ]
-        },
-        {
-            "name": "Python: 当前文件",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": false,
-            "args": [
-                "--env",
-                "local",
-                "--use_cache"
-            ]
-        },
-        {
-            "name": "Python: run server",
-            "type": "python",
-            "request": "launch",
-            "program": "src/server.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "env": {
-                "GEVENT_SUPPORT": "True"
-            },
-            "args": [
-                "--env",
-                "local",
-                // "--use_cache"
-            ]
-        },
-        {
-            "name": "Python: role_play",
-            "type": "python",
-            "request": "launch",
-            "program": "src/pkgs/models/role_play_model.py",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": [
-                "--env",
-                "local",
-                "--use_cache"
-            ]
-        },
-        {
-            "name": "Python: Prompt Factory",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "justMyCode": true,
-            "args": [
-                "--env",
-                "居家",
-                "--scene",
-                "一般用户",
-                "--role",
-                "医师",
-                "--plan",
-                "辅助诊断"
-            ]
-        }
-    ]
+  // 使用 IntelliSense 了解相关属性。
+  // 悬停以查看现有属性的描述。
+  // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "streamlit",
+      "type": "python",
+      "request": "launch",
+      "module": "streamlit.web.cli",
+      "console": "integratedTerminal",
+      "env": {
+        "STREAMLIT_ENABLE_COLAB_BACKEND": "true"
+      },
+      "args": ["run", "${file}"]
+    },
+    {
+      "name": "Python: 当前文件",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "args": ["--env", "local", "--use_cache"]
+    },
+    {
+      "name": "Python: run server",
+      "type": "python",
+      "request": "launch",
+      "program": "src/server.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "GEVENT_SUPPORT": "True"
+      },
+      "args": [
+        "--env",
+        "local"
+        // "--use_cache"
+      ]
+    },
+    {
+      "name": "Python: role_play",
+      "type": "python",
+      "request": "launch",
+      "program": "src/pkgs/models/role_play_model.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": ["--env", "local", "--use_cache"]
+    },
+    {
+      "name": "Python: Prompt Factory",
+      "type": "python",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--env",
+        "居家",
+        "--scene",
+        "一般用户",
+        "--role",
+        "医师",
+        "--plan",
+        "辅助诊断"
+      ]
+    }
+  ]
 }
