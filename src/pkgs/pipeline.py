@@ -846,6 +846,7 @@ class Chat_v2:
                 "role": "assistant",
                 "content": thought,
                 "function_call": {"name": "convComplete", "arguments": content},
+                "intentCode": intentCode
             }
         )
         return chat_history, intentCode
