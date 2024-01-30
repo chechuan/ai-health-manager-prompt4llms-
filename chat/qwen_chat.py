@@ -220,11 +220,11 @@ class Chat:
         if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
         if len(history) > 1:
-            h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
+            h_p = "\n".join([("User" if i['role'] == "user" else "Assistant")
                 + f": {i['content']}" for i in history[-5:-1]])
         else:
             h_p = "无"
-        prefix = "Question" if history[-1]['role'] == "user" else "Answer"
+        prefix = "User" if history[-1]['role'] == "user" else "Assistant"
         query = f"{prefix}: {history[-1]['content']}"
 
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "

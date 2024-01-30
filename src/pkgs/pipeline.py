@@ -378,6 +378,8 @@ class Chat_v2:
                     role = i["role"]
                     content = f"{func_args['arguments']}"
                     history.append({"role": role, "content": content})
+            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+            history = history[-8:]
             return history
 
         intentCode = kwargs.get("intentCode", "other")
@@ -389,7 +391,7 @@ class Chat_v2:
             ext_info = desc + "\n" + process
             messages = [{"role": "system", "content": ext_info}] + messages
 
-        messages = compose_func_reply(messages)
+        logger.debug(f"闲聊 LLM Input:\n{messages}")
         content = callLLM("", messages, temperature=0.7, top_p=0.8)
         self.update_mid_vars(
             mid_vars,
@@ -858,6 +860,7 @@ class Chat_v2:
         if self.prompt_meta_data["event"].get(intentCode):
             if intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
+                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
