@@ -821,7 +821,7 @@ class Chat_v2:
     def complete(self, mid_vars: List[object], **kwargs):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
-        prompt = kwargs["prompt"]
+        prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
         thought = "I know the answer."
