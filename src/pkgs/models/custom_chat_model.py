@@ -1,0 +1,110 @@
+# -*- encoding: utf-8 -*-
+"""
+@Time    :   2024-01-30 10:08:10
+@desc    :   自定义对话模型
+@Author  :   ticoAg
+@Contact :   1627635056@qq.com
+"""
+from typing import Any, Dict, List
+
+from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
+from src.utils.Logger import logger
+from src.utils.module import InitAllResource, accept_stream_response, update_mid_vars
+
+
+class CustomChatModel:
+    def __init__(self, gsr: InitAllResource):
+        self.gsr = gsr
+        self.code_func_map = {"auxiliary_diagnosis": self.__chat_auxiliary_diagnosis__}
+        pass
+
+    def __parameter_check__(self, **kwargs):
+        """参数检查"""
+        if "intentCode" not in kwargs:
+            raise ValueError("intentCode is not in kwargs")
+        if kwargs["intentCode"] not in self.code_func_map:
+            raise ValueError("intentCode is not in CustomChatModel.code_func_map")
+        if not kwargs.get("history", []):
+            raise ValueError("history is empty")
+
+    def __extract_event_from_gsr__(self, gsr: InitAllResource, code: str) -> Dict[str, Any]:
+        """从global_share_resource中提取事件数据"""
+        event = {}
+        for ecode, event in gsr.prompt_meta_data["event"].items():
+            if ecode == code:
+                return event
+        raise ValueError(f"event code {code} not found in gsr.prompt_meta_data['event']")
+
+    def __parse_response__(self, text):
+        # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
+        try:
+            thought_index = text.find("Thought:")
+            doctor_index = text.find("\nDoctor:")
+            if thought_index == -1 or doctor_index == -1:
+                return "None", text
+            thought = text[thought_index + 8 : doctor_index].strip()
+            doctor = text[doctor_index + 8 :].strip()
+            return thought, doctor
+        except Exception as err:
+            logger.error(text)
+            return "None", text
+
+    def __compose_auxiliary_diagnosis_message__(self, history: List[Dict[str, str]]) -> List[DeltaMessage]:
+        """组装辅助诊断消息"""
+        event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
+        sys_prompt = event["description"] + event["process"]
+        system_message = DeltaMessage(role="system", content=sys_prompt)
+        messages = []
+        for idx in range(len(history)):
+            i = history[idx]
+            if i["role"] == "assistant":
+                if i["function_call"]:
+                    content = f"Thought: {i['content']}\nDoctor: {i['function_call']['arguments']}"
+                else:
+                    content = f"Doctor: {i['content']}"
+                messages.append(DeltaMessage(role="assistant", content=content))
+            if i["role"] == "user":
+                if idx == 0:
+                    content = f"Question: {i['content']}"
+                else:
+                    content = f"Observation: {i['content']}"
+                messages.append(DeltaMessage(role="user", content=content))
+        messages = [system_message] + messages
+        for idx, n in enumerate(messages):
+            messages[idx] = n.dict()
+        return messages
+
+    def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
+        """辅助诊断"""
+        # 过滤掉辅助诊断之外的历史消息
+        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        history = [i for i in kwargs["history"] if i["intentCode"] == "auxiliary_diagnosis"]
+        messages = self.__compose_auxiliary_diagnosis_message__(history)
+        chat_response = callLLM(
+            model=model,
+            history=messages,
+            temperature=0.7,
+            max_tokens=512,
+            top_p=0.8,
+            n=1,
+            presence_penalty=0,
+            frequency_penalty=0.3,
+            stop=["\nObservation"],
+            stream=True,
+        )
+        content = accept_stream_response(chat_response, verbose=True)
+        logger.info(f"Custom Chat 辅助诊断 LLM Input: {messages}")
+        logger.info(f"Custom Chat 辅助诊断 LLM Output: {content}")
+        thought, doctor = self.__parse_response__(content)
+        if thought == "None" or doctor == "None":
+            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
+        )
+        return mid_vars, (thought, doctor)
+
+    def chat(self, **kwargs):
+        """自定义对话"""
+        self.__parameter_check__(**kwargs)
+        out = self.code_func_map[kwargs["intentCode"]](**kwargs)
+        return out

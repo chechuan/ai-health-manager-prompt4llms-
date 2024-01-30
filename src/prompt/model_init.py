@@ -12,6 +12,7 @@ import openai
 from pydantic import BaseModel, Field
 
 from src.utils.Logger import logger
+from src.utils.module import dumpJS
 
 
 def callLLM(query: str = "", 
@@ -61,20 +62,11 @@ def callLLM(query: str = "",
         "do_sample": do_sample,
         "stop": stop,
         "stream": stream,
-        "repetition_penalty": repetition_penalty
+        "repetition_penalty": repetition_penalty,
+        **kwargs
     }
+    logger.trace(f"callLLM with {dumpJS(kwds)}")
     if not history:
-        # completion = openai.Completion.create(
-        #     model=model,
-        #     prompt=query,
-        #     top_p=top_p,
-        #     top_k=top_k,
-        #     temperature=temperature,
-        #     max_tokens=max_tokens,
-        #     do_sample=do_sample,
-        #     stop=stop,
-        #     stream=stream
-        # )
         kwds['prompt'] = query
         completion = openai.Completion.create(**kwds)
         if stream:
@@ -91,18 +83,6 @@ def callLLM(query: str = "",
                 break
             else:
                 h = history
-        # completion = openai.ChatCompletion.create(
-        #     model=model,
-        #     messages=h,
-        #     top_k=top_k, 
-        #     top_p=top_p, 
-        #     repetition_penalty=repetition_penalty,
-        #     temperature=temperature,
-        #     max_tokens=max_tokens,
-        #     do_sample=do_sample,
-        #     stop=stop,
-        #     stream=stream
-        # )
         kwds['messages'] = h
         completion = openai.ChatCompletion.create(**kwds)
         if stream:

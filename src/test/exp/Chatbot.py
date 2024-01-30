@@ -72,9 +72,7 @@ def place_sidebar():
 
         st.text_area(
             "system prompt",
-            system_prompt_dict.get(_system_prompt_version)
-            if _system_prompt_version
-            else default_system_prompt,
+            system_prompt_dict.get(_system_prompt_version) if _system_prompt_version else default_system_prompt,
             height=400,
             key="system_prompt",
             on_change=initlize_system_prompt,
@@ -88,15 +86,9 @@ def place_sidebar():
 def prepare_parameters():
     """Initialize the parameters for the llm"""
     global args
-    args.max_tokens = st.sidebar.slider(
-        "Max tokens", min_value=1, max_value=32000, value=4096, step=1
-    )
-    args.temperature = st.sidebar.slider(
-        "Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1
-    )
-    args.top_p = st.sidebar.slider(
-        "Top p", min_value=0.0, max_value=1.0, value=0.8, step=0.1
-    )
+    args.max_tokens = st.sidebar.slider("Max tokens", min_value=1, max_value=32000, value=4096, step=1)
+    args.temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
+    args.top_p = st.sidebar.slider("Top p", min_value=0.0, max_value=1.0, value=0.8, step=0.1)
     # args.top_k = st.sidebar.slider("Top k", min_value=-1, max_value=100, value=-1, step=1)
     args.n = st.sidebar.slider("N", min_value=1, max_value=50, value=1, step=1)
     args.presence_penalty = st.sidebar.slider(
@@ -121,9 +113,7 @@ def prepare_parameters():
 def initlize_system_prompt():
     """Initialize the system prompt"""
     st.session_state.messages = []
-    st.session_state.messages.append(
-        {"role": "system", "content": st.session_state.system_prompt}
-    )
+    st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
     # logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
 
@@ -152,9 +142,7 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
     if st.session_state.system_prompt:
-        st.session_state.messages.append(
-            {"role": "system", "content": st.session_state.system_prompt}
-        )
+        st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
         # logger.debug("update system_prompt to messages")
 
 for message in st.session_state.messages:
@@ -162,7 +150,10 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Your message"):
-    prompt = f"Observation: {prompt}"
+    if len(st.session_state.messages) == 1 and st.session_state.messages[0]["role"] == "system":
+        prompt = f"Question: {prompt}"
+    else:
+        prompt = f"Observation: {prompt}"
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(f"{prompt}")
@@ -181,13 +172,11 @@ if prompt := st.chat_input("Your message"):
             message_placeholder.markdown(full_response + "▌")
         logger.debug(f"Full response:\n{full_response}")
         thought, doctor_output = parse_response(full_response)
-        message_placeholder.markdown(
-            f"~~Thought: {thought}~~ \nDoctor: {doctor_output}"
-        )
+        message_placeholder.markdown(f"~~Thought: {thought}~~ \nDoctor: {doctor_output}")
     content = f"Doctor: {doctor_output}" if thought == "None" else full_response
     st.session_state.messages.append({"role": "assistant", "content": content})
     messages = copy.deepcopy(st.session_state.messages)
-    logger.debug(f"Messages:\n{[dumpJS(i) for i in messages]}")
+    logger.debug(f"Messages: {dumpJS(messages)}")
     logger.info("".center(80, "="))
 
 

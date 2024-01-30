@@ -23,8 +23,8 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import (accept_stream_response, clock, compute_blood_pressure_level,
-                              get_intent, initAllResource)
+from src.utils.module import (InitAllResource, accept_stream_response, clock,
+                              compute_blood_pressure_level, get_intent)
 
 
 class expertModel:
@@ -476,7 +476,7 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
 if __name__ == "__main__":
-    expert_model = expertModel(initAllResource())
+    expert_model = expertModel(InitAllResource())
     # expert_model.__rec_diet_eval__(param)sss
 
     # param = testParam.param_pressure_trend

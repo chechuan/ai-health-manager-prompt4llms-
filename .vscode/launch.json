@@ -21,7 +21,7 @@
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
-      "justMyCode": false,
+      "justMyCode": true,
       "args": ["--env", "local", "--use_cache"]
     },
     {

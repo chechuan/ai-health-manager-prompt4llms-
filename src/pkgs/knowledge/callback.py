@@ -31,27 +31,27 @@ from data.constrant_for_task_schedule import query_schedule_template, query_sche
 from src.pkgs.knowledge.utils import SearchQAChain, check_task, get_template, search_engine_chat
 from src.prompt.model_init import ChatMessage, callLLM
 from src.utils.Logger import logger
-from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
-                              date_after_days, initAllResource, this_sunday)
+from src.utils.module import (InitAllResource, accept_stream_response, clock, curr_time,
+                              curr_weekday, date_after_days, this_sunday)
 
 
-class funcCall:
+class FuncCall:
     headers: Dict = {"content-type": "application/json"}
     proxies = {"http": "socks5://127.0.0.1:7891", "https": "socks5://127.0.0.1:7891"}
     session = Session()
     session.mount('https://', HTTPAdapter(max_retries=Retry(total=2, method_whitelist=frozenset(['GET', 'POST']))))
     param_server: object = ParamServer()
 
-    def __init__(self, gsr: initAllResource=None):
+    def __init__(self, gsr: InitAllResource=None):
         if not gsr:
-            gsr = initAllResource()
+            gsr = InitAllResource()
         self.api_config = gsr.api_config
         self.model_config = gsr.model_config
         self.prompt_meta_data = gsr.prompt_meta_data
 
         if gsr.args.use_proxy:
             self.session.proxies = self.proxies
-            logger.info("funcCall.session use proxy: " + str(self.proxies))
+            logger.info("FuncCall.session use proxy: " + str(self.proxies))
         self.scheduleManager = scheduleManager(gsr)
         self.register_for_all()
         self.scheduleManager.__init_vars__(self.funcmap, self.session)
@@ -585,7 +585,7 @@ class extApiFactory:
         return content
 
 if __name__ == "__main__":
-    funcall = funcCall()
+    funcall = FuncCall()
     # function_call = {'name': 'searchKB', 'arguments': '后脑勺持续一个月的头疼'}
     function_call = {'name': 'askAPI', 'arguments': '{"task":"三济饮食处方"}'}
     funcall._call(out_history=[{"function_call":function_call}], verbose=True)

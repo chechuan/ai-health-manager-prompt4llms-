@@ -18,7 +18,7 @@ from typing_extensions import Dict
 
 from data.constrant import PLAN_MAP, TEMPLATE_ENV, TEMPLATE_PLAN, TEMPLATE_ROLE, TEMPLATE_SENCE
 from src.utils.Logger import logger
-from src.utils.module import initAllResource
+from src.utils.module import InitAllResource
 
 
 class baseVarsForPromptEngine:
@@ -92,7 +92,7 @@ class promptEngine:
             prompt = self.__concat(prompt, self.tpe_plan, plan)
         return prompt
 
-class customPromptEngine:
+class CustomPromptEngine:
     """组装先验知识到INSTRUCTION_TEMPLATE中
     """
     def __init__(self, global_share_resource):
@@ -104,7 +104,7 @@ class customPromptEngine:
             parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
             parser.add_argument('--port', type=int, default=6500, help='port')
             args = parser.parse_args()
-            self.prompt_meta_data = initAllResource(args).prompt_meta_data
+            self.prompt_meta_data = InitAllResource(args).prompt_meta_data
     
     def __join_character(self, character: str, **kwds):
         """拼接角色部分的prompt

@@ -7,13 +7,8 @@
 '''
 import json
 import sys
-from pathlib import Path
-
-import yaml
 
 sys.path.append('.')
-
-from typing import Dict, List
 
 from langchain.prompts import PromptTemplate
 
@@ -25,12 +20,12 @@ from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
-from src.utils.module import (MysqlConnector, _parse_latest_plugin_call, clock, get_doc_role,
-                              get_intent, initAllResource, make_meta_ret)
+from src.utils.module import (InitAllResource, MysqlConnector, _parse_latest_plugin_call, clock,
+                              get_doc_role, get_intent, make_meta_ret)
 
 
 class Chat:
-    def __init__(self, global_share_resource: initAllResource) -> None:
+    def __init__(self, global_share_resource: InitAllResource) -> None:
         global_share_resource.chat = self
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env

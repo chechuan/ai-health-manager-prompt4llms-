@@ -16,26 +16,15 @@ from langchain.prompts import PromptTemplate
 
 sys.path.append(str(Path.cwd()))
 from data.constrant import task_schedule_return_demo
-from data.constrant_for_task_schedule import (
-    _tspdfq,
-    query_schedule_template,
-    task_schedule_parameter_description,
-    task_schedule_parameter_description_for_qwen,
-)
+from data.constrant_for_task_schedule import (_tspdfq, query_schedule_template,
+                                              task_schedule_parameter_description,
+                                              task_schedule_parameter_description_for_qwen)
 from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
-from src.utils.module import (
-    accept_stream_response,
-    clock,
-    curr_time,
-    curr_weekday,
-    date_after_days,
-    initAllResource,
-    make_meta_ret,
-    parse_latest_plugin_call,
-    this_sunday,
-)
+from src.utils.module import (InitAllResource, accept_stream_response, clock, curr_time,
+                              curr_weekday, date_after_days, make_meta_ret,
+                              parse_latest_plugin_call, this_sunday)
 
 
 class taskSchedulaManager:
@@ -379,7 +368,7 @@ class taskSchedulaManager:
 class scheduleManager:
     """细化版日程管理模块 2024年1月2日17:56:10"""
 
-    def __init__(self, gsr: initAllResource) -> None:
+    def __init__(self, gsr: InitAllResource) -> None:
         self.api_config = gsr.api_config
         self.model_config = gsr.model_config
         self.prompt_meta_data = gsr.prompt_meta_data

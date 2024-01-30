@@ -12,11 +12,11 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 
-from src.utils.module import initAllResource
+from src.utils.module import InitAllResource
 
 
 class rolePlayModel:
-    def __init__(self, gsr: initAllResource):
+    def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
         self.__extract_role_message__()
         
@@ -62,7 +62,7 @@ class rolePlayModel:
         ...
 
 if __name__ == "__main__":
-    rolellm = rolePlayModel(initAllResource())
+    rolellm = rolePlayModel(InitAllResource())
     param = {
         "character": "白展堂"
     }

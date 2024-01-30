@@ -14,8 +14,8 @@ import openai
 
 sys.path.append(str(Path.cwd()))
 from src.prompt.model_init import callLLM
-from src.utils.module import (accept_stream_response, clock, curr_time, curr_weekday,
-                              date_after_days, initAllResource, this_sunday)
+from src.utils.module import (InitAllResource, accept_stream_response, clock, curr_time,
+                              curr_weekday, date_after_days, this_sunday)
 
 openai.api_base = "http://10.228.67.99:26921/v1"
 openai.api_key = "EMPTY"
