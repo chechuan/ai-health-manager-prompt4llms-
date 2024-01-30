@@ -78,7 +78,7 @@ class CustomChatModel:
         """辅助诊断"""
         # 过滤掉辅助诊断之外的历史消息
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        history = [i for i in kwargs["history"] if i["intentCode"] == "auxiliary_diagnosis"]
+        history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         chat_response = callLLM(
             model=model,
