@@ -30,10 +30,11 @@ class CustomChatModel:
     def __extract_event_from_gsr__(self, gsr: InitAllResource, code: str) -> Dict[str, Any]:
         """从global_share_resource中提取事件数据"""
         event = {}
-        for ecode, event in gsr.prompt_meta_data["event"].items():
-            if ecode == code:
-                return event
-        raise ValueError(f"event code {code} not found in gsr.prompt_meta_data['event']")
+        if gsr.prompt_meta_data["event"].get(code):
+            event = gsr.prompt_meta_data["event"][code]
+            return event
+        else:
+            raise ValueError(f"event code {code} not found in gsr.prompt_meta_data['event']")
 
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
@@ -94,7 +95,7 @@ class CustomChatModel:
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {messages}")
-        logger.info(f"Custom Chat 辅助诊断 LLM Output: {content}")
+        logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
         thought, doctor = self.__parse_response__(content)
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
