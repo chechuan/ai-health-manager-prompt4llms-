@@ -566,10 +566,23 @@ class scheduleManager:
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query)
         logger.debug(f"取消日程-提取时间范围描述 LLM Input: \n{prompt}")
-        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
+        messages = [{"role": "user", "content": prompt}]
+        response = callLLM(
+            history=messages, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True
+        )
         tdesc = accept_stream_response(response, verbose=False)
         logger.debug(f"取消日程-提取时间范围描述 LLM Output: \n{tdesc}")
-        self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="取消日程-提取时间描述",model=model)
+        self.__update_mid_vars__(
+            kwds["mid_vars"],
+            input_text=messages,
+            output_text=tdesc,
+            key="取消日程-提取时间描述",
+            model=model,
+        )
+        # response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
+        # tdesc = accept_stream_response(response, verbose=False)
+        # logger.debug(f"取消日程-提取时间范围描述 LLM Output: \n{tdesc}")
+        # self.__update_mid_vars__(kwds['mid_vars'], input_text=prompt, output_text=tdesc, key="取消日程-提取时间描述",model=model)
         try:
             time_range = self.__cancel_parse_time_desc__(tdesc, **kwds)
         except Exception as e:
