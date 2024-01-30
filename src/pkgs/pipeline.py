@@ -860,7 +860,7 @@ class Chat_v2:
                 out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
-            elif self.prompt_meta_data["event"][intentCode].get("process_type") == "only_prompt":
+            elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
                 out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs["intentCode"] = intentCode
             elif self.prompt_meta_data["event"][intentCode].get("process_type") == "react":
