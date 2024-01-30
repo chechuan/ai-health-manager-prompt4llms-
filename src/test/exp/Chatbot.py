@@ -12,16 +12,19 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.append(Path(__file__).parent.as_posix())
+sys.path.append(Path("./").parent.as_posix())
 
 import streamlit as st
 from loguru import logger
 from openai import OpenAI
 
-from data.prompts import AuxiliaryDiagnosisPrompt
+from src.test.exp.data.prompts import AuxiliaryDiagnosisPrompt
 
+logger.remove()
+logger.add(sink=sys.stderr, level="TRACE", backtrace=True, diagnose=True)
 logger.add(
-    Path("logs", "chatbot.log"),
+    sink="logs/Chatbot.log",
+    level="DEBUG",
     encoding="utf-8",
     rotation="00:00",
     retention="10 days",
@@ -91,7 +94,7 @@ def prepare_parameters():
     args.frequency_penalty = st.sidebar.slider(
         "Frequency penalty", min_value=0.0, max_value=2.0, value=0.0, step=0.1
     )
-    args.stop = ["\nObservation", "\nFinally"]
+    args.stop = ["\nObservation"]
 
 
 def initlize_system_prompt():

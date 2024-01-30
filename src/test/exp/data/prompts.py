@@ -32,7 +32,7 @@ Begins!"""
 
 Question: 我的主诉
 Thought: 思考针对当前问题应该做什么
-Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题
+Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题,每次只能问一个问题
 Observation: 我对你提出的问题的回复
 ...(Thought/Doctor/Observation 可能会循环一次或多次直到你获取到了足够的信息能判断病情)
 Thought: 你认为我提供的信息足够给出诊断结果
