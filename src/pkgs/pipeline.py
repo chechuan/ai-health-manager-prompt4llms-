@@ -913,7 +913,7 @@ class Chat_v2:
             # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"的交集大于5个字
             if len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
                 out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
-            elif kwargs["history"][-2]["content"].startswith("从你的描述来看") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
+            elif len(kwargs["history"]) >=2 and kwargs["history"][-2]["content"].startswith("从你的描述来看") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
