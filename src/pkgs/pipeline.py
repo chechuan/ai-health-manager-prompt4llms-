@@ -892,7 +892,7 @@ class Chat_v2:
         # prompt = kwargs.get("prompt")
         history = kwargs["history"]
         intentCode = kwargs["intentCode"]
-        content = "我1小时后会提醒您监测体温。"
+        content = "我1小时后会提醒您测量体温。"
 
         history.append(
             {
