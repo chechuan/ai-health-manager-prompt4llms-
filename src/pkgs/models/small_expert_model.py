@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
-'''
+"""
 @Time    :   2023-12-05 15:14:07
 @desc    :   专家模型 & 独立功能
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
-'''
+"""
 import json
 import re
 import sys
@@ -28,10 +28,12 @@ from src.utils.module import (InitAllResource, accept_stream_response, clock,
 
 
 class expertModel:
-    indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率":"XYZBXY001005"}
+    indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率": "XYZBXY001005"}
+
     def __init__(self, gsr) -> None:
         self.gsr = gsr
-        
+        self.expert_model = self
+
     def check_number(x: str or int or float, key: str):
         try:
             x = float(x)
@@ -42,9 +44,9 @@ class expertModel:
     @staticmethod
     def tool_compute_bmi(weight: float or int, height: float or int) -> float():
         """计算bmi
-        
+
         - Args
-            
+
             weight 体重(kg)
 
             height 身高(m)
@@ -59,7 +61,7 @@ class expertModel:
     @staticmethod
     def tool_compute_max_heart_rate(age: float or int) -> int:
         """计算最大心率
-        
+
         max_heart_rate = 220-年龄（岁）
         """
         try:
@@ -68,11 +70,11 @@ class expertModel:
             logger.exception(e)
             raise f"type `age`={age} must be a number"
         return int(220 - age)
-    
+
     @staticmethod
     def tool_compute_exercise_target_heart_rate_for_old(age: float or int) -> int:
         """计算最大心率
-        
+
         max_heart_rate = 170-年龄（岁）
         """
         try:
@@ -85,7 +87,7 @@ class expertModel:
     @staticmethod
     def tool_assert_body_status(age: float or int, bmi: float or int) -> str:
         """判断体重状态
-        
+
         - Rules
             体重偏低：18≤年龄≤64：BMI＜18.5；年龄＞64：BMI＜20
             体重正常：18≤年龄≤64：18.5≤BMI＜24；年龄＞64：20≤BMI＜26.9
@@ -106,7 +108,7 @@ class expertModel:
         elif 64 < age:
             if bmi < 20:
                 status = "体重偏低"
-            elif 20 <= bmi < 26.9 :
+            elif 20 <= bmi < 26.9:
                 status = "体重正常"
             elif 26.9 <= bmi < 28:
                 status = "超重"
@@ -121,7 +123,7 @@ class expertModel:
         """
         ## 需求
         https://ehbl4r.axshare.com/#g=1&id=c2eydm&p=%E6%88%91%E7%9A%84%E9%A5%AE%E9%A3%9F
-        
+
         ## 开发参数
         ```json
         {
@@ -134,42 +136,36 @@ class expertModel:
         }
         ```
         """
-        sys_prompt = (
-            "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、"
-            f"热量/蛋白/碳水/脂肪四大营养素摄入的角度,简洁的点评一下{param['meal']}是否健康"
-        )
-        prompt = (
-            f"本餐建议热量: {param['recommend_heat_target']}\n"
-            "实际吃的:\n"
-        )
+        sys_prompt = "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、" f"热量/蛋白/碳水/脂肪四大营养素摄入的角度,简洁的点评一下{param['meal']}是否健康"
+        prompt = f"本餐建议热量: {param['recommend_heat_target']}\n" "实际吃的:\n"
 
         recipes_prompt_list = []
         for recipe in param["recipes"]:
             tmp = f"{recipe['name']}"
-            if recipe['weight']:
+            if recipe["weight"]:
                 tmp += f": {recipe['weight']}g"
-            elif recipe['unit']:
+            elif recipe["unit"]:
                 tmp += f": {recipe['unit']}"
             recipes_prompt_list.append(tmp)
-        
+
         recipes_prompt = "\n".join(recipes_prompt_list)
         prompt += recipes_prompt
-        history = [{"role":"system", "content": sys_prompt},{"role":"user", "content": prompt}]
+        history = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]
 
         logger.debug(f"饮食点评 Prompt:\n{json.dumps(history, ensure_ascii=False)}")
-        
+
         content = callLLM(history=history, temperature=0.7, top_p=0.8)
-        
+
         logger.debug(f"饮食点评 Result:\n{content}")
-        
+
         return content
-    
+
     def __bpta_compose_value_prompt(self, key: str = "对值的解释", data: List = []):
         """血压趋势分析, 拼接值"""
-        value_list = [i['value'] for i in data]
+        value_list = [i["value"] for i in data]
         content = f"{key}{value_list}\n"
         return content
-    
+
     @clock
     def health_blood_pressure_trend_analysis(self, param: Dict) -> str:
         """血压趋势分析
@@ -200,21 +196,21 @@ class expertModel:
         }
         ```
         """
-        model = self.gsr.model_config['blood_pressure_trend_analysis']
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
         history = []
-        sys_prompt = self.gsr.prompt_meta_data['event']['blood_pressure_trend_analysis']['description']
-        history.append({"role":"system", "content": sys_prompt})
-        
-        tst = param['ihm_health_sbp'][0]['date']
-        ted = param['ihm_health_sbp'][-1]['date']
+        sys_prompt = self.gsr.prompt_meta_data["event"]["blood_pressure_trend_analysis"]["description"]
+        history.append({"role": "system", "content": sys_prompt})
+
+        tst = param["ihm_health_sbp"][0]["date"]
+        ted = param["ihm_health_sbp"][-1]["date"]
         content = f"从{tst}至{ted}期间\n"
-        if param.get('ihm_health_sbp'):
-            content += self.__bpta_compose_value_prompt("收缩压测量数据: ", param['ihm_health_sbp'])
-        if param.get('ihm_health_dbp'):
-            content += self.__bpta_compose_value_prompt("舒张压测量数据: ", param['ihm_health_dbp'])
-        if param.get('ihm_health_hr'):
-            content += self.__bpta_compose_value_prompt("心率测量数据: ", param['ihm_health_hr'])
-        history.append({"role":"user", "content": content})
+        if param.get("ihm_health_sbp"):
+            content += self.__bpta_compose_value_prompt("收缩压测量数据: ", param["ihm_health_sbp"])
+        if param.get("ihm_health_dbp"):
+            content += self.__bpta_compose_value_prompt("舒张压测量数据: ", param["ihm_health_dbp"])
+        if param.get("ihm_health_hr"):
+            content += self.__bpta_compose_value_prompt("心率测量数据: ", param["ihm_health_hr"])
+        history.append({"role": "user", "content": content})
         logger.debug(f"血压趋势分析\n{history}")
         response = callLLM(history=history, temperature=0.8, top_p=1, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
@@ -222,61 +218,63 @@ class expertModel:
         return content
 
     def __health_warning_solutions_early_continuous_check__(self, indicatorData: List[Dict]) -> bool:
-        """判断指标数据近五天是否连续
-        """
+        """判断指标数据近五天是否连续"""
+
         def get_day_before(days):
             now = datetime.now()
-            date_after = ((now+timedelta(days=days)).strftime("%Y-%m-%d"))
+            date_after = (now + timedelta(days=days)).strftime("%Y-%m-%d")
             return date_after
-        
+
         if not indicatorData:
             raise ValueError("indicatorData can't be empty")
-        date_before_map = {get_day_before(-1*i): 1 for i in range(5)}
-        
-        for data_item in indicatorData:         # 任一指标存在近五天不连续, 状态为False
-            if len(data_item['data']) < 5:
+        date_before_map = {get_day_before(-1 * i): 1 for i in range(5)}
+
+        for data_item in indicatorData:  # 任一指标存在近五天不连续, 状态为False
+            if len(data_item["data"]) < 5:
                 return False
-            date_current_map = {i['date'][:10]: 1 for i in data_item['data']}
+            date_current_map = {i["date"][:10]: 1 for i in data_item["data"]}
             for k, _ in date_before_map.items():
                 if date_current_map.get(k) is None:
                     return False
         return True
 
-    def __health_warning_update_blood_pressure_level__(self, vars: List[int], value_list: List[int] = [], return_str: bool = False):
-            """更新血压水平
+    def __health_warning_update_blood_pressure_level__(
+        self, vars: List[int], value_list: List[int] = [], return_str: bool = False
+    ):
+        """更新血压水平
 
-            - Args
+        - Args
 
-                vars List[int]: 血压等级 [] or [0,2,1,3,2]
-                value_list List[int]: 真实血压值列表 收缩压or舒张压
-            """
-            if return_str:
-                valuemap = {-1: "低血压", 0: '正常', 1: '高血压一级', 2: '高血压二级', 3: '高血压三级'}
-                vars = [valuemap.get(i) for i in vars]
-                return vars
-            if not vars:
-                vars = [compute_blood_pressure_level(value) for value in value_list]
-            else:
-                new_vars = [compute_blood_pressure_level(value) for value in value_list]
-                if len(vars) == len(new_vars):
-                    vars = [i if abs(i)>abs(j) else j for i, j in zip(vars, new_vars)]
+            vars List[int]: 血压等级 [] or [0,2,1,3,2]
+            value_list List[int]: 真实血压值列表 收缩压or舒张压
+        """
+        if return_str:
+            valuemap = {-1: "低血压", 0: "正常", 1: "高血压一级", 2: "高血压二级", 3: "高血压三级"}
+            vars = [valuemap.get(i) for i in vars]
             return vars
+        if not vars:
+            vars = [compute_blood_pressure_level(value) for value in value_list]
+        else:
+            new_vars = [compute_blood_pressure_level(value) for value in value_list]
+            if len(vars) == len(new_vars):
+                vars = [i if abs(i) > abs(j) else j for i, j in zip(vars, new_vars)]
+        return vars
 
     def health_warning_solutions_early(self, param: Dict) -> str:
         """
         - 输入：客户的指标数据（C端客户通过手工录入、语音录入、医疗设备测量完的结果），用药情况（如果C端有用药情况）
-        - 要求: 
+        - 要求:
             1. 如果近5天都有数据，则推出预警解决方案的内容包括，指标最近的波动情况，在饮食、运动、日常护理方面的建议。见格式一
             2. 如果不满足连续条件（包括只有一条数据的情况）则预警方案只给出指标解读。见格式二
-        
+
         - 输出：分析客户的指标数据，给出解决方案, 示例如下:
-            
+
             格式一：从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。
-            
+
             格式二：患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。
-        
+
         prd: https://alidocs.dingtalk.com/i/nodes/KGZLxjv9VGBk7RlwHeRpRpXrW6EDybno?utm_scene=team_space
-        
+
         api: https://confluence.enncloud.cn/pages/viewpage.action?pageId=850011452#:~:text=%7D-,3.4.2%20%E9%A2%84%E8%AD%A6%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88,-%E5%8A%9F%E8%83%BD%E6%8F%8F%E8%BF%B0
         云效需求: https://devops.aliyun.com/projex/req/VOSE-3607# 《通过预警患者指标数据给出预警解决方案》
 
@@ -286,52 +284,56 @@ class expertModel:
         3. 传近5天的数据 仅以此判断连续
         4. 收缩压和舒张压近五天连续 格式一
         """
-        model = self.gsr.model_config['health_warning_solutions_early']
-        is_continuous = self.__health_warning_solutions_early_continuous_check__(param['indicatorData'])        # 通过数据校验判断处理逻辑
-        
-        time_range = {i['date'][:10] for i in param['indicatorData'][0]['data']}    # 当前的时间范围
+        model = self.gsr.model_config["health_warning_solutions_early"]
+        is_continuous = self.__health_warning_solutions_early_continuous_check__(param["indicatorData"])  # 通过数据校验判断处理逻辑
+
+        time_range = {i["date"][:10] for i in param["indicatorData"][0]["data"]}  # 当前的时间范围
         bpl = []
         ihm_health_sbp, ihm_health_dbp, ihm_health_hr = [], [], []
         if is_continuous:
-            prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_continuous']['description']
+            prompt_str = self.gsr.prompt_meta_data["event"]["warning_solutions_early_continuous"]["description"]
             prompt_template = PromptTemplate.from_template(prompt_str)
-            for i in param['indicatorData']:
-                if i['code'] == self.indicatorCodeMap['收缩压']:      # 收缩压
-                    ihm_health_sbp = [j['value'] for j in i['data']]
+            for i in param["indicatorData"]:
+                if i["code"] == self.indicatorCodeMap["收缩压"]:  # 收缩压
+                    ihm_health_sbp = [j["value"] for j in i["data"]]
                     bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_sbp)
-                elif i['code'] == self.indicatorCodeMap['舒张压']:    # 舒张压
-                    ihm_health_dbp = [j['value'] for j in i['data']]
+                elif i["code"] == self.indicatorCodeMap["舒张压"]:  # 舒张压
+                    ihm_health_dbp = [j["value"] for j in i["data"]]
                     bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_dbp)
-                elif i['code'] == self.indicatorCodeMap['心率']:       # 心率
-                    ihm_health_hr = [j['value'] for j in i['data']]
+                elif i["code"] == self.indicatorCodeMap["心率"]:  # 心率
+                    ihm_health_hr = [j["value"] for j in i["data"]]
             ihm_health_blood_pressure_level = self.__health_warning_update_blood_pressure_level__(bpl, return_str=True)
-            prompt = prompt_template.format(time_start=min(time_range),
-                                            time_end=max(time_range),
-                                            ihm_health_sbp=ihm_health_sbp,
-                                            ihm_health_dbp=ihm_health_dbp,
-                                            ihm_health_blood_pressure_level=ihm_health_blood_pressure_level, 
-                                            ihm_health_hr=ihm_health_hr)
-        else:       # 非连续，只取当日指标
-            prompt_str = self.gsr.prompt_meta_data['event']['warning_solutions_early_not_continuous']['description']
+            prompt = prompt_template.format(
+                time_start=min(time_range),
+                time_end=max(time_range),
+                ihm_health_sbp=ihm_health_sbp,
+                ihm_health_dbp=ihm_health_dbp,
+                ihm_health_blood_pressure_level=ihm_health_blood_pressure_level,
+                ihm_health_hr=ihm_health_hr,
+            )
+        else:  # 非连续，只取当日指标
+            prompt_str = self.gsr.prompt_meta_data["event"]["warning_solutions_early_not_continuous"]["description"]
             prompt_template = PromptTemplate.from_template(prompt_str)
-            for i in param['indicatorData']:
-                if i['code'] == self.indicatorCodeMap['收缩压']:
-                    ihm_health_sbp = [i['data'][-1]['value']]
-                elif i['code'] == self.indicatorCodeMap['舒张压']:
-                    ihm_health_dbp = [i['data'][-1]['value']]
-                elif i['code'] == self.indicatorCodeMap['心率']:
-                    ihm_health_hr = [i['data'][-1]['value']]
-            prompt = prompt_template.format(time_start=min(time_range),
-                                            time_end=max(time_range),
-                                            ihm_health_sbp=ihm_health_sbp,
-                                            ihm_health_dbp=ihm_health_dbp,
-                                            ihm_health_hr=ihm_health_hr)
-        history = [{"role":"user", "content":prompt}]
+            for i in param["indicatorData"]:
+                if i["code"] == self.indicatorCodeMap["收缩压"]:
+                    ihm_health_sbp = [i["data"][-1]["value"]]
+                elif i["code"] == self.indicatorCodeMap["舒张压"]:
+                    ihm_health_dbp = [i["data"][-1]["value"]]
+                elif i["code"] == self.indicatorCodeMap["心率"]:
+                    ihm_health_hr = [i["data"][-1]["value"]]
+            prompt = prompt_template.format(
+                time_start=min(time_range),
+                time_end=max(time_range),
+                ihm_health_sbp=ihm_health_sbp,
+                ihm_health_dbp=ihm_health_dbp,
+                ihm_health_hr=ihm_health_hr,
+            )
+        history = [{"role": "user", "content": prompt}]
         response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
         return content
 
-    def food_purchasing_list_manage(self, reply="好的-unknow reply",**kwds):
+    def food_purchasing_list_manage(self, reply="好的-unknow reply", **kwds):
         """食材采购清单管理
 
         [
@@ -345,20 +347,22 @@ class expertModel:
         ]
 
         """
+
         def parse_model_response(content):
             first_match_content = re.findall("```json(.*?)```", content, re.S)[0].strip()
             ret = json.loads(first_match_content)
-            reply, purchasing_list = ret['content'], ret['purchasing_list']
+            reply, purchasing_list = ret["content"], ret["purchasing_list"]
             return reply, purchasing_list
+
         purchasing_list = kwds.get("purchasing_list")
         prompt = kwds.get("prompt")
         intentCode = "food_purchasing_list_management"
-        event_msg = self.gsr.prompt_meta_data['event'][intentCode]
-        sys_prompt = event_msg['description'] + event_msg['process']
-        model = self.gsr.model_config['food_purchasing_list_management']
+        event_msg = self.gsr.prompt_meta_data["event"][intentCode]
+        sys_prompt = event_msg["description"] + event_msg["process"]
+        model = self.gsr.model_config["food_purchasing_list_management"]
         sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
         query = sys_prompt + f"\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
-        history = [{"role":"user", "content":query}]
+        history = [{"role": "user", "content": query}]
         content = callLLM(history=history, temperature=0.7, model=model, top_p=0.8)
         try:
             reply, purchasing_list = parse_model_response(content)
@@ -375,16 +379,55 @@ class expertModel:
                     {"name": "鸡胸肉", "quantity": 500, "unit": "g"},
                     {"name": "酱油", "quantity": 1, "unit": "瓶"},
                     {"name": "牛腩", "quantity": 200, "unit": "g"},
-                    {"name": "菠菜", "quantity": 500, "unit": "g"}
+                    {"name": "菠菜", "quantity": 500, "unit": "g"},
                 ]
         ret = {
-            "purchasing_list": purchasing_list, 
-            "content": reply, 
-            "intentCode": intentCode, 
-            "dataSource": "语言模型", 
-            "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error")
+            "purchasing_list": purchasing_list,
+            "content": reply,
+            "intentCode": intentCode,
+            "dataSource": "语言模型",
+            "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error"),
         }
         return ret
+
+    def food_purchasing_list_generate_by_content(self, query: str, *args, **kwargs) -> Dict:
+        """根据用户输入内容生成食材采购清单"""
+        if not query:
+            raise ValueError("query can't be empty")
+        model = self.gsr.model_config["food_purchasing_list_generate_by_content"]
+        # system_prompt = self.gsr.prompt_meta_data['event']['food_purchasing_list_generate_by_content']['description']
+        example_item = {
+            "name": {"desc": "物品名称", "type": "str"},
+            "classify": {"desc": "物品分类", "type": "str"},
+            "quantity": {"desc": "数量", "tpye": "int"},
+            "unit": {"desc": "单位", "type": "str"},
+            # "price": {"desc": "价格", "tpye": "int"},
+        }
+        example_item_js = json.dumps(example_item, ensure_ascii=False)
+        system_prompt = (
+            "请你根据医生的建议帮我生成一份采购清单,要求如下:\n"
+            "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段"
+            "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]"
+            "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮"
+            "4. 价格默认以人民币为单位,类型为int,请你根据市场价估计对应物品及单位的实际价格"
+            "5. 只输出生成的采购清单，不包含任何其他内容"
+            "6. 示例如下:\n```json\n```"
+        )
+        system_prompt = system_prompt.replace("{{ example_item_js }}", example_item_js)
+        history = [{"role": "system", "content": system_prompt}, {"role": "user", "content": query}]
+        logger.debug(f"根据用户输入生成采购清单 LLM Input: {json.dumps(history, ensure_ascii=False)}")
+        response = callLLM(
+            history=history,
+            temperature=0.7,
+            model=model,
+            top_p=0.5,
+            stream=True,
+        )
+        content = accept_stream_response(response, verbose=True)
+        logger.debug(f"根据用户输入生成采购清单 LLM Output: \n{content}")
+        purchasing_list_str = re.findall("```json(.*?)```", content, re.S)[0].strip()
+        purchasing_list = json.loads(purchasing_list_str)
+        return purchasing_list
 
     def rec_diet_reunion_meals_restaurant_selection(self, history=[], backend_history: List = [], **kwds) -> str:
         """聚餐场景
@@ -394,7 +437,7 @@ class expertModel:
 
         Args
             history List[Dict]: 群组对话信息
-        
+
         Example
             ```json
             {
@@ -410,53 +453,68 @@ class expertModel:
             }
             ```
         """
+
         def make_system_prompt(kwds):
-            restaurant_message = kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
-            event_msg = self.gsr.prompt_meta_data['event']['reunion_meals_restaurant_selection']['description'] if not kwds.get("event_msg") else kwds.get("event_msg")
+            restaurant_message = (
+                kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
+            )
+            event_msg = (
+                self.gsr.prompt_meta_data["event"]["reunion_meals_restaurant_selection"]["description"]
+                if not kwds.get("event_msg")
+                else kwds.get("event_msg")
+            )
             sys_prompt = event_msg.replace("{RESTAURANT_MESSAGE}", restaurant_message)
             return sys_prompt
-        
+
         def make_ret_item(message: str, end: bool, backend_history: List[Dict]) -> Dict:
             return {
                 "message": message,
                 "end": end,
                 "backend_history": backend_history,
                 "dataSource": "语言模型",
-                "intentCode": "shared_decision", 
+                "intentCode": "shared_decision",
                 "intentDesc": "年夜饭共策",
-                "type": "Result"
+                "type": "Result",
             }
-        model = self.gsr.model_config['reunion_meals_restaurant_selection']
+
+        model = self.gsr.model_config["reunion_meals_restaurant_selection"]
         sys_prompt = make_system_prompt(kwds)
         # messages = [{"role":"system", "content": sys_prompt}] + backend_history
-        messages = [{"role":"system", "content": sys_prompt}]
+        messages = [{"role": "system", "content": sys_prompt}]
         try:
             query = ""
             for item in history:
                 name, role, content = item.get("name"), item.get("role"), item.get("content")
                 # {"name": "管家","role": "hb_qa@39238","content": "欢迎韩伟娜进入本群，您可以在这里畅所欲言了。"}  管家的信息无用, 过滤    2024年1月11日10:41:02
-                if name == "管家":      
+                if name == "管家":
                     continue
                 user_input = ""
                 user_input += name
                 # TODO 当前role传的是hb_qa@39238这种信息，会导致生成内容中出现这样的信息, 取消把role信息传入提示中  2024年1月11日10:41:07
                 # if role:
                 #     user_input += f"({role})"
-                
-                # {"name": "郭燕","role": "hb_qa@39541","content": "@管家 今天晚上朋友聚餐，大概10人，想找一个热热闹闹，有表演的餐厅"}  
+
+                # {"name": "郭燕","role": "hb_qa@39541","content": "@管家 今天晚上朋友聚餐，大概10人，想找一个热热闹闹，有表演的餐厅"}
                 # 用户的输入信息中包含@管家, 进行过滤        2024年1月11日10:41:11
                 content = content.replace("@管家 ", "")
                 user_input += f": {content}\n"
                 query += user_input
             messages.append({"role": "user", "content": query})
-            response = openai.ChatCompletion.create(model=model, messages=messages,
-                                                    temperature=0.9, top_p=0.8, top_k=-1, repetition_penalty=1.1, stream=True)
-            
+            response = openai.ChatCompletion.create(
+                model=model,
+                messages=messages,
+                temperature=0.9,
+                top_p=0.8,
+                top_k=-1,
+                repetition_penalty=1.1,
+                stream=True,
+            )
+
             t_st = time.time()
             ret_content = ""
             for i in response:
                 msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get('content')
+                text_stream = msg.get("content")
                 if text_stream:
                     ret_content += text_stream
                     yield make_ret_item(text_stream, False, [])
@@ -464,9 +522,10 @@ class expertModel:
 
             time_cost = round(time.time() - t_st, 1)
             logger.debug(f"年夜饭共策餐厅选择回复: {ret_content}")
-            logger.success(f"Model {model} generate costs summary: " + 
-                            f"total_texts:{len(ret_content)}, "
-                            f"complete cost: {time_cost}s")
+            logger.success(
+                f"Model {model} generate costs summary: " + f"total_texts:{len(ret_content)}, "
+                f"complete cost: {time_cost}s"
+            )
             yield make_ret_item("", True, messages[1:])
         except openai.APIError as e:
             logger.error(f"Model {model} generate error: {e}")
@@ -474,6 +533,7 @@ class expertModel:
         except Exception as err:
             logger.error(f"Model {model} generate error: {err}")
             yield make_ret_item(repr(err), True, [])
+
 
 if __name__ == "__main__":
     expert_model = expertModel(InitAllResource())

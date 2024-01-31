@@ -191,11 +191,24 @@ def create_app():
             return ret
 
     @app.route("/rec/diet/food_purchasing_list/manage", methods=["post"])
-    def _rec_diet_create_food_purchasing_list():
+    def _rec_diet_create_food_purchasing_list_manage():
         """食材采购清单管理"""
         try:
             param = accept_param_purge()
             ret = expert_model.food_purchasing_list_manage(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
+    def _rec_diet_create_food_purchasing_list_generate_by_content():
+        """食材采购清单管理"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.food_purchasing_list_generate_by_content(**param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)

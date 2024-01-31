@@ -4,6 +4,7 @@ local:
     - decorate_search_prompt                              # 查询知识库装饰
     - food_purchasing_list_management                     # 食材清单管理
     - schedular_time_understand                           # 日程时间理解
+    - food_purchasing_list_generate_by_content            # 基于内容生成食材清单
     - call_schedule_query                                 # 查询日程最终的组装输出
     - call_schedule_create_extract_event_time_pair        # 日程创建 提取事件-时间描述pair
     - call_schedule_create_reply                          # 创建日程的回复

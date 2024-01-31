@@ -66,9 +66,9 @@ def place_sidebar():
         args.model = st.selectbox("Choose your model", model_list, index=1)
 
         _system_prompt_version = st.selectbox(
-            "Choose your model",
+            "Choose your prompt version",
             system_prompt_version_list,
-            index=2,
+            index=3,
             on_change=initlize_system_prompt,
         )
 
@@ -89,10 +89,38 @@ def prepare_parameters():
     """Initialize the parameters for the llm"""
     global args
     args.max_tokens = st.sidebar.slider("Max tokens", min_value=1, max_value=32000, value=4096, step=1)
-    args.temperature = st.sidebar.slider("Temperature", min_value=0.0, max_value=2.0, value=0.7, step=0.1)
-    args.top_p = st.sidebar.slider("Top p", min_value=0.0, max_value=1.0, value=0.8, step=0.1)
-    # args.top_k = st.sidebar.slider("Top k", min_value=-1, max_value=100, value=-1, step=1)
-    args.n = st.sidebar.slider("N", min_value=1, max_value=50, value=1, step=1)
+    args.temperature = st.sidebar.slider(
+        "Temperature",
+        min_value=0.0,
+        max_value=2.0,
+        value=0.7,
+        step=0.1,
+        help="模型在生成文本时的随机性。这个参数的值在0到2之间，越高表示模型越倾向于选择不太可能的单词，越低表示模型越倾向于选择最可能的单词。一般来说，这个值越高，模型生成的文本越有创意，但也可能会出现更多的语法错误或不合理的内容。",
+    )
+    args.top_p = st.sidebar.slider(
+        "Top p",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.8,
+        step=0.1,
+        help="模型在生成文本时的概率阈值。这个参数的值在0到1之间，表示模型只会从概率之和大于等于这个值的单词中选择一个。这个参数可以帮助模型过滤掉一些极端的或不相关的单词，提高文本的质量和一致性。",
+    )
+    # args.top_k = st.sidebar.slider(
+    #     "Top k",
+    #     min_value=-1,
+    #     max_value=100,
+    #     value=-1,
+    #     step=1,
+    #     help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
+    # )
+    args.n = st.sidebar.slider(
+        "N",
+        min_value=1,
+        max_value=50,
+        value=1,
+        step=1,
+        help="模型生成的文本的数量。这个参数的值是一个整数，表示模型会根据同一个提示生成多少个不同的文本。这个参数可以帮助您比较模型的多样性和稳定性，或者从多个选项中选择最合适的一个。",
+    )
     args.presence_penalty = st.sidebar.slider(
         "Presence penalty",
         min_value=0.0,
@@ -107,10 +135,9 @@ def prepare_parameters():
         max_value=2.0,
         value=0.5,
         step=0.1,
-        help="This parameter is used to encourage the model to include a diverse range of tokens in the generated text. It is a value that is subtracted from the log-probability of a token each time it is generated. A higher presence_penalty value will result in the model being more likely to generate tokens that have not yet been included in the generated text.",
+        help="用来控制模型生成文本时避免重复相同的单词或短语。它是一个值，每次生成的单词出现在文本中时，就会加到该单词的对数概率上。这个值越高（接近1），模型就越不倾向于重复单词或短语；这个值越低（接近0），模型就越允许重复。您可以根据您的需求和期望的输出来调整这个参数的值",
     )
     args.stop = ["\nObservation"]
-
 
 def initlize_system_prompt():
     """Initialize the system prompt"""

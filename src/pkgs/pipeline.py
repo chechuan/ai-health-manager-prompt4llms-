@@ -848,7 +848,7 @@ class Chat_v2:
                 "role": "assistant",
                 "content": thought,
                 "function_call": {"name": "convComplete", "arguments": content},
-                "intentCode": intentCode
+                "intentCode": intentCode,
             }
         )
         return chat_history, intentCode
@@ -950,6 +950,15 @@ class Chat_v2:
             init_intent=self.if_init(tool),
             dataSource=dataSource,
         )
+
+        # XXX 2024年01月31日11:28:00 演示增加逻辑
+        if intentCode == "auxiliary_diagnosis":
+            if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
+                purchasing_list = self.gsr.expert_model.food_purchasing_list_generate_by_content(content)
+                ret_result["intentCode"] = "create_food_purchasing_list"
+                ret_result["appendData"] = purchasing_list
+                ret_result["message"] += "\n为您生成了一份采购清单，请确认"
+
         yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
 

@@ -16,7 +16,6 @@ class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
         self.code_func_map = {"auxiliary_diagnosis": self.__chat_auxiliary_diagnosis__}
-        pass
 
     def __parameter_check__(self, **kwargs):
         """参数检查"""
