@@ -25,6 +25,7 @@ dev:
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 1.0.1
+    call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
@@ -41,8 +42,10 @@ test:
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 1.0.1
+    call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
   character:
   tool:
     创建日程: 0.2.0
@@ -58,6 +61,7 @@ fat:
     auxiliary_diagnosis: 1.0.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
   character:
   tool:
     创建日程: 0.2.0
