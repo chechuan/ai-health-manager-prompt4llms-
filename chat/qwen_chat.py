@@ -232,7 +232,7 @@ class Chat:
 
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
-            prompt = kwargs.get('intentPrompt') + "\n\n" + query + "\nThought: "
+            prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
             prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
