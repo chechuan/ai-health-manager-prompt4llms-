@@ -19,7 +19,7 @@ from typing import Dict, List
 
 from langchain.prompts.prompt import PromptTemplate
 
-from data.constrant import DEFAULT_RESTAURANT_MESSAGE
+from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
@@ -455,15 +455,16 @@ class expertModel:
         """
 
         def make_system_prompt(kwds):
-            restaurant_message = (
-                kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
+            message = (
+                # kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
+                kwds.get("hospital_message") if kwds.get("hospital_message") else HOSPITAL_MESSAGE
             )
             event_msg = (
                 self.gsr.prompt_meta_data["event"]["reunion_meals_restaurant_selection"]["description"]
                 if not kwds.get("event_msg")
                 else kwds.get("event_msg")
             )
-            sys_prompt = event_msg.replace("{RESTAURANT_MESSAGE}", restaurant_message)
+            sys_prompt = event_msg.replace("{MESSAGE}", message)
             return sys_prompt
 
         def make_ret_item(message: str, end: bool, backend_history: List[Dict]) -> Dict:
@@ -517,11 +518,12 @@ class expertModel:
                 text_stream = msg.get("content")
                 if text_stream:
                     ret_content += text_stream
+                    print(text_stream, end="", flush=True)
                     yield make_ret_item(text_stream, False, [])
             messages.append({"role": "assistant", "content": ret_content})
 
             time_cost = round(time.time() - t_st, 1)
-            logger.debug(f"年夜饭共策餐厅选择回复: {ret_content}")
+            logger.debug(f"共策回复: {ret_content}")
             logger.success(
                 f"Model {model} generate costs summary: " + f"total_texts:{len(ret_content)}, "
                 f"complete cost: {time_cost}s"
