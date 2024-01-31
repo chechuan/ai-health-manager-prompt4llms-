@@ -391,6 +391,20 @@ class expertModel:
             "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error"),
         }
         return ret
+    
+    def food_sort(self, items: List[Dict]) -> List[Dict]:
+        cat_map = {
+            '水果':'001',
+            '蔬菜':'002',
+            '肉蛋类':'003',
+            '水产类':'004',
+            '米面粮油':'005',
+            '营养保健':'006',
+            '茶饮':'007',
+            '奶类':'008'
+        }
+        ret = list(sorted(items, key=lambda x: cat_map[x['classify']]))
+        return ret
 
     def food_purchasing_list_generate_by_content(self, query: str, *args, **kwargs) -> Dict:
         """根据用户输入内容生成食材采购清单"""
@@ -430,6 +444,8 @@ class expertModel:
         logger.debug(f"根据用户输入生成采购清单 LLM Output: \n{content}")
         purchasing_list_str = re.findall("```json(.*?)```", content, re.S)[0].strip()
         purchasing_list = json.loads(purchasing_list_str)
+        
+        purchasing_list = self.food_sort(purchasing_list)
         return purchasing_list
 
     def rec_diet_reunion_meals_restaurant_selection(self, history=[], backend_history: List = [], **kwds) -> str:
