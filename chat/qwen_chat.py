@@ -206,7 +206,10 @@ class Chat:
         inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互','语音交互页面','查看聊天','聊天页面', '我的聊天', '看看聊天']
         # st_key, ed_key = "<|im_start|>", "<|im_end|>"
         history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+        gc = ['商量', '医院', '去', '到']
         # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        if sum([1 for i in gc if i in history[-1]['content']]) >= 3:
+            return '拉群共策'
         if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:
             return '打开功能页面'
         if sum([1 for i in inter_info_list if i in history[-1]['content']]) > 0:
