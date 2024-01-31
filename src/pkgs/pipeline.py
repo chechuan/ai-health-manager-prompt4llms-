@@ -911,9 +911,9 @@ class Chat_v2:
         if self.prompt_meta_data["event"].get(intentCode):
             # XXX 演示临时增加逻辑 2024年01月31日11:28:00
             # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"的交集大于5个字
-            if len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
+            if kwargs["history"] and len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
                 out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
-            elif len(kwargs["history"]) >=2 and kwargs["history"][-2]["content"].startswith("请您时刻关注自己的病情变化，") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
+            elif kwargs["history"] and len(kwargs["history"]) >=2 and kwargs["history"][-2]["content"].startswith("请您时刻关注自己的病情变化，") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
