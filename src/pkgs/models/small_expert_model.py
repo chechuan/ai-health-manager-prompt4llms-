@@ -23,7 +23,8 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import InitAllResource, accept_stream_response, clock, compute_blood_pressure_level, get_intent
+from src.utils.module import (InitAllResource, accept_stream_response, clock,
+                              compute_blood_pressure_level, get_intent)
 
 
 class expertModel:
@@ -362,7 +363,9 @@ class expertModel:
         sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
         query = sys_prompt + f"\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
         history = [{"role": "user", "content": query}]
+        logger.debug(f"食材采购清单管理 LLM Input: \n{history}")
         content = callLLM(history=history, temperature=0.7, model=model, top_p=0.8)
+        logger.debug(f"食材采购清单管理 LLM Output: \n{content}")
         try:
             reply, purchasing_list = parse_model_response(content)
         except Exception as err:
@@ -408,6 +411,7 @@ class expertModel:
             "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段\n"
             "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]\n"
             "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮、奶类\n"
+            "4. 水果、蔬菜、肉蛋类、水产类、米面粮油单位为: g, 饮品、营养保健、奶类的单位可以是: 瓶、箱、包、盒、罐、桶, 其他的单位可以是:个、粒"
             "4. 价格默认以人民币为单位,类型为int,请你根据市场价估计对应物品及单位的实际价格\n"
             "5. 只输出生成的采购清单，不包含任何其他内容\n"
             "6. 输出示例:\n```json\n```"
