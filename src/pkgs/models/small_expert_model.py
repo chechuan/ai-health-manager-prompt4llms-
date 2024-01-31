@@ -23,8 +23,7 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, get_intent)
+from src.utils.module import InitAllResource, accept_stream_response, clock, compute_blood_pressure_level, get_intent
 
 
 class expertModel:
@@ -32,7 +31,7 @@ class expertModel:
 
     def __init__(self, gsr) -> None:
         self.gsr = gsr
-        self.expert_model = self
+        self.gsr.expert_model = self
 
     def check_number(x: str or int or float, key: str):
         try:
@@ -406,21 +405,21 @@ class expertModel:
         example_item_js = json.dumps(example_item, ensure_ascii=False)
         system_prompt = (
             "请你根据医生的建议帮我生成一份采购清单,要求如下:\n"
-            "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段"
-            "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]"
-            "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮"
-            "4. 价格默认以人民币为单位,类型为int,请你根据市场价估计对应物品及单位的实际价格"
-            "5. 只输出生成的采购清单，不包含任何其他内容"
-            "6. 示例如下:\n```json\n```"
+            "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段\n"
+            "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]\n"
+            "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮、奶类\n"
+            "4. 价格默认以人民币为单位,类型为int,请你根据市场价估计对应物品及单位的实际价格\n"
+            "5. 只输出生成的采购清单，不包含任何其他内容\n"
+            "6. 输出示例:\n```json\n```"
         )
         system_prompt = system_prompt.replace("{{ example_item_js }}", example_item_js)
         history = [{"role": "system", "content": system_prompt}, {"role": "user", "content": query}]
         logger.debug(f"根据用户输入生成采购清单 LLM Input: {json.dumps(history, ensure_ascii=False)}")
         response = callLLM(
             history=history,
-            temperature=0.7,
+            temperature=0.3,
             model=model,
-            top_p=0.5,
+            top_p=0.8,
             stream=True,
         )
         content = accept_stream_response(response, verbose=True)
@@ -457,7 +456,9 @@ class expertModel:
         def make_system_prompt(kwds):
             message = (
                 # kwds.get("restaurant_message") if kwds.get("restaurant_message") else DEFAULT_RESTAURANT_MESSAGE
-                kwds.get("hospital_message") if kwds.get("hospital_message") else HOSPITAL_MESSAGE
+                kwds.get("hospital_message")
+                if kwds.get("hospital_message")
+                else HOSPITAL_MESSAGE
             )
             event_msg = (
                 self.gsr.prompt_meta_data["event"]["reunion_meals_restaurant_selection"]["description"]
