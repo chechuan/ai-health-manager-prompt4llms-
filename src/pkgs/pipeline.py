@@ -934,6 +934,18 @@ class Chat_v2:
         # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
         return self.prompt_meta_data["init_intent"].get(tool, False)
 
+    def __assert_diet_suggest_in_content__(self, content):
+        """判断是否有建议饮食"""
+        model = self.gsr.model_config.get("assert_diet_suggest_in_content", "Qwen-14B-Chat")
+        promt = f"{content}\n\n请理解以上文本，判断文本是否包含饮食建议，如果是输出YES，否则输出NO。"
+        messages = [{"role":"user", "content": promt}]
+        flag = callLLM(model=model, history=messages, temperature=0, top_p=0.8, do_sample=False)
+
+        if "yes" in flag.lower():
+            return True
+        else:
+            return False
+
     def pipeline(self, mid_vars=[], **kwargs):
         """
         ## 多轮交互流程
@@ -1010,7 +1022,8 @@ class Chat_v2:
 
         # XXX 演示临时增加逻辑 2024年01月31日11:28:00
         if intentCode == "auxiliary_diagnosis":
-            if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
+            # if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
+            if self.__assert_diet_suggest_in_content__(content):
                 purchasing_list = self.gsr.expert_model.food_purchasing_list_generate_by_content(content)
                 ret_result["intentCode"] = "create_food_purchasing_list"
                 ret_result["appendData"] = purchasing_list
