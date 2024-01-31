@@ -90,7 +90,7 @@ class CustomChatModel:
             presence_penalty=0,
             frequency_penalty=1.5,
             repetition_penalty=1,
-            stop=["\nObservation"],
+            stop=["Observation"],
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
