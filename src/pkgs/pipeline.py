@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+import copy
 import sys
 
 sys.path.append(".")
@@ -853,12 +854,68 @@ class Chat_v2:
         )
         return chat_history, intentCode
 
+    def complete_temporary(self, mid_vars: List[object], **kwargs):
+        # XXX 演示临时增加逻辑 2024年01月31日12:39:28
+        # XXX 推出这句话同时调用创建日程（2个：体温监测、挂号）
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        # prompt = kwargs.get("prompt")
+        history = kwargs["history"]
+        intentCode = kwargs["intentCode"]
+        content = "请您时刻关注自己的病情变化，如果出现新症状（胸痛、呼吸困难、疲劳等）或者原有症状加重（如咳嗽频率增加、持续发热、症状持续时间超过3天），建议您线下就医。" + \
+        "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置了一个23:55的挂号日程，您看可以吗？"
+
+        url = self.gsr.api_config["ai_backend"] + "/alg-api/schedule/manage"
+        
+        _history = copy.deepcopy(history)
+        _history[-2]['content'] = "一小时后叫我体温检测, 今晚23点55分叫我挂号"
+        reply = self.funcall.scheduleManager.create(
+            history=_history, 
+            intentCode="schedule_manager", 
+            orgCode=kwargs.get("orgCode"),
+            customId=kwargs.get("customId"),
+            mid_vars=kwargs.get("mid_vars", [])
+        )
+        history.append(
+            {
+                "role": "assistant",
+                "content": "I know the answer.",
+                "function_call": {"name": "convComplete", "arguments": content},
+                "intentCode": intentCode,
+            }
+        )
+        return history
+    
+    def complete_temporary_v1(self, mid_vars: List[object], **kwargs):
+        # XXX 演示临时增加逻辑 2024年01月31日12:39:28
+        # XXX 推出这句话同时调用创建日程（2个：体温监测、挂号）
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        # prompt = kwargs.get("prompt")
+        history = kwargs["history"]
+        intentCode = kwargs["intentCode"]
+        content = "我1小时后会提醒您监测体温。"
+
+        history.append(
+            {
+                "role": "assistant",
+                "content": "I know the answer.",
+                "function_call": {"name": "convComplete", "arguments": content},
+                "intentCode": intentCode,
+            }
+        )
+        return history
+
     def interact_first(self, mid_vars, **kwargs):
         """首次交互"""
         intentCode = kwargs.get("intentCode")
         out_history = None
         if self.prompt_meta_data["event"].get(intentCode):
-            if intentCode == "other":
+            # XXX 演示临时增加逻辑 2024年01月31日11:28:00
+            # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"的交集大于5个字
+            if len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
+                out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
+            elif kwargs["history"][-2]["content"].startswith("从你的描述来看") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
+                out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
+            elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
                 out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
@@ -951,7 +1008,7 @@ class Chat_v2:
             dataSource=dataSource,
         )
 
-        # XXX 2024年01月31日11:28:00 演示增加逻辑
+        # XXX 演示临时增加逻辑 2024年01月31日11:28:00
         if intentCode == "auxiliary_diagnosis":
             if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
                 purchasing_list = self.gsr.expert_model.food_purchasing_list_generate_by_content(content)
