@@ -9,11 +9,11 @@ local:
     - call_schedule_create_extract_event_time_pair        # 日程创建 提取事件-时间描述pair
     - call_schedule_create_reply                          # 创建日程的回复
     - call_llm_with_search_engine                         # 与搜索引擎对话
-    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   Qwen-72B-Chat:
     - blood_pressure_trend_analysis                       # 血压心率趋势分析
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
+    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 dev:
@@ -26,11 +26,11 @@ dev:
     - call_schedule_create_extract_event_time_pair        # 日程创建 提取事件-时间描述pair
     - call_schedule_create_reply                          # 创建日程的回复
     - call_llm_with_search_engine                         # 与搜索引擎对话
-    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   Qwen-72B-Chat:
     - blood_pressure_trend_analysis                       # 血压心率趋势分析
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
+    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 test:
@@ -43,11 +43,11 @@ test:
     - call_schedule_create_extract_event_time_pair        # 日程创建 提取事件-时间描述pair
     - call_schedule_create_reply                          # 创建日程的回复
     - call_llm_with_search_engine                         # 与搜索引擎对话
-    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   Qwen-72B-Chat:
     - blood_pressure_trend_analysis                       # 血压心率趋势分析
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
+    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 fat:
@@ -60,10 +60,10 @@ fat:
     - call_schedule_create_extract_event_time_pair        # 日程创建 提取事件-时间描述pair
     - call_schedule_create_reply                          # 创建日程的回复
     - call_llm_with_search_engine                         # 与搜索引擎对话
-    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   Qwen-72B-Chat:
     - blood_pressure_trend_analysis                       # 血压心率趋势分析
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
+    - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策

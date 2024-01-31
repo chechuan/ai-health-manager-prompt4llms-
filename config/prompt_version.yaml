@@ -7,7 +7,7 @@ local:
     schedule_qry_up: 0.1.1
     schedule_manager: 0.1.0
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.0.2
     call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
@@ -24,7 +24,7 @@ dev:
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.0.2
     call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
@@ -41,7 +41,7 @@ test:
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.0.2
     call_schedule_create_reply: 0.1.0
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
@@ -58,7 +58,7 @@ fat:
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.0.2
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0

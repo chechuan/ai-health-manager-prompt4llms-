@@ -83,12 +83,12 @@ class CustomChatModel:
         chat_response = callLLM(
             model=model,
             history=messages,
-            temperature=0.7,
+            temperature=1,
             max_tokens=512,
             top_p=0.8,
             n=1,
             presence_penalty=0,
-            frequency_penalty=0.3,
+            frequency_penalty=1.5,
             stop=["\nObservation"],
             stream=True,
         )
