@@ -27,8 +27,7 @@ from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, get_doc_role, get_intent, make_meta_ret,
-                              parse_latest_plugin_call)
+from src.utils.module import InitAllResource, get_doc_role, get_intent, make_meta_ret, parse_latest_plugin_call
 
 
 class Chat_v2:
@@ -861,19 +860,21 @@ class Chat_v2:
         # prompt = kwargs.get("prompt")
         history = kwargs["history"]
         intentCode = kwargs["intentCode"]
-        content = "请您时刻关注自己的病情变化，如果出现新症状（胸痛、呼吸困难、疲劳等）或者原有症状加重（如咳嗽频率增加、持续发热、症状持续时间超过3天），建议您线下就医。" + \
-        "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置了一个23:55的挂号日程，您看可以吗？"
+        content = (
+            "请您时刻关注自己的病情变化，如果出现新症状（胸痛、呼吸困难、疲劳等）或者原有症状加重（如咳嗽频率增加、持续发热、症状持续时间超过3天），建议您线下就医。"
+            + "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置了一个23:55的挂号日程，您看可以吗？"
+        )
 
         url = self.gsr.api_config["ai_backend"] + "/alg-api/schedule/manage"
-        
+
         _history = copy.deepcopy(history)
-        _history[-2]['content'] = "一小时后叫我体温检测, 今晚23点55分叫我挂号"
+        _history[-2]["content"] = "一小时后叫我体温检测, 今晚23点55分叫我挂号"
         reply = self.funcall.scheduleManager.create(
-            history=_history, 
-            intentCode="schedule_manager", 
+            history=_history,
+            intentCode="schedule_manager",
             orgCode=kwargs.get("orgCode"),
             customId=kwargs.get("customId"),
-            mid_vars=kwargs.get("mid_vars", [])
+            mid_vars=kwargs.get("mid_vars", []),
         )
         history.append(
             {
@@ -884,7 +885,7 @@ class Chat_v2:
             }
         )
         return history
-    
+
     def complete_temporary_v1(self, mid_vars: List[object], **kwargs):
         # XXX 演示临时增加逻辑 2024年01月31日12:39:28
         # XXX 推出这句话同时调用创建日程（2个：体温监测、挂号）
@@ -913,12 +914,18 @@ class Chat_v2:
             # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"的交集大于5个字
             if kwargs["history"] and len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
                 out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
-            elif kwargs["history"] and len(kwargs["history"]) >=2 and kwargs["history"][-2]["content"].startswith("请您时刻关注自己的病情变化，") and set(kwargs["history"][-1]["content"]).intersection(set("好,好的")):
+            elif (
+                kwargs["history"]
+                and len(kwargs["history"]) >= 2
+                and kwargs["history"][-2]["function_call"]
+                and kwargs["history"][-2]["function_call"]["arguments"].startswith("请您时刻关注自己的病情变化，")
+                and set(kwargs["history"][-1]["content"]).intersection(set("好,好的"))
+            ):
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
                 out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
-                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
@@ -938,7 +945,7 @@ class Chat_v2:
         """判断是否有建议饮食"""
         model = self.gsr.model_config.get("assert_diet_suggest_in_content", "Qwen-14B-Chat")
         promt = f"{content}\n\n请理解以上文本，判断文本是否包含饮食建议，如果是输出YES，否则输出NO。"
-        messages = [{"role":"user", "content": promt}]
+        messages = [{"role": "user", "content": promt}]
         flag = callLLM(model=model, history=messages, temperature=0, top_p=0.8, do_sample=False)
 
         if "yes" in flag.lower():
