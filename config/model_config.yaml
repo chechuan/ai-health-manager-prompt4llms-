@@ -14,6 +14,7 @@ local:
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
     - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
+    - assert_diet_suggest_in_content                      # 内容中提供饮食建议
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 dev:
@@ -31,6 +32,7 @@ dev:
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
     - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
+    - assert_diet_suggest_in_content                      # 内容中提供饮食建议
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 test:
@@ -48,6 +50,7 @@ test:
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
     - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
+    - assert_diet_suggest_in_content                      # 内容中提供饮食建议
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策
 fat:
@@ -65,5 +68,6 @@ fat:
     - health_warning_solutions_early                      # 预警解决方案
     - reunion_meals_restaurant_selection                  # 共策决策
     - custom_chat_auxiliary_diagnosis                     # 自定义对话辅助诊断
+    - assert_diet_suggest_in_content                      # 内容中提供饮食建议
   # Yi-34B-Chat:
   #   - reunion_meals_restaurant_selection                  # 共策决策

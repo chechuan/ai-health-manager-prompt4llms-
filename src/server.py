@@ -202,7 +202,7 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+
     @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
     def _rec_diet_create_food_purchasing_list_generate_by_content():
         """食材采购清单管理"""

@@ -89,6 +89,7 @@ class CustomChatModel:
             n=1,
             presence_penalty=0,
             frequency_penalty=1.5,
+            repetition_penalty=1,
             stop=["\nObservation"],
             stream=True,
         )
