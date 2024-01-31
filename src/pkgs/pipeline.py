@@ -917,7 +917,7 @@ class Chat_v2:
             elif (
                 kwargs["history"]
                 and len(kwargs["history"]) >= 2
-                and kwargs["history"][-2]["function_call"]
+                and kwargs["history"][-2].get("function_call")
                 and kwargs["history"][-2]["function_call"]["arguments"].startswith("请您时刻关注自己的病情变化，")
                 and set(kwargs["history"][-1]["content"]).intersection(set("好,好的"))
             ):
