@@ -88,7 +88,8 @@ class CustomChatModel:
         event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis_summary_diet_rec")
         prompt_template_str = event["process"]
         compose_message = ""
-        for role, content in history:
+        for i in history:
+            role, content = i["role"], i["content"]
             if role == "assistant":
                 compose_message += f"你: {content}\n"
             elif role == "user":
@@ -138,7 +139,9 @@ class CustomChatModel:
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         elif "Finished" in doctor:
-            self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            content = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+        else:
+            ...
         mid_vars = update_mid_vars(
             kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
         )
