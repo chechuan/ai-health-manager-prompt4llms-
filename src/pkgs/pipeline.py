@@ -869,7 +869,7 @@ class Chat_v2:
         intentCode = kwargs["intentCode"]
         content = (
             "请您时刻关注自己的病情变化，如果出现新症状（胸痛、呼吸困难、疲劳等）或者原有症状加重（如咳嗽频率增加、持续发热、症状持续时间超过3天），建议您线下就医。"
-            + "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置了一个23:55的挂号日程，您看可以吗？"
+            + "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置一个23:55的挂号日程，您看可以吗？"
         )
 
         url = self.gsr.api_config["ai_backend"] + "/alg-api/schedule/manage"
@@ -941,7 +941,8 @@ class Chat_v2:
                 and len(kwargs["history"]) >= 2
                 and kwargs["history"][-2].get("function_call")
                 and kwargs["history"][-2]["function_call"]["arguments"].startswith("请您时刻关注自己的病情变化，")
-                and set(kwargs["history"][-1]["content"]).intersection(set("好,好的"))
+                and [i for i in ["好的", "行", "可以", "ok", "OK"] if i in kwargs["history"][-1]["content"]]
+                # and set(kwargs["history"][-1]["content"]).intersection(set("好行可以"))
             ):
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":

@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.utils.Logger import logger
-from src.utils.module import InitAllResource, accept_stream_response, update_mid_vars
+from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
 
 
 class CustomChatModel:
@@ -52,7 +52,7 @@ class CustomChatModel:
     def __compose_auxiliary_diagnosis_message__(self, history: List[Dict[str, str]]) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
         event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
-        sys_prompt = event["description"] + event["process"]
+        sys_prompt = event["description"] + "\n" + event["process"]
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -94,7 +94,7 @@ class CustomChatModel:
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
-        logger.info(f"Custom Chat 辅助诊断 LLM Input: {messages}")
+        logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
         thought, doctor = self.__parse_response__(content)
         if thought == "None" or doctor == "None":
