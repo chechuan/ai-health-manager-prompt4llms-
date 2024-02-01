@@ -239,6 +239,7 @@ class Chat:
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
         logger.debug('父意图识别模型输出：' + generate_text)
+        intentIdx = 0
         if 'Intent:' in  generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
@@ -259,6 +260,7 @@ class Chat:
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])
             logger.debug('子意图模型输出：' + generate_text)
+            intentIdx = 0
             if 'Intent:' in  generate_text:
                 intentIdx = generate_text.find("\nIntent: ") + 9
             elif '意图:' in generate_text:
