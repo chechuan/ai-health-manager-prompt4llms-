@@ -933,8 +933,8 @@ class Chat_v2:
         out_history = None
         if self.prompt_meta_data["event"].get(intentCode):
             # XXX 演示临时增加逻辑 2024年01月31日11:28:00
-            # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"的交集大于5个字
-            if kwargs["history"] and len(set(kwargs["history"][-1]["content"]).intersection(set("我需要去医院吗？"))) >= 5:
+            # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"是否一致，如果一致，则进入临时逻辑，否则进入正常流程
+            if kwargs["history"] and "我需要去医院吗" in kwargs["history"][-1]["content"]:
                 out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
             elif (
                 kwargs["history"]
