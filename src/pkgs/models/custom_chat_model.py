@@ -121,7 +121,7 @@ class CustomChatModel:
         chat_response = callLLM(
             model=model,
             history=messages,
-            temperature=0.7,
+            temperature=0,
             max_tokens=512,
             top_p=0.8,
             n=1,
