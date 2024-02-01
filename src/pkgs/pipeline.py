@@ -967,8 +967,10 @@ class Chat_v2:
         """判断是否有建议饮食"""
         model = self.gsr.model_config.get("assert_diet_suggest_in_content", "Qwen-14B-Chat")
         promt = f"{content}\n\n请理解以上文本，判断文本是否包含饮食建议，如果是输出YES，否则输出NO。"
+        logger.debug(f"判断是否有建议饮食 LLM Input: {promt}")
         messages = [{"role": "user", "content": promt}]
         flag = callLLM(model=model, history=messages, temperature=0, top_p=0.8, do_sample=False)
+        logger.debug(f"判断是否有建议饮食 LLM Output: {flag}")
 
         if "yes" in flag.lower():
             return True
