@@ -68,7 +68,7 @@ def place_sidebar():
         _system_prompt_version = st.selectbox(
             "Choose your prompt version",
             system_prompt_version_list,
-            index=3,
+            index=0,
             on_change=initlize_system_prompt,
         )
 
@@ -143,6 +143,7 @@ def initlize_system_prompt():
     """Initialize the system prompt"""
     st.session_state.messages = []
     st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
+
     # logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
 
@@ -172,7 +173,7 @@ if "messages" not in st.session_state:
 
     if st.session_state.system_prompt:
         st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
-        # logger.debug("update system_prompt to messages")
+
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
