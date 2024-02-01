@@ -94,8 +94,8 @@ class CustomChatModel:
                 compose_message += f"你: {content}\n"
             elif role == "user":
                 compose_message += f"用户: {content}\n"
-        prompt = prompt_template_str.replace("MESSAGE", compose_message)
-        messages = [{role: "user", "content": prompt}]
+        prompt = prompt_template_str.replace("{MESSAGE}", compose_message)
+        messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get("custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"),
             history=messages,
@@ -105,9 +105,7 @@ class CustomChatModel:
             n=1,
             presence_penalty=0,
             repetition_penalty=1,
-            stop=["Observation"],
             stream=True,
-            do_sample=False,
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 辅助诊断总结、饮食建议 LLM Output: \n{content}")
@@ -119,26 +117,26 @@ class CustomChatModel:
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
         history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
+        logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         chat_response = callLLM(
             model=model,
             history=messages,
-            temperature=1,
+            temperature=0.7,
             max_tokens=512,
             top_p=0.8,
             n=1,
             presence_penalty=0,
-            frequency_penalty=1.5,
+            frequency_penalty=0.5,
             repetition_penalty=1,
-            stop=["Observation"],
+            stop=["Observation", "问诊Finished!"],
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
-        logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
         thought, doctor = self.__parse_response__(content)
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif "Finished" in doctor:
+        elif not doctor:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
         else:
             ...
