@@ -24,7 +24,8 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import InitAllResource, accept_stream_response, clock, compute_blood_pressure_level, get_intent
+from src.utils.module import (InitAllResource, accept_stream_response, clock,
+                              compute_blood_pressure_level, get_intent)
 
 
 class expertModel:
@@ -425,7 +426,7 @@ class expertModel:
             "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段\n"
             "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]\n"
             "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮、奶类，如医生建议中包含药品不能加入采购清单\n"
-            "4. 蔬菜、肉蛋类、水产类、米面粮油单位为: g，饮品、营养保健、奶类的单位为: 瓶、箱、包、盒、罐, 水果的单位是: 个、g。所有单位不能是斤、杯。"
+            "4. 蔬菜、肉蛋类、水产类、米面粮油单位为: g, 饮品、营养保健、奶类的单位可以是: 瓶、箱、包、盒、罐、桶, 水果的单位可以是: 个、斤、盒\n"
             "5. 只输出生成的采购清单，不包含任何其他内容\n"
             "6. 输出示例:\n```json\n```\n\n"
             "医生建议: \n{{ prompt }}"
