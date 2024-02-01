@@ -5,7 +5,9 @@
 @Author  :   ticoAg
 @Contact :   1627635056@qq.com
 """
-from typing import Any, Dict, List
+from pydoc import doc
+from typing import Any, AnyStr, Dict, List
+from urllib import response
 
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.utils.Logger import logger
@@ -74,8 +76,44 @@ class CustomChatModel:
             messages[idx] = n.dict()
         return messages
 
+    def __chat_auxiliary_diagnosis_summary_diet_rec__(self, history: List[Dict]) -> AnyStr:
+        """辅助诊断总结、饮食建议
+
+        Args:
+            history (List[Dict]): 历史消息列表
+
+        Returns:
+            AnyStr: 辅助诊断总结、饮食建议
+        """
+        event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis_summary_diet_rec")
+        prompt_template_str = event["process"]
+        compose_message = ""
+        for role, content in history:
+            if role == "assistant":
+                compose_message += f"你: {content}\n"
+            elif role == "user":
+                compose_message += f"用户: {content}\n"
+        prompt = prompt_template_str.replace("MESSAGE", compose_message)
+        messages = [{role: "user", "content": prompt}]
+        chat_response = callLLM(
+            model=self.gsr.model_config.get("custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"),
+            history=messages,
+            temperature=0,
+            max_tokens=512,
+            top_p=0.8,
+            n=1,
+            presence_penalty=0,
+            repetition_penalty=1,
+            stop=["Observation"],
+            stream=True,
+            do_sample=False,
+        )
+        content = accept_stream_response(chat_response, verbose=True)
+        logger.info(f"Custom Chat 辅助诊断总结、饮食建议 LLM Output: \n{content}")
+        return content
+
     def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
-        """辅助诊断"""
+        """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
         history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
@@ -99,6 +137,8 @@ class CustomChatModel:
         thought, doctor = self.__parse_response__(content)
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        elif "Finished" in doctor:
+            self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
         mid_vars = update_mid_vars(
             kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
         )
