@@ -384,6 +384,7 @@ class expertModel:
                     {"name": "牛腩", "quantity": 200, "unit": "g"},
                     {"name": "菠菜", "quantity": 500, "unit": "g"},
                 ]
+        purchasing_list = self.__sort_purchasing_list_by_category__(purchasing_list)
         ret = {
             "purchasing_list": purchasing_list,
             "content": reply,
@@ -393,7 +394,17 @@ class expertModel:
         }
         return ret
 
-    def food_sort(self, items: List[Dict]) -> List[Dict]:
+    def __sort_purchasing_list_by_category__(self, items: List[Dict]) -> List[Dict]:
+        """根据分类对采购清单排序
+        
+        Args:
+            items List[Dict]: 采购清单列表, 包含`name`, `classify`, `quantity`, `unit`四个字段    
+
+        Returns:
+            List[Dict]: 排序后的采购清单列表
+        """
+        if items[0].get("classify") is None:    # 没有分类字段, 直接返回
+            return items
         cat_map = {
             "水果": "001",
             "蔬菜": "002",
@@ -404,7 +415,7 @@ class expertModel:
             "茶饮": "007",
             "奶类": "008",
         }
-        items = [i for i in items if cat_map.get(i["classify"])]
+        items = [i for i in items if i.get("classify") and cat_map.get(i["classify"])]
         ret = list(sorted(items, key=lambda x: cat_map.get(x["classify"])))
         return ret
 
@@ -441,12 +452,12 @@ class expertModel:
             top_p=0.8,
             stream=True,
         )
-        content = accept_stream_response(response, verbose=True)
+        content = accept_stream_response(response, verbose=False)
         logger.debug(f"根据用户输入生成采购清单 LLM Output: \n{content}")
         purchasing_list_str = re.findall("```json(.*?)```", content, re.S)[0].strip()
         purchasing_list = json.loads(purchasing_list_str)
 
-        purchasing_list = self.food_sort(purchasing_list)
+        purchasing_list = self.__sort_purchasing_list_by_category__(purchasing_list)
         return purchasing_list
 
     def rec_diet_reunion_meals_restaurant_selection(self, history=[], backend_history: List = [], **kwds) -> str:
