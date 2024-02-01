@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+from nis import cat
 from pathlib import Path
 
 import openai
@@ -23,8 +24,7 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, get_intent)
+from src.utils.module import InitAllResource, accept_stream_response, clock, compute_blood_pressure_level, get_intent
 
 
 class expertModel:
@@ -391,19 +391,20 @@ class expertModel:
             "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error"),
         }
         return ret
-    
+
     def food_sort(self, items: List[Dict]) -> List[Dict]:
         cat_map = {
-            '水果':'001',
-            '蔬菜':'002',
-            '肉蛋类':'003',
-            '水产类':'004',
-            '米面粮油':'005',
-            '营养保健':'006',
-            '茶饮':'007',
-            '奶类':'008'
+            "水果": "001",
+            "蔬菜": "002",
+            "肉蛋类": "003",
+            "水产类": "004",
+            "米面粮油": "005",
+            "营养保健": "006",
+            "茶饮": "007",
+            "奶类": "008",
         }
-        ret = list(sorted(items, key=lambda x: cat_map[x['classify']]))
+        items = [i for i in items if cat_map.get(i["classify"])]
+        ret = list(sorted(items, key=lambda x: cat_map.get(x["classify"])))
         return ret
 
     def food_purchasing_list_generate_by_content(self, query: str, *args, **kwargs) -> Dict:
@@ -417,21 +418,20 @@ class expertModel:
             "classify": {"desc": "物品分类", "type": "str"},
             "quantity": {"desc": "数量", "tpye": "int"},
             "unit": {"desc": "单位", "type": "str"},
-            # "price": {"desc": "价格", "tpye": "int"},
         }
         example_item_js = json.dumps(example_item, ensure_ascii=False)
-        system_prompt = (
+        prompt_template_str = (
             "请你根据医生的建议帮我生成一份采购清单,要求如下:\n"
             "1. 每个推荐物品包含`name`, `classify`, `quantity`, `unit`四个字段\n"
             "2. 最终的格式应该是List[Dict],各字段描述及类型定义:\n[{{ example_item_js }}]\n"
-            "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮、奶类\n"
-            "4. 蔬菜、肉蛋类、水产类、米面粮油单位为: g, 饮品、营养保健、奶类的单位可以是: 瓶、箱、包、盒、罐、桶, 水果的单位可以是: 个、斤、盒, 其他的单位可以是:个、粒"
-            "4. 价格默认以人民币为单位,类型为int,请你根据市场价估计对应物品及单位的实际价格\n"
+            "3. classify字段可选范围包含：肉蛋类、水产类、米面粮油、蔬菜、水果、营养保健、茶饮、奶类，如医生建议中包含药品不能加入采购清单\n"
+            "4. 蔬菜、肉蛋类、水产类、米面粮油单位为: g，饮品、营养保健、奶类的单位为: 瓶、箱、包、盒、罐, 水果的单位是: 个、g。所有单位不能是斤、杯。"
             "5. 只输出生成的采购清单，不包含任何其他内容\n"
-            "6. 输出示例:\n```json\n```"
+            "6. 输出示例:\n```json\n```\n\n"
+            "医生建议: \n{{ prompt }}"
         )
-        system_prompt = system_prompt.replace("{{ example_item_js }}", example_item_js)
-        history = [{"role": "system", "content": system_prompt}, {"role": "user", "content": query}]
+        prompt = prompt_template_str.replace("{{ example_item_js }}", example_item_js).replace("{{ prompt }}", query)
+        history = [{"role": "user", "content": prompt}]
         logger.debug(f"根据用户输入生成采购清单 LLM Input: {json.dumps(history, ensure_ascii=False)}")
         response = callLLM(
             history=history,
@@ -444,7 +444,7 @@ class expertModel:
         logger.debug(f"根据用户输入生成采购清单 LLM Output: \n{content}")
         purchasing_list_str = re.findall("```json(.*?)```", content, re.S)[0].strip()
         purchasing_list = json.loads(purchasing_list_str)
-        
+
         purchasing_list = self.food_sort(purchasing_list)
         return purchasing_list
 
