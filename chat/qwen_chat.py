@@ -239,8 +239,11 @@ class Chat:
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
         logger.debug('父意图识别模型输出：' + generate_text)
-        intentIdx = generate_text.find("\nIntent: ") + 9
-        text = generate_text[intentIdx:].split("\n")[0]
+        if 'Intent:' in  generate_text:
+            intentIdx = generate_text.find("\nIntent: ") + 9
+        elif '意图:' in generate_text:
+            intentIdx = generate_text.find("\n意图:") + 4 
+        text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
         if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图']:
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
