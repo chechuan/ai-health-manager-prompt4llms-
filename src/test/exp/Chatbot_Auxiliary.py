@@ -63,7 +63,7 @@ def place_sidebar():
         client.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
 
         model_list = [i.id for i in client.models.list().data]
-        args.model = st.selectbox("Choose your model", model_list, index=1)
+        args.model = st.selectbox("Choose your model", model_list, index=2)
 
         _system_prompt_version = st.selectbox(
             "Choose your prompt version",
