@@ -656,6 +656,11 @@ def date_after_days(days: int):
     date_after = (now + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
+def date_after(**kwargs):
+    now = datetime.now()
+    date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
+    return date_after
+
 
 def this_sunday():
     """返回下周一0点0分0秒"""

@@ -5,7 +5,6 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import copy
 import sys
 
 sys.path.append(".")
@@ -27,7 +26,15 @@ from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
-from src.utils.module import InitAllResource, get_doc_role, get_intent, make_meta_ret, parse_latest_plugin_call
+from src.utils.module import (
+    InitAllResource,
+    curr_time,
+    date_after,
+    get_doc_role,
+    get_intent,
+    make_meta_ret,
+    parse_latest_plugin_call,
+)
 
 
 class Chat_v2:
@@ -866,16 +873,31 @@ class Chat_v2:
         )
 
         url = self.gsr.api_config["ai_backend"] + "/alg-api/schedule/manage"
-
-        _history = copy.deepcopy(history)
-        _history[-2]["content"] = "一小时后叫我体温检测, 今晚23点55分叫我挂号"
-        reply = self.funcall.scheduleManager.create(
-            history=_history,
-            intentCode="schedule_manager",
-            orgCode=kwargs.get("orgCode"),
-            customId=kwargs.get("customId"),
-            mid_vars=kwargs.get("mid_vars", []),
-        )
+        for task, cronData in [["体温测量", "一个小时后"], ["挂号提醒", "今晚23点55分"]]:
+            if cronData == "一个小时后":
+                cronData = date_after(hours=1)
+            elif cronData == "今晚23点55分":
+                cronData = curr_time()[:10] + " 23:55:00"
+            payload = {
+                "customId": kwargs.get("customId"),
+                "orgCode": kwargs.get("orgCode"),
+                "taskName": task,
+                "cronDate": cronData,
+                "taskType": "reminder",
+                "intentCode": "CREATE",
+            }
+            resp_js = self.session.post(url, json=payload).json()
+            if resp_js["code"] == 200 and resp_js["data"] is True:
+                ...
+            else:
+                logger.error(f"Error to create schedule {task}")
+        # reply = self.funcall.scheduleManager.create(
+        #     history=_history,
+        #     intentCode="schedule_manager",
+        #     orgCode=kwargs.get("orgCode"),
+        #     customId=kwargs.get("customId"),
+        #     mid_vars=kwargs.get("mid_vars", []),
+        # )
         history.append(
             {
                 "role": "assistant",
