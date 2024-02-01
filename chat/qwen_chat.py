@@ -259,7 +259,10 @@ class Chat:
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])
             logger.debug('子意图模型输出：' + generate_text)
-            intentIdx = generate_text.find("\nIntent: ") + 9
+            if 'Intent:' in  generate_text:
+                intentIdx = generate_text.find("\nIntent: ") + 9
+            elif '意图:' in generate_text:
+                intentIdx = generate_text.find("\n意图:") + 4
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
