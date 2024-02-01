@@ -139,7 +139,7 @@ class CustomChatModel:
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         elif "Finished" in doctor:
-            content = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
         else:
             ...
         mid_vars = update_mid_vars(
