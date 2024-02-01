@@ -137,7 +137,7 @@ def prepare_parameters():
         step=0.1,
         help="用来控制模型生成文本时避免重复相同的单词或短语。它是一个值，每次生成的单词出现在文本中时，就会加到该单词的对数概率上。这个值越高（接近1），模型就越不倾向于重复单词或短语；这个值越低（接近0），模型就越允许重复。您可以根据您的需求和期望的输出来调整这个参数的值",
     )
-    args.stop = ["\nObservation", "问诊Finished"]
+    args.stop = ["\nObservation"]
 
 def initlize_system_prompt():
     """Initialize the system prompt"""
