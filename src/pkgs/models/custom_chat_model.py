@@ -177,7 +177,7 @@ class CustomChatModel:
         logger.debug(f'问诊重复判断LLM输入：{judge_p}')
         h = [{'role':'user', 'content':judge_p}]
         chat_response = callLLM(
-            model=model,
+            model="Yi-34B-Chat",
             history=h,
             temperature=0,
             max_tokens=512,
@@ -199,7 +199,7 @@ class CustomChatModel:
         elif '没有回答' in content or '没有被回答' in content:
             return False
         elif '回答过' in content or '回答了'in content:
-            return False
+            return True
         return False
 
 
