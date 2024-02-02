@@ -170,10 +170,10 @@ class CustomChatModel:
         return mid_vars, (thought, doctor)
 
     def judge_repeat(self, history, content, model):
-        his = [f"\n{i['role']}:{i['content']}" for i in history]
-        his = ''.join(his)
-        judgge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
-        logger.debug(f'问诊重复判断LLM输入：{judgge_p}')
+        his = [f"{i['role']}:{i['content']}" for i in history]
+        his = '[' + ''.join(his) + ']'
+        judge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
+        logger.debug(f'问诊重复判断LLM输入：{judge_p}')
         chat_response = callLLM(
             model=model,
             query=judgge_p,
