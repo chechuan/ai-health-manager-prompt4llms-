@@ -54,16 +54,14 @@ class CustomChatModel:
     def __parse_jr_response__(self, text):
 
         try:
-            thought_index = text.find("Thought:")
-            doctor_index = text.find("\nOutput:")
-            if thought_index == -1 or doctor_index == -1:
-                return "None", text
-            thought = text[thought_index + 8 : doctor_index].strip()
-            out = text[doctor_index + 8 :].strip()
-            return thought, out
+            idx = text.find("\nOutput:")
+            if idx == -1:
+                return "None"
+            out = text[idx + 8 :].split('\n')[0].strip()
+            return out
         except Exception as err:
             logger.error(text)
-            return "None", text
+            return "None"
 
     def __compose_auxiliary_diagnosis_message__(self, history: List[Dict[str, str]]) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
@@ -185,7 +183,7 @@ class CustomChatModel:
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
-        thought, output = self.__parse_jr_response__(content)
+        output = self.__parse_jr_response__(content)
         if 'YES' in output:
             return True
         elif 'No' in output:
