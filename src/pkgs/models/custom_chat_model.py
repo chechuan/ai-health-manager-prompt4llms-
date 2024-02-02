@@ -176,7 +176,7 @@ class CustomChatModel:
         logger.debug(f'问诊重复判断LLM输入：{judge_p}')
         chat_response = callLLM(
             model=model,
-            query=judgge_p,
+            query=judge_p,
             temperature=0,
             max_tokens=512,
             top_p=0.8,
