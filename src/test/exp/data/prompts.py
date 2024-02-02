@@ -116,6 +116,26 @@ Doctor: 问诊Finished!
 
 Begins!"""
 
+_auxiliary_diagnosis_judgment_repetition_prompt = """你作为一个有经验的智能问诊助手，需要判断当前的问诊问题能否在问诊对话历史中找到答案，请严格按要求输出判断结果。
+
+- 判断原则为:
+1. 当前的问诊问题能够在对话历史中找到答案，输出: YES
+2. 当前的问诊问题不能在对话历史中找到答案，输出: NO
+
+请遵循以下格式回复:
+Hisitory: 问诊对话历史
+Question: 当前的问诊问题
+Thought: 思考当前的问诊问题能否在问诊对话历史中找到答案
+Output: 判断结果
+
+Begins!
+
+Hisitory: {0}
+Question: {1}
+Thought: 
+"""
+
+
 _auxiliary_diagnosis_system_prompt_dict = {
     # "v1": _auxiliary_diagnosis_system_prompt_v1,
     # "v2": _auxiliary_diagnosis_system_prompt_v2,

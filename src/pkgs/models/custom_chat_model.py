@@ -12,7 +12,7 @@ from urllib import response
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.utils.Logger import logger
 from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
-
+from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
 
 class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
@@ -47,6 +47,20 @@ class CustomChatModel:
             thought = text[thought_index + 8 : doctor_index].strip()
             doctor = text[doctor_index + 8 :].strip()
             return thought, doctor
+        except Exception as err:
+            logger.error(text)
+            return "None", text
+
+    def __parse_jr_response__(self, text):
+
+        try:
+            thought_index = text.find("Thought:")
+            doctor_index = text.find("\nOutput:")
+            if thought_index == -1 or doctor_index == -1:
+                return "None", text
+            thought = text[thought_index + 8 : doctor_index].strip()
+            out = text[doctor_index + 8 :].strip()
+            return thought, out
         except Exception as err:
             logger.error(text)
             return "None", text
@@ -118,9 +132,47 @@ class CustomChatModel:
         history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
+        for _ in range(2):
+            chat_response = callLLM(
+                model=model,
+                history=messages,
+                temperature=0,
+                max_tokens=512,
+                top_p=0.8,
+                n=1,
+                presence_penalty=0,
+                frequency_penalty=0.5,
+                repetition_penalty=1,
+                stop=["Observation", "问诊Finished!"],
+                stream=True,
+            )
+            content = accept_stream_response(chat_response, verbose=True)
+
+            logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
+            thought, doctor = self.__parse_response__(content)
+            is_repeat = self.judge_repeat(history, doctor, model)
+            if is_repeat:
+                continue
+            else:
+                break
+
+        if thought == "None" or doctor == "None":
+            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        elif not doctor:
+            doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+        else:
+            ...
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
+        )
+        return mid_vars, (thought, doctor)
+
+
+    def judge_repeat(self, history, content, model):
+        judgge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(history, content)
         chat_response = callLLM(
             model=model,
-            history=messages,
+            prompt=judgge_p,
             temperature=0,
             max_tokens=512,
             top_p=0.8,
@@ -132,18 +184,15 @@ class CustomChatModel:
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
-        logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-        thought, doctor = self.__parse_response__(content)
-        if thought == "None" or doctor == "None":
-            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor:
-            doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
-        else:
-            ...
-        mid_vars = update_mid_vars(
-            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
-        )
-        return mid_vars, (thought, doctor)
+        logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
+        thought, output = self.__parse_jr_response__(content)
+        if 'YES' in output:
+            return True
+        elif 'No' in output:
+            return False
+        return False
+
+
 
     def chat(self, **kwargs):
         """自定义对话"""
