@@ -55,9 +55,9 @@ class CustomChatModel:
     def __parse_jr_response__(self, text):
 
         try:
-            idx = text.find("\nOutput:")
+            idx = text.find("\nResult:")
             if idx == -1:
-                return "None"
+                return ""
             out = text[idx:].split('\n')[0].strip()
             return out
         except Exception as err:
