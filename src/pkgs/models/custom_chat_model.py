@@ -5,6 +5,7 @@
 @Author  :   ticoAg
 @Contact :   1627635056@qq.com
 """
+import json
 from pydoc import doc
 from typing import Any, AnyStr, Dict, List
 from urllib import response
@@ -167,7 +168,9 @@ class CustomChatModel:
 
 
     def judge_repeat(self, history, content, model):
-        judgge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(history, content)
+        his = json.dumps(history, ensure_ascii=False)
+        judgge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
+        logger.debug(f'问诊重复判断LLM输入：{judgge_p}')
         chat_response = callLLM(
             model=model,
             prompt=judgge_p,
