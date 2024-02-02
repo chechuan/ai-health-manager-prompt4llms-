@@ -131,6 +131,7 @@ class CustomChatModel:
         history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
+        valid = True
         for _ in range(2):
             chat_response = callLLM(
                 model=model,
@@ -151,13 +152,15 @@ class CustomChatModel:
             thought, doctor = self.__parse_response__(content)
             is_repeat = self.judge_repeat(history, doctor, model)
             if is_repeat:
+                valid = False
                 continue
             else:
+                valid = True
                 break
 
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor:
+        elif not doctor or not valid:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
         else:
             ...
@@ -173,7 +176,7 @@ class CustomChatModel:
         logger.debug(f'问诊重复判断LLM输入：{judgge_p}')
         chat_response = callLLM(
             model=model,
-            prompt=judgge_p,
+            query=judgge_p,
             temperature=0,
             max_tokens=512,
             top_p=0.8,
