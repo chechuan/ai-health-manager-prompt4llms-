@@ -53,7 +53,6 @@ class CustomChatModel:
             return "None", text
 
     def __parse_jr_response__(self, text):
-
         try:
             idx = text.find("\nResult:")
             if idx == -1:
@@ -177,7 +176,7 @@ class CustomChatModel:
         logger.debug(f'问诊重复判断LLM输入：{judge_p}')
         h = [{'role':'user', 'content':judge_p}]
         chat_response = callLLM(
-            model="Yi-34B-Chat",
+            model="Qwen-72B-Chat",
             history=h,
             temperature=0,
             max_tokens=512,
