@@ -58,7 +58,7 @@ class CustomChatModel:
             idx = text.find("\nOutput:")
             if idx == -1:
                 return "None"
-            out = text[idx + 8 :].split('\n')[0].strip()
+            out = text[idx:].split('\n')[0].strip()
             return out
         except Exception as err:
             logger.error(text)
