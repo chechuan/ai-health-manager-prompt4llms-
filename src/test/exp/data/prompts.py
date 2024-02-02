@@ -122,7 +122,7 @@ _auxiliary_diagnosis_judgment_repetition_prompt = """你作为一个有经验的
 History: [问诊对话历史]
 Question: 当前的问诊问题
 Thought: 思考当前的问诊问题能否在问诊对话历史中找到答案
-Output: 输出判断结果
+Output: 输出判断结果（YES/NO）
 
 Begins!
 
