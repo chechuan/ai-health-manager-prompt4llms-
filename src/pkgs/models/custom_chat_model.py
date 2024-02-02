@@ -195,7 +195,7 @@ class CustomChatModel:
             return True
         elif 'No' in output:
             return False
-        elif '没有回答' in content or '没有被回答' in content:
+        elif '没有回答' in content or '没有被回答' in content or '未回答' in content or '未被回答' in content:
             return False
         elif '回答过' in content or '回答了'in content:
             return True
