@@ -116,13 +116,13 @@ Doctor: 问诊Finished!
 
 Begins!"""
 
-_auxiliary_diagnosis_judgment_repetition_prompt = """你作为一个有经验的全科医生，需要判断当前的问诊问题能否在问诊对话历史中已经回答过，当前的问诊问题能够在对话历史中找到答案，输出判断结果: YES，否则输出判断结果: NO。
+_auxiliary_diagnosis_judgment_repetition_prompt = """你作为一个有经验的全科医生，需要判断当前的问诊问题是否在问诊对话历史中已经回答过，如果已经回答过当前问题，则输出判断结果: YES；没有回答过，则输出判断结果: NO
 
-必须严格遵循以下格式回复:
+遵循以下格式回复:
 History: [问诊对话历史]
 Question: 当前的问诊问题
-Thought: 思考当前的问诊问题能否在问诊对话历史中找到答案
-Output: 输出判断结果（YES/NO）
+Thought: 思考当前的问诊问题是否在问诊对话历史中已经回答过
+Output: 判断结果（YES/NO）
 
 Begins!
 

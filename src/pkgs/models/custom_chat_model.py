@@ -171,7 +171,7 @@ class CustomChatModel:
 
     def judge_repeat(self, history, content, model):
         his = [f"{i['role']}:{i['content']}" for i in history]
-        his = '[' + ''.join(his) + ']'
+        his = '[' + '  '.join(his) + ']'
         judge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
         logger.debug(f'问诊重复判断LLM输入：{judge_p}')
         h = [{'role':'user', 'content':judge_p}]
