@@ -174,9 +174,10 @@ class CustomChatModel:
         his = '[' + ''.join(his) + ']'
         judge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
         logger.debug(f'问诊重复判断LLM输入：{judge_p}')
+        h = [{'role':'user', 'content':judge_p}]
         chat_response = callLLM(
             model=model,
-            query=judge_p,
+            history=h,
             temperature=0,
             max_tokens=512,
             top_p=0.8,
