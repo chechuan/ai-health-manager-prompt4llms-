@@ -188,7 +188,7 @@ class CustomChatModel:
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
-        logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
+        logger.debug(f"辅助问诊 重复判断 Output: \n{chat_response}")
         output = self.__parse_jr_response__(content)
         if 'YES' in output:
             return True
