@@ -244,6 +244,8 @@ class Chat:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
             intentIdx = generate_text.find("\n意图:") + 4 
+        elif '\nFunction:' in generate_text:
+            intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
         if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图']:
