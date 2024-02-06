@@ -267,6 +267,8 @@ class Chat:
                 intentIdx = generate_text.find("\nIntent: ") + 9
             elif '意图:' in generate_text:
                 intentIdx = generate_text.find("\n意图:") + 4
+            elif '\nFunction:' in generate_text:
+                intentIdx = generate_text.find("\nFunction:") + 10
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
