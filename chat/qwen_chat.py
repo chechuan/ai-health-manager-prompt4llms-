@@ -425,7 +425,7 @@ class Chat:
         # 应对演示临时添加-240208
         import json
         data_demo = json.load(open('data/demo.json', 'r'))
-        data_demo = sorted(data_demo, key=lamda x:len(x['key_words']), reverse=True)
+        data_demo = sorted(data_demo, key=lambda x:len(x['key_words']), reverse=True)
         for i in data_demo:
             key_num = sum([1 for k in i['key_words'] if k in
                 history[-1]['contnet']])
