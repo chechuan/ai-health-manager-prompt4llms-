@@ -431,7 +431,7 @@ class Chat:
                 history[-1]['contnet']])
             if key_num == len(i['key_words']) and key_num > 0:
                 return {'message':i['response'], 'intentCode':'other',
-                        'processCode':'trans_back', 'intentDesc':'日常对话'}
+                        'processCode':i['processCode'], 'intentDesc':'日常对话'}
 
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
