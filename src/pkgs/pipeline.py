@@ -392,7 +392,8 @@ class Chat_v2:
 1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家
 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
 3. 我是你的主人"""
-        process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        # process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        process = ""
         if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
             ext_info = desc + "\n" + process
             messages = [{"role": "system", "content": ext_info}] + messages
