@@ -324,6 +324,9 @@ def get_intent(text):
     elif "辅助诊断" in text:
         code = "auxiliary_diagnosis"
         desc = "辅助诊断"
+    elif "问诊" in text:
+        code = "auxiliary_diagnosis"
+        desc = "辅助诊断",
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"

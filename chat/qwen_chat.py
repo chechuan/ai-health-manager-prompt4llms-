@@ -239,13 +239,16 @@ class Chat:
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
         logger.debug('父意图识别模型输出：' + generate_text)
+        intentIdx = 0
         if 'Intent:' in  generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
             intentIdx = generate_text.find("\n意图:") + 4 
+        elif '\nFunction:' in generate_text:
+            intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图']:
+        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
             sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
@@ -259,10 +262,13 @@ class Chat:
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])
             logger.debug('子意图模型输出：' + generate_text)
+            intentIdx = 0
             if 'Intent:' in  generate_text:
                 intentIdx = generate_text.find("\nIntent: ") + 9
             elif '意图:' in generate_text:
                 intentIdx = generate_text.find("\n意图:") + 4
+            elif '\nFunction:' in generate_text:
+                intentIdx = generate_text.find("\nFunction:") + 10
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
@@ -415,6 +421,18 @@ class Chat:
         mid_vars = kwargs.get('mid_vars', [])
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
+
+        # 应对演示临时添加-240208
+        import json
+        data_demo = json.load(open('data/demo.json', 'r'))
+        data_demo = sorted(data_demo, key=lambda x:len(x['key_words']), reverse=True)
+        for i in data_demo:
+            key_num = sum([1 for k in i['key_words'] if k in
+                history[-1]['contnet']])
+            if key_num == len(i['key_words']) and key_num > 0:
+                return {'message':i['response'], 'intentCode':'other',
+                        'processCode':i['processCode'], 'intentDesc':'日常对话'}
+
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))

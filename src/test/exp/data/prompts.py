@@ -116,6 +116,21 @@ Doctor: 问诊Finished!
 
 Begins!"""
 
+_auxiliary_diagnosis_judgment_repetition_prompt = """你作为一个有经验的全科医生，需要判断当前的问诊问题是否在问诊对话历史中已经回答过，输出判断结果，如果已经回答过当前问题，则输出判断结果: 'Result: YES'；没有回答过，则输出判断结果: 'Result: NO'
+
+遵循以下格式回复:
+History: [问诊对话历史]
+Question: 当前的问诊问题
+Thought: 思考当前的问诊问题是否在问诊对话历史中已经回答过
+Result: 判断结果（YES/NO）
+
+Begins!
+
+History: {0}
+Question: {1}
+Thought: """
+
+
 _auxiliary_diagnosis_system_prompt_dict = {
     # "v1": _auxiliary_diagnosis_system_prompt_v1,
     # "v2": _auxiliary_diagnosis_system_prompt_v2,

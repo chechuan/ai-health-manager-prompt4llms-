@@ -26,15 +26,8 @@ from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    curr_time,
-    date_after,
-    get_doc_role,
-    get_intent,
-    make_meta_ret,
-    parse_latest_plugin_call,
-)
+from src.utils.module import (InitAllResource, curr_time, date_after, get_doc_role, get_intent,
+                              make_meta_ret, parse_latest_plugin_call)
 
 
 class Chat_v2:
@@ -391,15 +384,23 @@ class Chat_v2:
 
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        messages = compose_func_reply(messages)
 
-        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
-        process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        # desc = self.prompt_meta_data["event"][intentCode].get("description", "")
+        # TODO 2024年2月17日13:25:42 修改闲聊提示，无法连接远程数据库 直接写代码里
+        desc = """你是由来康生命研发的智能健康管家, 下面是一些定义:
+1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家
+2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
+3. 我是你的主人"""
+        # process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        process = ""
         if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
             ext_info = desc + "\n" + process
             messages = [{"role": "system", "content": ext_info}] + messages
 
         logger.debug(f"闲聊 LLM Input:\n{messages}")
-        content = callLLM("", messages, temperature=0.7, top_p=0.8)
+        content = callLLM("", messages, temperature=0.7, top_p=0.45)
+        logger.debug(f"闲聊 LLM Output: {content}")
         self.update_mid_vars(
             mid_vars,
             key="闲聊",
@@ -409,6 +410,7 @@ class Chat_v2:
         if kwargs.get("return_his"):
             messages.append(
                 {
+                    "intentCode": "other",
                     "role": "assistant",
                     "content": "I know the answer.",
                     "function_call": {"name": "convComplete", "arguments": content},
