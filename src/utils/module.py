@@ -711,7 +711,6 @@ def accept_stream_response(response, verbose=True):
                 content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
-    print("")
     t_cost = round(time.time() - tst, 2)
     logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
     return content

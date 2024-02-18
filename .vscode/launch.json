@@ -26,7 +26,7 @@
     },
     {
       "name": "Python: run server",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "src/server.py",
       "console": "integratedTerminal",
@@ -35,9 +35,8 @@
         "GEVENT_SUPPORT": "True"
       },
       "args": [
-        "--env",
-        "local",
-        "--use_cache"
+        "--env", "local",
+        // "--use_cache"
       ]
     },
     {
