@@ -5,8 +5,23 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Python: 日程管理测试20240219",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "/home/tico/workspace/ai-health-manager-prompt4llms/src/test/test_schedule_script.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "args": [
+        "--file-path", "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/日程管理测试用例20240219.xlsx",
+        "--url", "http://127.0.0.1:26928",
+        "--sheet-name", "日程删除",
+        "--ai-backend-url", "https://gate-dev.op.laikang.com/aihealthmanager-dev/alg-api/schedule",
+        "--debug", "True"
+      ]
+    },
+    {
       "name": "streamlit",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "module": "streamlit.web.cli",
       "console": "integratedTerminal",
@@ -17,7 +32,7 @@
     },
     {
       "name": "Python: 当前文件",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
@@ -41,7 +56,7 @@
     },
     {
       "name": "Python: role_play",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "src/pkgs/models/role_play_model.py",
       "console": "integratedTerminal",
@@ -50,7 +65,7 @@
     },
     {
       "name": "Python: Prompt Factory",
-      "type": "python",
+      "type": "debugpy",
       "request": "launch",
       "program": "${file}",
       "console": "integratedTerminal",
