@@ -115,7 +115,18 @@ class InitAllResource:
         self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[self.args.env]
         model_config = load_yaml(Path("config", "model_config.yaml"))[self.args.env]
         self.model_config = {event: model for model, event_list in model_config.items() for event in event_list}
+        intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
 
+        self.intent_aigcfunc_map = {}
+        _tmp_dict = {}
+        for aigcFuncCode, detail in intent_aigcfunc_map.items():
+            _intent_code_list = [i.strip() for i in detail["intent_code_list"].split(",")]
+            for intentCode in _intent_code_list:
+                if _tmp_dict.get(intentCode):
+                    logger.warning(f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}")
+                else:
+                    _tmp_dict[intentCode] = aigcFuncCode
+                self.intent_aigcfunc_map[intentCode] = aigcFuncCode
         # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
         self.__info_config__(model_config)
 
@@ -223,11 +234,11 @@ class InitAllResource:
         else:
             prompt_meta_data = pickle.load(open(data_cache_file, "rb"))
             logger.debug(f"load prompt_meta_data from {data_cache_file}")
-   
-        for name, func in prompt_meta_data['tool'].items():
-            func['params'] = json.loads(func['params']) if func['params'] else func['params']
-        intent_desc_map = {code: item['intent_desc'] for code, item in prompt_meta_data['event'].items()}
-        default_desc_map = loadJS(Path("data","intent_desc_map.json"))
+
+        for name, func in prompt_meta_data["tool"].items():
+            func["params"] = json.loads(func["params"]) if func["params"] else func["params"]
+        intent_desc_map = {code: item["intent_desc"] for code, item in prompt_meta_data["event"].items()}
+        default_desc_map = loadJS(Path("data", "intent_desc_map.json"))
         # 以intent_desc_map.json定义的intent_desc优先
         self.intent_desc_map = {**intent_desc_map, **default_desc_map}
         return prompt_meta_data
@@ -326,7 +337,7 @@ def get_intent(text):
         desc = "辅助诊断"
     elif "问诊" in text:
         code = "auxiliary_diagnosis"
-        desc = "辅助诊断",
+        desc = ("辅助诊断",)
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"
@@ -658,6 +669,7 @@ def date_after_days(days: int):
     now = datetime.now()
     date_after = (now + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
+
 
 def date_after(**kwargs):
     now = datetime.now()

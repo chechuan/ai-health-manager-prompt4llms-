@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from crypt import methods
 from gevent import monkey, pywsgi
 
 monkey.patch_all()
@@ -291,6 +292,22 @@ def create_app():
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/aigc/functions", methods=["post"])
+    def _aigc_functions():
+        """aigc函数"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.call_function(**param)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
         finally:
             return ret
 

@@ -9,14 +9,13 @@ import json
 import re
 import sys
 import time
-from nis import cat
 from pathlib import Path
 
 import openai
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from langchain.prompts.prompt import PromptTemplate
 
@@ -34,8 +33,14 @@ class expertModel:
     def __init__(self, gsr) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
+        self.regist_aigc_functions()
 
-    def check_number(x: str or int or float, key: str):
+    def check_number(x: Union[str, int, float], key: str): # type: ignore
+        """检查数字
+        - Args
+
+            x 输入值 (str, int, float)
+        """
         try:
             x = float(x)
             return float(x)
@@ -43,7 +48,7 @@ class expertModel:
             raise f"{key} must can be trans to number."
 
     @staticmethod
-    def tool_compute_bmi(weight: float or int, height: float or int) -> float():
+    def tool_compute_bmi(weight: Union[int, float], height: Union[int, float]) -> float: # type: ignore
         """计算bmi
 
         - Args
@@ -60,7 +65,7 @@ class expertModel:
         return bmi
 
     @staticmethod
-    def tool_compute_max_heart_rate(age: float or int) -> int:
+    def tool_compute_max_heart_rate(age: Union[int, float]) -> int:
         """计算最大心率
 
         max_heart_rate = 220-年龄（岁）
@@ -73,7 +78,7 @@ class expertModel:
         return int(220 - age)
 
     @staticmethod
-    def tool_compute_exercise_target_heart_rate_for_old(age: float or int) -> int:
+    def tool_compute_exercise_target_heart_rate_for_old(age: Union[int, float]) -> int:
         """计算最大心率
 
         max_heart_rate = 170-年龄（岁）
@@ -86,7 +91,7 @@ class expertModel:
         return int(170 - age)
 
     @staticmethod
-    def tool_assert_body_status(age: float or int, bmi: float or int) -> str:
+    def tool_assert_body_status(age: Union[int, float], bmi: Union[int, float]) -> str:
         """判断体重状态
 
         - Rules
@@ -569,6 +574,68 @@ class expertModel:
             logger.error(f"Model {model} generate error: {err}")
             yield make_ret_item(repr(err), True, [])
 
+    def regist_aigc_functions(self):
+        self.funcmap = {}
+        self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
+
+    def __single_choice__(self, prompt: str, options: List[str], **kwargs):
+        """单项选择功能
+
+        - Args:
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            str: 答案
+        """
+        model = self.gsr.model_config.get("aigc_functions_single_choice", "Qwen-14B-Chat")
+        prompt_template_str = self.gsr.prompt_meta_data["event"]["aigc_functions_single_choice"]["description"]
+        prompt_template = PromptTemplate.from_template(prompt_template_str)
+        query = prompt_template.format(options=options, prompt=prompt)
+        messages = [{"role": "user", "content": query}]
+        logger.debug(f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}")
+        response = callLLM(history=messages, model=model, temperature=0.7, top_p=0.5, stream=True)
+        content = accept_stream_response(response, verbose=False)
+        logger.debug(f"Single choice LLM Output: {content}")
+        if content == "选项与要求不符":
+            return content
+        else:
+            if content not in options:
+                logger.error(f"Single choice error: {content} not in options")
+                return "选项与要求不符"
+        return content
+
+    def call_function(self, **kwargs):
+        """调用函数
+
+        - Args Example:
+            ```json
+            {
+                "intentCode": "",
+                "prompt": "",
+                "options": []
+            }
+            ```
+        - Args:
+            intentCode (str): 意图代码
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            str: 答案
+        """
+        intent_code = kwargs.get("intentCode")
+        # TODO intentCode -> funcCode
+        func_code = self.gsr.intent_aigcfunc_map.get(intent_code) if self.gsr.intent_aigcfunc_map.get(intent_code) else intent_code
+        if not self.funcmap.get(func_code):
+            logger.error(f"intentCode {func_code} not found in funcmap")
+            raise RuntimeError(f"Code not supported.")
+        try:
+            content = self.funcmap.get(func_code)(**kwargs)
+        except Exception as e:
+            logger.error(f"call function {func_code} error: {e}")
+            raise RuntimeError(f"Call function error.")
+        return content
 
 if __name__ == "__main__":
     expert_model = expertModel(InitAllResource())
@@ -583,5 +650,5 @@ if __name__ == "__main__":
     #     yield_item = next(generator)
     #     print(yield_item)
 
-    param = testParam.param_health_warning_solutions_early
-    expert_model.health_warning_solutions_early(param)
+    param = testParam.param_dev_single_choice
+    expert_model.call_function(**param)
