@@ -36,7 +36,7 @@ class expertModel:
         self.gsr.expert_model = self
         self.regist_aigc_functions()
 
-    def check_number(x: Union[str, int, float], key: str): # type: ignore
+    def check_number(x: Union[str, int, float], key: str):  # type: ignore
         """检查数字
         - Args
 
@@ -49,7 +49,7 @@ class expertModel:
             raise f"{key} must can be trans to number."
 
     @staticmethod
-    def tool_compute_bmi(weight: Union[int, float], height: Union[int, float]) -> float: # type: ignore
+    def tool_compute_bmi(weight: Union[int, float], height: Union[int, float]) -> float:  # type: ignore
         """计算bmi
 
         - Args
@@ -125,6 +125,71 @@ class expertModel:
             status = "体重正常"
         return status
 
+    @staticmethod
+    def tool_rules_blood_pressure_level(ihm_health_sbp: int, ihm_health_dbp: int, **kwargs) -> dict:
+        """计算血压等级
+
+        - Args
+
+            ihm_health_sbp(int, float) 收缩压
+
+            ihm_health_dbp(int, float) 舒张压
+
+        - Rules
+
+            有既往史: 用户既往史有高血压则进入此流程管理
+
+            1.如血压达到高血压3级(血压>180/110) 则呼叫救护车。
+
+            2.如血压达到高血压2级(收缩压160-179，舒张压100-109)
+                1.预问诊(大模型) (步骤1结果不影响步骤2/3)
+                2.是否通知家人 (步骤2)
+                3.确认是否通知家庭医师 (步骤3)
+
+            3.如血压达到高血压1级(收缩压140-159，90-99)
+                1.预问诊
+                2.看血压是否波动，超出日常值30%，则使用“智能呼叫工具”通知家庭医师。日常值30%以内，则嘱患者密切监测，按时服药，注意休息。(调预警模型接口，准备历史血压数据)
+
+            4.如血压达到正常高值《收缩压120-139,舒张压80-89)，
+                1.预问诊
+                2.则嘱患者密切监测，按时服药，注意休息。
+
+            预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
+        """
+        ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
+        ihm_health_dbp_list = [88, 66, 78, 59, 100, 90, 60]
+
+        # 计算血压波动率,和血压列表的均值对比
+        def compute_blood_pressure_trend(x: int, data_list: List) -> float:
+            mean_value = sum(data_list) / len(data_list)
+            rate = (x - mean_value) / mean_value
+            if rate > 0.3:
+                return 1
+            else:
+                return 0
+
+        if ihm_health_sbp > 180 or ihm_health_dbp > 110:
+            level = 3
+            rules = ["呼叫救护车"]
+        elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
+            level = 2
+            rules = ["预问诊", "是否通知家人", "是否通知家庭医师"]
+        elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
+            level = 1
+            trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
+            trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
+            if trend_sbp or trend_dbp:
+                rules = ["预问诊", "智能呼叫工具"]
+            else:
+                rules = ["预问诊", "嘱托"]
+        elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
+            level = 0
+            rules = ["预问诊", "嘱托"]
+        else:
+            level = -1
+            rules = []
+        return {"level": level, "rules": rules}
+
     @clock
     def rec_diet_eval(self, param):
         """
@@ -143,7 +208,10 @@ class expertModel:
         }
         ```
         """
-        sys_prompt = "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、" f"热量/蛋白/碳水/脂肪四大营养素摄入的角度,简洁的点评一下{param['meal']}是否健康"
+        sys_prompt = (
+            "请你扮演一位经验丰富的营养师,基于提供的基础信息,从荤素搭配、"
+            f"热量/蛋白/碳水/脂肪四大营养素摄入的角度,简洁的点评一下{param['meal']}是否健康"
+        )
         prompt = f"本餐建议热量: {param['recommend_heat_target']}\n" "实际吃的:\n"
 
         recipes_prompt_list = []
@@ -292,7 +360,9 @@ class expertModel:
         4. 收缩压和舒张压近五天连续 格式一
         """
         model = self.gsr.model_config["health_warning_solutions_early"]
-        is_continuous = self.__health_warning_solutions_early_continuous_check__(param["indicatorData"])  # 通过数据校验判断处理逻辑
+        is_continuous = self.__health_warning_solutions_early_continuous_check__(
+            param["indicatorData"]
+        )  # 通过数据校验判断处理逻辑
 
         time_range = {i["date"][:10] for i in param["indicatorData"][0]["data"]}  # 当前的时间范围
         bpl = []
@@ -402,14 +472,14 @@ class expertModel:
 
     def __sort_purchasing_list_by_category__(self, items: List[Dict]) -> List[Dict]:
         """根据分类对采购清单排序
-        
+
         Args:
-            items List[Dict]: 采购清单列表, 包含`name`, `classify`, `quantity`, `unit`四个字段    
+            items List[Dict]: 采购清单列表, 包含`name`, `classify`, `quantity`, `unit`四个字段
 
         Returns:
             List[Dict]: 排序后的采购清单列表
         """
-        if items[0].get("classify") is None:    # 没有分类字段, 直接返回
+        if items[0].get("classify") is None:  # 没有分类字段, 直接返回
             return items
         cat_map = {
             "水果": "001",
@@ -606,10 +676,10 @@ class expertModel:
                 logger.error(f"Single choice error: {content} not in options")
                 return "选项与要求不符"
         return content
-    
+
     def __report_interpretation__(self, **kwargs) -> str:
         """报告解读功能
-        
+
         - Args:
             file_path (str): 报告文件路径
 
@@ -624,11 +694,7 @@ class expertModel:
             ocr_result = [line[1] for line in result]
             docs += "\n".join(ocr_result)
 
-        prompt_template_str = (
-            "You are a helpful assistant.\n"
-            "# 任务描述\n"
-            "请你为我解读报告中的异常信息"
-        )
+        prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
         # prompt_template = PromptTemplate.from_template(prompt_template_str)
         # query = prompt_template.format(prompt=docs)
         messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
@@ -659,7 +725,11 @@ class expertModel:
         """
         intent_code = kwargs.get("intentCode")
         # TODO intentCode -> funcCode
-        func_code = self.gsr.intent_aigcfunc_map.get(intent_code) if self.gsr.intent_aigcfunc_map.get(intent_code) else intent_code
+        func_code = (
+            self.gsr.intent_aigcfunc_map.get(intent_code)
+            if self.gsr.intent_aigcfunc_map.get(intent_code)
+            else intent_code
+        )
         if not self.funcmap.get(func_code):
             logger.error(f"intentCode {func_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
@@ -670,6 +740,7 @@ class expertModel:
 
             raise RuntimeError(f"Call function error.")
         return content
+
 
 if __name__ == "__main__":
     expert_model = expertModel(InitAllResource())
@@ -685,5 +756,7 @@ if __name__ == "__main__":
     #     print(yield_item)
 
     # param = testParam.param_dev_single_choice
-    param = testParam.param_dev_report_interpretation
-    expert_model.call_function(**param)
+    # param = testParam.param_dev_report_interpretation
+    # expert_model.call_function(**param)
+    param = testParam.param_dev_tool_compute_blood_pressure
+    expert_model.tool_compute_blood_pressure(**param)

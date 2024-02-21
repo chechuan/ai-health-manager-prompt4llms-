@@ -395,5 +395,5 @@ class testParam:
     #     ]
     # }
     param_dev_report_interpretation = {"intentCode": "report_interpretation", "file_path": "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/tmp/report_demo.png"}
-
+    param_dev_tool_compute_blood_pressure = {"ihm_health_sbp": 161, "ihm_health_dbp": 99, "ihm_medical_chief": []}
 
