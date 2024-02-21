@@ -154,6 +154,7 @@ def create_app():
                 userInfo=param.get("promptParam", ""),
                 intentPrompt=param.get("intentPrompt", ""),
                 subIntentPrompt=param.get("subIntentPrmopt", ""),
+                scene_code=param.get('scene_code', 'default')
             )
             result = make_result(items=item)
         except AssertionError as err:
