@@ -170,7 +170,7 @@ class Chat:
             return '医疗健康意图'
         elif '饮食' in text:
             return '饮食营养意图'
-        elif '运动' in text:
+        elif '运动咨询' in text:
             return '运动咨询意图'
         elif '日程' in text:
             return '日程管理意图'
