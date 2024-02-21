@@ -234,7 +234,7 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            if kwargs.get('intentPrompt', 'default') == 'exhibition_hall_exercise':
+            if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
                 scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
             else:
