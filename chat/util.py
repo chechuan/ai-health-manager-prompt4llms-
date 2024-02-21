@@ -167,3 +167,9 @@ def norm_userInfo_msg(intentCode, content):
     #    return get_chest_pain(content)
     else:
         return content
+    
+
+def get_scene_intent(prompt_tool_data, scene_code):
+    res = [prompt_tool_data[i]['description'] for i in prompt_tool_data.keys() if scene_code in prompt_tool_data[i]['scene_code'].split(',')]
+    return '\n'.join(res)
+
