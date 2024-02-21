@@ -13,8 +13,7 @@ sys.path.append('.')
 from langchain.prompts import PromptTemplate
 
 from chat.constant import *
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
-from data.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
+from chat.util import *
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import callLLM
@@ -234,7 +233,11 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
+            if kwargs.get('intentPrompt', 'default') == 'exhibition_hall_exercise':
+                scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
+                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+            else:
+                prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
