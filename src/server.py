@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 from crypt import methods
+from fileinput import filename
 from gevent import monkey, pywsgi
 
 monkey.patch_all()
@@ -301,6 +302,29 @@ def create_app():
         try:
             param = accept_param_purge()
             ret = expert_model.call_function(**param)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+    
+    @app.route("/aigc/functions/report_interpretation", methods=["post"])
+    def _aigc_functions_report_interpretation():
+        """aigc函数-报告解读"""
+        try:
+            # param = accept_param_purge()
+            upload_file = request.files.get("file")
+            filename = upload_file.filename
+            tmp_path = Path(f".cache/tmp")
+            if not tmp_path.exists():
+                tmp_path.mkdir(parents=True)
+            file_path = tmp_path.joinpath(filename)
+            upload_file.save(file_path)
+            ret = expert_model.call_function(intentCode="report_interpretation", file_path=file_path)
             ret = make_result(items=ret)
         except RuntimeError as err:
             logger.error(err)

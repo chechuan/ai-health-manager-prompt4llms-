@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Union
 
 from langchain.prompts.prompt import PromptTemplate
+from rapidocr_onnxruntime import RapidOCR
 
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
@@ -577,6 +578,7 @@ class expertModel:
     def regist_aigc_functions(self):
         self.funcmap = {}
         self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
+        self.funcmap["report_interpretation"] = self.__report_interpretation__
 
     def __single_choice__(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
@@ -603,6 +605,37 @@ class expertModel:
             if content not in options:
                 logger.error(f"Single choice error: {content} not in options")
                 return "选项与要求不符"
+        return content
+    
+    def __report_interpretation__(self, **kwargs) -> str:
+        """报告解读功能
+        
+        - Args:
+            file_path (str): 报告文件路径
+
+        - Returns:
+            str: 报告解读内容
+        """
+        file_path = kwargs.get("file_path")
+        ocr = RapidOCR()
+        result, _ = ocr(file_path)
+        docs = ""
+        if result:
+            ocr_result = [line[1] for line in result]
+            docs += "\n".join(ocr_result)
+
+        prompt_template_str = (
+            "You are a helpful assistant.\n"
+            "# 任务描述\n"
+            "请你为我解读报告中的异常信息"
+        )
+        # prompt_template = PromptTemplate.from_template(prompt_template_str)
+        # query = prompt_template.format(prompt=docs)
+        messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
+        logger.debug(f"Report interpretation LLM Input: {messages}")
+        response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
+        content = accept_stream_response(response, verbose=True)
+        logger.debug(f"Report interpretation LLM Output: {content}")
         return content
 
     def call_function(self, **kwargs):
@@ -633,7 +666,8 @@ class expertModel:
         try:
             content = self.funcmap.get(func_code)(**kwargs)
         except Exception as e:
-            logger.error(f"call function {func_code} error: {e}")
+            logger.exception(f"call function {func_code} error: {e}")
+
             raise RuntimeError(f"Call function error.")
         return content
 
@@ -650,5 +684,6 @@ if __name__ == "__main__":
     #     yield_item = next(generator)
     #     print(yield_item)
 
-    param = testParam.param_dev_single_choice
+    # param = testParam.param_dev_single_choice
+    param = testParam.param_dev_report_interpretation
     expert_model.call_function(**param)
