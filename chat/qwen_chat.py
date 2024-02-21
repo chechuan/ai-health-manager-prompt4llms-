@@ -170,7 +170,7 @@ class Chat:
             return '医疗健康意图'
         elif '饮食' in text:
             return '饮食营养意图'
-        elif '运动' in text:
+        elif '运动咨询' in text:
             return '运动咨询意图'
         elif '日程' in text:
             return '日程管理意图'
@@ -234,7 +234,7 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            if kwargs.get('intentPrompt', 'default') == 'exhibition_hall_exercise':
+            if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
                 scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
                 prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
             else:
