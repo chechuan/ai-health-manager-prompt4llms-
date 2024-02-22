@@ -7,6 +7,7 @@
 """
 from crypt import methods
 from fileinput import filename
+
 from gevent import monkey, pywsgi
 
 monkey.patch_all()
@@ -25,14 +26,8 @@ from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import RolePlayRequest
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    NpEncoder,
-    curr_time,
-    decorate_text_stream,
-    dumpJS,
-    format_sse_chat_complete,
-)
+from src.utils.module import (InitAllResource, NpEncoder, curr_time, decorate_text_stream, dumpJS,
+                              format_sse_chat_complete)
 
 
 def accept_param():
@@ -333,6 +328,19 @@ def create_app():
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+
+    @app.route("/rules/blood_pressure_level", methods=["post"])
+    def _rules_blood_pressure_level():
+        """计算血压等级及处理规则"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.tool_rules_blood_pressure_level(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
 
