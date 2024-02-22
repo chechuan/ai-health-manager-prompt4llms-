@@ -25,7 +25,7 @@ from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, get_intent)
+                              compute_blood_pressure_level, dumpJS, get_intent)
 
 
 class expertModel:
@@ -692,17 +692,18 @@ class expertModel:
         docs = ""
         if result:
             ocr_result = [line[1] for line in result]
+            logger.debug(f"Report interpretation OCR result: {dumpJS(ocr_result)}")
             docs += "\n".join(ocr_result)
 
         prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
         # prompt_template = PromptTemplate.from_template(prompt_template_str)
         # query = prompt_template.format(prompt=docs)
         messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
-        logger.debug(f"Report interpretation LLM Input: {messages}")
+        logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
         response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
         content = accept_stream_response(response, verbose=True)
         logger.debug(f"Report interpretation LLM Output: {content}")
-        return content
+        return {"ocr_result": ocr_result, "report_interpretation": content}
 
     def call_function(self, **kwargs):
         """调用函数
