@@ -9,9 +9,11 @@ import json
 import re
 import sys
 import time
+from os.path import basename
 from pathlib import Path
 
 import openai
+from requests import Session
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 from datetime import datetime, timedelta
@@ -30,7 +32,9 @@ from src.utils.module import (InitAllResource, accept_stream_response, clock,
 
 class expertModel:
     indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率": "XYZBXY001005"}
-
+    session = Session()
+    ocr = RapidOCR()
+    
     def __init__(self, gsr) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
@@ -648,7 +652,7 @@ class expertModel:
     def regist_aigc_functions(self):
         self.funcmap = {}
         self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
-        self.funcmap["report_interpretation"] = self.__report_interpretation__
+        self.funcmap["aigc_functions_report_interpretation"] = self.__report_interpretation__
 
     def __single_choice__(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
@@ -686,9 +690,21 @@ class expertModel:
         - Returns:
             str: 报告解读内容
         """
-        file_path = kwargs.get("file_path")
-        ocr = RapidOCR()
-        result, _ = ocr(file_path)
+        tmp_path = Path(f".cache/tmp")
+        if not tmp_path.exists():
+            tmp_path.mkdir(parents=True)
+        image_url = kwargs.get("url")
+        if image_url:
+            r = self.session.get(image_url)
+            file_path = tmp_path.joinpath(basename(image_url))
+            with open(file_path, mode="wb") as f:
+                f.write(r.content)
+        elif kwargs.get("file_path"):
+            file_path = kwargs.get("file_path")
+        else:
+            logger.error(f"Report interpretation error: file_path or url not found")
+            return {"ocr_result": [], "report_interpretation": "请输入信息源"}
+        result, _ = self.ocr(file_path)
         docs = ""
         if result:
             ocr_result = [line[1] for line in result]
