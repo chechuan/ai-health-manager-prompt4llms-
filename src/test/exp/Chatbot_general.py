@@ -170,13 +170,9 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 if prompt := st.chat_input("Your message"):
-    if len(st.session_state.messages) == 1 and st.session_state.messages[0]["role"] == "system":
-        prompt = f"Question: {prompt}"
-    else:
-        prompt = f"Observation: {prompt}"
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
-        st.markdown(f"{prompt}")
+        st.markdown(prompt)
 
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
