@@ -694,6 +694,9 @@ class expertModel:
             ocr_result = [line[1] for line in result]
             logger.debug(f"Report interpretation OCR result: {dumpJS(ocr_result)}")
             docs += "\n".join(ocr_result)
+        else:
+            logger.error(f"Report interpretation OCR result is empty")
+            return {"ocr_result": [], "report_interpretation": "未识别出报告内容，请重新尝试"}
 
         prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
         # prompt_template = PromptTemplate.from_template(prompt_template_str)
@@ -738,7 +741,6 @@ class expertModel:
             content = self.funcmap.get(func_code)(**kwargs)
         except Exception as e:
             logger.exception(f"call function {func_code} error: {e}")
-
             raise RuntimeError(f"Call function error.")
         return content
 
