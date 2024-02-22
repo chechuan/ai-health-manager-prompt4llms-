@@ -20,7 +20,7 @@ local:
     查询日程: 0.1.0
 dev:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
@@ -39,7 +39,7 @@ dev:
     查询日程: 0.1.0
 test:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
@@ -47,17 +47,18 @@ test:
     nutri_knowledge_rec: 0.1.0
     auxiliary_diagnosis: 1.1.0
     auxiliary_diagnosis_summary_diet_rec: 1.0.0
-    call_schedule_create_reply: 0.1.0
+    call_schedule_create_reply: 0.1.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
 fat:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
@@ -68,6 +69,7 @@ fat:
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
   character:
   tool:
     创建日程: 0.2.0

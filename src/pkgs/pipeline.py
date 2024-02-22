@@ -386,12 +386,12 @@ class Chat_v2:
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
         messages = compose_func_reply(messages)
 
-        # desc = self.prompt_meta_data["event"][intentCode].get("description", "")
+        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
         # TODO 2024年2月17日13:25:42 修改闲聊提示，无法连接远程数据库 直接写代码里
-        desc = """你是由来康生命研发的智能健康管家, 下面是一些定义:
-1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家
-2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
-3. 我是你的主人"""
+#         desc = """你是由来康生命研发的智能健康管家, 下面是一些定义:
+# 1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家
+# 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
+# 3. 我是你的主人"""
         # process = self.prompt_meta_data["event"][intentCode].get("process", "")
         process = ""
         if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
