@@ -181,9 +181,11 @@ class InitAllResource:
             prompt_character = mysql_conn.query("select * from ai_prompt_character")
             prompt_event = mysql_conn.query("select * from ai_prompt_event")
             prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+            prompt_intent = mysql_conn.query("select * from ai_prompt_intent")
             prompt_character = filter_format(prompt_character, splited=True)
             prompt_event = filter_format(prompt_event)
             prompt_tool = filter_format(prompt_tool)
+            prompt_intent = filter_format(prompt_intent)
 
             # 优先使用指定的version 否则使用latest
             if self.args.special_prompt_version:
@@ -195,6 +197,8 @@ class InitAllResource:
                             prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
                         elif key == "tool":
                             prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool}
+                        elif key == "intent":
+                            prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
                     else:
                         if key == "character":
                             for i in prompt_character:
@@ -217,11 +221,19 @@ class InitAllResource:
                                 prompt_meta_data[key][i["name"]] = search_target_version_item(
                                     prompt_tool, "name", i["name"], v
                                 )
+                        elif key == "intent":
+                            for i in prompt_intent:
+                                if prompt_meta_data[key].get(i["name"]):
+                                    continue
+                                prompt_meta_data[key][i["name"]] = search_target_version_item(
+                                    prompt_intent, "name", i["name"], v
+                                )
             else:
                 prompt_meta_data["character"] = {i["name"]: i for i in prompt_character if i["type"] == "event"}
                 prompt_meta_data["role_play"] = {i["name"]: i for i in prompt_character if i["type"] == "role_play"}
                 prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
                 prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool if i["in_used"] == 1}
+                prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
             prompt_meta_data["init_intent"] = {i["code"]: True for i in prompt_tool if i["init_intent"] == 1}
             prompt_meta_data["rollout_tool"] = {i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"}
             prompt_meta_data["rollout_tool_after_complete"] = {
