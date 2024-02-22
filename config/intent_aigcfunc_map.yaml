@@ -1,3 +1,6 @@
 aigc_functions_single_choice:
   desc: 单项选择
   intent_code_list: switch_exercise
+aigc_functions_report_interpretation:
+  desc: 报告解读
+  intent_code_list: report_interpretation
