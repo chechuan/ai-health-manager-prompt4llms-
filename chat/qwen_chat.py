@@ -161,19 +161,19 @@ class Chat:
     
     def get_parent_intent_name(self, text):
         if '五师' in text:
-            return '呼叫五师意图'
+            return '呼叫五师'
         elif '音频' in text:
-            return '音频播放意图'
+            return '音频播放'
         elif '生活' in text:
-            return '生活工具查询意图'
+            return '生活工具查询'
         elif '医疗' in text:
-            return '医疗健康意图'
+            return '医疗健康'
         elif '饮食' in text:
-            return '饮食营养意图'
+            return '饮食营养'
         elif '运动咨询' in text:
-            return '运动咨询意图'
+            return '运动咨询'
         elif '日程' in text:
-            return '日程管理意图'
+            return '日程管理'
         else:
             return '其它'
 
@@ -234,11 +234,14 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
-                scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
-                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
-            else:
-                prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
+            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'))
+            prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+
+            # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
+            #     scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
+            #     prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+            # else:
+            #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
@@ -252,16 +255,18 @@ class Chat:
             intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
-            sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
+            # sub_intent_prompt = self.prompt_meta_data['intent'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
                 query = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
                 h_p = '无'
             if kwargs.get('subIntentPrompt', ''):
-                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
+                prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
             else:
-                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
+                scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'), parant_intent)
+                prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+                # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])

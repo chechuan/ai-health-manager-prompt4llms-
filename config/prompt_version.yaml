@@ -18,6 +18,7 @@ local:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 dev:
   event:
     other: 1.0.3
@@ -37,6 +38,7 @@ dev:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 test:
   event:
     other: 1.0.3
@@ -55,6 +57,7 @@ test:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 fat:
   event:
     other: 1.0.3
@@ -72,3 +75,4 @@ fat:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
