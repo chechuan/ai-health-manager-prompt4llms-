@@ -302,7 +302,7 @@ Begins!"""
             logger.error(text)
             return "None", text
 
-    def __chat_report_interpretation__(self, **kwargs):
+    def __chat_report_interpretation__(self, tool: str = "AskHuman", **kwargs):
         """报告解读"""
         model = self.gsr.model_config["report_interpretation_chat"]
         # model = "Qwen-72B-Chat"
@@ -324,8 +324,10 @@ Begins!"""
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 报告解读 LLM Output: \n{content}")
-        thought, doctor = self.__parse_response__(content)
+        thought, content = self.__parse_response__(content)
         mid_vars = update_mid_vars(
             kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话"
         )
-        return mid_vars, (thought, doctor, "AskHuman")
+        if "?" not in content and "？" not in content:
+            tool = "convComplete"
+        return mid_vars, (thought, content, tool)
