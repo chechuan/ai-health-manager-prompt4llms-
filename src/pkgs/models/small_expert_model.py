@@ -246,7 +246,7 @@ class expertModel:
 
         def is_visit(history, query):
             if '您需要家庭医生上门帮您服务吗' in history[-1]['content']:
-                prompt = blood_pressure_pd_prompt.format(history[-1]['content'], query)
+                prompt = blood_pressure_pd_prompt.format(history[-2]['content'], query)
                 messages = [{"role": "user", "content": prompt}]
                 text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                         temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
