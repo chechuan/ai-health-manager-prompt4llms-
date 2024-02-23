@@ -21,7 +21,7 @@ from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
-from src.pkgs.models.custom_chat_model import CustomChatAuxiliary, CustomChatReportInterpretation
+from src.pkgs.models.custom_chat_model import CustomChatAuxiliary, CustomChatReportInterpretation, CustomChatModel
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
@@ -40,6 +40,7 @@ class Chat_v2:
         self.funcall = FuncCall(self.gsr)
         self.sys_template = PromptTemplate(input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT)
         self.custom_chat_auxiliary = CustomChatAuxiliary(self.gsr)
+        self.custom_chat_model = CustomChatModel(self.gsr)
         self.custom_chat_report_interpretation = CustomChatReportInterpretation(self.gsr)
         self.chatter_assistant = ChatterGailyAssistant()
         self.__initalize_intent_map__()
@@ -871,6 +872,8 @@ class Chat_v2:
     def complete(self, mid_vars: List[object], tool: str = "convComplete", **kwargs):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        weight_res = {}
+        blood_res = {}
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -887,13 +890,11 @@ class Chat_v2:
         elif intentCode == "auxiliary_diagnosis":
             mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "weight_meas":
-            content = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "blood_meas":
-            import pdb
-            pdb.set_trace()
-            content = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "report_interpretation_chat":
-            mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+            mid_vars, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
             )
         else:
@@ -907,6 +908,8 @@ class Chat_v2:
                 "content": thought,
                 "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
+                "weight_res": weight_res,
+                "blood_res": blood_res
             }
         )
         return chat_history, intentCode
