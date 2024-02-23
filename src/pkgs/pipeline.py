@@ -874,6 +874,7 @@ class Chat_v2:
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         weight_res = {}
         blood_res = {}
+        content = ''
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
