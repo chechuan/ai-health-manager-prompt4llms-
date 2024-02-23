@@ -25,6 +25,7 @@ from src.pkgs.models.custom_chat_model import CustomChatModel
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
+from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
 from src.utils.module import (InitAllResource, curr_time, date_after, get_doc_role, get_intent,
                               make_meta_ret, parse_latest_plugin_call)
@@ -39,6 +40,7 @@ class Chat_v2:
         self.funcall = FuncCall(self.gsr)
         self.sys_template = PromptTemplate(input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT)
         self.custom_chat_model = CustomChatModel(self.gsr)
+        self.chatter_assistant = ChatterGailyAssistant()
         self.__initalize_intent_map__()
         self.session = Session()
 
@@ -129,7 +131,9 @@ class Chat_v2:
         elif intentCode == "schedule_qry_up":
             content = "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程"
         elif intentCode == "meeting_schedule":
-            content = "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+            content = (
+                "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+            )
         elif intentCode == "auxiliary_diagnosis":
             content = "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
         else:
@@ -361,37 +365,28 @@ class Chat_v2:
         )
         return text
 
+    def __chatter_gaily_compose_func_reply__(self, messages):
+        """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
+        history = []
+        for i in messages:
+            if not i.get("function_call"):
+                history.append(i)
+            else:
+                func_args = i["function_call"]
+                role = i["role"]
+                content = f"{func_args['arguments']}"
+                history.append({"role": role, "content": content})
+        # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+        history = history[-8:]
+        return history
+
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt"""
-
-        def compose_func_reply(messages):
-            """拼接func中回复的内容到history中
-
-            最终的history只有role/content字段
-            """
-            history = []
-            for i in messages:
-                if not i.get("function_call"):
-                    history.append(i)
-                else:
-                    func_args = i["function_call"]
-                    role = i["role"]
-                    content = f"{func_args['arguments']}"
-                    history.append({"role": role, "content": content})
-            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
-            history = history[-8:]
-            return history
-
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
-        messages = compose_func_reply(messages)
+        messages = self.__chatter_gaily_compose_func_reply__(messages)
 
         desc = self.prompt_meta_data["event"][intentCode].get("description", "")
-        # TODO 2024年2月17日13:25:42 修改闲聊提示，无法连接远程数据库 直接写代码里
-#         desc = """你是由来康生命研发的智能健康管家, 下面是一些定义:
-# 1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家
-# 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
-# 3. 我是你的主人"""
         # process = self.prompt_meta_data["event"][intentCode].get("process", "")
         process = ""
         if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
@@ -416,6 +411,47 @@ class Chat_v2:
                     "function_call": {"name": "convComplete", "arguments": content},
                 }
             )
+            return messages
+        else:
+            return content
+
+    def chatter_gaily_new(self, mid_vars, **kwargs):
+        """组装mysql中闲聊对应的prompt"""
+        def __chatter_gaily_compose_func_reply__(messages):
+            """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
+            history = []
+            for i in messages:
+                if not i.get("function_call"):
+                    history.append(i)
+                else:
+                    func_args = i["function_call"]
+                    role = i["role"]
+                    content = f"{func_args['arguments']}"
+                    history.append({"role": role, "content": content})
+            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+            history = history[-8:]
+            return history
+        intentCode = kwargs.get("intentCode", "other")
+        messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        # messages = __chatter_gaily_compose_func_reply__(messages)
+
+        next_step, messages = self.chatter_assistant.get_next_step(messages)
+
+        if next_step == "查询知识库":
+            self.funcall._call()
+        elif next_step == "搜索引擎":
+            self.funcall._call()
+        elif next_step == "日常闲聊":
+            content, messages = self.chatter_assistant.run(messages)
+        else:
+            content, messages = self.chatter_assistant.run(messages)
+        self.update_mid_vars(
+            mid_vars,
+            key="日常闲聊",
+            input_text=json.dumps(messages, ensure_ascii=False),
+            output_text=content,
+        )
+        if kwargs.get("return_his"):
             return messages
         else:
             return content
@@ -949,8 +985,8 @@ class Chat_v2:
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily_new(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
@@ -1068,7 +1104,7 @@ class Chat_v2:
 
 if __name__ == "__main__":
     chat = Chat_v2(InitAllResource())
-    ori_input_param = testParam.param_feat_custom_chat_react_auxiliary_diagnosis
+    ori_input_param = testParam.param_dev_chat_gen_other
     prompt = ori_input_param["prompt"]
     history = ori_input_param["history"]
     intentCode = ori_input_param["intentCode"]
