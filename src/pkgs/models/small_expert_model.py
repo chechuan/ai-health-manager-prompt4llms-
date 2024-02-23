@@ -156,7 +156,10 @@ class expertModel:
         return {'thought': thought, 'content': content}
     
     @staticmethod
-    def fat_reduction(history, cur_date, weight, query=''):
+    def fat_reduction(history, cur_date, weight, query='', **kwargs):
+        cur_date = kwargs['promptParam'].get('cur_date', '')
+        weight = kwargs['promptParam'].get('weight', '')
+        query = kwargs['promptParam'].get('query', '')
         if not query:
             return {'thought': '', 'content': f'您今日体重为{weight}'}
         query = query if query else "减脂效果不好，怎么改善？"
@@ -203,6 +206,11 @@ class expertModel:
 
             预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
         """
+
+        ihm_health_sbp = kwargs['promptParam']['ihm_health_sbp']
+        ihm_health_dbp = kwargs['promptParam']['ihm_health_dbp']
+        query = kwargs['promptParam'].get('query', '')
+
         def blood_pressure_inquiry(self, history, query):
             history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
