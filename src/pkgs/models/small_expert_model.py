@@ -239,7 +239,8 @@ class expertModel:
             rules = []
         return {"level": level, "rules": rules}
     
-    def blood_pressure_inquiry(history)
+    def blood_pressure_inquiry(history):
+        ...
 
     @clock
     def rec_diet_eval(self, param):
