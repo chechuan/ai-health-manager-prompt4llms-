@@ -344,7 +344,7 @@ def create_app():
         finally:
             return ret
     
-    @app.route("/rule/emotions", methods=["post"])
+    @app.route("/rules/emotions", methods=["post"])
     def _rules_enotions_level():
         """情志分级"""
         try:
