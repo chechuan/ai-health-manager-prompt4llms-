@@ -875,6 +875,7 @@ class Chat_v2:
         weight_res = {}
         blood_res = {}
         content = ''
+        sch = False
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
