@@ -155,10 +155,10 @@ class expertModel:
         return {'thought': thought, 'content': content}
     
     @staticmethod
-    def fat_reduction(history, cur_date, weight):
+    def fat_reduction(history, cur_date, weight, query=''):
         if not history:
             return f'您今日体重为{weight}'
-        prompt = weight_trend_prompt.format(cur_date, weight)
+        prompt = fat_reduction__prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
@@ -222,6 +222,9 @@ class expertModel:
             if not history:
                 return {'level':2, 'rules':[], 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高']}
             
+            # 问诊
+
+
             rules = ["预问诊", "是否通知家人", "是否通知家庭医师"]
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
             level = 1
@@ -239,7 +242,15 @@ class expertModel:
             rules = []
         return {"level": level, "rules": rules}
     
-    def blood_pressure_inquiry(history)
+    def blood_pressure_inquiry(history):
+        prompt = emotions_prompt.format(cur_date, level)
+        messages = [{"role": "user", "content": prompt}]
+        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        thoughtIdx = generate_text.find("\nThought") + 9
+        thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        outIdx = generate_text.find("\nOutput") + 8
+        content = generate_text[outIdx:].split("\n")[0].strip()
 
     @clock
     def rec_diet_eval(self, param):
