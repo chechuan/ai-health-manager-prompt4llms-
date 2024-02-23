@@ -280,7 +280,7 @@ class expertModel:
             return {'level':level, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
-            if not query:
+            if not history:
                 thought, content = blood_pressure_inquiry(history, query)
                 return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             
@@ -301,7 +301,7 @@ class expertModel:
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
             level = 1
 
-            if not query:
+            if not history:
                 thought, content = blood_pressure_inquiry(history, query)
                 return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             
@@ -327,7 +327,7 @@ class expertModel:
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
             level = 0
             thought, content = blood_pressure_inquiry(history, query)
-            if not query:
+            if not history:
                 return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False}
             
             if '？' in content or '?' in content:
