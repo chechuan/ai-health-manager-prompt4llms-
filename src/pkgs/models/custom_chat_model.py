@@ -14,11 +14,12 @@ from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.utils.Logger import logger
 from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
+from src.pkgs.models.small_expert_model import expertModel
 
 class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
-        self.code_func_map = {"auxiliary_diagnosis": self.__chat_auxiliary_diagnosis__}
+        self.code_func_map = {"auxiliary_diagnosis": self.__chat_auxiliary_diagnosis__, "blood_meas": expertModel.tool_rules_blood_pressure_level, "weight_meas": expertModel.fat_reduction}
 
     def __parameter_check__(self, **kwargs):
         """参数检查"""
@@ -200,8 +201,6 @@ class CustomChatModel:
         elif '回答过' in content or '回答了'in content:
             return True
         return False
-
-
 
     def chat(self, **kwargs):
         """自定义对话"""

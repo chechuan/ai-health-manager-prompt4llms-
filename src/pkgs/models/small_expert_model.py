@@ -205,8 +205,22 @@ class expertModel:
         """
         def blood_pressure_inquiry(self, history, query):
             history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
+            # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
+            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
+            generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+            thoughtIdx = generate_text.find("\nThought") + 9
+            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            outIdx = generate_text.find("\nDoctor") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
+
+            return thought, content
+        
+        def blood_pressure_pacify(self, history, query):
+            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
             his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
-            prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
+            prompt = blood_pressure_pacify_prompt.format(his_prompt) + f'Doctor: '
             messages = [{"role": "user", "content": prompt}]
             generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                     temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
@@ -217,15 +231,23 @@ class expertModel:
 
             return thought, content
 
-        def is_pacify(history, query):
-            prompt = blood_pressure_pacify_prompt.format(history[-1]['content'], query)
-            messages = [{"role": "user", "content": prompt}]
-            text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-            if 'YES' in text:
-                return True
+        def is_visit(history, query):
+            if '您需要家庭医生上门帮您服务吗' in history[-1]['content']:
+                prompt = blood_pressure_pacify_prompt.format(history[-1]['content'], query)
+                messages = [{"role": "user", "content": prompt}]
+                text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                        temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+                if 'YES' in text:
+                    return True
+                else:
+                    return NO
             else:
                 return NO
+            
+        def is_pacify(history, query):
+            r = [1 for i in history if '您需要家庭医生上门帮您服务吗' in i['content']]
+            return True if sum(r) > 0 else False
+            
 
         ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
         ihm_health_dbp_list = [88, 66, 78, 59, 100, 90, 60]
@@ -245,36 +267,61 @@ class expertModel:
             rules = ["呼叫救护车"]
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
-            if not history:
-                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':''}
+            if not query:
+                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False, 'scene_ending':False}
             
-            # if is_pacify(history, query=query):
-
-            # else:# 问诊
-            # thought, content = blood_pressure_inquiry(history, query)
-            # elif '？' in content or '?' in content:
-            #     return {'level':2, 'contents': [content], 'thought':thought}
-            # else:
-            #     return {'level':2, 'contents': [content, '我已经通知了您的女儿。', '您需要家庭医生上门帮您服务吗？'], 'thought':thought}
+            if is_visit(history, query=query):
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+            elif is_pacify(history, query=query): # 安抚
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
+            else:# 问诊
+                thought, content = blood_pressure_inquiry(history, query)
+                if '？' in content or '?' in content:
+                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                else:
+                    return {'level':level, 'contents': [content, '我已经通知了您的女儿。', '您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
             
 
-
-            rules = ["预问诊", "是否通知家人", "是否通知家庭医师"]
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
             level = 1
-            trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
-            trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
-            if trend_sbp or trend_dbp:
-                rules = ["预问诊", "智能呼叫工具"]
-            else:
-                rules = ["预问诊", "嘱托"]
+
+            if not query:
+                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False, 'scene_ending':False}
+            
+            if is_visit(history, query=query):
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 'contents': ['我已经通知了您的家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+            elif is_pacify(history, query=query): # 安抚
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
+            else:# 问诊
+                thought, content = blood_pressure_inquiry(history, query)
+                if '？' in content or '?' in content:
+                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                else: # 出结论
+                    trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
+                    trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
+                    if trend_sbp or trend_dbp:
+                        return {'level':level, 'contents': [content, '', '您的血压与日常值相比已波动30%，整体波动较大，根据治疗原则也为了您的健康，需要医生上门评估。您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
+                    else:
+                        thought, cont = blood_pressure_pacify(history, query)  #安抚
+                        return {'level':level, 'contents': [content, cont], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
+
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
             level = 0
-            rules = ["预问诊", "嘱托"]
+            if not query:
+                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False}
+            thought, content = blood_pressure_inquiry(history, query)
+            if '？' in content or '?' in content:
+                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+            else:
+                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
         else:
             level = -1
             rules = []
-        return {"level": level, "rules": rules}
+            return {'level':0, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
     
         
 

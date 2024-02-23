@@ -883,6 +883,10 @@ class Chat_v2:
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
             mid_vars, (thought, content) = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "weight_meas":
+            content = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "blood_meas":
+            content = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
