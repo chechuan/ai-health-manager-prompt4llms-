@@ -159,7 +159,8 @@ class expertModel:
     def fat_reduction(**kwargs):
         cur_date = kwargs['promptParam'].get('cur_date', '')
         weight = kwargs['promptParam'].get('weight', '')
-        query = kwargs['promptParam'].get('query', '')
+        if len(kwargs['history']) > 0:
+            query = kwargs['history'][-1]['content']
         if not query:
             return {'thought': '', 'content': f'您今日体重为{weight}'}
         query = query if query else "减脂效果不好，怎么改善？"

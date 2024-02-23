@@ -892,8 +892,18 @@ class Chat_v2:
             mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = weight_res['content']
+            conts = []
+            level = ''
+            tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "blood_meas":
             blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = blood_res['content'][0]
+            conts = blood_res['content'][1:]
+            sch = blood_res['scheme_gen']
+            thought = blood_res['thought']
+            level = blood_res['level']
+            tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             mid_vars, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
@@ -910,7 +920,14 @@ class Chat_v2:
                 "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
                 "weight_res": weight_res,
-                "blood_res": blood_res
+                "blood_res": blood_res,
+                "appendData":{
+                    "contents": conts,
+                    "scheme_gen": sch,
+                    "level": level
+                }
+
+
             }
         )
         return chat_history, intentCode
