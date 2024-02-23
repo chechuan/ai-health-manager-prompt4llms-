@@ -11,6 +11,7 @@ import sys
 import time
 from os.path import basename
 from pathlib import Path
+from tkinter import NO
 
 import openai
 from requests import Session
@@ -156,7 +157,7 @@ class expertModel:
     
     @staticmethod
     def fat_reduction(history, cur_date, weight, query=''):
-        if not history:
+        if not query:
             return {'thought': '', 'content': f'您今日体重为{weight}'}
         query = query if query else "减脂效果不好，怎么改善？"
         prompt = fat_reduction_prompt.format(cur_date, weight, query)
@@ -216,17 +217,15 @@ class expertModel:
 
             return thought, content
 
-        # def is_pacify(history):
-        #     prompt = fat_reduction_prompt.format(history, weight, query)
-        #     messages = [{"role": "user", "content": prompt}]
-        #     generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-        #             temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-        #     thoughtIdx = generate_text.find("\nThought") + 9
-        #     thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        #     outIdx = generate_text.find("\nOutput") + 8
-        #     content = generate_text[outIdx:].split("\n")[0].strip()
-        #     return {'thought': thought, 'content': content}
-    
+        def is_pacify(history, query):
+            prompt = blood_pressure_pacify_prompt.format(history[-1]['content'], query)
+            messages = [{"role": "user", "content": prompt}]
+            text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+            if 'YES' in text:
+                return True
+            else:
+                return NO
 
         ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
         ihm_health_dbp_list = [88, 66, 78, 59, 100, 90, 60]
@@ -249,7 +248,8 @@ class expertModel:
             if not history:
                 return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':''}
             
-            # if 
+            # if is_pacify(history, query=query):
+
             # else:# 问诊
             # thought, content = blood_pressure_inquiry(history, query)
             # elif '？' in content or '?' in content:
