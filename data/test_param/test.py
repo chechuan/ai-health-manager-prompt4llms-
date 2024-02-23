@@ -396,7 +396,7 @@ class testParam:
     # }
     param_dev_report_interpretation = {"intentCode": "report_interpretation", "file_path": "/home/tico/workspace/ai-health-manager-prompt4llms/.tmp/images/口腔.png", "options": ["口腔", "B超", "体检"]}
     param_dev_tool_compute_blood_pressure = {"ihm_health_sbp": 161, "ihm_health_dbp": 99, "ihm_medical_chief": []}
-    param_dev_chat_gen_other = {"orgCode": "sf","customId": "test_songhaoyang","prompt": "","init_intent": False,"intentCode": "other",
-                                "history": [
-                                    {"msgId": "8638249042","role": "1","content": "最近有什么歌比较好听","sendTime": "2024-02-17 12:20:23"}
-                                    ],"backend_history": []}
+    param_dev_chat_gen_other = {"orgCode": "sf","customId": "test_songhaoyang","prompt": "","init_intent": False,"intentCode": "other","history": [{"msgId": "8638249042","role": "1","content": "最近有什么歌比较好听","sendTime": "2024-02-17 12:20:23"}],"backend_history": []}
+    param_dev_report_interpretation_chat = {"orgCode": "sf","customId": "test_songhaoyang",
+                                            "prompt": "",
+                                            "init_intent": False,"intentCode": "report_interpretation_chat","history": [{"msgId": "8638249042","role": "1","content": "青少年、儿童口腔健康检查结果反馈表\n尊敬的家长:\n您好:\n经检查，您家孩子_张三_口腔健康情况结果如下：\n牙列式右上8765432\n45678左上\nIV\nIV\n右下876543\n345678左下\n龋坏牙:\n非龋性牙齿缺损:\n深窝沟牙：_存在\n滞留乳牙:\n缺失牙:\n多生牙:\n其他情况：牙列不齐√\n“地包天”口\n牙龈炎口\n牙好，胃口就好!拥有一口健康正常、洁白漂亮的牙齿，不仅关\n系到孩子的身体健康，从某种程度上讲还能起到提高孩子自信的作用。\n因此,为了孩子，如果他有口腔健康问题，请及时带其就诊。\n2024年02月21日","sendTime": "2024-02-17 12:20:23"}],"backend_history": []}

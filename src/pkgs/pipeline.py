@@ -21,7 +21,7 @@ from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
-from src.pkgs.models.custom_chat_model import CustomChatModel
+from src.pkgs.models.custom_chat_model import CustomChatAuxiliary, CustomChatReportInterpretation
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
@@ -39,7 +39,8 @@ class Chat_v2:
         self.promptEngine = CustomPromptEngine(self.gsr)
         self.funcall = FuncCall(self.gsr)
         self.sys_template = PromptTemplate(input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT)
-        self.custom_chat_model = CustomChatModel(self.gsr)
+        self.custom_chat_auxiliary = CustomChatAuxiliary(self.gsr)
+        self.custom_chat_report_interpretation = CustomChatReportInterpretation(self.gsr)
         self.chatter_assistant = ChatterGailyAssistant()
         self.__initalize_intent_map__()
         self.session = Session()
@@ -417,6 +418,7 @@ class Chat_v2:
 
     def chatter_gaily_new(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt"""
+
         def __chatter_gaily_compose_func_reply__(messages):
             """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
             history = []
@@ -431,6 +433,7 @@ class Chat_v2:
             # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
             history = history[-8:]
             return history
+
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
         # messages = __chatter_gaily_compose_func_reply__(messages)
@@ -865,7 +868,7 @@ class Chat_v2:
         """
         ...
 
-    def complete(self, mid_vars: List[object], **kwargs):
+    def complete(self, mid_vars: List[object], tool: str = "convComplete", **kwargs):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         prompt = kwargs.get("prompt")
@@ -882,7 +885,11 @@ class Chat_v2:
             intentCode = self.get_pageName_code(output_text)
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
-            mid_vars, (thought, content) = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "report_interpretation_chat":
+            mid_vars, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+                mid_vars=mid_vars, **kwargs
+            )
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
@@ -892,7 +899,7 @@ class Chat_v2:
             {
                 "role": "assistant",
                 "content": thought,
-                "function_call": {"name": "convComplete", "arguments": content},
+                "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
             }
         )
@@ -1104,7 +1111,7 @@ class Chat_v2:
 
 if __name__ == "__main__":
     chat = Chat_v2(InitAllResource())
-    ori_input_param = testParam.param_dev_chat_gen_other
+    ori_input_param = testParam.param_dev_report_interpretation_chat
     prompt = ori_input_param["prompt"]
     history = ori_input_param["history"]
     intentCode = ori_input_param["intentCode"]
