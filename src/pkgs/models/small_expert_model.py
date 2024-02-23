@@ -245,9 +245,11 @@ class expertModel:
             return thought, content
 
         def is_visit(history, query):
-            if '您需要家庭医生上门帮您服务吗' in history[-1]['content']:
+            if '您需要家庭医生上门帮您服务吗' in history[-2]['content']:
                 prompt = blood_pressure_pd_prompt.format(history[-2]['content'], query)
                 messages = [{"role": "user", "content": prompt}]
+                if '是的' in history[-2]['content'] or '好的' in history[-2]['content']:
+                    return True
                 text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                         temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
                 if 'YES' in text:
