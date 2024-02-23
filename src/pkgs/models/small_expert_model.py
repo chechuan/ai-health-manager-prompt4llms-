@@ -157,8 +157,9 @@ class expertModel:
     @staticmethod
     def fat_reduction(history, cur_date, weight, query=''):
         if not history:
-            return f'您今日体重为{weight}'
-        prompt = fat_reduction__prompt.format(cur_date, weight, query)
+            return {'thought': '', 'content': f'您今日体重为{weight}'}
+        query = query if query else "减脂效果不好，怎么改善？"
+        prompt = fat_reduction_prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
@@ -171,7 +172,7 @@ class expertModel:
 
 
     @staticmethod
-    def tool_rules_blood_pressure_level(ihm_health_sbp: int, ihm_health_dbp: int, **kwargs) -> dict:
+    def tool_rules_blood_pressure_level(ihm_health_sbp: int, ihm_health_dbp: int, query='', **kwargs) -> dict:
         """计算血压等级
 
         - Args
@@ -201,6 +202,32 @@ class expertModel:
 
             预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
         """
+        def blood_pressure_inquiry(self, history, query):
+            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
+            prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
+            messages = [{"role": "user", "content": prompt}]
+            generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+            thoughtIdx = generate_text.find("\nThought") + 9
+            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            outIdx = generate_text.find("\nDoctor") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
+
+            return thought, content
+
+        # def is_pacify(history):
+        #     prompt = fat_reduction_prompt.format(history, weight, query)
+        #     messages = [{"role": "user", "content": prompt}]
+        #     generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+        #             temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        #     thoughtIdx = generate_text.find("\nThought") + 9
+        #     thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        #     outIdx = generate_text.find("\nOutput") + 8
+        #     content = generate_text[outIdx:].split("\n")[0].strip()
+        #     return {'thought': thought, 'content': content}
+    
+
         ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
         ihm_health_dbp_list = [88, 66, 78, 59, 100, 90, 60]
 
@@ -220,9 +247,16 @@ class expertModel:
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
             if not history:
-                return {'level':2, 'rules':[], 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高']}
+                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':''}
             
-            # 问诊
+            # if 
+            # else:# 问诊
+            # thought, content = blood_pressure_inquiry(history, query)
+            # elif '？' in content or '?' in content:
+            #     return {'level':2, 'contents': [content], 'thought':thought}
+            # else:
+            #     return {'level':2, 'contents': [content, '我已经通知了您的女儿。', '您需要家庭医生上门帮您服务吗？'], 'thought':thought}
+            
 
 
             rules = ["预问诊", "是否通知家人", "是否通知家庭医师"]
@@ -242,15 +276,7 @@ class expertModel:
             rules = []
         return {"level": level, "rules": rules}
     
-    def blood_pressure_inquiry(history):
-        prompt = emotions_prompt.format(cur_date, level)
-        messages = [{"role": "user", "content": prompt}]
-        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-        thoughtIdx = generate_text.find("\nThought") + 9
-        thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        outIdx = generate_text.find("\nOutput") + 8
-        content = generate_text[outIdx:].split("\n")[0].strip()
+        
 
 
     @clock
