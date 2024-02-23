@@ -780,7 +780,7 @@ class expertModel:
 
     def __report_interpretation_result__(
         self,
-        ocr_result: List[str] = [],
+        ocr_result: Union[str, List[str]] = "",
         msg: str = "Unknown Error",
         report_type: str = "Unknown Type",
     ):
@@ -796,7 +796,7 @@ class expertModel:
         """
         return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type}
 
-    def __report_interpretation__(self, **kwargs) -> str:
+    def __report_interpretation__(self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs) -> Dict:
         """报告解读功能
 
         - Args:
@@ -834,32 +834,32 @@ class expertModel:
             return self.__report_interpretation_result__(msg="未识别出报告内容，请重新尝试")
 
         # 报告异常信息解读
-        prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
-        messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
-        logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
-        response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
-        content = accept_stream_response(response, verbose=False)
-        logger.debug(f"Report interpretation LLM Output: {content}")
+        # prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
+        # messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
+        # logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
+        # response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
+        # content = accept_stream_response(response, verbose=False)
+        # logger.debug(f"Report interpretation LLM Output: {content}")
 
         # 增加报告类型判断
-        if kwargs.get("options"):
-            query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {kwargs['options']}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
+        if options:
+            query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
             response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5, stream=True)
             report_type = accept_stream_response(response, verbose=False)
             logger.debug(f"Report interpretation report type: {report_type}")
-            if report_type not in kwargs["options"]:
-                if "口腔" in docs and "口腔" in kwargs["options"]:
+            if report_type not in options:
+                if "口腔" in docs and "口腔" in options:
                     report_type = "口腔"
-                elif "B超" in docs and "B超" in kwargs["options"]:
+                elif "B超" in docs and "B超" in options:
                     report_type = "B超"
-                elif "体检" in docs and "体检" in kwargs["options"]:
+                elif "体检" in docs and "体检" in options:
                     report_type = "体检"
-            if report_type not in kwargs["options"]:
+            if report_type not in options:
                 report_type = "其他"
         else:
             report_type = "其他"
-        return self.__report_interpretation_result__(ocr_result=docs, msg=content, report_type=report_type)
+        return self.__report_interpretation_result__(ocr_result=docs, report_type=report_type)
 
     def call_function(self, **kwargs):
         """调用函数

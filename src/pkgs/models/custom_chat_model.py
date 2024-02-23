@@ -251,7 +251,9 @@ class CustomChatReportInterpretation(CustomChatModel):
 
     def __compose_message__(self, history: List[Dict[str, str]], **kwargs):
         """组装消息"""
-        system_prompt = """【问诊和出具报告解读的提示】：
+        messages = []
+        if not history:
+            system_prompt = """【问诊和出具报告解读的提示】：
 # 任务描述
 你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
 # 问诊流程专业性要求
@@ -271,8 +273,6 @@ Thought: 思考针对当前问题应该做什么
 Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题，不要出现序号数字
  
 Begins!"""
-        messages = []
-        if not history:
             content = system_prompt.format(prompt=kwargs["promptParam"]["report_ocr_result"])
             messages.append({"role": "user", "content": content})
         else:
@@ -304,8 +304,8 @@ Begins!"""
 
     def __chat_report_interpretation__(self, **kwargs):
         """报告解读"""
-        # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        model = "Qwen-72B-Chat"
+        model = self.gsr.model_config["report_interpretation_chat"]
+        # model = "Qwen-72B-Chat"
         messages = self.__compose_message__(**kwargs)
         logger.info(f"Custom Chat 报告解读 LLM Input: {dumpJS(messages)}")
         chat_response = callLLM(
