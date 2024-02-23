@@ -22,13 +22,13 @@ from typing import Dict, List, Union
 from langchain.prompts.prompt import PromptTemplate
 from rapidocr_onnxruntime import RapidOCR
 
+from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 from src.utils.module import (InitAllResource, accept_stream_response, clock,
                               compute_blood_pressure_level, dumpJS, get_intent)
-from data.constrant import *
 
 
 class expertModel:
@@ -806,7 +806,18 @@ class expertModel:
 
         # 增加报告类型判断
         if kwargs.get("options"):
-            report_type = self.__single_choice__(docs, kwargs["options"] + ["其他"])
+            query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {kwargs['options']}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
+            messages = [{"role": "user", "content": query}]
+            response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5, stream=True)
+            report_type = accept_stream_response(response, verbose=False)
+            logger.debug(f"Report interpretation report type: {report_type}")
+            if report_type not in kwargs["options"]:
+                if "口腔" in docs and "口腔" in kwargs["options"]:
+                    report_type = "口腔"
+                elif "B超" in docs and "B超" in kwargs["options"]:
+                    report_type = "B超"
+                elif "体检" in docs and "体检" in kwargs["options"]:
+                    report_type = "体检"
             if report_type not in kwargs["options"]:
                 report_type = "其他"
         else:
