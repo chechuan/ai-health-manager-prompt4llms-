@@ -159,6 +159,7 @@ class expertModel:
     def fat_reduction(**kwargs):
         cur_date = kwargs['promptParam'].get('cur_date', '')
         weight = kwargs['promptParam'].get('weight', '')
+        query = ''
         if len(kwargs['history']) > 0:
             query = kwargs['history'][-1]['content']
         if not query:
