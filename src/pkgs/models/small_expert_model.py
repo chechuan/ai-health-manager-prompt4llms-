@@ -283,8 +283,6 @@ class expertModel:
             if not history:
                 thought, content = blood_pressure_inquiry(history, query)
                 return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            import pdb
-            pdb.set_trace()
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
                 return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
