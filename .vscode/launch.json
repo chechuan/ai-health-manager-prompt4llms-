@@ -50,9 +50,9 @@
         "GEVENT_SUPPORT": "True"
       },
       "args": [
-        "--env", "dev",
+        "--env", "local",
         "--special_prompt_version",
-        "--use_cache"
+        // "--use_cache"
       ]
     },
     {

@@ -14,6 +14,7 @@ local:
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
     aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
@@ -34,6 +35,7 @@ dev:
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
     aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
@@ -54,6 +56,7 @@ test:
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
     aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
@@ -73,6 +76,7 @@ fat:
     warning_solutions_early_not_continuous: 0.1.0
     reunion_meals_restaurant_selection: 1.0.0
     aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
