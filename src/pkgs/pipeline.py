@@ -1134,7 +1134,7 @@ class Chat_v2:
                 ret_result["appendData"] = purchasing_list
                 ret_result["message"] += "\n为您生成了一份采购清单，请确认"
 
-        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
+        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history, "append_data": append_data,}
 
 
 if __name__ == "__main__":
