@@ -276,7 +276,8 @@ class expertModel:
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
             if not query:
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False, 'scene_ending':False}
+                thought, content = blood_pressure_inquiry(history, query)
+                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
@@ -296,7 +297,8 @@ class expertModel:
             level = 1
 
             if not query:
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False, 'scene_ending':False}
+                thought, content = blood_pressure_inquiry(history, query)
+                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
@@ -319,9 +321,10 @@ class expertModel:
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
             level = 0
-            if not query:
-                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高'], 'thought':'', 'scheme_gen':False}
             thought, content = blood_pressure_inquiry(history, query)
+            if not query:
+                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False}
+            
             if '？' in content or '?' in content:
                 return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             else:
