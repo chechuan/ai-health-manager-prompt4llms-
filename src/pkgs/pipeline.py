@@ -921,7 +921,7 @@ class Chat_v2:
                 "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
                 #"weight_res": weight_res,
-                "blood_res": blood_res,
+                #"blood_res": blood_res,
                 "appendData":{
                     "contents": conts,
                     "scheme_gen": sch,
