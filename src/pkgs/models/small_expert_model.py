@@ -159,7 +159,7 @@ class expertModel:
     def fat_reduction(history, cur_date, weight, query='', **kwargs):
         cur_date = kwargs['promptParam'].get('cur_date', '')
         weight = kwargs['promptParam'].get('weight', '')
-        query = kwargs.get('query', '')
+        query = kwargs['promptParam'].get('query', '')
         if not query:
             return {'thought': '', 'content': f'您今日体重为{weight}'}
         query = query if query else "减脂效果不好，怎么改善？"
@@ -209,7 +209,7 @@ class expertModel:
 
         ihm_health_sbp = kwargs['promptParam']['ihm_health_sbp']
         ihm_health_dbp = kwargs['promptParam']['ihm_health_dbp']
-        query = kwargs.get('query', '')
+        query = kwargs['promptParam'].get('query', '')
 
         def blood_pressure_inquiry(self, history, query):
             history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
