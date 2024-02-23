@@ -893,7 +893,7 @@ class Chat_v2:
             pdb.set_trace()
             content = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "report_interpretation_chat":
-            mid_vars, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+            mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
             )
         else:
