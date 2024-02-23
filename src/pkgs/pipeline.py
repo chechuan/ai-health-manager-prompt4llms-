@@ -914,6 +914,11 @@ class Chat_v2:
 
         assert type(content) == str, "only_prompt模式下，返回值必须为str类型"
 
+        appendData = {
+                    "contents": conts,
+                    "scheme_gen": sch,
+                    "level": level
+                }
         chat_history.append(
             {
                 "role": "assistant",
@@ -922,16 +927,9 @@ class Chat_v2:
                 "intentCode": intentCode,
                 #"weight_res": weight_res,
                 #"blood_res": blood_res,
-                "appendData":{
-                    "contents": conts,
-                    "scheme_gen": sch,
-                    "level": level
-                }
-
-
             }
         )
-        return chat_history, intentCode
+        return appendData, chat_history, intentCode
 
     def complete_temporary(self, mid_vars: List[object], **kwargs):
         # XXX 演示临时增加逻辑 2024年01月31日12:39:28
@@ -1025,13 +1023,13 @@ class Chat_v2:
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
-                out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+                append_data, out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs["intentCode"] = intentCode
             elif self.prompt_meta_data["event"][intentCode].get("process_type") == "react":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         if not out_history:
             out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
-        return out_history, intentCode
+        return append_data, out_history, intentCode
 
     def if_init(self, tool):
         # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
@@ -1075,7 +1073,7 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode")
         mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
-        out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
+        append_data, out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
@@ -1090,6 +1088,7 @@ class Chat_v2:
                     "data": ret_thought,
                     "mid_vars": mid_vars,
                     "history": out_history,
+                    "append_data": append_data,
                 }
 
             if self.prompt_meta_data["rollout_tool"].get(tool) or not self.funcall.funcmap.get(tool):
@@ -1113,6 +1112,7 @@ class Chat_v2:
                     "data": ret_function_call,
                     "mid_vars": mid_vars,
                     "history": out_history,
+                    "append_data": append_data,
                 }
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
