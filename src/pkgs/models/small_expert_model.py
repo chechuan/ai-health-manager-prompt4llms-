@@ -141,7 +141,7 @@ class expertModel:
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         outIdx = generate_text.find("\nOutput") + 8
         content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content}
+        return {'thought': thought, 'content': content,'scene_ending': True}
     
     @staticmethod
     def weight_trend(cur_date, weight):
@@ -153,7 +153,7 @@ class expertModel:
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         outIdx = generate_text.find("\nOutput") + 8
         content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content}
+        return {'thought': thought, 'content': content,'scene_ending': True}
     
     @staticmethod
     def fat_reduction(**kwargs):
