@@ -896,7 +896,7 @@ class Chat_v2:
             content = weight_res['content']
             conts = []
             level = ''
-            tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
+            tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "blood_meas":
             blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = blood_res['content'][0]
