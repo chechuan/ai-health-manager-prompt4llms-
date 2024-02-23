@@ -101,8 +101,8 @@ Observation: the result of the action
 ... (this Thought/Action/Action Input/Observation can be repeated zero or more times)
 
 Begin!"""
-        # Thought: I now know the final answer
-        # Final Answer: the final answer to the original input question
+# Thought: I now know the final answer
+# Final Answer: the final answer to the original input question
 
         functions = [
             {

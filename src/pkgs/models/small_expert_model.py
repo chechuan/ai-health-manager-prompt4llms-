@@ -859,7 +859,7 @@ class expertModel:
                 report_type = "其他"
         else:
             report_type = "其他"
-        return self.__report_interpretation_result__(ocr_result=ocr_result, msg=content, report_type=report_type)
+        return self.__report_interpretation_result__(ocr_result=docs, msg=content, report_type=report_type)
 
     def call_function(self, **kwargs):
         """调用函数
