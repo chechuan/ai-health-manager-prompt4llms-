@@ -51,8 +51,8 @@
       },
       "args": [
         "--env", "dev",
-        "--special_prompt_version"
-        // "--use_cache"
+        "--special_prompt_version",
+        "--use_cache"
       ]
     },
     {

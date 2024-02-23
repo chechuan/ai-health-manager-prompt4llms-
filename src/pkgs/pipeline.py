@@ -417,36 +417,41 @@ class Chat_v2:
 
     def chatter_gaily_new(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt"""
-        # TODO 2024年2月22日18:17:20 new 闲聊
+        def __chatter_gaily_compose_func_reply__(messages):
+            """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
+            history = []
+            for i in messages:
+                if not i.get("function_call"):
+                    history.append(i)
+                else:
+                    func_args = i["function_call"]
+                    role = i["role"]
+                    content = f"{func_args['arguments']}"
+                    history.append({"role": role, "content": content})
+            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+            history = history[-8:]
+            return history
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
-        messages = self.__chatter_gaily_compose_func_reply__(messages)
+        # messages = __chatter_gaily_compose_func_reply__(messages)
 
-        next_step = self.chatter_assistant.get_next_step(messages)
+        next_step, messages = self.chatter_assistant.get_next_step(messages)
 
         if next_step == "查询知识库":
             self.funcall._call()
         elif next_step == "搜索引擎":
             self.funcall._call()
         elif next_step == "日常闲聊":
-            content = self.chatter_assistant.run(messages)
+            content, messages = self.chatter_assistant.run(messages)
         else:
-            content = self.chatter_assistant.run(messages)
+            content, messages = self.chatter_assistant.run(messages)
         self.update_mid_vars(
             mid_vars,
-            key="闲聊",
+            key="日常闲聊",
             input_text=json.dumps(messages, ensure_ascii=False),
             output_text=content,
         )
         if kwargs.get("return_his"):
-            messages.append(
-                {
-                    "intentCode": "other",
-                    "role": "assistant",
-                    "content": "I know the answer.",
-                    "function_call": {"name": "convComplete", "arguments": content},
-                }
-            )
             return messages
         else:
             return content
@@ -980,8 +985,8 @@ class Chat_v2:
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily_new(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:

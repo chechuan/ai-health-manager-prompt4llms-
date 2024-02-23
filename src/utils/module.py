@@ -549,7 +549,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     return "", ""
 
 
-def parse_latest_plugin_call(text: str):
+def parse_latest_plugin_call(text: str, plugin_name: str = "AskHuman"):
     # TODO 优化解析逻辑
     h = text.find("\nThought:")
     i = text.find("\nAction:")
@@ -560,7 +560,7 @@ def parse_latest_plugin_call(text: str):
     k = k1 if k1 and k1 > 0 else k2
     l = text.find("\nFinal Answer:")
 
-    plugin_name = "AskHuman"
+    # plugin_name = "AskHuman"
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,

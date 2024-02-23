@@ -396,4 +396,7 @@ class testParam:
     # }
     param_dev_report_interpretation = {"intentCode": "report_interpretation", "file_path": "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/tmp/report_demo.png"}
     param_dev_tool_compute_blood_pressure = {"ihm_health_sbp": 161, "ihm_health_dbp": 99, "ihm_medical_chief": []}
-    param_dev_chat_gen_other = {"orgCode": "sf","customId": "test_songhaoyang","prompt": "","init_intent": False,"intentCode": "other","history": [{"msgId": "8638249042","role": "1","content": "我是谁","sendTime": "2024-02-17 12:20:23"}],"backend_history": []}
+    param_dev_chat_gen_other = {"orgCode": "sf","customId": "test_songhaoyang","prompt": "","init_intent": False,"intentCode": "other",
+                                "history": [
+                                    {"msgId": "8638249042","role": "1","content": "最近有什么歌比较好听","sendTime": "2024-02-17 12:20:23"}
+                                    ],"backend_history": []}
