@@ -253,8 +253,7 @@ class CustomChatReportInterpretation(CustomChatModel):
     def __compose_message__(self, history: List[Dict[str, str]], **kwargs):
         """组装消息"""
         messages = []
-        if not history:
-            system_prompt = """【问诊和出具报告解读的提示】：
+        system_prompt = """【问诊和出具报告解读的提示】：
 # 任务描述
 你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
 # 问诊流程专业性要求
@@ -274,15 +273,16 @@ Thought: 思考针对当前问题应该做什么
 Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题，不要出现序号数字
  
 Begins!"""
+        if not history:
             content = system_prompt.format(prompt=kwargs["promptParam"]["report_ocr_result"])
             messages.append({"role": "user", "content": content})
         else:
             for idx in range(len(history)):
                 msg = history[idx]
-                if idx == 0 and msg["role"] == "user":
-                    content = system_prompt.format(prompt=msg["content"])
-                    messages.append({"role": "user", "content": content})
-                elif msg["role"] == "assistant" and msg["function_call"]:
+                # if idx == 0 and msg["role"] == "user":
+                #     content = system_prompt.format(prompt=msg["content"])
+                #     messages.append({"role": "user", "content": content})
+                if msg["role"] == "assistant" and msg["function_call"]:
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
                     messages.append({"role": "assistant", "content": content})
                 else:
@@ -331,4 +331,4 @@ Begins!"""
         )
         if "?" not in content and "？" not in content:
             tool = "convComplete"
-        return mid_vars, (thought, content, tool)
+        return mid_vars, messages, (thought, content, tool)
