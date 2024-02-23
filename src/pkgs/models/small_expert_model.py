@@ -215,7 +215,7 @@ class expertModel:
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
-            logger.debug('血压问诊模型输入： ' + '\n'.join(messages))
+            logger.debug('血压问诊模型输入： ' + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                     temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
             logger.debug('血压问诊模型输出： ' + generate_text)
@@ -231,7 +231,7 @@ class expertModel:
             his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             prompt = blood_pressure_pacify_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
-            logger.debug('血压安抚模型输入： ' + '\n'.join(messages))
+            logger.debug('血压安抚模型输入： ' + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                     temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
             logger.debug('血压安抚模型输出： ' + generate_text)
