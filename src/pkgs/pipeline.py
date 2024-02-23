@@ -1083,7 +1083,7 @@ class Chat_v2:
             ):  # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
                 ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
                 ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
-                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
+                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history,"append_data": append_data,}
                 yield {
                     "data": ret_thought,
                     "mid_vars": mid_vars,
