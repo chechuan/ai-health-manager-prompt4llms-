@@ -394,7 +394,7 @@ class testParam:
     #         "D. 核心锻炼 - 平板支撑（Plank） \n\n目标肌肉：整个核心肌群，包括腹直肌、腹横肌、多裂肌\n动作要领：采取俯卧撑的起始姿势，但是将前臂放在地面上，保持身体一条直线，核心紧绷，保持这个姿势尽可能长的时间。"
     #     ]
     # }
-    param_dev_report_interpretation = {"intentCode": "report_interpretation", "file_path": "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/tmp/report_demo.png"}
+    param_dev_report_interpretation = {"intentCode": "report_interpretation", "file_path": "/home/tico/workspace/ai-health-manager-prompt4llms/.tmp/images/口腔.png", "options": ["口腔", "B超", "体检"]}
     param_dev_tool_compute_blood_pressure = {"ihm_health_sbp": 161, "ihm_health_dbp": 99, "ihm_medical_chief": []}
     param_dev_chat_gen_other = {"orgCode": "sf","customId": "test_songhaoyang","prompt": "","init_intent": False,"intentCode": "other",
                                 "history": [

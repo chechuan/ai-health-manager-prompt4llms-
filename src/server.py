@@ -315,7 +315,7 @@ def create_app():
             # param = accept_param_purge()
             upload_file = request.files.get("file")
             filename = upload_file.filename
-            tmp_path = Path(f".cache/tmp")
+            tmp_path = Path(f".tmp/images")
             if not tmp_path.exists():
                 tmp_path.mkdir(parents=True)
             file_path = tmp_path.joinpath(filename)

@@ -5,3 +5,4 @@ doc/test/debug
 .cache/
 .idea/
 .vscode/
+.tmp
