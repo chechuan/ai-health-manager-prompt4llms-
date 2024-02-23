@@ -156,7 +156,7 @@ class expertModel:
         return {'thought': thought, 'content': content}
     
     @staticmethod
-    def fat_reduction(history, cur_date, weight, query='', **kwargs):
+    def fat_reduction(**kwargs):
         cur_date = kwargs['promptParam'].get('cur_date', '')
         weight = kwargs['promptParam'].get('weight', '')
         query = kwargs['promptParam'].get('query', '')
@@ -176,7 +176,7 @@ class expertModel:
 
 
     @staticmethod
-    def tool_rules_blood_pressure_level(ihm_health_sbp: int, ihm_health_dbp: int, query='', **kwargs) -> dict:
+    def tool_rules_blood_pressure_level(**kwargs) -> dict:
         """计算血压等级
 
         - Args
@@ -272,7 +272,7 @@ class expertModel:
         history = kwargs.get('history', [])
         if ihm_health_sbp > 180 or ihm_health_dbp > 110:
             level = 3
-            rules = ["呼叫救护车"]
+            return {'level':level, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
             if not query:
