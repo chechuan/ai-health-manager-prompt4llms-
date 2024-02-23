@@ -28,6 +28,7 @@ from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
 from src.utils.module import (InitAllResource, accept_stream_response, clock,
                               compute_blood_pressure_level, dumpJS, get_intent)
+from data.constrant import *
 
 
 class expertModel:
@@ -130,6 +131,46 @@ class expertModel:
         return status
 
     @staticmethod
+    def emotions(cur_date, level):
+        prompt = emotions_prompt.format(cur_date, level)
+        messages = [{"role": "user", "content": prompt}]
+        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        thoughtIdx = generate_text.find("\nThought") + 9
+        thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        outIdx = generate_text.find("\nOutput") + 8
+        content = generate_text[outIdx:].split("\n")[0].strip()
+        return {'thought': thought, 'content': content}
+    
+    @staticmethod
+    def weight_trend(cur_date, weight):
+        prompt = weight_trend_prompt.format(cur_date, weight)
+        messages = [{"role": "user", "content": prompt}]
+        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        thoughtIdx = generate_text.find("\nThought") + 9
+        thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        outIdx = generate_text.find("\nOutput") + 8
+        content = generate_text[outIdx:].split("\n")[0].strip()
+        return {'thought': thought, 'content': content}
+    
+    @staticmethod
+    def fat_reduction(history, cur_date, weight):
+        if not history:
+            return f'您今日体重为{weight}'
+        prompt = weight_trend_prompt.format(cur_date, weight)
+        messages = [{"role": "user", "content": prompt}]
+        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
+                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        thoughtIdx = generate_text.find("\nThought") + 9
+        thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        outIdx = generate_text.find("\nOutput") + 8
+        content = generate_text[outIdx:].split("\n")[0].strip()
+        return {'thought': thought, 'content': content}
+
+
+
+    @staticmethod
     def tool_rules_blood_pressure_level(ihm_health_sbp: int, ihm_health_dbp: int, **kwargs) -> dict:
         """计算血压等级
 
@@ -171,12 +212,16 @@ class expertModel:
                 return 1
             else:
                 return 0
-
+        
+        history = kwargs.get('history', [])
         if ihm_health_sbp > 180 or ihm_health_dbp > 110:
             level = 3
             rules = ["呼叫救护车"]
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
+            if not history:
+                return {'level':2, 'rules':[], 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp_list},血压偏高']}
+            
             rules = ["预问诊", "是否通知家人", "是否通知家庭医师"]
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
             level = 1
@@ -193,6 +238,8 @@ class expertModel:
             level = -1
             rules = []
         return {"level": level, "rules": rules}
+    
+    def blood_pressure_inquiry(history)
 
     @clock
     def rec_diet_eval(self, param):
