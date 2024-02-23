@@ -274,7 +274,7 @@ class expertModel:
             else:
                 return 0
         
-        history = kwargs.get('history', [])
+        history = kwargs.get('his', [])
         if ihm_health_sbp > 180 or ihm_health_dbp > 110:
             level = 3
             return {'level':level, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}

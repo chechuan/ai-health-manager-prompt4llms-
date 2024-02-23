@@ -622,6 +622,7 @@ class Chat_v2:
         2. history 由backend_history拼接用户输入
         """
         args, kwargs = self.pre_fill_param(*args, **kwargs)
+        kwargs['his'] = kwargs.get("history", [])
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i["role"]), "user")} for i in kwargs["history"]]
             kwargs["history"] = kwargs["backend_history"] + [history[-1]]
