@@ -35,7 +35,7 @@ class expertModel:
     indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率": "XYZBXY001005"}
     session = Session()
     ocr = RapidOCR()
-    
+
     def __init__(self, gsr) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
@@ -251,6 +251,7 @@ class expertModel:
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         outIdx = generate_text.find("\nOutput") + 8
         content = generate_text[outIdx:].split("\n")[0].strip()
+
 
     @clock
     def rec_diet_eval(self, param):
@@ -739,6 +740,36 @@ class expertModel:
                 return "选项与要求不符"
         return content
 
+    def __ocr_report__(self, file_path):
+        """报告OCR功能"""
+        result, _ = self.ocr(file_path)
+        docs = ""
+        if result:
+            ocr_result = [line[1] for line in result]
+            logger.debug(f"Report interpretation OCR result: {dumpJS(ocr_result)}")
+            docs += "\n".join(ocr_result)
+        else:
+            logger.error(f"Report interpretation OCR result is empty")
+        return docs, ocr_result
+
+    def __report_interpretation_result__(
+        self,
+        ocr_result: List[str] = [],
+        msg: str = "Unknown Error",
+        report_type: str = "Unknown Type",
+    ):
+        """报告解读结果
+
+        - Args:
+            ocr_result (List[str]): OCR结果
+            msg (str): 报告解读内容
+            report_type (str): 报告类型
+
+        - Returns:
+            Dict: 报告解读结果
+        """
+        return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type}
+
     def __report_interpretation__(self, **kwargs) -> str:
         """报告解读功能
 
@@ -748,39 +779,50 @@ class expertModel:
         - Returns:
             str: 报告解读内容
         """
-        tmp_path = Path(f".cache/tmp")
-        if not tmp_path.exists():
-            tmp_path.mkdir(parents=True)
-        image_url = kwargs.get("url")
-        if image_url:
-            r = self.session.get(image_url)
-            file_path = tmp_path.joinpath(basename(image_url))
-            with open(file_path, mode="wb") as f:
-                f.write(r.content)
-        elif kwargs.get("file_path"):
-            file_path = kwargs.get("file_path")
-        else:
-            logger.error(f"Report interpretation error: file_path or url not found")
-            return {"ocr_result": [], "report_interpretation": "请输入信息源"}
-        result, _ = self.ocr(file_path)
-        docs = ""
-        if result:
-            ocr_result = [line[1] for line in result]
-            logger.debug(f"Report interpretation OCR result: {dumpJS(ocr_result)}")
-            docs += "\n".join(ocr_result)
-        else:
-            logger.error(f"Report interpretation OCR result is empty")
-            return {"ocr_result": [], "report_interpretation": "未识别出报告内容，请重新尝试"}
 
+        def prepare_file(**kwargs):
+            tmp_path = Path(f".tmp/images")
+            file_path = None
+            image_url = kwargs.get("url")
+
+            if not tmp_path.exists():
+                tmp_path.mkdir(parents=True)
+
+            if image_url:
+                r = self.session.get(image_url)
+                file_path = tmp_path.joinpath(basename(image_url))
+                with open(file_path, mode="wb") as f:
+                    f.write(r.content)
+            elif kwargs.get("file_path"):
+                file_path = kwargs.get("file_path")
+            else:
+                logger.error(f"Report interpretation error: file_path or url not found")
+
+            return file_path
+
+        file_path = prepare_file(**kwargs)
+        if not file_path:
+            return self.__report_interpretation_result__(msg="请输入信息源")
+        docs, ocr_result = self.__ocr_report__(file_path)
+        if not docs:
+            return self.__report_interpretation_result__(msg="未识别出报告内容，请重新尝试")
+
+        # 报告异常信息解读
         prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
-        # prompt_template = PromptTemplate.from_template(prompt_template_str)
-        # query = prompt_template.format(prompt=docs)
         messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
         logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
         response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"Report interpretation LLM Output: {content}")
-        return {"ocr_result": ocr_result, "report_interpretation": content}
+
+        # 增加报告类型判断
+        if kwargs.get("options"):
+            report_type = self.__single_choice__(docs, kwargs["options"] + ["其他"])
+            if report_type not in kwargs["options"]:
+                report_type = "其他"
+        else:
+            report_type = "其他"
+        return self.__report_interpretation_result__(ocr_result=ocr_result, msg=content, report_type=report_type)
 
     def call_function(self, **kwargs):
         """调用函数
@@ -833,7 +875,7 @@ if __name__ == "__main__":
     #     print(yield_item)
 
     # param = testParam.param_dev_single_choice
-    # param = testParam.param_dev_report_interpretation
-    # expert_model.call_function(**param)
-    param = testParam.param_dev_tool_compute_blood_pressure
-    expert_model.tool_compute_blood_pressure(**param)
+    param = testParam.param_dev_report_interpretation
+    expert_model.call_function(**param)
+    # param = testParam.param_dev_tool_compute_blood_pressure
+    # expert_model.tool_compute_blood_pressure(**param)
