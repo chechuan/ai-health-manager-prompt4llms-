@@ -343,6 +343,45 @@ def create_app():
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+    
+    @app.route("/rules/emotions", methods=["post"])
+    def _rules_enotions_level():
+        """情志分级"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.emotions(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/rules/weight_trend", methods=["post"])
+    def _rules_weight_trend():
+        """体重趋势"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.weight_trend(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/rules/fat_reduction", methods=["post"])
+    def _rules_fat_reduction():
+        """体重减脂"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.fat_reduction(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
     @app.route("/test/sync", methods=["post"])
     def _test_sync():
