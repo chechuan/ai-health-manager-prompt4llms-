@@ -888,6 +888,7 @@ class Chat_v2:
         content = ''
         sch = False
         conts = []
+        level = ''
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -906,6 +907,7 @@ class Chat_v2:
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = weight_res['content']
+            sch = weight_res['scheme_gen']
             conts = []
             level = ''
             tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 

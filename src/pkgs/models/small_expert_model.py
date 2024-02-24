@@ -135,13 +135,18 @@ class expertModel:
     def emotions(cur_date, level):
         prompt = emotions_prompt.format(cur_date, level)
         messages = [{"role": "user", "content": prompt}]
+        logger.debug('压力模型输入:' + json.dumps(messages,ensure_ascii=False))
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        logger.debug('压力模型输出:' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        outIdx = generate_text.find("\nOutput") + 8
-        content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content,'scene_ending': True}
+        if generate_text.find("\nDoctor") == -1:
+                content = generate_text
+        else:
+            outIdx = generate_text.find("\nDoctor") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
+        return {'thought': thought, 'content': content + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",'scene_ending': True}
     
     @staticmethod
     def weight_trend(cur_date, weight):
@@ -163,7 +168,7 @@ class expertModel:
         if len(kwargs['history']) > 0:
             query = kwargs['history'][-1]['content']
         if not query:
-            return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': True}
+            return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
         query = query if query else "减脂效果不好，怎么改善？"
         prompt = fat_reduction_prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
@@ -176,7 +181,7 @@ class expertModel:
         else:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content, 'scene_ending': True}
+        return {'thought': thought, 'content': content, 'scene_ending': True, 'scheme_gen':True}
 
 
 
@@ -250,14 +255,18 @@ class expertModel:
             else:
                 outIdx = generate_text.find("\nDoctor") + 8
                 content = generate_text[outIdx:].split("\n")[0].strip()
-
+            if content.find("？") == -1:
+                content = content
+            else:
+                content = content[content.find("？")+1:]
+                content = content if content else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒，然后慢慢呼出，也持续5秒。这样可以帮助您放松身心，减轻症状。"
             return thought, content
 
         def is_visit(history, query):
             if '您需要家庭医生上门帮您服务吗' in history[-2]['content']:
                 prompt = blood_pressure_pd_prompt.format(history[-2]['content'], query)
                 messages = [{"role": "user", "content": prompt}]
-                if '是的' in history[-2]['content'] or '好的' in history[-2]['content']:
+                if '是的' in history[-1]['content'] or '好的' in history[-1]['content'] or '需要' in history[-1]['content'] or '嗯' in history[-1]['content']:
                     return True
                 text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                         temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
@@ -296,7 +305,7 @@ class expertModel:
                 return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
             elif is_pacify(history, query=query): # 安抚
                 thought, content = blood_pressure_pacify(history, query)
                 return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
