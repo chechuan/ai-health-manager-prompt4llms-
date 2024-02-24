@@ -12,11 +12,16 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "args": [
-        "--file-path", "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/日程管理测试用例20240219.xlsx",
-        "--url", "http://127.0.0.1:26928",
-        "--sheet-name", "日程删除",
-        "--ai-backend-url", "https://gate-dev.op.laikang.com/aihealthmanager-dev/alg-api/schedule",
-        "--debug", "True"
+        "--file-path",
+        "/home/tico/workspace/ai-health-manager-prompt4llms/.cache/日程管理测试用例20240219.xlsx",
+        "--url",
+        "http://127.0.0.1:26928",
+        "--sheet-name",
+        "日程删除",
+        "--ai-backend-url",
+        "https://gate-dev.op.laikang.com/aihealthmanager-dev/alg-api/schedule",
+        "--debug",
+        "True"
       ]
     },
     {
@@ -28,7 +33,10 @@
       "env": {
         "STREAMLIT_ENABLE_COLAB_BACKEND": "true"
       },
-      "args": ["run", "${file}"]
+      "args": [
+        "run",
+        "${file}"
+      ]
     },
     {
       "name": "Python: 当前文件",
@@ -37,7 +45,11 @@
       "program": "${file}",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["--env", "local", "--use_cache"]
+      "args": [
+        "--env",
+        "local",
+        // "--use_cache"
+      ]
     },
     {
       "name": "Python: run server",
@@ -50,7 +62,8 @@
         "GEVENT_SUPPORT": "True"
       },
       "args": [
-        "--env", "local",
+        "--env",
+        "local",
         "--special_prompt_version",
         // "--use_cache"
       ]
@@ -62,7 +75,11 @@
       "program": "src/pkgs/models/role_play_model.py",
       "console": "integratedTerminal",
       "justMyCode": true,
-      "args": ["--env", "local", "--use_cache"]
+      "args": [
+        "--env",
+        "local",
+        "--use_cache"
+      ]
     },
     {
       "name": "Python: Prompt Factory",
