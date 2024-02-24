@@ -141,8 +141,11 @@ class expertModel:
         logger.debug('压力模型输出:' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        outIdx = generate_text.find("\nOutput") + 8
-        content = generate_text[outIdx:].split("\n")[0].strip()
+        if generate_text.find("\nDoctor") == -1:
+                content = generate_text
+        else:
+            outIdx = generate_text.find("\nDoctor") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
         return {'thought': thought, 'content': content + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",'scene_ending': True}
     
     @staticmethod
