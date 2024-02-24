@@ -172,8 +172,10 @@ class expertModel:
         query = query if query else "减脂效果不好，怎么改善？"
         prompt = fat_reduction_prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
+        logger.debug('体重方案模型输入： ' + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        logger.debug('体重方案模型输出： ' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         if generate_text.find("\nOutput") == -1:
