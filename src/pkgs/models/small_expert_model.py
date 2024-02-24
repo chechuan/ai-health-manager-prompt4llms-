@@ -168,7 +168,7 @@ class expertModel:
         if len(kwargs['history']) > 0:
             query = kwargs['history'][-1]['content']
         if not query:
-            return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': True}
+            return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': True, 'scheme_gen':False}
         query = query if query else "减脂效果不好，怎么改善？"
         prompt = fat_reduction_prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
@@ -181,7 +181,7 @@ class expertModel:
         else:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content, 'scene_ending': True}
+        return {'thought': thought, 'content': content, 'scene_ending': True, 'scheme_gen':True}
 
 
 
