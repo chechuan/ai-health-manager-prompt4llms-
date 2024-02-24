@@ -103,8 +103,8 @@ Begin!"""
 
         functions = [
             {
-                "name": "查询知识库",
-                "description": "知识查询工具可以通过查询指定外部知识库获取query相关专业知识, 当问题需要专业的知识时, 优先使用该工具",
+                "name": "searchKB",
+                "description": "searchKB可以指定外部知识库获取query相关专业知识, 并为用户提供基于专业知识的聊天服务, 优先使用该工具",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -112,20 +112,21 @@ Begin!"""
                             "type": "string",
                             "description": "知识库名称",
                             "options": ["新奥百科知识库", "健康知识", "高血压"],
-                        }
+                        },
+                        "query": {"type": "string", "description": "搜索的关键字"},
                     },
-                    "required": ["knowledge_base_name"],
+                    "required": ["knowledge_base_name", "query"],
                 },
             },
-            {
-                "name": "搜索引擎",
-                "description": "搜索引擎可以快速找到相关的网页, 查询到相关的知识内容, 当问题需要知识且知识库不匹配时, 优先使用该工具",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"query": {"type": "string", "description": "搜索的关键字"}},
-                    "required": ["query"],
-                },
-            },
+            # {
+            #     "name": "searchEngine",
+            #     "description": "searchEngine可以快速检索到问题相关网页, 查询到相关知识内容, 当问题需要专业知识且知识库不匹配时, 优先使用该工具",
+            #     "parameters": {
+            #         "type": "object",
+            #         "properties": {"query": {"type": "string", "description": "搜索的关键字"}},
+            #         "required": ["query"],
+            #     },
+            # },
             {
                 "name": "AskHuman",
                 "description": "日常闲聊工具可以进行简单的聊天",
@@ -236,7 +237,7 @@ Begin!"""
         messages = compose_prompt_react(messages)
         response = openai.ChatCompletion.create(
             messages=messages,
-            model="Qwen-14B-Chat",
+            model="Qwen-72B-Chat",
             temperature=0.7,
             top_p=0.5,
             n=1,
