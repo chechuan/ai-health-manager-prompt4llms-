@@ -281,14 +281,20 @@ Begin!"""
         return history
 
     def run(self, history: Dict):
-        system_prompt = """你是由来康生命研发的智能健康管家, 你的小名叫`来康智伴`,下面是一些定义:
+        system_prompt = """你是由来康生命研发的智能健康管家, 你的小名叫`来康智伴`,你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
+###下面是一些要求:###
 1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家, 你可以叫我来康智伴
 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
 3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务
-4. 我是你的主人"""
+4. 对于用户的发散性提问，你不一定要给出答案，你可以用问题回答问题。你可以询问我任何你想了解的信息。
+5. 当我问你一个值得分析的问题时你要对问题进行拆解,一步步的和我聊
+6. 你的输出要口语化，突出重点
+7. 给出切实可行的实际方案,不要说假大空的套话。
+8. 你要具备积极的价值观，避免输出有毒有害的内容禁止输出黄赌毒相关信息
+9. 当我问你我是谁时，你要知道我是你的客户"""
         messages = self.__compose_func_reply__(history)
         messages = [{"role": "system", "content": system_prompt}] + messages
-        response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
+        response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5, stream=True)
         content = accept_stream_response(response, verbose=True)
         if history[-1].get("function_call"):
             history[-1]["function_call"]["arguments"] = content
