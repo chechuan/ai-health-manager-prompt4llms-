@@ -171,8 +171,11 @@ class expertModel:
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        outIdx = generate_text.find("\nOutput") + 8
-        content = generate_text[outIdx:].split("\n")[0].strip()
+        if generate_text.find("\nOutput") == -1:
+                content = generate_text
+        else:
+            outIdx = generate_text.find("\nOutput") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
         return {'thought': thought, 'content': content, 'scene_ending': True}
 
 
@@ -223,8 +226,11 @@ class expertModel:
             logger.debug('血压问诊模型输出： ' + generate_text)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            outIdx = generate_text.find("\nDoctor") + 8
-            content = generate_text[outIdx:].split("\n")[0].strip()
+            if generate_text.find("\nDoctor") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("\nDoctor") + 8
+                content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
         
@@ -239,8 +245,11 @@ class expertModel:
             logger.debug('血压安抚模型输出： ' + generate_text)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            outIdx = generate_text.find("\nDoctor") + 8
-            content = generate_text[outIdx:].split("\n")[0].strip()
+            if generate_text.find("\nDoctor") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("\nDoctor") + 8
+                content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
 
