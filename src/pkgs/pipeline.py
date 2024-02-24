@@ -877,6 +877,7 @@ class Chat_v2:
         blood_res = {}
         content = ''
         sch = False
+        conts = []
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
