@@ -278,9 +278,11 @@ Begins!"""
                 # if idx == 0 and msg["role"] == "user":
                 #     content = system_prompt.format(prompt=msg["content"])
                 #     messages.append({"role": "user", "content": content})
-                if msg["role"] == "assistant" and msg["function_call"]:
+                if msg["role"] == "assistant" and msg.get("function_call"):
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
                     messages.append({"role": "assistant", "content": content})
+                elif msg["role"] == "assistant":
+                    messages.append({"role": "assistant", "content": msg["content"]})
                 else:
                     messages.append({"role": msg["role"], "content": msg["content"]})
         return messages
