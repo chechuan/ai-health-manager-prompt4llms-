@@ -255,7 +255,11 @@ class expertModel:
             else:
                 outIdx = generate_text.find("\nDoctor") + 8
                 content = generate_text[outIdx:].split("\n")[0].strip()
-
+            if content.find("？") == -1:
+                content = content
+            else:
+                content = content[content.find("？")+1:]
+                content = content if content else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒，然后慢慢呼出，也持续5秒。这样可以帮助您放松身心，减轻症状。"
             return thought, content
 
         def is_visit(history, query):
