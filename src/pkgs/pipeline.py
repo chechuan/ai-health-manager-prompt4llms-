@@ -878,6 +878,7 @@ class Chat_v2:
         content = ''
         sch = False
         conts = []
+        level = ''
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
