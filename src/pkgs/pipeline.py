@@ -908,6 +908,7 @@ class Chat_v2:
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = weight_res['content']
             sch = weight_res['scheme_gen']
+            thought = weight_res['thought']
             conts = []
             level = ''
             tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 
