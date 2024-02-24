@@ -636,7 +636,8 @@ class Chat_v2:
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i["role"]), "user")} for i in kwargs["history"]]
             kwargs["history"] = kwargs["backend_history"] + [history[-1]]
-            kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
+            if not kwargs["history"][-1].get("intentCode"):
+                kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
 
         if kwargs["intentCode"] == "other":
             kwargs["prompt"] = None
@@ -920,6 +921,7 @@ class Chat_v2:
             level = blood_res['level']
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
+            kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
             mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
             )
