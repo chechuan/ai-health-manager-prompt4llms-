@@ -877,6 +877,7 @@ class Chat_v2:
         blood_res = {}
         content = ''
         sch = False
+        conts = []
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -907,7 +908,7 @@ class Chat_v2:
             level = blood_res['level']
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
-            mid_vars, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+            mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
             )
         else:

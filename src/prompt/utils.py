@@ -9,12 +9,9 @@
 import json
 import re
 import sys
-from json import tool
-from os import system
 from typing import Dict
 
 import openai
-from matplotlib.pyplot import hist
 
 from src.utils.module import accept_stream_response, parse_latest_plugin_call
 
@@ -250,7 +247,7 @@ Begin!"""
         )
         content = accept_stream_response(response, verbose=True)
         # content = "Thought: 提供的工具帮助较小，我将直接回答。\nAnswer: 你是你的主人。"
-        output_text = parse_latest_plugin_call(content, plugin_name="AskHuman")
+        output_text = parse_latest_plugin_call("\n" + content, plugin_name="AskHuman")
         action = output_text[1]
         # out_text = self.__generate_content_verification__(out_text, tool_msg["functions"])
         history.append(

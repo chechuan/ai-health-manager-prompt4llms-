@@ -5,11 +5,7 @@
 @Author  :   ticoAg
 @Contact :   1627635056@qq.com
 """
-import sys
-from email import message
 from typing import Any, AnyStr, Dict, List
-
-from matplotlib.pyplot import hist
 
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
