@@ -135,13 +135,15 @@ class expertModel:
     def emotions(cur_date, level):
         prompt = emotions_prompt.format(cur_date, level)
         messages = [{"role": "user", "content": prompt}]
+        logger.debug('压力模型输入:' + json.dumps(messages,ensure_ascii=False))
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        logger.debug('压力模型输出:' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         outIdx = generate_text.find("\nOutput") + 8
         content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content,'scene_ending': True}
+        return {'thought': thought, 'content': content + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",'scene_ending': True}
     
     @staticmethod
     def weight_trend(cur_date, weight):
