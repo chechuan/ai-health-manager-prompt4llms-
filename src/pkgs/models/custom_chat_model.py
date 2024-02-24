@@ -246,7 +246,7 @@ class CustomChatReportInterpretation(CustomChatModel):
         super().__init__(gsr)
         self.code_func_map["report_interpretation_chat"] = self.__chat_report_interpretation__
 
-    def __compose_message__(self, history: List[Dict[str, str]], **kwargs):
+    def __compose_message__(self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs):
         """组装消息"""
         messages = []
         system_prompt = """【问诊和出具报告解读的提示】：
@@ -271,7 +271,7 @@ Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的�
 Begins!"""
         if not history:
             content = system_prompt.format(prompt=kwargs["promptParam"]["report_ocr_result"])
-            messages.append({"role": "user", "content": content})
+            messages.append({"role": "user", "content": content, "intentCode": intentCode})
         else:
             for idx in range(len(history)):
                 msg = history[idx]
@@ -280,7 +280,7 @@ Begins!"""
                 #     messages.append({"role": "user", "content": content})
                 if msg["role"] == "assistant" and msg.get("function_call"):
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
-                    messages.append({"role": "assistant", "content": content})
+                    messages.append({"role": "assistant", "content": content, })
                 elif msg["role"] == "assistant":
                     messages.append({"role": "assistant", "content": msg["content"]})
                 else:
