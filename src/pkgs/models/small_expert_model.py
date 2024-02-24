@@ -178,6 +178,7 @@ class expertModel:
         logger.debug('体重方案模型输出： ' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+        logger.debug('体重方案thought： ' + thought)
         if generate_text.find("\nOutput") == -1:
                 content = generate_text
         else:
