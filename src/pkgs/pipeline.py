@@ -440,21 +440,31 @@ class Chat_v2:
         # messages = __chatter_gaily_compose_func_reply__(messages)
 
         next_step, messages = self.chatter_assistant.get_next_step(messages)
+        self.update_mid_vars(mid_vars, key="日常闲聊-next_step", input_text=messages, output_text=next_step)
 
-        if next_step == "查询知识库":
-            self.funcall._call()
-        elif next_step == "搜索引擎":
-            self.funcall._call()
-        elif next_step == "日常闲聊":
+        if next_step == "searchKB":
+            history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+            content = history[-1]["content"]
+            messages[-1]['function_call']['name'] = 'AskHuman'
+            messages[-1]['function_call']['arguments'] = content
+        # elif next_step == "searchEngine":
+        #     history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+        #     content = history[-1]["content"]
+        #     messages[-1]['function_call']['name'] = 'AskHuman'
+        #     messages[-1]['function_call']['arguments'] = content
+        if next_step == "AskHuman":
             content, messages = self.chatter_assistant.run(messages)
+            self.update_mid_vars(
+                mid_vars,
+                key="日常闲聊",
+                input_text=json.dumps(messages, ensure_ascii=False),
+                output_text=content,
+            )
         else:
-            content, messages = self.chatter_assistant.run(messages)
-        self.update_mid_vars(
-            mid_vars,
-            key="日常闲聊",
-            input_text=json.dumps(messages, ensure_ascii=False),
-            output_text=content,
-        )
+            content = ""
+        # else:
+        #     content, messages = self.chatter_assistant.run(messages)
+        
         if kwargs.get("return_his"):
             return messages
         else:

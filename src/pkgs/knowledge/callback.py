@@ -319,7 +319,9 @@ class FuncCall:
         """
         called_method = self.funcmap['searchKB']['method']
         try:
-            query = json.loads(args[0])['query']
+            params = json.loads(args[0])
+            query = params['query']
+            knowledge_base_name = params.get("knowledge_base_name", knowledge_base_name)
         except:
             query = args[0]
     
@@ -364,7 +366,10 @@ class FuncCall:
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
             dataSource = "知识库: " + '、'.join(doc_name_list)
             content = msg['answer'].strip()
-            self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain")
+            try:
+                self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain") 
+            except:
+                pass
 
         ret = {"content": content, "dataSource": dataSource}
         return ret
@@ -389,9 +394,14 @@ class FuncCall:
         
         使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
-        query = args[0]
+        try:
+            params = json.loads(args[0])
+            query = params['query']
+        except:
+            query = args[0]
         logger.debug(f"搜索引擎 Input: {query}")
-        search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
+        # search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
+        search_result = search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session)
         logger.debug(f"搜索引擎检索 Output:\n{search_result}")
         template = get_template("search_engine_chat")
         if search_result:
@@ -462,7 +472,7 @@ class FuncCall:
 
     def _call(self, **kwargs):
         """"""
-        history = kwargs["out_history"]
+        history = copy.deepcopy(kwargs["out_history"])
         function_call = history[-1]['function_call']
         func_name = function_call["name"]
         arguments = function_call["arguments"]
@@ -478,7 +488,7 @@ class FuncCall:
         elif isinstance(ret_obj, dict):
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
-        history.append({"role": "user", "content": content, "intentCode": kwargs['intentCode']})
+        history.append({"role": "assistant", "content": content, "intentCode": kwargs['intentCode']})
         # logger.debug(f"Observation: {content}")
         return history, dataSource
 
