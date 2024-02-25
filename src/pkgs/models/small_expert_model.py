@@ -304,7 +304,7 @@ class expertModel:
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in bk_hitory]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
-            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + history
+            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + his
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
@@ -525,7 +525,7 @@ class expertModel:
             return get_second_hypertension(b_history, query, level)
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
             level = 1
-            
+
             if trend_sbp or trend_dbp:  # 血压波动超过30%
                 return get_second_hypertension(b_history, query, level=1)
             else:
