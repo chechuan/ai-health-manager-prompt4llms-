@@ -161,6 +161,7 @@ class expertModel:
             content = generate_text[outIdx:].split("\n")[0].strip()
         return {
             "thought": thought,
+            "scheme_gen": 0,
             "content": "健康报告显示您的健康处于轻度失衡状态。"
             + content
             + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
@@ -223,7 +224,7 @@ class expertModel:
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
             try:
-                num = float(weight.replace('kg', '')) - 75.4
+                num = round(float(weight.replace('kg', '')) - 75.4, 1)
                 if num < 0:
                     cnt = f"体重较上周减少{num}kg。"
                 else:
@@ -243,18 +244,18 @@ class expertModel:
                     "thought": thought,
                     "contents": [f"您今日体重为{weight}。", cnt, "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
                     "scene_ending": False,
-                    "scheme_gen": 1,
+                    "scheme_gen": 2,
                     "modi_scheme": "scheme_no_change",
                     "weight_trend_gen": True,
                 }
         else:
             modi_type = get_scheme_modi_type(content)
             return {"thought": thought, 
-                    "contents": [content], 
+                    "contents": ['好的，已重新帮您生成了健康方案，请查收。'], 
                     "scene_ending": False, 
-                    "scheme_gen": -1, 
+                    "scheme_gen": 0, 
                     "modi_scheme":modi_type,
-                    "weight_trend_gen":True,
+                    "weight_trend_gen":False,
                 }
 
     @staticmethod
@@ -293,28 +294,36 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def blood_pressure_inquiry(history, query):
+        def inquire_gen(history, ihm_health_sbp, ihm_health_dbp):
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
-            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
+            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
-                history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+                history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
             )
             logger.debug("血压问诊模型输出： " + generate_text)
-            if generate_text.find("\nThought") == -1:
-                thought = generate_text
-            else:
-                thoughtIdx = generate_text.find("\nThought") + 9
-                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            thoughtIdx = generate_text.find("\nThought") + 9
+            return generate_text
+
+        def blood_pressure_inquiry(history, query):
+            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
+            while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
+                #thought = generate_text
+                generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
+            thoughtIdx = generate_text.find("Thought") + 8
+            # thoughtIdx = 0
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("\nDoctor") == -1:
-                content = generate_text
-            else:
-                outIdx = generate_text.find("\nDoctor") + 8
-                content = generate_text[outIdx:].split("\n")[0].strip()
+            outIdx = generate_text.find("\nAssistant") + 11
+            content = generate_text[outIdx:].split("\n")[0].strip()
+            # else:
+            #     thoughtIdx = generate_text.find("\nThought") + 9
+            #     thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            # if generate_text.find("\nDoctor") == -1:
+            #     content = generate_text
+            # else:
+            #     outIdx = generate_text.find("\nDoctor") + 8
+            #     content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
 
@@ -600,7 +609,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                 }
-        elif 90 <= ihm_health_sbp < 120 or 80 > ihm_health_dbp >= 60:  # 正常血压
+        elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
             rules = []
             return {
@@ -617,11 +626,12 @@ class expertModel:
         else:   # 低血压
             level = -1
             rules = []
+            thought, content = blood_pressure_inquiry(history, query)
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。"],
-                    "thought": "用户血压偏低",
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", content],
+                    "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": True,
                     "blood_trend_gen": True,
@@ -630,7 +640,7 @@ class expertModel:
                     "is_visit": False,
                 }
             else:
-                thought, content = blood_pressure_inquiry(history, query)  
+                  
                 if "？" in content or "?" in content:   # 问诊
                     return {
                         "level": level,

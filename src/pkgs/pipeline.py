@@ -917,6 +917,7 @@ class Chat_v2:
             content = pressure_res['content']
             #sch = pressure_res['scheme_gen']
             thought = pressure_res['thought']
+            sch = pressure_res['scheme_gen']
             tool = 'askHuman' if pressure_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
