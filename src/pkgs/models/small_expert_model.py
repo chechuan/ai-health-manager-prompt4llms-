@@ -226,7 +226,10 @@ class expertModel:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
-            # cont = 
+            # try:
+            #     cont = float(weight.replace('kg', ''))
+            # except Exception as err:
+            # finally:
             return {
                 "thought": thought,
                 "contents": [f"您今日体重为{weight}。健康报告显示您的健康处于平衡状态。", content],
@@ -238,7 +241,7 @@ class expertModel:
         else:
             modi_type = get_scheme_modi_type(content)
             return {"thought": thought, 
-                    "contents": [generate_text], 
+                    "contents": [content], 
                     "scene_ending": False, 
                     "scheme_gen": -1, 
                     "modi_scheme":modi_type,
