@@ -900,6 +900,7 @@ class Chat_v2:
         call_120 = False
         is_visit = False
         modi_scheme = ''
+        idx = 0
         weight_trend_gen = False
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
@@ -975,6 +976,10 @@ class Chat_v2:
                     ct = th + 'Assistant: ' + content + '\n'
                     for i in conts:
                         ct += 'Assistant: ' + i + '\n'
+                elif idx == -1:
+                    ct = 'Assistant: ' + content + '\n'
+                    for i in range(conts):
+                        ct += 'Assistant: ' + content + '\n'
                 else:
                     ct = 'Assistant: ' + content + '\n'
                     for i in range(conts):
