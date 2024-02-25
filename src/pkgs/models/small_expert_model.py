@@ -1046,7 +1046,9 @@ class expertModel:
         for rectangle, text in rectangles_with_text:
             draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
             self.image_font.size = 36
-            draw.text((rectangle[0], rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red")
+            draw.text(
+                (rectangle[0] - 30, rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
+            )
         save_path = tmp_path.joinpath(file_path.stem + "_rect" + ".jpg")
         image_io.save(save_path)
         logger.debug(f"Plot rectangle image saved to {save_path}")
@@ -1084,9 +1086,9 @@ class expertModel:
         response = openai.ChatCompletion.create(
             model="Qwen-72B-Chat",
             messages=messages,
-            temperature=0.7,
+            temperature=0,
             n=1,
-            top_p=1,
+            top_p=0.8,
             top_k=-1,
             presence_penalty=0,
             frequency_penalty=0.5,
@@ -1103,7 +1105,7 @@ class expertModel:
 
         rectangles_with_text = []
         for topic, index_range in loc.items():
-            msgs = raw_result[index_range[0] : index_range[1]]
+            msgs = raw_result[index_range[0] : index_range[1] + 1]
             coordinates = [item[0] for item in msgs]
             left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
             top = min([j for i in coordinates for j in [i[0][1], i[1][1]]])
@@ -1175,6 +1177,8 @@ class expertModel:
             )
         try:
             remote_image_url = self.__report_ocr_classification_make_text_group__(file_path, raw_result, tmp_path)
+            if not remote_image_url:
+                remote_image_url = image_url
         except Exception as e:
             logger.exception(f"Report interpretation error: {e}")
             remote_image_url = image_url
