@@ -308,7 +308,7 @@ class expertModel:
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
-            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] + history
+            messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] #+ history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
@@ -327,7 +327,7 @@ class expertModel:
             # outIdx = generate_text.find("\nassistant") + 11
             # content = generate_text[outIdx:].split("\n")[0].strip()
             if generate_text.find("Thought") == -1:
-                lis = ['结合用户情况，帮助用户降低血压。', '结合用户个人血压信息，为用户提供帮助。']
+                lis = ['结合用户个人血压信息，为用户提供帮助。', '结合用户情况，帮助用户降低血压。']
                 import random
                 thought = random.choice(lis)
             else:
