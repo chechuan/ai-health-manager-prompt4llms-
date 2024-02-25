@@ -1020,7 +1020,7 @@ class Chat_v2:
         """首次交互"""
         intentCode = kwargs.get("intentCode")
         out_history = None
-        append_data = {}
+        appendData = {}
         if self.prompt_meta_data["event"].get(intentCode):
             # XXX 演示临时增加逻辑 2024年01月31日11:28:00
             # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"是否一致，如果一致，则进入临时逻辑，否则进入正常流程
@@ -1042,13 +1042,13 @@ class Chat_v2:
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
-                append_data, out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+                appendData, out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs["intentCode"] = intentCode
             elif self.prompt_meta_data["event"][intentCode].get("process_type") == "react":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         if not out_history:
             out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
-        return append_data, out_history, intentCode
+        return appendData, out_history, intentCode
 
     def if_init(self, tool):
         # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
@@ -1092,7 +1092,7 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode")
         mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
-        append_data, out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
+        appendData, out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
@@ -1102,12 +1102,12 @@ class Chat_v2:
             ):  # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
                 ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
                 ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
-                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history,"append_data": append_data,}
+                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history,"appendData": appendData,}
                 yield {
                     "data": ret_thought,
                     "mid_vars": mid_vars,
                     "history": out_history,
-                    "append_data": append_data,
+                    "appendData": appendData,
                 }
 
             if self.prompt_meta_data["rollout_tool"].get(tool) or not self.funcall.funcmap.get(tool):
@@ -1131,7 +1131,7 @@ class Chat_v2:
                     "data": ret_function_call,
                     "mid_vars": mid_vars,
                     "history": out_history,
-                    "append_data": append_data,
+                    "appendData": appendData,
                 }
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
@@ -1153,7 +1153,7 @@ class Chat_v2:
                 ret_result["appendData"] = purchasing_list
                 ret_result["message"] += "\n为您生成了一份采购清单，请确认"
 
-        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history, "append_data": append_data,}
+        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history, "appendData": appendData,}
 
 
 if __name__ == "__main__":
