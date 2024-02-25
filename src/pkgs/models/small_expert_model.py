@@ -298,9 +298,9 @@ class expertModel:
             his = []
             for i in bk_hitory:
                 if 'match_cont' not in i:
-                    his.append({'role':'User','content':i['content']})
+                    his.append({'role':'user','content':i['content']})
                 else:
-                    his.append({'role':'Assistant','content':i['match_cont']})
+                    his.append({'role':'assistant','content':i['match_cont']})
                 # if i['role'] == 'User' or i['role'] == 'user':
                 #     his.append({'role':'User', 'content':i['content']})
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
@@ -318,13 +318,13 @@ class expertModel:
 
         def blood_pressure_inquiry(bk_history, query):
             generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
-            while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
+            while generate_text.count("\nassistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
                 generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
             thoughtIdx = generate_text.find("Thought") + 8
             # thoughtIdx = 0
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            outIdx = generate_text.find("\nAssistant") + 11
+            outIdx = generate_text.find("\nassistant") + 11
             content = generate_text[outIdx:].split("\n")[0].strip()
             # else:
             #     thoughtIdx = generate_text.find("\nThought") + 9
@@ -340,7 +340,7 @@ class expertModel:
         def blood_pressure_pacify(history, query):
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             his_prompt = "\n".join(
-                [("Doctor" if not i["role"] == "User" else "User") + f": {i['content']}" for i in history]
+                [("Doctor" if not i["role"] == "user" else "user") + f": {i['content']}" for i in history]
             )
             prompt = blood_pressure_pacify_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]

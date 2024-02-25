@@ -970,23 +970,23 @@ class Chat_v2:
             ct = ''
             th = f'Thought: {thought}\n' if thought else ''
             if not conts:
-                ct = th + 'Assistant: ' + content + '\n'
+                ct = th + 'assistant: ' + content + '\n'
             else:
                 if idx == 0:
-                    ct = th + 'Assistant: ' + content + '\n'
+                    ct = th + 'assistant: ' + content + '\n'
                     for i in conts:
-                        ct += 'Assistant: ' + i + '\n'
+                        ct += 'assistant: ' + i + '\n'
                 elif idx == -1:
-                    ct = 'Assistant: ' + content + '\n'
+                    ct = 'assistant: ' + content + '\n'
                     for i in range(conts):
-                        ct += 'Assistant: ' + content + '\n'
+                        ct += 'assistant: ' + content + '\n'
                 else:
-                    ct = 'Assistant: ' + content + '\n'
+                    ct = 'assistant: ' + content + '\n'
                     for i in range(conts):
                         if idx == i + 1:
-                            ct = th + 'Assistant: ' + content + '\n'
+                            ct = th + 'assistant: ' + content + '\n'
                         else:
-                            ct += 'Assistant: ' + content + '\n'
+                            ct += 'assistant: ' + content + '\n'
             chat_history.append(
                 {
                     "role": "assistant",
