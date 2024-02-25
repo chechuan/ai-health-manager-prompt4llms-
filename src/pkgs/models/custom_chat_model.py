@@ -17,7 +17,7 @@ from src.utils.module import InitAllResource, accept_stream_response, dumpJS, up
 class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
-        self.code_func_map = { "blood_meas": expertModel.tool_rules_blood_pressure_level, "weight_meas": expertModel.fat_reduction}
+        self.code_func_map = { "blood_meas": expertModel.tool_rules_blood_pressure_level, "weight_meas": expertModel.fat_reduction, "pressure_meas":expertModel.emotions}
 
     def __parameter_check__(self, **kwargs):
         """参数检查"""

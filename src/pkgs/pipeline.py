@@ -895,6 +895,11 @@ class Chat_v2:
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
         thought = "I know the answer."
+        blood_trend_gen = False
+        notifi_daughter_doctor = False
+        call_120 = False
+        is_visit = False
+        modi_scheme = ''
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
         elif self.intent_map["tips"].get(intentCode):
@@ -906,6 +911,12 @@ class Chat_v2:
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
             mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "pressure_meas":
+            pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = pressure_res['content']
+            #sch = pressure_res['scheme_gen']
+            thought = pressure_res['thought']
+            tool = 'askHuman' if pressure_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             if weight_res['contents']:
@@ -913,6 +924,8 @@ class Chat_v2:
                 conts = weight_res['contents'][1:]
             sch = weight_res['scheme_gen']
             thought = weight_res['thought']
+            modi_scheme = weight_res.get('modi_scheme', 'scheme_no_change')
+
             level = ''
             tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "blood_meas":
@@ -922,6 +935,10 @@ class Chat_v2:
             sch = blood_res['scheme_gen']
             thought = blood_res['thought']
             level = blood_res['level']
+            blood_trend_gen = blood_res['blood_trend_gen']
+            notifi_daughter_doctor = blood_res['notifi_daughter_doctor']
+            call_120 = blood_res['call_120']
+            is_visit = blood_res['is_visit']
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
@@ -936,7 +953,12 @@ class Chat_v2:
         appendData = {
                     "contents": conts,
                     "scheme_gen": sch,
-                    "level": level
+                    "level": level,
+                    'blood_trend_gen':blood_trend_gen,
+                    'notifi_daughter_doctor':notifi_daughter_doctor,
+                    'call_120': call_120,
+                    'is_visit':is_visit,
+                    'modi_scheme':modi_scheme
                 }
         chat_history.append(
             {

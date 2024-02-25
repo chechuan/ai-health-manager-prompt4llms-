@@ -228,7 +228,7 @@ class expertModel:
                 "thought": thought,
                 "contents": [f"您今日体重为{weight}", content],
                 "scene_ending": False,
-                "scheme_gen": True,
+                "scheme_gen": 1,
                 "modi_scheme":'scheme_no_change'
             }
         else:
@@ -236,7 +236,7 @@ class expertModel:
             return {"thought": thought, 
                     "contents": [generate_text], 
                     "scene_ending": False, 
-                    "scheme_gen": True, 
+                    "scheme_gen": -1, 
                     "modi_scheme":modi_type,
                 }
 
@@ -456,7 +456,7 @@ class expertModel:
             return {'level':level, 
                     'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。', '我已为您呼叫120。'], 
                     'thought':'', 
-                    'scheme_gen':False, 
+                    'scheme_gen':-1, 
                     'scene_ending':True, 
                     'blood_trend_gen':False,
                     'notifi_daughter_doctor': False,
@@ -476,7 +476,7 @@ class expertModel:
                     return {'level':level, 
                             'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。', content], 
                             'thought':thought, 
-                            'scheme_gen':False, 
+                            'scheme_gen':-1, 
                             'scene_ending':False,
                             'blood_trend_gen':True,
                             'notifi_daughter_doctor': False,
@@ -489,7 +489,7 @@ class expertModel:
                         return {'level':level, 
                                 'contents': [content], 
                                 'thought':thought, 
-                                'scheme_gen':False, 
+                                'scheme_gen':-1, 
                                 'scene_ending':False,
                                 'blood_trend_gen':False,
                                 'notifi_daughter_doctor': False,
@@ -501,7 +501,7 @@ class expertModel:
                         return {'level':level,
                                 'contents': [content], 
                                 'thought':thought, 
-                                'scheme_gen':True, 
+                                'scheme_gen':0, 
                                 'scene_ending':True,
                                 'blood_trend_gen':False,
                                 'notifi_daughter_doctor': False,
@@ -516,28 +516,43 @@ class expertModel:
                 return {'level':level, 
                         'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。'], 
                         'thought':thought,
-                        'scheme_gen':False,
-                        'blood_trend_gen':True,
+                        'scheme_gen':-1,
+                        'scene_ending':False,
+                        'blood_trend_gen':True,                      
                         'notifi_daughter_doctor': False,
                         'call_120': False,
                         'is_visit': False,
                     }
             
             elif '？' in content or '?' in content:
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':-1, 'scene_ending':False,
+                        'blood_trend_gen':True,                      
+                        'notifi_daughter_doctor': False,
+                        'call_120': False,
+                        'is_visit': False,
+                        }
 
             else:
                 return {
                     "level": level,
                     "contents": [content],
                     "thought": thought,
-                    "scheme_gen": False,
+                    "scheme_gen": 0,
                     "scene_ending": True,
+                    'blood_trend_gen':True,                      
+                    'notifi_daughter_doctor': False,
+                    'call_120': False,
+                    'is_visit': False,
                 }
         else:
             level = -1
             rules = []
-            return {'level':0, 'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围'], 'thought':'用户血压正常', 'scheme_gen':False, 'scene_ending':True}
+            return {'level':0, 'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围'], 'thought':'用户血压正常', 'scheme_gen':-1, 'scene_ending':True,
+                    'blood_trend_gen':True,                      
+                    'notifi_daughter_doctor': False,
+                    'call_120': False,
+                    'is_visit': False,
+                }
 
 
     @clock
