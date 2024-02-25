@@ -162,30 +162,45 @@ class expertModel:
     
     @staticmethod
     def fat_reduction(**kwargs):
+        def get_scheme_modi_type(text):
+            if '运动' in text and '不满意' in text:
+                return 'modify_exercise_scheme'
+            elif '饮食' in text and '不满意' in text:
+                return 'modify_diet_scheme'
+            else:
+                return 'all'
+            
         cur_date = kwargs['promptParam'].get('cur_date', '')
         weight = kwargs['promptParam'].get('weight', '')
         query = ''
         if len(kwargs['history']) > 0:
             query = kwargs['history'][-1]['content']
-        if not query:
-            return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
-        query = query if query else "减脂效果不好，怎么改善？"
-        prompt = fat_reduction_prompt.format(cur_date, weight, query)
+        # if not query:
+        #     return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
+        if query:
+            # 判断是否是对方案不满意及对方案某一部分不满意
+            prompt = weight_scheme_modify_prompt.format(query)
+        else:
+            query = query if query else "减脂效果不好，怎么改善？"
+            prompt = fat_reduction_prompt.format(cur_date, weight, query)
         messages = [{"role": "user", "content": prompt}]
-        logger.debug('体重方案模型输入： ' + json.dumps(messages, ensure_ascii=False))
+        logger.debug('体重方案/修改模型输入： ' + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
                 temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-        logger.debug('体重方案模型输出： ' + generate_text)
+        logger.debug('体重方案/修改模型输出： ' + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        logger.debug('体重方案thought： ' + thought)
+        logger.debug('体重方案/修改模型thought： ' + thought)
         if generate_text.find("\nOutput") == -1:
                 content = generate_text
         else:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content, 'scene_ending': True, 'scheme_gen':True}
-
+        if not query:
+            return {'thought': thought, 'contents': [f'您今日体重为{weight}', content], 'scene_ending': True, 'scheme_gen': 'all'}
+        else:
+            modi_type = get_scheme_modi_type(content)
+            return {'thought': thought, 'contents': [], 'scene_ending': True, 'scheme_gen': modi_type}
 
 
     @staticmethod
