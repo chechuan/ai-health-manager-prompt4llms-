@@ -180,9 +180,11 @@ class expertModel:
         if query:
             # 判断是否是对方案不满意及对方案某一部分不满意
             prompt = weight_scheme_modify_prompt.format(query)
+            logger.debug('进入体重方案修改流程。。。')
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
             prompt = fat_reduction_prompt.format(cur_date, weight, "减脂效果不好，怎么改善？")
+            logger.debug('进入体重出方案流程。。。')
         messages = [{"role": "user", "content": prompt}]
         logger.debug('体重方案/修改模型输入： ' + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
