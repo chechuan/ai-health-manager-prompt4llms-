@@ -226,12 +226,14 @@ class expertModel:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
+            # cont = 
             return {
                 "thought": thought,
-                "contents": [f"您今日体重为{weight}", content],
+                "contents": [f"您今日体重为{weight}。健康报告显示您的健康处于平衡状态。", content],
                 "scene_ending": False,
                 "scheme_gen": 1,
-                "modi_scheme":'scheme_no_change'
+                "modi_scheme":'scheme_no_change',
+                "weight_trend_gen":True
             }
         else:
             modi_type = get_scheme_modi_type(content)
@@ -240,6 +242,7 @@ class expertModel:
                     "scene_ending": False, 
                     "scheme_gen": -1, 
                     "modi_scheme":modi_type,
+                    "weight_trend_gen":True,
                 }
 
     @staticmethod
