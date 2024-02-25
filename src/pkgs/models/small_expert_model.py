@@ -293,21 +293,22 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def inquire_gen(bk_hitory, ihm_health_sbp, ihm_health_dbp):
+        def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp):
             his = []
-            for i in bk_hitory:
-                if 'match_cont' not in i:
-                    his.append({'role':'user','content':i['content']})
-                else:
-                    his.append({'role':'assistant','content':i['match_cont']})
+            # for i in bk_hitory:
+            #     if 'match_cont' not in i:
+            #         his.append({'role':'user','content':i['content']})
+            #     else:
+            #         his.append({'role':'assistant','content':i['match_cont']})
                 # if i['role'] == 'User' or i['role'] == 'user':
                 #     his.append({'role':'User', 'content':i['content']})
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
                 #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
-            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in bk_hitory]
+            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in hitory]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
-            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + his
+            hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
+            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] + history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
@@ -315,12 +316,12 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(bk_history, query):
-            generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
+        def blood_pressure_inquiry(history, query):
+            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
             #while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
                 # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
-            thoughtIdx = generate_text.find("Thought") + 8
+            #thoughtIdx = generate_text.find("Thought") + 8
             # thoughtIdx = 0
             # thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             # outIdx = generate_text.find("\nassistant") + 11
@@ -328,12 +329,12 @@ class expertModel:
             if generate_text.find("Thought") == -1:
                 thought = generate_text
             else:
-                thoughtIdx = generate_text.find("\nThought") + 9
+                thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("\nDoctor") == -1:
+            if generate_text.find("\nAssistant") == -1:
                 content = generate_text
             else:
-                outIdx = generate_text.find("\nDoctor") + 8
+                outIdx = generate_text.find("\nAssistant") + 11
                 content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
@@ -414,7 +415,7 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(b_history, query)
+                thought, content = blood_pressure_inquiry(history, query)
                 return {
                     "level": level,
                     "contents": [
@@ -460,7 +461,7 @@ class expertModel:
                     "is_visit": False,
                 }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(b_history, query)
+                thought, content = blood_pressure_inquiry(history, query)
                 if "？" in content or "?" in content:
                     return {
                         "level": level,
@@ -540,7 +541,7 @@ class expertModel:
                 return get_second_hypertension(b_history, history, query, level=1)
             else:
                 if not history:
-                    thought, content = blood_pressure_inquiry(b_history, query)
+                    thought, content = blood_pressure_inquiry(history, query)
                     return {
                         "level": level,
                         "contents": [
@@ -558,7 +559,7 @@ class expertModel:
                         "is_visit": False,
                     }
                 else:  # 问诊
-                    thought, content = blood_pressure_inquiry(b_history, query)
+                    thought, content = blood_pressure_inquiry(history, query)
                     if "？" in content or "?" in content:
                         return {
                             "level": level,
@@ -589,7 +590,7 @@ class expertModel:
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
             level = 0
-            thought, content = blood_pressure_inquiry(b_history, query)
+            thought, content = blood_pressure_inquiry(history, query)
             if not history:
                 return {
                     "level": level,
@@ -652,7 +653,7 @@ class expertModel:
         else:   # 低血压
             level = -1
             rules = []
-            thought, content = blood_pressure_inquiry(b_history, query)
+            thought, content = blood_pressure_inquiry(history, query)
             if not history:
                 return {
                     "level": -1,
