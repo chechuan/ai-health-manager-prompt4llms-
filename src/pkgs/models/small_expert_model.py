@@ -253,9 +253,9 @@ class expertModel:
             return {"thought": thought, 
                     "contents": ['好的，已重新帮您生成了健康方案，请查收。'], 
                     "scene_ending": False, 
-                    "scheme_gen": -1, 
+                    "scheme_gen": 0, 
                     "modi_scheme":modi_type,
-                    "weight_trend_gen":True,
+                    "weight_trend_gen":False,
                 }
 
     @staticmethod
