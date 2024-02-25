@@ -322,17 +322,19 @@ class expertModel:
                 # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
             thoughtIdx = generate_text.find("Thought") + 8
             # thoughtIdx = 0
-            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            outIdx = generate_text.find("\nassistant") + 11
-            content = generate_text[outIdx:].split("\n")[0].strip()
-            # else:
-            #     thoughtIdx = generate_text.find("\nThought") + 9
-            #     thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            # if generate_text.find("\nDoctor") == -1:
-            #     content = generate_text
-            # else:
-            #     outIdx = generate_text.find("\nDoctor") + 8
-            #     content = generate_text[outIdx:].split("\n")[0].strip()
+            # thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            # outIdx = generate_text.find("\nassistant") + 11
+            # content = generate_text[outIdx:].split("\n")[0].strip()
+            if generate_text.find("Thought") == -1:
+                thought = generate_text
+            else:
+                thoughtIdx = generate_text.find("\nThought") + 9
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            if generate_text.find("\nDoctor") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("\nDoctor") + 8
+                content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
 
