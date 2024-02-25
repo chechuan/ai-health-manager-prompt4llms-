@@ -7,12 +7,12 @@
 """
 from typing import Any, AnyStr, Dict, List
 
+from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
 from src.utils.Logger import logger
 from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
-from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
-from src.pkgs.models.small_expert_model import expertModel
+
 
 class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
@@ -264,8 +264,8 @@ class CustomChatReportInterpretation(CustomChatModel):
 # 已知信息
 {prompt}
 # 格式要求：请遵循以下格式回复
- 
-Thought: 思考针对当前问题应该做什么
+
+Thought: 思考推理针对当前问题应该做什么, 怎么做
 Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题，不要出现序号数字
  
 Begins!"""

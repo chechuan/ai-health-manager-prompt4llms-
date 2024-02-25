@@ -1049,7 +1049,7 @@ class expertModel:
             draw.text(
                 (rectangle[0] - 30, rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
             )
-        save_path = tmp_path.joinpath(file_path.stem + "_rect" + ".jpg")
+        save_path = tmp_path.joinpath(file_path.stem + "_rect" + file_path.suffix)
         image_io.save(save_path)
         logger.debug(f"Plot rectangle image saved to {save_path}")
         return save_path
@@ -1058,7 +1058,12 @@ class expertModel:
         """上传图片到服务器"""
         url = self.gsr.api_config["ai_backend"] + "/file/uploadFile"
         payload = {"businessType": "reportAnalysis"}
-        files = [("file", (save_path.name, open(save_path, "rb"), "image/jpeg"))]
+        if save_path.suffix.lower() in [".jpg", ".jpeg"]:
+            files = [("file", (save_path.name, open(save_path, "rb"), "image/jpeg"))]
+        elif save_path.suffix.lower() in [".png"]:
+            files = [("file", (save_path.name, open(save_path, "rb"), "image/png"))]
+        else:
+            files = [("file", (save_path.name, open(save_path, "rb"), f"image/{save_path.suffix.lower()[1:]}"))]
         resp = self.session.post(url, data=payload, files=files)
         if resp.status_code == 200:
             remote_image_url = resp.json()["data"]
