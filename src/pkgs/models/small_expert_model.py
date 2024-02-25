@@ -300,7 +300,7 @@ class expertModel:
                 if 'match_cont' not in i:
                     his.append({'role':'User','content':i['content']})
                 else:
-                    his.append(i['match_cont'])
+                    his.append({'role':'Assistant','content':i['match_cont']})
                 # if i['role'] == 'User' or i['role'] == 'user':
                 #     his.append({'role':'User', 'content':i['content']})
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
