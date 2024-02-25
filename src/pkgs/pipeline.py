@@ -900,6 +900,7 @@ class Chat_v2:
         call_120 = False
         is_visit = False
         modi_scheme = ''
+        weight_trend_gen = False
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
         elif self.intent_map["tips"].get(intentCode):
@@ -924,6 +925,7 @@ class Chat_v2:
                 conts = weight_res['contents'][1:]
             sch = weight_res['scheme_gen']
             thought = weight_res['thought']
+            weight_trend_gen = weight_res['weight_trend_gen']
             modi_scheme = weight_res.get('modi_scheme', 'scheme_no_change')
 
             level = ''
@@ -958,7 +960,8 @@ class Chat_v2:
                     'notifi_daughter_doctor':notifi_daughter_doctor,
                     'call_120': call_120,
                     'is_visit':is_visit,
-                    'modi_scheme':modi_scheme
+                    'modi_scheme':modi_scheme,
+                    'weight_trend_gen':weight_trend_gen
                 }
         chat_history.append(
             {
