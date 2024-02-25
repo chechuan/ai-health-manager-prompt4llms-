@@ -522,12 +522,12 @@ class expertModel:
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
-            return get_second_hypertension(b_history, query, level)
+            return get_second_hypertension(b_history, history, query, level)
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
             level = 1
 
             if trend_sbp or trend_dbp:  # 血压波动超过30%
-                return get_second_hypertension(b_history, query, level=1)
+                return get_second_hypertension(b_history, history, query, level=1)
             else:
                 if not history:
                     thought, content = blood_pressure_inquiry(b_history, query)
