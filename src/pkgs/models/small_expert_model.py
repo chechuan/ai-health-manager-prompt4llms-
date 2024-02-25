@@ -293,7 +293,7 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def inquire_gen(messages):
+        def inquire_gen(history):
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
