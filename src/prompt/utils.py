@@ -122,7 +122,7 @@ Begin!"""
                             "description": "知识库名称",
                             "options": ["新奥百科知识库", "健康知识", "高血压"],
                         },
-                        "query": {"type": "string", "description": "搜索的关键字"},
+                        "query": {"type": "string", "description": "用户的问题"},
                     },
                     "required": ["knowledge_base_name", "query"],
                 },

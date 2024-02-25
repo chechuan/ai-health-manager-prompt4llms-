@@ -452,7 +452,7 @@ class Chat_v2:
         #     content = history[-1]["content"]
         #     messages[-1]['function_call']['name'] = 'AskHuman'
         #     messages[-1]['function_call']['arguments'] = content
-        if next_step == "AskHuman":
+        elif next_step == "AskHuman":
             content, messages = self.chatter_assistant.run(messages)
             self.update_mid_vars(
                 mid_vars,

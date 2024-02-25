@@ -837,7 +837,7 @@ class expertModel:
     def regist_aigc_functions(self):
         self.funcmap = {}
         self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
-        self.funcmap["aigc_functions_report_interpretation"] = self.__report_interpretation__
+        self.funcmap["aigc_functions_report_interpretation"] = self.__report_ocr_classification__
 
     def __single_choice__(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
@@ -896,7 +896,7 @@ class expertModel:
         """
         return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type}
 
-    def __report_interpretation__(self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs) -> Dict:
+    def __report_ocr_classification__(self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs) -> Dict:
         """报告解读功能
 
         - Args:
@@ -949,12 +949,12 @@ class expertModel:
             report_type = accept_stream_response(response, verbose=False)
             logger.debug(f"Report interpretation report type: {report_type}")
             if report_type not in options:
-                if "口腔" in docs and "口腔" in options:
-                    report_type = "口腔"
-                elif "B超" in docs and "B超" in options:
-                    report_type = "B超"
-                elif "体检" in docs and "体检" in options:
-                    report_type = "体检"
+                if "口腔" in docs and "口腔报告" in options:
+                    report_type = "口腔报告"
+                elif "胸部" in docs and "胸部报告" in options:
+                    report_type = "胸部报告"
+                elif "腹部" in docs and "腹部报告" in options:
+                    report_type = "腹部报告"
             if report_type not in options:
                 report_type = "其他"
         else:
