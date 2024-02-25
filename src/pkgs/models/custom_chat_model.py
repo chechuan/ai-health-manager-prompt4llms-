@@ -315,12 +315,12 @@ Begins!"""
             model=model,
             history=messages,
             temperature=0.7,
-            max_tokens=512,
+            max_tokens=4096,
             top_p=0.8,
             top_k=-1,
             n=1,
             presence_penalty=0,
-            frequency_penalty=0,
+            frequency_penalty=0.5,
             repetition_penalty=1,
             length_penalty=1,
             stream=True,
@@ -331,6 +331,21 @@ Begins!"""
         mid_vars = update_mid_vars(
             kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话"
         )
+        _contents = []
+        sch = -1
         if "?" not in content and "？" not in content:
             tool = "convComplete"
-        return mid_vars, messages, (thought, content, tool)
+            sch = 1
+            if kwargs['promptParam']['report_type'] == "口腔报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。别担心，我已经帮你智能匹配到奉华林社区卫生服务中心口腔科的滑波医生，他可是廊坊最好的齿科医生了，并告诉了你妈妈，让她尽快带你去看医生。我还为你智能匹配了一个非常适合你的口腔保健服务包，里面有全套的牙齿问诊和保健服务。你近期一定要认真刷牙，我每天早晚会给你按时播放一个专业的刷牙视频，超级专业有趣的，我陪你一起保护牙齿！"
+                ]
+            elif kwargs['promptParam']['report_type'] == "胸部报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你妈妈，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
+                ]
+            elif kwargs['promptParam']['report_type'] == "腹部报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据您的情况，我为您智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
+                ]
+        return mid_vars, messages, _contents, sch, (thought, content, tool)
