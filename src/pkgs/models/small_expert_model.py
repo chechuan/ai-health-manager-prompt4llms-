@@ -11,7 +11,6 @@ import sys
 import time
 from os.path import basename
 from pathlib import Path
-from tkinter import NO
 
 import openai
 from requests import Session
@@ -21,6 +20,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Union
 
 from langchain.prompts.prompt import PromptTemplate
+from PIL import Image, ImageDraw, ImageFont
 from rapidocr_onnxruntime import RapidOCR
 
 from data.constrant import *
@@ -41,6 +41,15 @@ class expertModel:
         self.gsr = gsr
         self.gsr.expert_model = self
         self.regist_aigc_functions()
+        self.load_image_config()
+
+    def load_image_config(self):
+        self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath("data/font/simsun.ttc")
+        if not self.image_font_path.exists():
+            logger.error(f"font file not found: {self.image_font_path}")
+            exit(1)
+        self.image_font_size = 12
+        self.image_font = ImageFont.truetype(str(self.image_font_path), 24)
 
     def check_number(x: Union[str, int, float], key: str):  # type: ignore
         """检查数字
@@ -135,46 +144,52 @@ class expertModel:
     def emotions(cur_date, level):
         prompt = emotions_prompt.format(cur_date, level)
         messages = [{"role": "user", "content": prompt}]
-        logger.debug('压力模型输入:' + json.dumps(messages,ensure_ascii=False))
-        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-        logger.debug('压力模型输出:' + generate_text)
+        logger.debug("压力模型输入:" + json.dumps(messages, ensure_ascii=False))
+        generate_text = callLLM(
+            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+        )
+        logger.debug("压力模型输出:" + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         if generate_text.find("\nDoctor") == -1:
-                content = generate_text
+            content = generate_text
         else:
             outIdx = generate_text.find("\nDoctor") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",'scene_ending': True}
-    
+        return {
+            "thought": thought,
+            "content": content + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
+            "scene_ending": True,
+        }
+
     @staticmethod
     def weight_trend(cur_date, weight):
         prompt = weight_trend_prompt.format(cur_date, weight)
         messages = [{"role": "user", "content": prompt}]
-        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
+        generate_text = callLLM(
+            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+        )
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
         outIdx = generate_text.find("\nOutput") + 8
         content = generate_text[outIdx:].split("\n")[0].strip()
-        return {'thought': thought, 'content': content,'scene_ending': True}
-    
+        return {"thought": thought, "content": content, "scene_ending": True}
+
     @staticmethod
     def fat_reduction(**kwargs):
         def get_scheme_modi_type(text):
-            if '运动' in text and '不满意' in text:
-                return 'modify_exercise_scheme'
-            elif '饮食' in text and '不满意' in text:
-                return 'modify_diet_scheme'
+            if "运动" in text and "不满意" in text:
+                return "modify_exercise_scheme"
+            elif "饮食" in text and "不满意" in text:
+                return "modify_diet_scheme"
             else:
-                return 'all'
-            
-        cur_date = kwargs['promptParam'].get('cur_date', '')
-        weight = kwargs['promptParam'].get('weight', '')
-        query = ''
-        if len(kwargs['history']) > 0:
-            query = kwargs['history'][-1]['content']
+                return "all"
+
+        cur_date = kwargs["promptParam"].get("cur_date", "")
+        weight = kwargs["promptParam"].get("weight", "")
+        query = ""
+        if len(kwargs["history"]) > 0:
+            query = kwargs["history"][-1]["content"]
         # if not query:
         #     return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
         if query:
@@ -184,23 +199,29 @@ class expertModel:
             # query = query if query else "减脂效果不好，怎么改善？"
             prompt = fat_reduction_prompt.format(cur_date, weight, "减脂效果不好，怎么改善？")
         messages = [{"role": "user", "content": prompt}]
-        logger.debug('体重方案/修改模型输入： ' + json.dumps(messages, ensure_ascii=False))
-        generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-        logger.debug('体重方案/修改模型输出： ' + generate_text)
+        logger.debug("体重方案/修改模型输入： " + json.dumps(messages, ensure_ascii=False))
+        generate_text = callLLM(
+            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+        )
+        logger.debug("体重方案/修改模型输出： " + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-        logger.debug('体重方案/修改模型thought： ' + thought)
+        logger.debug("体重方案/修改模型thought： " + thought)
         if generate_text.find("\nOutput") == -1:
-                content = generate_text
+            content = generate_text
         else:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
-            return {'thought': thought, 'contents': [f'您今日体重为{weight}', content], 'scene_ending': True, 'scheme_gen': 'all'}
+            return {
+                "thought": thought,
+                "contents": [f"您今日体重为{weight}", content],
+                "scene_ending": True,
+                "scheme_gen": "all",
+            }
         else:
             modi_type = get_scheme_modi_type(content)
-            return {'thought': thought, 'contents': [], 'scene_ending': True, 'scheme_gen': modi_type}
+            return {"thought": thought, "contents": [], "scene_ending": True, "scheme_gen": modi_type}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -234,18 +255,20 @@ class expertModel:
             预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
         """
 
-        ihm_health_sbp = kwargs['promptParam']['ihm_health_sbp']
-        ihm_health_dbp = kwargs['promptParam']['ihm_health_dbp']
-        query = kwargs['promptParam'].get('query', '')
+        ihm_health_sbp = kwargs["promptParam"]["ihm_health_sbp"]
+        ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
+        query = kwargs["promptParam"].get("query", "")
+
         def blood_pressure_inquiry(history, query):
-            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
-            logger.debug('血压问诊模型输入： ' + json.dumps(messages, ensure_ascii=False))
-            generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-            logger.debug('血压问诊模型输出： ' + generate_text)
+            logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
+            generate_text = callLLM(
+                history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+            )
+            logger.debug("血压问诊模型输出： " + generate_text)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             if generate_text.find("\nDoctor") == -1:
@@ -255,16 +278,19 @@ class expertModel:
                 content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
-        
+
         def blood_pressure_pacify(history, query):
-            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-            his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
+            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
+            his_prompt = "\n".join(
+                [("Doctor" if not i["role"] == "User" else "User") + f": {i['content']}" for i in history]
+            )
             prompt = blood_pressure_pacify_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
-            logger.debug('血压安抚模型输入： ' + json.dumps(messages, ensure_ascii=False))
-            generate_text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                    temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-            logger.debug('血压安抚模型输出： ' + generate_text)
+            logger.debug("血压安抚模型输入： " + json.dumps(messages, ensure_ascii=False))
+            generate_text = callLLM(
+                history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+            )
+            logger.debug("血压安抚模型输出： " + generate_text)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             if generate_text.find("\nDoctor") == -1:
@@ -275,29 +301,43 @@ class expertModel:
             if content.find("？") == -1:
                 content = content
             else:
-                content = content[content.find("？")+1:]
-                content = content if content else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒，然后慢慢呼出，也持续5秒。这样可以帮助您放松身心，减轻症状。"
+                content = content[content.find("？") + 1 :]
+                content = (
+                    content
+                    if content
+                    else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒，然后慢慢呼出，也持续5秒。这样可以帮助您放松身心，减轻症状。"
+                )
             return thought, content
 
         def is_visit(history, query):
-            if '您需要家庭医生上门帮您服务吗' in history[-2]['content']:
-                prompt = blood_pressure_pd_prompt.format(history[-2]['content'], query)
+            if "您需要家庭医生上门帮您服务吗" in history[-2]["content"]:
+                prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
-                if '是的' in history[-1]['content'] or '好的' in history[-1]['content'] or '需要' in history[-1]['content'] or '嗯' in history[-1]['content']:
+                if (
+                    "是的" in history[-1]["content"]
+                    or "好的" in history[-1]["content"]
+                    or "需要" in history[-1]["content"]
+                    or "嗯" in history[-1]["content"]
+                ):
                     return True
-                text = callLLM(history=messages, max_tokens=1024, top_p=0.8,
-                        temperature=0.0, do_sample=False, model='Qwen-72B-Chat')
-                if 'YES' in text:
+                text = callLLM(
+                    history=messages,
+                    max_tokens=1024,
+                    top_p=0.8,
+                    temperature=0.0,
+                    do_sample=False,
+                    model="Qwen-72B-Chat",
+                )
+                if "YES" in text:
                     return True
                 else:
-                    return NO
+                    return False
             else:
-                return NO
-            
+                return False
+
         def is_pacify(history, query):
-            r = [1 for i in history if '您需要家庭医生上门帮您服务吗' in i['content']]
+            r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
             return True if sum(r) > 0 else False
-            
 
         ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
         ihm_health_dbp_list = [88, 66, 78, 59, 100, 90, 60]
@@ -310,73 +350,162 @@ class expertModel:
                 return 1
             else:
                 return 0
-        
-        history = kwargs.get('his', [])
+
+        history = kwargs.get("his", [])
         if ihm_health_sbp > 180 or ihm_health_dbp > 110:
             level = 3
-            return {'level':level, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
+            return {"level": level, "contents": [], "thought": "", "scheme_gen": False, "scene_ending": True}
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
             level = 2
             if not history:
                 thought, content = blood_pressure_inquiry(history, query)
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                return {
+                    "level": level,
+                    "contents": [f"张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高", content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": False,
+                }
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            elif is_pacify(history, query=query): # 安抚
+                return {
+                    "level": level,
+                    "contents": [
+                        "我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。",
+                        content,
+                    ],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": True,
+                }
+            elif is_pacify(history, query=query):  # 安抚
                 thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            else:# 问诊
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": True,
+                }
+            else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query)
-                if '？' in content or '?' in content:
-                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                if "？" in content or "?" in content:
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "thought": thought,
+                        "scheme_gen": False,
+                        "scene_ending": False,
+                    }
                 else:
-                    return {'level':level, 'contents': [content, '我已经通知了您的女儿。', '您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
-            
+                    return {
+                        "level": level,
+                        "contents": [content, "我已经通知了您的女儿。", "您需要家庭医生上门帮您服务吗？"],
+                        "thought": thought,
+                        "scheme_gen": True,
+                        "scene_ending": False,
+                    }
 
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
             level = 1
 
             if not history:
                 thought, content = blood_pressure_inquiry(history, query)
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            
+                return {
+                    "level": level,
+                    "contents": [f"张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高", content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": False,
+                }
+
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': ['我已经通知了您的家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            elif is_pacify(history, query=query): # 安抚
+                return {
+                    "level": level,
+                    "contents": [
+                        "我已经通知了您的家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。",
+                        content,
+                    ],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": False,
+                }
+            elif is_pacify(history, query=query):  # 安抚
                 thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            else:# 问诊
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": True,
+                }
+            else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query)
-                if '？' in content or '?' in content:
-                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-                else: # 出结论
+                if "？" in content or "?" in content:
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "thought": thought,
+                        "scheme_gen": False,
+                        "scene_ending": False,
+                    }
+                else:  # 出结论
                     trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
                     trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
                     if trend_sbp or trend_dbp:
-                        return {'level':level, 'contents': [content, '', '您的血压与日常值相比已波动30%，整体波动较大，根据治疗原则也为了您的健康，需要医生上门评估。您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
+                        return {
+                            "level": level,
+                            "contents": [
+                                content,
+                                "",
+                                "您的血压与日常值相比已波动30%，整体波动较大，根据治疗原则也为了您的健康，需要医生上门评估。您需要家庭医生上门帮您服务吗？",
+                            ],
+                            "thought": thought,
+                            "scheme_gen": True,
+                            "scene_ending": False,
+                        }
                     else:
-                        thought, cont = blood_pressure_pacify(history, query)  #安抚
-                        return {'level':level, 'contents': [content, cont], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
+                        thought, cont = blood_pressure_pacify(history, query)  # 安抚
+                        return {
+                            "level": level,
+                            "contents": [content, cont],
+                            "thought": thought,
+                            "scheme_gen": True,
+                            "scene_ending": False,
+                        }
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
             level = 0
             thought, content = blood_pressure_inquiry(history, query)
             if not history:
-                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False}
-            
-            if '？' in content or '?' in content:
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
+                return {
+                    "level": 2,
+                    "contents": [f"张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高", content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                }
+
+            if "？" in content or "?" in content:
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": False,
+                }
             else:
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": False,
+                    "scene_ending": True,
+                }
         else:
             level = -1
             rules = []
-            return {'level':0, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
-    
-        
-
+            return {"level": 0, "contents": [], "thought": "", "scheme_gen": False, "scene_ending": True}
 
     @clock
     def rec_diet_eval(self, param):
@@ -867,21 +996,22 @@ class expertModel:
 
     def __ocr_report__(self, file_path):
         """报告OCR功能"""
-        result, _ = self.ocr(file_path)
+        raw_result, _ = self.ocr(file_path)
         docs = ""
-        if result:
-            ocr_result = [line[1] for line in result]
-            logger.debug(f"Report interpretation OCR result: {dumpJS(ocr_result)}")
-            docs += "\n".join(ocr_result)
+        if raw_result:
+            process_ocr_result = [line[1] for line in raw_result]
+            logger.debug(f"Report interpretation OCR result: {dumpJS(process_ocr_result)}")
+            docs += "\n".join(process_ocr_result)
         else:
             logger.error(f"Report interpretation OCR result is empty")
-        return docs, ocr_result
+        return docs, raw_result, process_ocr_result
 
     def __report_interpretation_result__(
         self,
         ocr_result: Union[str, List[str]] = "",
         msg: str = "Unknown Error",
         report_type: str = "Unknown Type",
+        remote_image_url: str = ""
     ):
         """报告解读结果
 
@@ -893,9 +1023,90 @@ class expertModel:
         - Returns:
             Dict: 报告解读结果
         """
-        return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type}
+        return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type, "image_retc": remote_image_url}
 
-    def __report_ocr_classification__(self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs) -> Dict:
+    def __report_ocr_classification_make_text_group__(
+        self, file_path: Union[str, Path], raw_result, tmp_path, **kwargs
+    ) -> str:
+        """报告OCR结果分组"""
+
+        def plot_rectangle(file_path, rectangles_with_text):
+            image_io = Image.open(file_path)
+            draw = ImageDraw.Draw(image_io)
+            for rectangle, text in rectangles_with_text:
+                draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
+                self.image_font.size = 36
+                draw.text(
+                    (rectangle[0], rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
+                )
+            save_path = tmp_path.joinpath(file_path.stem + "_rect" + ".jpg")
+            image_io.save(save_path)
+            logger.debug(f"Plot rectangle image saved to {save_path}")
+            return save_path
+
+        def upload_image(self, save_path):
+            """上传图片到服务器"""
+            url = self.gsr.api_config["ai_backend"] + "/file/uploadFile"
+            payload = {"businessType": "reportAnalysis"}
+            files = [("file", (save_path.name, open(save_path, "rb"), "image/jpeg"))]
+            resp = self.session.post(url, data=payload, files=files)
+            if resp.status_code == 200:
+                remote_image_url = resp.json()["data"]
+            else:
+                logger.error(f"Upload image error: {resp.text}")
+                remote_image_url = ""
+            return remote_image_url
+
+        sysprompt = (
+            "You are a helpful assistant.\n"
+            "# 任务描述\n"
+            "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
+            "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别不少于4个\n"
+            "3. 只给出分类开始和结尾内容对应的index, 相邻分类的index应当是相连的\n"
+            "4. 给出的index不应超出给定的内容\n"
+            '5. 输出格式参考:```json\n{"分类1": [start_idx, end_idx]}\n```\n'
+        )
+        content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
+        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
+
+        logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
+        response = openai.ChatCompletion.create(
+            model="Qwen-72B-Chat",
+            messages=messages,
+            temperature=0.7,
+            n=1,
+            top_p=0.8,
+            top_k=-1,
+            presence_penalty=0,
+            frequency_penalty=0.5,
+            stream=True,
+        )
+        content = accept_stream_response(response, verbose=True)
+        logger.debug(f"报告解读文本分组: {content}")
+
+        content = re.findall("```json(.*?)```", content, re.S)[0].strip()
+        try:
+            loc = json.loads(content)
+        except:
+            loc = {}
+
+        rectangles_with_text = []
+        for topic, index_range in loc.items():
+            msgs = raw_result   [index_range[0]: index_range[1]]
+            coordinates = [item[0] for item in msgs]
+            left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
+            top = min([j for i in coordinates for j in [i[0][1], i[1][1]]])
+            right = max([j for i in coordinates for j in [i[1][0], i[2][0]]])
+            bottom = max([j for i in coordinates for j in [i[2][1], i[3][1]]])
+            rectangles_with_text.append(((left, top, right, bottom), topic))
+
+        save_path = plot_rectangle(file_path, rectangles_with_text)
+        remote_image_url = upload_image(self, save_path)
+        return remote_image_url
+
+    def __report_ocr_classification__(
+        self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs
+    ) -> Dict:
         """报告解读功能
 
         - Args:
@@ -906,7 +1117,7 @@ class expertModel:
         """
 
         def prepare_file(**kwargs):
-            tmp_path = Path(f".tmp/images")
+
             file_path = None
             image_url = kwargs.get("url")
 
@@ -925,23 +1136,7 @@ class expertModel:
 
             return file_path
 
-        file_path = prepare_file(**kwargs)
-        if not file_path:
-            return self.__report_interpretation_result__(msg="请输入信息源")
-        docs, ocr_result = self.__ocr_report__(file_path)
-        if not docs:
-            return self.__report_interpretation_result__(msg="未识别出报告内容，请重新尝试")
-
-        # 报告异常信息解读
-        # prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
-        # messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
-        # logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
-        # response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
-        # content = accept_stream_response(response, verbose=False)
-        # logger.debug(f"Report interpretation LLM Output: {content}")
-
-        # 增加报告类型判断
-        if options:
+        def jude_report_type(docs: str, options: List[str]) -> str:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
             response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5, stream=True)
@@ -956,9 +1151,32 @@ class expertModel:
                     report_type = "腹部报告"
             if report_type not in options:
                 report_type = "其他"
+            return report_type
+
+        tmp_path = Path(f".tmp/images")
+        file_path = prepare_file(**kwargs)
+        if not file_path:
+            return self.__report_interpretation_result__(msg="请输入信息源")
+        docs, raw_result, process_ocr_result = self.__ocr_report__(file_path)
+        if not docs:
+            return self.__report_interpretation_result__(msg="未识别出报告内容，请重新尝试")
+
+        remote_image_url = self.__report_ocr_classification_make_text_group__(file_path, raw_result, tmp_path)
+
+        # 报告异常信息解读
+        # prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
+        # messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
+        # logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
+        # response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
+        # content = accept_stream_response(response, verbose=False)
+        # logger.debug(f"Report interpretation LLM Output: {content}")
+
+        # 增加报告类型判断
+        if options:
+            report_type = jude_report_type(docs, options)
         else:
             report_type = "其他"
-        return self.__report_interpretation_result__(ocr_result=docs, report_type=report_type)
+        return self.__report_interpretation_result__(ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url)
 
     def call_function(self, **kwargs):
         """调用函数
