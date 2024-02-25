@@ -161,6 +161,7 @@ class expertModel:
             content = generate_text[outIdx:].split("\n")[0].strip()
         return {
             "thought": thought,
+            "scheme_gen": 0,
             "content": "健康报告显示您的健康处于轻度失衡状态。"
             + content
             + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
