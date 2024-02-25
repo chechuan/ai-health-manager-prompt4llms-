@@ -354,7 +354,7 @@ class expertModel:
             )
             logger.debug("血压安抚模型输出： " + generate_text)
             if generate_text.find("\nThought") == -1:
-                thought = generate_text
+                thought = '在等待医生上门的过程中，我应该安抚患者的情绪，让他保持平静，同时提供一些有助于降低血压的建议。'
             else:
                 thoughtIdx = generate_text.find("\nThought") + 9
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -366,7 +366,8 @@ class expertModel:
             if content.find("？") == -1:
                 content = content
             else:
-                content = content[content.find("？") + 1 :]
+                while content.find("？") != -1:
+                    content = content[content.find("？") + 1 :]
                 content = (
                     content
                     if content
