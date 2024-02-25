@@ -293,7 +293,7 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def blood_pressure_inquiry(history, query):
+        def inquire_gen(messages):
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
@@ -302,17 +302,26 @@ class expertModel:
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
             )
+            return generate_text
+
+        def blood_pressure_inquiry(history, query):
+            generate_text = inquire_gen(history)
             logger.debug("血压问诊模型输出： " + generate_text)
-            if generate_text.find("\nThought") == -1:
-                thought = generate_text
-            else:
-                thoughtIdx = generate_text.find("\nThought") + 9
-                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("\nDoctor") == -1:
-                content = generate_text
-            else:
-                outIdx = generate_text.find("\nDoctor") + 8
-                content = generate_text[outIdx:].split("\n")[0].strip()
+            while generate_text.find("\nThought") == -1 or generate_text.find("\nDoctor") == -1:
+                #thought = generate_text
+                generate_text = inquire_gen(history)
+            thoughtIdx = generate_text.find("\nThought") + 9
+            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            outIdx = generate_text.find("\nDoctor") + 8
+            content = generate_text[outIdx:].split("\n")[0].strip()
+            # else:
+            #     thoughtIdx = generate_text.find("\nThought") + 9
+            #     thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            # if generate_text.find("\nDoctor") == -1:
+            #     content = generate_text
+            # else:
+            #     outIdx = generate_text.find("\nDoctor") + 8
+            #     content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
 
