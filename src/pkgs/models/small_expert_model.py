@@ -1208,7 +1208,7 @@ class expertModel:
             draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
             self.image_font.size = 36
             draw.text(
-                (rectangle[0] - 30, rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
+                (rectangle[0] - 30, rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="blue"
             )
         save_path = tmp_path.joinpath(file_path.stem + "_rect" + file_path.suffix)
         image_io.save(save_path)
@@ -1241,7 +1241,7 @@ class expertModel:
             "You are a helpful assistant.\n"
             "# 任务描述\n"
             "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
-            "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别不少于4个\n"
+            "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别最多5个\n"
             "3. 可选类别包含: 报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生\n"
             "4. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
             '5. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
