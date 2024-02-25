@@ -251,30 +251,22 @@ class CustomChatReportInterpretation(CustomChatModel):
         messages = []
         system_prompt = """# 任务描述
 你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
-# 问诊流程专业性要求
 
+# 问诊流程专业性要求
 1.我会提供我的医疗检查报告, 请你根据自身经验分析,针对我的个人情况提出相应的问题，每次最多提出两个问题
 2.问题关键点可以包括: 是否出现报告中提及的疾病相关的症状，是否存在该疾病的诱因，平素生活习惯等,同类问题可以总结在一起问
-3.多轮问诊最多2轮，每轮最多1个问题，不要打招呼，直接开始问诊，每次输出不超过200字 
-4.当你收集到足够信息后，输出以下内容：概括报告中的异常点；分析导致该影响学表现的可能原因；该疾病可能的病因，可能的症状，生活注意事项、后续建议患者完善的检查项目。
-5.最终输出内容要求通俗易懂、温柔亲切、符合科学性、整体字数在250字以内。
-6.如果报告是胸部检查，可以建议进一步检查如：血常规、C反应蛋白等。
-如果报告是腹部检查，可以建议进一步检查血常规、肝功能等。
-7.不要输出列表
-
-# 已知信息
-## 患者检查报告
-
-{prompt}
+3.当你收集到足够信息后，输出以下内容：概括报告中的异常点；分析导致该影响学表现的可能原因；该疾病可能的病因，可能的症状，生活注意事项、后续建议患者完善的检查项目。
+4.如果报告是胸部检查，可以建议进一步检查如：血常规、C反应蛋白等。如果报告是腹部检查，可以建议进一步检查血常规、肝功能等。
 
 # 格式要求：
-请遵循以下格式回复：
+每次请遵循以下格式回复：
 Thought: 思考推理针对当前问题应该做什么, 怎么做
-Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题
+Doctor: 你作为一个医生,分析思考的内容,注意: you are only be able to ask me one question
 
 Begins!"""
         if not history:
-            content = system_prompt.format(prompt=kwargs["promptParam"]["report_ocr_result"])
+            content = kwargs["promptParam"]["report_ocr_result"]
+            messages.append({"role": "system", "content": system_prompt, "intentCode": intentCode})
             messages.append({"role": "user", "content": content, "intentCode": intentCode})
         else:
             for idx in range(len(history)):
@@ -316,13 +308,13 @@ Begins!"""
             history=messages,
             temperature=0.7,
             max_tokens=4096,
-            top_p=0.8,
-            top_k=-1,
-            n=1,
-            presence_penalty=0,
-            frequency_penalty=0.5,
-            repetition_penalty=1,
-            length_penalty=1,
+            top_p=1,
+            # top_k=-1,
+            # n=1,
+            # presence_penalty=1.15,
+            frequency_penalty=2,
+            # repetition_penalty=1,
+            # length_penalty=1.2,
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
