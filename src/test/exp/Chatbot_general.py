@@ -16,7 +16,7 @@ sys.path.append(Path("./").parent.as_posix())
 
 import streamlit as st
 from loguru import logger
-from openai import OpenAI
+import openai
 
 from src.test.exp.data.prompts import Sysprompt
 
@@ -35,7 +35,6 @@ logger.add(
     diagnose=True,
 )
 
-client = OpenAI()
 default_system_prompt = Sysprompt.system_prompt
 
 
@@ -51,15 +50,15 @@ def dumpJS(obj):
 
 def place_sidebar():
     with st.sidebar:
-        client.base_url = st.text_input(
+        openai.api_base = st.text_input(
             "api base",
             key="openai_api_base",
             value=os.environ.get("OPENAI_API_BASE", ""),
         )
         api_key = st.text_input("api key", key="openai_api_key", value=None)
-        client.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
+        openai.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
 
-        model_list = [i.id for i in client.models.list().data]
+        model_list = [i.id for i in openai.Model.list().data]
         args.model = st.selectbox("Choose your model", model_list, index=2)
         st.text_area(
             "system prompt",
@@ -94,14 +93,14 @@ def prepare_parameters():
         step=0.05,
         help="模型在生成文本时的概率阈值。这个参数的值在0到1之间，表示模型只会从概率之和大于等于这个值的单词中选择一个。这个参数可以帮助模型过滤掉一些极端的或不相关的单词，提高文本的质量和一致性。",
     )
-    # args.top_k = st.sidebar.slider(
-    #     "Top k",
-    #     min_value=-1,
-    #     max_value=100,
-    #     value=-1,
-    #     step=1,
-    #     help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
-    # )
+    args.top_k = st.sidebar.slider(
+        "Top k",
+        min_value=-1,
+        max_value=100,
+        value=-1,
+        step=1,
+        help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
+    )
     args.n = st.sidebar.slider(
         "N",
         min_value=1,
@@ -195,7 +194,7 @@ if prompt := st.chat_input("Your message"):
         full_response = ""
         logger.debug(f"{dumpJS(args.__dict__)}")
         logger.debug(f"Input: \n{prompt}")
-        for response in client.chat.completions.create(
+        for response in openai.ChatCompletion.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
             if not response.choices[0].delta.content:
