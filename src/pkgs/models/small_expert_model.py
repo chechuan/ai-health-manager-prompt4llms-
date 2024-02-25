@@ -291,6 +291,11 @@ class expertModel:
                 history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
             )
             logger.debug("血压问诊模型输出： " + generate_text)
+            if generate_text.find("\nThought") == -1:
+                thought = generate_text
+            else:
+                thoughtIdx = generate_text.find("\nThought") + 9
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             if generate_text.find("\nDoctor") == -1:
@@ -313,8 +318,11 @@ class expertModel:
                 history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
             )
             logger.debug("血压安抚模型输出： " + generate_text)
-            thoughtIdx = generate_text.find("\nThought") + 9
-            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            if generate_text.find("\nThought") == -1:
+                thought = generate_text
+            else:
+                thoughtIdx = generate_text.find("\nThought") + 9
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             if generate_text.find("\nDoctor") == -1:
                 content = generate_text
             else:
@@ -378,7 +386,7 @@ class expertModel:
                 return {'level':level, 
                         'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。','我已经通知了您的女儿和您的家庭医生。', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。', content], 
                         'thought':thought, 
-                        'scheme_gen':False, 
+                        'scheme_gen':-1, 
                         'scene_ending':False, 
                         'blood_trend_gen':True, 
                         'notifi_daughter_doctor': True,
@@ -390,7 +398,7 @@ class expertModel:
                 return {'level':level, 
                         'contents': ['您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 
                         'thought':thought, 
-                        'scheme_gen':False, 
+                        'scheme_gen':-1, 
                         'scene_ending':True,
                         'blood_trend_gen':False, 
                         'notifi_daughter_doctor': False,
@@ -402,7 +410,7 @@ class expertModel:
                 return {'level':level, 
                         'contents': [content], 
                         'thought':thought, 
-                        'scheme_gen':False, 
+                        'scheme_gen':-1, 
                         'scene_ending':True,
                         'blood_trend_gen':False, 
                         'notifi_daughter_doctor': False,
@@ -415,7 +423,7 @@ class expertModel:
                     return {'level':level, 
                             'contents': [content], 
                             'thought':thought, 
-                            'scheme_gen':False, 
+                            'scheme_gen':-1, 
                             'scene_ending':False,
                             'blood_trend_gen':False, 
                             'notifi_daughter_doctor': False,
@@ -426,7 +434,7 @@ class expertModel:
                     return {'level':level, 
                             'contents': [content, '您需要家庭医生上门帮您服务吗？'], 
                             'thought':thought, 
-                            'scheme_gen':True, 
+                            'scheme_gen':0, 
                             'scene_ending':False,
                             'blood_trend_gen':False, 
                             'notifi_daughter_doctor': False,
