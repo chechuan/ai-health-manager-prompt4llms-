@@ -234,7 +234,7 @@ class expertModel:
                     "thought": thought,
                     "contents": [f"您今日体重为{weight}。", "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
                     "scene_ending": False,
-                    "scheme_gen": 1,
+                    "scheme_gen": 2,
                     "modi_scheme": "scheme_no_change",
                     "weight_trend_gen": True,
                 }
@@ -250,7 +250,7 @@ class expertModel:
         else:
             modi_type = get_scheme_modi_type(content)
             return {"thought": thought, 
-                    "contents": [content], 
+                    "contents": ['好的，已重新帮您生成了健康方案，请查收。'], 
                     "scene_ending": False, 
                     "scheme_gen": -1, 
                     "modi_scheme":modi_type,
@@ -600,7 +600,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                 }
-        elif 90 <= ihm_health_sbp < 120 or 80 > ihm_health_dbp >= 60:  # 正常血压
+        elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
             rules = []
             return {
