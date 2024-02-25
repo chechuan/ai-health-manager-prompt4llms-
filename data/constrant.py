@@ -678,7 +678,8 @@ blood_pressure_inquiry_prompt = '''# 任务描述
 # 输出格式要求：
 严格遵循以下格式回复：
 Thought: 思考针对当前问题应该做什么
-assistant: 你作为一个医生,分析思考的内容,提出当前想了解我的问题
+Assistant: 你作为一个医生,分析思考的内容,提出当前想了解我的问题
+
 Begins!
 
 
