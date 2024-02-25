@@ -222,19 +222,31 @@ class expertModel:
             outIdx = generate_text.find("\nOutput") + 8
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
-            # try:
-            #     cont = float(weight.replace('kg', ''))
-            # except Exception as err:
-            # finally:
+            try:
+                num = float(weight.replace('kg', '')) - 75.4
+                if num < 0:
+                    cnt = "体重较上周减少{num}kg。"
+                else:
+                    cnt = "体重较上周增加{num}kg。"
 
-            return {
-                "thought": thought,
-                "contents": [f"您今日体重为{weight}。健康报告显示您的健康处于平衡状态。", content],
-                "scene_ending": False,
-                "scheme_gen": 1,
-                "modi_scheme": "scheme_no_change",
-                "weight_trend_gen": True,
-            }
+            except Exception as err:
+                return {
+                    "thought": thought,
+                    "contents": [f"您今日体重为{weight}。", "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
+                    "scene_ending": False,
+                    "scheme_gen": 1,
+                    "modi_scheme": "scheme_no_change",
+                    "weight_trend_gen": True,
+                }
+            finally:
+                return {
+                    "thought": thought,
+                    "contents": [f"您今日体重为{weight}。", cnt, "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
+                    "scene_ending": False,
+                    "scheme_gen": 1,
+                    "modi_scheme": "scheme_no_change",
+                    "weight_trend_gen": True,
+                }
         else:
             modi_type = get_scheme_modi_type(content)
             return {"thought": thought, 
@@ -590,7 +602,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                 }
-        else:
+        elif 90 <= ihm_health_sbp < 120 or 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
             rules = []
             return {
@@ -604,6 +616,49 @@ class expertModel:
                 "call_120": False,
                 "is_visit": False,
             }
+        else:   # 低血压
+            level = -1
+            rules = []
+            if not history:
+                return {
+                    "level": -1,
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。"],
+                    "thought": "用户血压偏低",
+                    "scheme_gen": -1,
+                    "scene_ending": True,
+                    "blood_trend_gen": True,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                }
+            else:
+                thought, content = blood_pressure_inquiry(history, query)  
+                if "？" in content or "?" in content:   # 问诊
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "thought": thought,
+                        "scheme_gen": -1,
+                        "scene_ending": False,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                    }
+                else:  # 出结论
+                    # thought, cont = blood_pressure_pacify(history, query)  #安抚
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "thought": thought,
+                        "scheme_gen": 0,
+                        "scene_ending": True,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                    }
+
 
     @clock
     def rec_diet_eval(self, param):
