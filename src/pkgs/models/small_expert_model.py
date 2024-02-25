@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+from email.mime import image
 from os.path import basename
 from pathlib import Path
 
@@ -28,8 +29,14 @@ from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import callLLM
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, dumpJS, get_intent)
+from src.utils.module import (
+    InitAllResource,
+    accept_stream_response,
+    clock,
+    compute_blood_pressure_level,
+    dumpJS,
+    get_intent,
+)
 
 
 class expertModel:
@@ -195,11 +202,11 @@ class expertModel:
         if query:
             # 判断是否是对方案不满意及对方案某一部分不满意
             prompt = weight_scheme_modify_prompt.format(query)
-            logger.debug('进入体重方案修改流程。。。')
+            logger.debug("进入体重方案修改流程。。。")
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
             prompt = fat_reduction_prompt.format(cur_date, weight, "减脂效果不好，怎么改善？")
-            logger.debug('进入体重出方案流程。。。')
+            logger.debug("进入体重出方案流程。。。")
         messages = [{"role": "user", "content": prompt}]
         logger.debug("体重方案/修改模型输入： " + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(
@@ -223,7 +230,7 @@ class expertModel:
             }
         else:
             modi_type = get_scheme_modi_type(content)
-            return {'thought': thought, 'contents': [generate_text], 'scene_ending': True, 'scheme_gen': modi_type}
+            return {"thought": thought, "contents": [generate_text], "scene_ending": True, "scheme_gen": modi_type}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -1013,7 +1020,7 @@ class expertModel:
         ocr_result: Union[str, List[str]] = "",
         msg: str = "Unknown Error",
         report_type: str = "Unknown Type",
-        remote_image_url: str = ""
+        remote_image_url: str = "",
     ):
         """报告解读结果
 
@@ -1025,48 +1032,50 @@ class expertModel:
         - Returns:
             Dict: 报告解读结果
         """
-        return {"ocr_result": ocr_result, "report_interpretation": msg, "report_type": report_type, "image_retc": remote_image_url}
+        return {
+            "ocr_result": ocr_result,
+            "report_interpretation": msg,
+            "report_type": report_type,
+            "image_retc": remote_image_url,
+        }
+
+    def __plot_rectangle(self, tmp_path, file_path, rectangles_with_text):
+        """为识别的报告内容画出矩形框"""
+        image_io = Image.open(file_path)
+        draw = ImageDraw.Draw(image_io)
+        for rectangle, text in rectangles_with_text:
+            draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
+            self.image_font.size = 36
+            draw.text((rectangle[0], rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red")
+        save_path = tmp_path.joinpath(file_path.stem + "_rect" + ".jpg")
+        image_io.save(save_path)
+        logger.debug(f"Plot rectangle image saved to {save_path}")
+        return save_path
+
+    def __upload_image(self, save_path):
+        """上传图片到服务器"""
+        url = self.gsr.api_config["ai_backend"] + "/file/uploadFile"
+        payload = {"businessType": "reportAnalysis"}
+        files = [("file", (save_path.name, open(save_path, "rb"), "image/jpeg"))]
+        resp = self.session.post(url, data=payload, files=files)
+        if resp.status_code == 200:
+            remote_image_url = resp.json()["data"]
+        else:
+            logger.error(f"Upload image error: {resp.text}")
+            remote_image_url = ""
+        return remote_image_url
 
     def __report_ocr_classification_make_text_group__(
         self, file_path: Union[str, Path], raw_result, tmp_path, **kwargs
     ) -> str:
         """报告OCR结果分组"""
-
-        def plot_rectangle(file_path, rectangles_with_text):
-            image_io = Image.open(file_path)
-            draw = ImageDraw.Draw(image_io)
-            for rectangle, text in rectangles_with_text:
-                draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
-                self.image_font.size = 36
-                draw.text(
-                    (rectangle[0], rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
-                )
-            save_path = tmp_path.joinpath(file_path.stem + "_rect" + ".jpg")
-            image_io.save(save_path)
-            logger.debug(f"Plot rectangle image saved to {save_path}")
-            return save_path
-
-        def upload_image(self, save_path):
-            """上传图片到服务器"""
-            url = self.gsr.api_config["ai_backend"] + "/file/uploadFile"
-            payload = {"businessType": "reportAnalysis"}
-            files = [("file", (save_path.name, open(save_path, "rb"), "image/jpeg"))]
-            resp = self.session.post(url, data=payload, files=files)
-            if resp.status_code == 200:
-                remote_image_url = resp.json()["data"]
-            else:
-                logger.error(f"Upload image error: {resp.text}")
-                remote_image_url = ""
-            return remote_image_url
-
         sysprompt = (
             "You are a helpful assistant.\n"
             "# 任务描述\n"
             "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
             "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别不少于4个\n"
-            "3. 只给出分类开始和结尾内容对应的index, 相邻分类的index应当是相连的\n"
-            "4. 给出的index不应超出给定的内容\n"
-            '5. 输出格式参考:```json\n{"分类1": [start_idx, end_idx]}\n```\n'
+            "3. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
+            '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
         messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
@@ -1077,7 +1086,7 @@ class expertModel:
             messages=messages,
             temperature=0.7,
             n=1,
-            top_p=0.8,
+            top_p=1,
             top_k=-1,
             presence_penalty=0,
             frequency_penalty=0.5,
@@ -1094,7 +1103,7 @@ class expertModel:
 
         rectangles_with_text = []
         for topic, index_range in loc.items():
-            msgs = raw_result   [index_range[0]: index_range[1]]
+            msgs = raw_result[index_range[0] : index_range[1]]
             coordinates = [item[0] for item in msgs]
             left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
             top = min([j for i in coordinates for j in [i[0][1], i[1][1]]])
@@ -1102,8 +1111,8 @@ class expertModel:
             bottom = max([j for i in coordinates for j in [i[2][1], i[3][1]]])
             rectangles_with_text.append(((left, top, right, bottom), topic))
 
-        save_path = plot_rectangle(file_path, rectangles_with_text)
-        remote_image_url = upload_image(self, save_path)
+        save_path = self.__plot_rectangle(tmp_path, file_path, rectangles_with_text)
+        remote_image_url = self.__upload_image(save_path)
         return remote_image_url
 
     def __report_ocr_classification__(
@@ -1133,10 +1142,10 @@ class expertModel:
                     f.write(r.content)
             elif kwargs.get("file_path"):
                 file_path = kwargs.get("file_path")
+                image_url = self.__upload_image(file_path)
             else:
                 logger.error(f"Report interpretation error: file_path or url not found")
-
-            return file_path
+            return image_url, file_path
 
         def jude_report_type(docs: str, options: List[str]) -> str:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
@@ -1156,15 +1165,19 @@ class expertModel:
             return report_type
 
         tmp_path = Path(f".tmp/images")
-        file_path = prepare_file(**kwargs)
+        image_url, file_path = prepare_file(**kwargs)
         if not file_path:
             return self.__report_interpretation_result__(msg="请输入信息源")
         docs, raw_result, process_ocr_result = self.__ocr_report__(file_path)
         if not docs:
-            return self.__report_interpretation_result__(msg="未识别出报告内容，请重新尝试")
-
-        remote_image_url = self.__report_ocr_classification_make_text_group__(file_path, raw_result, tmp_path)
-
+            return self.__report_interpretation_result__(
+                msg="未识别出报告内容，请重新尝试", ocr_result="您的报告内容无法解析，请重新尝试."
+            )
+        try:
+            remote_image_url = self.__report_ocr_classification_make_text_group__(file_path, raw_result, tmp_path)
+        except Exception as e:
+            logger.exception(f"Report interpretation error: {e}")
+            remote_image_url = image_url
         # 报告异常信息解读
         # prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
         # messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
@@ -1178,7 +1191,9 @@ class expertModel:
             report_type = jude_report_type(docs, options)
         else:
             report_type = "其他"
-        return self.__report_interpretation_result__(ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url)
+        return self.__report_interpretation_result__(
+            ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url
+        )
 
     def call_function(self, **kwargs):
         """调用函数
