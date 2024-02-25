@@ -197,9 +197,9 @@ if prompt := st.chat_input("Your message"):
         for response in openai.ChatCompletion.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
-            if not response.choices[0].delta.content:
-                continue
-            full_response += response.choices[0].delta.content
+            if hasattr(response["choices"][0]["delta"], "content"):
+                chunk_text = response["choices"][0]["delta"]["content"]
+            full_response += chunk_text
             message_placeholder.markdown(full_response + "▌")
         logger.debug(f"Full response:\n{full_response}")
         message_placeholder.markdown(full_response)
