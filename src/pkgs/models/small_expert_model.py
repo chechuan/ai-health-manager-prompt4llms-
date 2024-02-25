@@ -223,7 +223,7 @@ class expertModel:
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
             try:
-                num = float(weight.replace('kg', '')) - 75.4
+                num = round(float(weight.replace('kg', '')) - 75.4, 1)
                 if num < 0:
                     cnt = f"体重较上周减少{num}kg。"
                 else:
