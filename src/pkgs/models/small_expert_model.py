@@ -235,7 +235,7 @@ class expertModel:
                     "thought": thought,
                     "contents": [f"您今日体重为{weight}。", "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
                     "scene_ending": False,
-                    "scheme_gen": 2,
+                    "scheme_gen": 1,
                     "modi_scheme": "scheme_no_change",
                     "weight_trend_gen": True,
                 }
@@ -244,7 +244,7 @@ class expertModel:
                     "thought": thought,
                     "contents": [f"您今日体重为{weight}。", cnt, "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
                     "scene_ending": False,
-                    "scheme_gen": 1,
+                    "scheme_gen": 2,
                     "modi_scheme": "scheme_no_change",
                     "weight_trend_gen": True,
                 }
