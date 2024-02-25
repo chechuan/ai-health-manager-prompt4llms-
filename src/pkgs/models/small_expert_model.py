@@ -303,11 +303,11 @@ class expertModel:
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
             )
+            logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
         def blood_pressure_inquiry(history, query):
             generate_text = inquire_gen(history)
-            logger.debug("血压问诊模型输出： " + generate_text)
             while generate_text.count("Thought") != 1 or generate_text.count("\nDoctor") != 1:
                 #thought = generate_text
                 generate_text = inquire_gen(history)
