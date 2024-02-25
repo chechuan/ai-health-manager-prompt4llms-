@@ -943,7 +943,7 @@ class Chat_v2:
             notifi_daughter_doctor = blood_res['notifi_daughter_doctor']
             call_120 = blood_res['call_120']
             is_visit = blood_res['is_visit']
-            idx = blood_res['idx']
+            idx = blood_res.get('idx', 0)
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
