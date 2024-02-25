@@ -1223,8 +1223,9 @@ class expertModel:
             "# 任务描述\n"
             "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
             "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别不少于4个\n"
-            "3. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
-            '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
+            "3. 可选类别包含: 报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生\n"
+            "4. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
+            '5. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
         messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
