@@ -294,8 +294,14 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def inquire_gen(history, ihm_health_sbp, ihm_health_dbp):
-            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
+        def inquire_gen(bk_hitory, ihm_health_sbp, ihm_health_dbp):
+            his = []
+            for i in bk_hitory:
+                if i['role'] == 'User' or i['role'] == 'user':
+                    his.append({'role':'User', 'content':i['content']})
+                elif i['role'] == 'Assistant' or i['role'] == 'assistant':
+                    his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
+            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in bk_hitory]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + history
@@ -306,11 +312,11 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(history, query):
-            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
+        def blood_pressure_inquiry(bk_history, query):
+            generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
             while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
-                generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
+                generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
             thoughtIdx = generate_text.find("Thought") + 8
             # thoughtIdx = 0
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -392,7 +398,7 @@ class expertModel:
             r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
             return True if sum(r) > 0 else False
 
-        def get_second_hypertension(history, query, level):
+        def get_second_hypertension(b_history, history, query, level):
             def get_level(le):
                 if le == 1:
                     return "一"
@@ -403,7 +409,7 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(history, query)
+                thought, content = blood_pressure_inquiry(b_history, query)
                 return {
                     "level": level,
                     "contents": [
@@ -447,7 +453,7 @@ class expertModel:
                     "is_visit": False,
                 }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query)
+                thought, content = blood_pressure_inquiry(b_history, query)
                 if "？" in content or "?" in content:
                     return {
                         "level": level,
@@ -485,6 +491,8 @@ class expertModel:
                 return 0
 
         history = kwargs.get("his", [])
+        b_history = kwargs.get("backend_history", [])
+
         if ihm_health_sbp >= 130 or ihm_health_dbp >= 90:
             a = "偏高"
         else:
@@ -514,14 +522,15 @@ class expertModel:
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
-            return get_second_hypertension(history, query, level)
+            return get_second_hypertension(b_history, query, level)
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
             level = 1
+            
             if trend_sbp or trend_dbp:  # 血压波动超过30%
-                return get_second_hypertension(history, query, level=1)
+                return get_second_hypertension(b_history, query, level=1)
             else:
                 if not history:
-                    thought, content = blood_pressure_inquiry(history, query)
+                    thought, content = blood_pressure_inquiry(b_history, query)
                     return {
                         "level": level,
                         "contents": [
@@ -538,7 +547,7 @@ class expertModel:
                         "is_visit": False,
                     }
                 else:  # 问诊
-                    thought, content = blood_pressure_inquiry(history, query)
+                    thought, content = blood_pressure_inquiry(b_history, query)
                     if "？" in content or "?" in content:
                         return {
                             "level": level,
@@ -567,7 +576,7 @@ class expertModel:
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
             level = 0
-            thought, content = blood_pressure_inquiry(history, query)
+            thought, content = blood_pressure_inquiry(b_history, query)
             if not history:
                 return {
                     "level": level,
@@ -626,7 +635,7 @@ class expertModel:
         else:   # 低血压
             level = -1
             rules = []
-            thought, content = blood_pressure_inquiry(history, query)
+            thought, content = blood_pressure_inquiry(b_history, query)
             if not history:
                 return {
                     "level": -1,
