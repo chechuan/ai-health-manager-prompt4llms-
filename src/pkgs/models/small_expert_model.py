@@ -50,7 +50,6 @@ class expertModel:
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
         self.image_font_size = 12
-        self.image_font = ImageFont.truetype(str(self.image_font_path), 24)
 
     def check_number(x: Union[str, int, float], key: str):  # type: ignore
         """检查数字
@@ -1224,10 +1223,11 @@ class expertModel:
         image_io = Image.open(file_path)
         draw = ImageDraw.Draw(image_io)
         for rectangle, text in rectangles_with_text:
-            draw.rectangle(rectangle, outline="red", width=int(0.002 * sum(image_io.size)))
-            self.image_font.size = 36
+            line_value = int(0.002 * sum(image_io.size))
+            draw.rectangle(rectangle, outline="blue", width=line_value)
+            image_font = ImageFont.truetype(str(self.image_font_path), line_value*4)
             draw.text(
-                (rectangle[0] - 30, rectangle[1] - self.image_font_size - 15), text, font=self.image_font, fill="red"
+                (rectangle[0] - 60, rectangle[1] - self.image_font_size - 15), text, font=image_font, fill="red"
             )
         save_path = tmp_path.joinpath(file_path.stem + "_rect" + file_path.suffix)
         image_io.save(save_path)
@@ -1260,10 +1260,10 @@ class expertModel:
             "You are a helpful assistant.\n"
             "# 任务描述\n"
             "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
-            "2. 请你参考给出的内容的前后信息，对报告的内容进行归类，类别不少于4个\n"
-            "3. 可选类别包含: 报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生\n"
-            "4. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
-            '5. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
+            "2. 请你参考给出的内容的前后信息，按内容的前后顺序对报告的内容进行归类，类别最多5个\n"
+            # "3. 可选类别有[报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生]\n"
+            "3. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
+            '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
         messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
@@ -1272,15 +1272,15 @@ class expertModel:
         response = openai.ChatCompletion.create(
             model="Qwen-72B-Chat",
             messages=messages,
-            temperature=0,
+            temperature=0.7,
             n=1,
-            top_p=0.8,
+            top_p=0.3,
             top_k=-1,
             presence_penalty=0,
             frequency_penalty=0.5,
             stream=True,
         )
-        content = accept_stream_response(response, verbose=True)
+        content = accept_stream_response(response, verbose=False)
         logger.debug(f"报告解读文本分组: {content}")
 
         content = re.findall("```json(.*?)```", content, re.S)[0].strip()
@@ -1288,18 +1288,19 @@ class expertModel:
             loc = json.loads(content)
         except:
             loc = {}
-
-        rectangles_with_text = []
-        for topic, index_range in loc.items():
-            msgs = raw_result[index_range[0] : index_range[1] + 1]
-            coordinates = [item[0] for item in msgs]
-            left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
-            top = min([j for i in coordinates for j in [i[0][1], i[1][1]]])
-            right = max([j for i in coordinates for j in [i[1][0], i[2][0]]])
-            bottom = max([j for i in coordinates for j in [i[2][1], i[3][1]]])
-            rectangles_with_text.append(((left, top, right, bottom), topic))
-
-        save_path = self.__plot_rectangle(tmp_path, file_path, rectangles_with_text)
+        try:
+            rectangles_with_text = []
+            for topic, index_range in loc.items():
+                msgs = raw_result[index_range[0] : index_range[1] + 1]
+                coordinates = [item[0] for item in msgs]
+                left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
+                top = min([j for i in coordinates for j in [i[0][1], i[1][1]]])
+                right = max([j for i in coordinates for j in [i[1][0], i[2][0]]])
+                bottom = max([j for i in coordinates for j in [i[2][1], i[3][1]]])
+                rectangles_with_text.append(((left, top, right, bottom), topic))
+            save_path = self.__plot_rectangle(tmp_path, file_path, rectangles_with_text)
+        except Exception as e:
+            ...
         remote_image_url = self.__upload_image(save_path)
         return remote_image_url
 
