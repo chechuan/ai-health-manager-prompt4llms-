@@ -912,7 +912,6 @@ class Chat_v2:
                 conts = weight_res['contents'][1:]
             sch = weight_res['scheme_gen']
             thought = weight_res['thought']
-            conts = []
             level = ''
             tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "blood_meas":
