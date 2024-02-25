@@ -202,7 +202,7 @@ class expertModel:
             return {'thought': thought, 'contents': [f'您今日体重为{weight}', content], 'scene_ending': True, 'scheme_gen': 'all'}
         else:
             modi_type = get_scheme_modi_type(content)
-            return {'thought': thought, 'contents': [], 'scene_ending': True, 'scheme_gen': modi_type}
+            return {'thought': thought, 'contents': [generate_text], 'scene_ending': True, 'scheme_gen': modi_type}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
