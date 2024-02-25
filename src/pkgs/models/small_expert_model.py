@@ -298,7 +298,7 @@ class expertModel:
             his = []
             for i in bk_hitory:
                 if 'match_cont' not in i:
-                    his.append({'role':'User', 'content':i['content']})
+                    his.append({'role':'User','content':i['content']})
                 else:
                     his.append(i['match_cont'])
                 # if i['role'] == 'User' or i['role'] == 'user':
