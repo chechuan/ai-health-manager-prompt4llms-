@@ -307,7 +307,7 @@ class expertModel:
         def blood_pressure_inquiry(history, query):
             generate_text = inquire_gen(history)
             logger.debug("血压问诊模型输出： " + generate_text)
-            while generate_text.find("\nThought") == -1 or generate_text.find("\nDoctor") == -1:
+            while generate_text.count("Thought") != 1 or generate_text.count("\nDoctor") != 1:
                 #thought = generate_text
                 generate_text = inquire_gen(history)
             thoughtIdx = generate_text.find("\nThought") + 9
