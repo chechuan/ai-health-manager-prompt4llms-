@@ -294,11 +294,11 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def inquire_gen(history):
+        def inquire_gen(history, ihm_health_sbp, ihm_health_dbp):
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
-            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
+            messages = [{"role": "system", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp))}] + history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
@@ -308,12 +308,12 @@ class expertModel:
 
         def blood_pressure_inquiry(history, query):
             generate_text = inquire_gen(history)
-            while generate_text.count("Thought") != 1 or generate_text.count("\nDoctor") != 1:
+            while generate_text.count("Thought") != 1 or generate_text.count("\nAssistant") != 1:
                 #thought = generate_text
                 generate_text = inquire_gen(history)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            outIdx = generate_text.find("\nDoctor") + 8
+            outIdx = generate_text.find("\nAssistant") + 11
             content = generate_text[outIdx:].split("\n")[0].strip()
             # else:
             #     thoughtIdx = generate_text.find("\nThought") + 9
