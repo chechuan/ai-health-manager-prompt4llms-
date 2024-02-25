@@ -308,8 +308,6 @@ class expertModel:
             else:
                 thoughtIdx = generate_text.find("\nThought") + 9
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            thoughtIdx = generate_text.find("\nThought") + 9
-            thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             if generate_text.find("\nDoctor") == -1:
                 content = generate_text
             else:
