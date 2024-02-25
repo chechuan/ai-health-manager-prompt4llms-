@@ -464,15 +464,13 @@ class expertModel:
                         "is_visit": False,
                     }
 
-        ihm_health_sbp_list = [116, 118, 132, 121, 128, 123, 128, 117, 132, 134, 124, 120]
-        ihm_health_dbp_list = [82, 86, 86, 78, 86, 80, 92, 88, 85, 86, 86, 82]
+        ihm_health_sbp_list = [116, 118, 132, 121, 128, 123, 128, 117, 132, 134, 124, 120, 80]
+        ihm_health_dbp_list = [82, 86, 86, 78, 86, 80, 92, 88, 85, 86, 86, 82, 60]
 
         # 计算血压波动率,和血压列表的均值对比
         def compute_blood_pressure_trend(x: int, data_list: List) -> float:
             mean_value = sum(data_list) / len(data_list)
-            rate = (x - mean_value) / mean_value
-            # if rate > 0.3:
-            if rate > 0.2:
+            if x > 1.2 * mean_value:
                 return 1
             else:
                 return 0
