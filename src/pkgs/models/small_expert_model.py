@@ -148,7 +148,9 @@ class expertModel:
         return status
 
     @staticmethod
-    def emotions(cur_date, level):
+    def emotions(**kwargs):
+        cur_date = kwargs["promptParam"].get("cur_date", "")
+        level = kwargs["promptParam"].get("level", "")
         prompt = emotions_prompt.format(cur_date, level)
         messages = [{"role": "user", "content": prompt}]
         logger.debug("压力模型输入:" + json.dumps(messages, ensure_ascii=False))
@@ -327,6 +329,8 @@ class expertModel:
             return thought, content
 
         def is_visit(history, query):
+            if len(history) < 2:
+                return False
             if "您需要家庭医生上门帮您服务吗" in history[-2]["content"]:
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
