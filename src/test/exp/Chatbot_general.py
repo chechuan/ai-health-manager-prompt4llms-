@@ -199,6 +199,8 @@ if prompt := st.chat_input("Your message"):
         ):
             if hasattr(response["choices"][0]["delta"], "content"):
                 chunk_text = response["choices"][0]["delta"]["content"]
+            else:
+                continue
             full_response += chunk_text
             message_placeholder.markdown(full_response + "▌")
         logger.debug(f"Full response:\n{full_response}")
