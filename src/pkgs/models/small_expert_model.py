@@ -225,9 +225,9 @@ class expertModel:
             try:
                 num = float(weight.replace('kg', '')) - 75.4
                 if num < 0:
-                    cnt = "体重较上周减少{num}kg。"
+                    cnt = f"体重较上周减少{num}kg。"
                 else:
-                    cnt = "体重较上周增加{num}kg。"
+                    cnt = f"体重较上周增加{num}kg。"
 
             except Exception as err:
                 return {
