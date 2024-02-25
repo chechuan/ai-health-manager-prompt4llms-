@@ -327,7 +327,9 @@ class expertModel:
             # outIdx = generate_text.find("\nassistant") + 11
             # content = generate_text[outIdx:].split("\n")[0].strip()
             if generate_text.find("Thought") == -1:
-                thought = generate_text
+                lis = ['结合用户情况，帮助用户降低血压。', '结合用户个人血压信息，为用户提供帮助。']
+                import random
+                thought = random.choice(lis)
             else:
                 thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
