@@ -14,9 +14,9 @@ from pathlib import Path
 
 sys.path.append(Path("./").parent.as_posix())
 
+import openai
 import streamlit as st
 from loguru import logger
-import openai
 
 from src.test.exp.data.prompts import Sysprompt
 
@@ -58,7 +58,7 @@ def place_sidebar():
         api_key = st.text_input("api key", key="openai_api_key", value=None)
         openai.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
 
-        model_list = [i.id for i in openai.Model.list().data]
+        model_list = [i['id'] for i in openai.Model.list()["data"]]
         args.model = st.selectbox("Choose your model", model_list, index=2)
         st.text_area(
             "system prompt",
