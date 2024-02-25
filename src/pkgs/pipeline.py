@@ -21,7 +21,8 @@ from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
-from src.pkgs.models.custom_chat_model import CustomChatAuxiliary, CustomChatReportInterpretation, CustomChatModel
+from src.pkgs.models.custom_chat_model import (CustomChatAuxiliary, CustomChatModel,
+                                               CustomChatReportInterpretation)
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
@@ -924,7 +925,7 @@ class Chat_v2:
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
-            mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+            mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
                 mid_vars=mid_vars, **kwargs
             )
         else:
