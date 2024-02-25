@@ -297,10 +297,14 @@ class expertModel:
         def inquire_gen(bk_hitory, ihm_health_sbp, ihm_health_dbp):
             his = []
             for i in bk_hitory:
-                if i['role'] == 'User' or i['role'] == 'user':
+                if 'match_cont' not in i:
                     his.append({'role':'User', 'content':i['content']})
-                elif i['role'] == 'Assistant' or i['role'] == 'assistant':
-                    his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
+                else:
+                    his.append(i['match_cont'])
+                # if i['role'] == 'User' or i['role'] == 'user':
+                #     his.append({'role':'User', 'content':i['content']})
+                # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
+                #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in bk_hitory]
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
@@ -432,6 +436,7 @@ class expertModel:
                     "level": level,
                     "contents": ["您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。", content],
                     "thought": thought,
+                    "idx":1,
                     "scheme_gen": -1,
                     "scene_ending": True,
                     "blood_trend_gen": False,
@@ -444,6 +449,7 @@ class expertModel:
                 return {
                     "level": level,
                     "contents": [content],
+                    "idx":0,
                     "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": True,
@@ -458,6 +464,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content],
+                        "idx":0,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -470,6 +477,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content, "您需要家庭医生上门帮您服务吗？"],
+                        "idx":0,
                         "thought": thought,
                         "scheme_gen": 0,
                         "scene_ending": False,
@@ -512,6 +520,7 @@ class expertModel:
                     f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
+                "idx":-1,
                 "thought": "",
                 "scheme_gen": -1,
                 "scene_ending": True,
@@ -538,6 +547,7 @@ class expertModel:
                             f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
+                        "idx":2,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -552,6 +562,7 @@ class expertModel:
                         return {
                             "level": level,
                             "contents": [content],
+                            "idx":0,
                             "thought": thought,
                             "scheme_gen": -1,
                             "scene_ending": False,
@@ -565,6 +576,7 @@ class expertModel:
                         return {
                             "level": level,
                             "contents": [content],
+                            "idx":0,
                             "thought": thought,
                             "scheme_gen": 0,
                             "scene_ending": True,
@@ -584,6 +596,7 @@ class expertModel:
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
                         f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     ],
+                    "idx":-1,
                     "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": False,
@@ -625,6 +638,7 @@ class expertModel:
                 "level": 0,
                 "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围"],
                 "thought": "用户血压正常",
+                "idx":-1,
                 "scheme_gen": -1,
                 "scene_ending": True,
                 "blood_trend_gen": True,
@@ -641,6 +655,7 @@ class expertModel:
                     "level": -1,
                     "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", content],
                     "thought": thought,
+                    "idx":1,
                     "scheme_gen": -1,
                     "scene_ending": True,
                     "blood_trend_gen": True,
@@ -654,6 +669,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content],
+                        "idx":0,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -667,6 +683,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content],
+                        "idx":0,
                         "thought": thought,
                         "scheme_gen": 0,
                         "scene_ending": True,

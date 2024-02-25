@@ -942,6 +942,7 @@ class Chat_v2:
             notifi_daughter_doctor = blood_res['notifi_daughter_doctor']
             call_120 = blood_res['call_120']
             is_visit = blood_res['is_visit']
+            idx = blood_res['idx']
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
@@ -964,16 +965,45 @@ class Chat_v2:
                     'modi_scheme':modi_scheme,
                     'weight_trend_gen':weight_trend_gen
                 }
-        chat_history.append(
-            {
-                "role": "assistant",
-                "content": thought,
-                "function_call": {"name": tool, "arguments": content},
-                "intentCode": intentCode,
-                #"weight_res": weight_res,
-                #"blood_res": blood_res,
-            }
-        )
+        if intentCode == "blood_meas":
+            ct = ''
+            th = f'Thought: {thought}\n' if thought else ''
+            if not conts:
+                ct = th + 'Assistant: ' + content + '\n'
+            else:
+                if idx == 0:
+                    ct = th + 'Assistant: ' + content + '\n'
+                    for i in conts:
+                        ct += 'Assistant: ' + i + '\n'
+                else:
+                    ct = 'Assistant: ' + content + '\n'
+                    for i in range(conts):
+                        if idx == i + 1:
+                            ct = th + 'Assistant: ' + content + '\n'
+                        else:
+                            ct += 'Assistant: ' + content + '\n'
+            chat_history.append(
+                {
+                    "role": "assistant",
+                    "content": thought,
+                    "function_call": {"name": tool, "arguments": content},
+                    "intentCode": intentCode,
+                    "match_cont":ct
+                    #"weight_res": weight_res,
+                    #"blood_res": blood_res,
+                }
+            )
+        else:
+            chat_history.append(
+                {
+                    "role": "assistant",
+                    "content": thought,
+                    "function_call": {"name": tool, "arguments": content},
+                    "intentCode": intentCode,
+                    #"weight_res": weight_res,
+                    #"blood_res": blood_res,
+                }
+            )
         return appendData, chat_history, intentCode
 
     def complete_temporary(self, mid_vars: List[object], **kwargs):
