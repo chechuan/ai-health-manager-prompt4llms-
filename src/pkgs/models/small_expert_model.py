@@ -299,6 +299,76 @@ class expertModel:
         def is_pacify(history, query):
             r = [1 for i in history if '您需要家庭医生上门帮您服务吗' in i['content']]
             return True if sum(r) > 0 else False
+        
+        def get_second_hypertension(history, query, level):
+            def get_level(le):
+                if le == 1:
+                    return '一'
+                elif le == 2:
+                    return '二'
+                elif le == 3:
+                    return '三'
+                return '二'
+            if not history:
+                thought, content = blood_pressure_inquiry(history, query)
+                return {'level':level, 
+                        'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。','我已经通知了您的女儿和您的家庭医生。', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。', content], 
+                        'thought':thought, 
+                        'scheme_gen':False, 
+                        'scene_ending':False, 
+                        'blood_trend_gen':True, 
+                        'notifi_daughter_doctor': True,
+                        'call_120': False,
+                        'is_visit': False,                    
+                    }
+            if is_visit(history, query=query):
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 
+                        'contents': ['您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 
+                        'thought':thought, 
+                        'scheme_gen':False, 
+                        'scene_ending':True,
+                        'blood_trend_gen':False, 
+                        'notifi_daughter_doctor': False,
+                        'call_120': False,
+                        'is_visit': True,
+                    }
+            elif is_pacify(history, query=query): # 安抚
+                thought, content = blood_pressure_pacify(history, query)
+                return {'level':level, 
+                        'contents': [content], 
+                        'thought':thought, 
+                        'scheme_gen':False, 
+                        'scene_ending':True,
+                        'blood_trend_gen':False, 
+                        'notifi_daughter_doctor': False,
+                        'call_120': False,
+                        'is_visit': False,
+                        }
+            else:# 问诊
+                thought, content = blood_pressure_inquiry(history, query)
+                if '？' in content or '?' in content:
+                    return {'level':level, 
+                            'contents': [content], 
+                            'thought':thought, 
+                            'scheme_gen':False, 
+                            'scene_ending':False,
+                            'blood_trend_gen':False, 
+                            'notifi_daughter_doctor': False,
+                            'call_120': False,
+                            'is_visit': False,
+                            }
+                else:  # 出结论
+                    return {'level':level, 
+                            'contents': [content, '您需要家庭医生上门帮您服务吗？'], 
+                            'thought':thought, 
+                            'scheme_gen':True, 
+                            'scene_ending':False,
+                            'blood_trend_gen':False, 
+                            'notifi_daughter_doctor': False,
+                            'call_120': False,
+                            'is_visit': False,
+                            }
             
 
         ihm_health_sbp_list = [134, 123, 142, 114, 173, 164, 121]
@@ -314,68 +384,96 @@ class expertModel:
                 return 0
         
         history = kwargs.get('his', [])
-        if ihm_health_sbp > 180 or ihm_health_dbp > 110:
+        if ihm_health_sbp >= 130 or ihm_health_dbp >= 90:
+            a = '偏高'
+        else:
+            a = '正常'
+        trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
+        trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
+        if trend_sbp or trend_dbp:
+            b = '大'
+        else:
+            b = '小'
+        if ihm_health_sbp > 180 or ihm_health_dbp > 110:  # 三级高血压
             level = 3
-            return {'level':level, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
-        elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:
+            return {'level':level, 
+                    'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。', '我已为您呼叫120。'], 
+                    'thought':'', 
+                    'scheme_gen':False, 
+                    'scene_ending':True, 
+                    'blood_trend_gen':False,
+                    'notifi_daughter_doctor': False,
+                    'call_120': True,
+                    'is_visit': False,
+                }
+        elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
-            if not history:
-                thought, content = blood_pressure_inquiry(history, query)
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            if is_visit(history, query=query):
-                thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': ['我已经通知了您的女儿和家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            elif is_pacify(history, query=query): # 安抚
-                thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            else:# 问诊
-                thought, content = blood_pressure_inquiry(history, query)
-                if '？' in content or '?' in content:
-                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-                else:
-                    return {'level':level, 'contents': [content, '我已经通知了您的女儿。', '您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
-            
-
-        elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:
+            return get_second_hypertension(history, query, level)
+        elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:   # 一级高血压
             level = 1
-
-            if not history:
-                thought, content = blood_pressure_inquiry(history, query)
-                return {'level':level, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            
-            if is_visit(history, query=query):
-                thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': ['我已经通知了您的家庭医生，您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。', content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-            elif is_pacify(history, query=query): # 安抚
-                thought, content = blood_pressure_pacify(history, query)
-                return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
-            else:# 问诊
-                thought, content = blood_pressure_inquiry(history, query)
-                if '？' in content or '?' in content:
-                    return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
-                else: # 出结论
-                    trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
-                    trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
-                    if trend_sbp or trend_dbp:
-                        return {'level':level, 'contents': [content, '', '您的血压与日常值相比已波动30%，整体波动较大，根据治疗原则也为了您的健康，需要医生上门评估。您需要家庭医生上门帮您服务吗？'], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
-                    else:
-                        thought, cont = blood_pressure_pacify(history, query)  #安抚
-                        return {'level':level, 'contents': [content, cont], 'thought':thought, 'scheme_gen':True, 'scene_ending':False}
-
-        elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:
+            if trend_sbp or trend_dbp: # 血压波动超过30%
+                return get_second_hypertension(history, query, level=1)
+            else:
+                if not history:
+                    thought, content = blood_pressure_inquiry(history, query)
+                    return {'level':level, 
+                            'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。', content], 
+                            'thought':thought, 
+                            'scheme_gen':False, 
+                            'scene_ending':False,
+                            'blood_trend_gen':True,
+                            'notifi_daughter_doctor': False,
+                            'call_120': False,
+                            'is_visit': False,
+                        }
+                else:# 问诊
+                    thought, content = blood_pressure_inquiry(history, query)
+                    if '？' in content or '?' in content:
+                        return {'level':level, 
+                                'contents': [content], 
+                                'thought':thought, 
+                                'scheme_gen':False, 
+                                'scene_ending':False,
+                                'blood_trend_gen':False,
+                                'notifi_daughter_doctor': False,
+                                'call_120': False,
+                                'is_visit': False,
+                                }
+                    else: # 出结论
+                        # thought, cont = blood_pressure_pacify(history, query)  #安抚
+                        return {'level':level,
+                                'contents': [content], 
+                                'thought':thought, 
+                                'scheme_gen':True, 
+                                'scene_ending':True,
+                                'blood_trend_gen':False,
+                                'notifi_daughter_doctor': False,
+                                'call_120': False,
+                                'is_visit': False,
+                            }
+                    
+        elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
             level = 0
             thought, content = blood_pressure_inquiry(history, query)
             if not history:
-                return {'level':2, 'contents': [f'张叔叔，发现您刚刚的血压是{ihm_health_sbp}/{ihm_health_dbp},血压偏高', content], 'thought':thought, 'scheme_gen':False}
+                return {'level':level, 
+                        'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围', f'健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。'], 
+                        'thought':thought,
+                        'scheme_gen':False,
+                        'blood_trend_gen':True,
+                        'notifi_daughter_doctor': False,
+                        'call_120': False,
+                        'is_visit': False,
+                    }
             
-            if '？' in content or '?' in content:
+            elif '？' in content or '?' in content:
                 return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':False}
             else:
                 return {'level':level, 'contents': [content], 'thought':thought, 'scheme_gen':False, 'scene_ending':True}
         else:
             level = -1
             rules = []
-            return {'level':0, 'contents': [], 'thought':'', 'scheme_gen':False, 'scene_ending':True}
+            return {'level':0, 'contents': [f'您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围'], 'thought':'用户血压正常', 'scheme_gen':False, 'scene_ending':True}
     
         
 
