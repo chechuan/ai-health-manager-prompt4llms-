@@ -300,7 +300,7 @@ class expertModel:
             messages = [{"role": "system", "content": blood_pressure_inquiry_prompt}] + history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
-                history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+                history=messages, max_tokens=1024, top_p=0.8, temperature=0.3, do_sample=False, model="Qwen-72B-Chat"
             )
             return generate_text
 
