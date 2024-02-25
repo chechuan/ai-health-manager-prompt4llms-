@@ -910,6 +910,12 @@ class Chat_v2:
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
             mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "pressure_meas":
+            pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = pressure_res['content']
+            #sch = pressure_res['scheme_gen']
+            thought = pressure_res['thought']
+            tool = 'askHuman' if pressure_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             if weight_res['contents']:
