@@ -297,7 +297,10 @@ class expertModel:
         def inquire_gen(bk_hitory, ihm_health_sbp, ihm_health_dbp):
             his = []
             for i in bk_hitory:
-                his.append(i['match_cont'])
+                if 'match_cont' not in i:
+                    his.append({'role':'User', 'content':i['content']})
+                else:
+                    his.append(i['match_cont'])
                 # if i['role'] == 'User' or i['role'] == 'user':
                 #     his.append({'role':'User', 'content':i['content']})
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
