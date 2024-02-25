@@ -297,9 +297,9 @@ class expertModel:
             his = []
             for i in bk_hitory:
                 if 'match_cont' not in i:
-                    his.append({'role':'User', 'content':i['content']})
+                    his.append({'role':'User','content':i['content']})
                 else:
-                    his.append(i['match_cont'])
+                    his.append({'role':'Assistant','content':i['match_cont']})
                 # if i['role'] == 'User' or i['role'] == 'user':
                 #     his.append({'role':'User', 'content':i['content']})
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
@@ -616,6 +616,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "idx":-0,
                 }
 
             else:
@@ -629,6 +630,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "idx":0,
                 }
         elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
