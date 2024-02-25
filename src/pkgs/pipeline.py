@@ -907,8 +907,9 @@ class Chat_v2:
             mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
         elif intentCode == "weight_meas":
             weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
-            content = weight_res['contents'][0]
-            conts = weight_res['contents'][1:]
+            if weight_res['contents']:
+                content = weight_res['contents'][0]
+                conts = weight_res['contents'][1:]
             sch = weight_res['scheme_gen']
             thought = weight_res['thought']
             conts = []
