@@ -94,14 +94,14 @@ def prepare_parameters():
         step=0.05,
         help="模型在生成文本时的概率阈值。这个参数的值在0到1之间，表示模型只会从概率之和大于等于这个值的单词中选择一个。这个参数可以帮助模型过滤掉一些极端的或不相关的单词，提高文本的质量和一致性。",
     )
-    # args.top_k = st.sidebar.slider(
-    #     "Top k",
-    #     min_value=-1,
-    #     max_value=100,
-    #     value=-1,
-    #     step=1,
-    #     help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
-    # )
+    args.top_k = st.sidebar.slider(
+        "Top k",
+        min_value=-1,
+        max_value=100,
+        value=-1,
+        step=1,
+        help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
+    )
     args.n = st.sidebar.slider(
         "N",
         min_value=1,
@@ -133,6 +133,14 @@ def prepare_parameters():
         value=1.0,
         step=0.1,
         help="用来控制模型生成文本时避免重复相同的单词或短语。它是一个值，每次生成的单词出现在文本中时，就会乘以该单词的对数概率上。这个值越高（接近1），模型就越不倾向于重复单词或短语；这个值越低（接近0），模型就越允许重复。您可以根据您的需求和期望的输出来调整这个参数的值",
+    )
+    args.length_penalty = st.sidebar.slider(
+        "Length penalty",
+        min_value=0.0,
+        max_value=1.0,
+        value=1.0,  
+        step=0.1,
+        help="用来控制模型生成的文本的长度。这个参数的值是一个浮点数，表示生成的文本的长度会被乘以这个值。较高的Length_penalty值会导致生成的文本更长，较低的Length_penalty值会导致生成的文本更短。",
     )
     args.stop = ['\nObservation']
 
