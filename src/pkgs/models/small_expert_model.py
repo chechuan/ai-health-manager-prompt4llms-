@@ -202,7 +202,6 @@ class expertModel:
             modi_type = get_scheme_modi_type(content)
             return {'thought': thought, 'contents': [], 'scene_ending': True, 'scheme_gen': modi_type}
 
-
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
         """计算血压等级
