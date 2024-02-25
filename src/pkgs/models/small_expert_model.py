@@ -307,10 +307,10 @@ class expertModel:
             return generate_text
 
         def blood_pressure_inquiry(history, query):
-            generate_text = inquire_gen(history)
+            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
             while generate_text.count("Thought") != 1 or generate_text.count("\nAssistant") != 1:
                 #thought = generate_text
-                generate_text = inquire_gen(history)
+                generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
             thoughtIdx = generate_text.find("\nThought") + 9
             thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             outIdx = generate_text.find("\nAssistant") + 11
