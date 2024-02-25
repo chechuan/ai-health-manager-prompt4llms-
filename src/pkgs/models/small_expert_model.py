@@ -629,7 +629,7 @@ class expertModel:
                 return {
                     "level": -1,
                     "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", content],
-                    "thought": "用户血压偏低",
+                    "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": True,
                     "blood_trend_gen": True,
