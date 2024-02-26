@@ -249,7 +249,7 @@ class CustomChatReportInterpretation(CustomChatModel):
     def __compose_message__(self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs):
         """组装消息"""
         messages = []
-        system_prompt = """# 任务描述
+        system_prompt = """You are a helpful assistant.\n# 任务描述
 你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
 
 # 问诊流程专业性要求
@@ -261,7 +261,7 @@ class CustomChatReportInterpretation(CustomChatModel):
 # 格式要求：
 每次请遵循以下格式回复：
 Thought: 思考推理针对当前问题应该做什么, 怎么做
-Doctor: 你作为一个医生,分析思考的内容,注意: you are only be able to ask me one question
+Doctor: 你作为一个医生,分析思考的内容,注意: 每次你只能问一个问题
 
 Begins!"""
         if not history:
@@ -312,7 +312,7 @@ Begins!"""
             # top_k=-1,
             # n=1,
             # presence_penalty=1.15,
-            frequency_penalty=2,
+            # frequency_penalty=2,
             # repetition_penalty=1,
             # length_penalty=1.2,
             stream=True,
