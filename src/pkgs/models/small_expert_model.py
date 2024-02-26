@@ -445,7 +445,7 @@ class expertModel:
                     "thought": thought,
                     "idx":1,
                     "scheme_gen": -1,
-                    "scene_ending": True,
+                    "scene_ending": False,
                     "blood_trend_gen": False,
                     "notifi_daughter_doctor": False,
                     "call_120": False,
@@ -602,6 +602,7 @@ class expertModel:
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
                         f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        content
                     ],
                     "idx":-1,
                     "thought": thought,
@@ -666,7 +667,7 @@ class expertModel:
                     "thought": thought,
                     "idx":1,
                     "scheme_gen": -1,
-                    "scene_ending": True,
+                    "scene_ending": False,
                     "blood_trend_gen": True,
                     "notifi_daughter_doctor": False,
                     "call_120": False,
