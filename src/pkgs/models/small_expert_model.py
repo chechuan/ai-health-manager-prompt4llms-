@@ -292,7 +292,7 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         query = kwargs["promptParam"].get("query", "")
 
-        def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp):
+        def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp,iq_n=7):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
@@ -307,7 +307,7 @@ class expertModel:
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
-            if len(history) >= 7:
+            if len(history) >= iq_n:
                 messages = [{"role": "user", "content": blood_pressure_scheme_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}]
             else:
                 messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] #+ history
@@ -318,8 +318,8 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(history, query):
-            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp)
+        def blood_pressure_inquiry(history, query, iq_n=7):
+            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp, iq_n=iq_n)
             #while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
                 # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
@@ -420,7 +420,7 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(history, query)
+                thought, content = blood_pressure_inquiry(history, query,iq_n=7)
                 return {
                     "level": level,
                     "contents": [
@@ -466,7 +466,7 @@ class expertModel:
                     "is_visit": False,
                 }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
                 if "？" in content or "?" in content:
                     return {
                         "level": level,
@@ -546,7 +546,7 @@ class expertModel:
                 return get_second_hypertension(b_history, history, query, level=1)
             else:
                 if not history:
-                    thought, content = blood_pressure_inquiry(history, query)
+                    thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                     return {
                         "level": level,
                         "contents": [
@@ -564,7 +564,7 @@ class expertModel:
                         "is_visit": False,
                     }
                 else:  # 问诊
-                    thought, content = blood_pressure_inquiry(history, query)
+                    thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                     if "？" in content or "?" in content:
                         return {
                             "level": level,
@@ -595,7 +595,7 @@ class expertModel:
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
             level = 0
-            thought, content = blood_pressure_inquiry(history, query)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 return {
                     "level": level,
@@ -659,11 +659,14 @@ class expertModel:
         else:   # 低血压
             level = -1
             rules = []
-            thought, content = blood_pressure_inquiry(history, query)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", content],
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，
+                                 为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                                 content
+                                ],
                     "thought": thought,
                     "idx":1,
                     "scheme_gen": -1,
