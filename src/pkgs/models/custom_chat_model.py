@@ -7,6 +7,8 @@
 """
 from typing import Any, AnyStr, Dict, List
 
+from data.constrant import (CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
+                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT)
 from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
@@ -249,38 +251,26 @@ class CustomChatReportInterpretation(CustomChatModel):
     def __compose_message__(self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs):
         """组装消息"""
         messages = []
-        system_prompt = """You are a helpful assistant.\n# 任务描述
-你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
-
-# 问诊流程专业性要求
-1.我会提供我的医疗检查报告, 请你根据自身经验分析,针对我的个人情况提出相应的问题，每次最多提出两个问题
-2.问题关键点可以包括: 是否出现报告中提及的疾病相关的症状，是否存在该疾病的诱因，平素生活习惯等,同类问题可以总结在一起问
-3.当你收集到足够信息后，输出以下内容：概括报告中的异常点；分析导致该影响学表现的可能原因；该疾病可能的病因，可能的症状，生活注意事项、后续建议患者完善的检查项目。
-4.如果报告是胸部检查，可以建议进一步检查如：血常规、C反应蛋白等。如果报告是腹部检查，可以建议进一步检查血常规、肝功能等。
-
-# 格式要求：
-每次请遵循以下格式回复：
-Thought: 思考推理针对当前问题应该做什么, 怎么做
-Doctor: 你作为一个医生,分析思考的内容,注意: 每次你只能问一个问题
-
-Begins!"""
         if not history:
             content = kwargs["promptParam"]["report_ocr_result"]
-            messages.append({"role": "system", "content": system_prompt, "intentCode": intentCode})
+            messages.append({"role": "system", "content": CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT, "intentCode": intentCode})
             messages.append({"role": "user", "content": content, "intentCode": intentCode})
         else:
+            # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
+            # 通过此处替换system_prompt控制问诊轮数
+            if len([i for i in history if i["role"] == "user"]) == 3:
+                system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY
+                history[0]["content"] = system_prompt if history[0]["role"] == "system" else ...
             for idx in range(len(history)):
                 msg = history[idx]
-                # if idx == 0 and msg["role"] == "user":
-                #     content = system_prompt.format(prompt=msg["content"])
-                #     messages.append({"role": "user", "content": content})
                 if msg["role"] == "assistant" and msg.get("function_call"):
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
-                    messages.append({"role": "assistant", "content": content, })
+                    messages.append({"role": "assistant", "content": content})
                 elif msg["role"] == "assistant":
                     messages.append({"role": "assistant", "content": msg["content"]})
                 else:
                     messages.append({"role": msg["role"], "content": msg["content"]})
+                messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
