@@ -333,10 +333,10 @@ class expertModel:
             else:
                 thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("\nAssistant") == -1:
+            if generate_text.find("Assistant") == -1:
                 content = generate_text
             else:
-                outIdx = generate_text.find("\nAssistant") + 11
+                outIdx = generate_text.find("Assistant") + 10
                 content = generate_text[outIdx:].split("\n")[0].strip()
 
             return thought, content
@@ -356,12 +356,12 @@ class expertModel:
             if generate_text.find("\nThought") == -1:
                 thought = '在等待医生上门的过程中，我应该安抚患者的情绪，让他保持平静，同时提供一些有助于降低血压的建议。'
             else:
-                thoughtIdx = generate_text.find("\nThought") + 9
+                thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("\nDoctor") == -1:
+            if generate_text.find("Doctor") == -1:
                 content = generate_text
             else:
-                outIdx = generate_text.find("\nDoctor") + 8
+                outIdx = generate_text.find("Doctor") + 7
                 content = generate_text[outIdx:].split("\n")[0].strip()
             if content.find("？") == -1:
                 content = content
