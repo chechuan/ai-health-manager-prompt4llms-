@@ -49,7 +49,6 @@ class expertModel:
         if not self.image_font_path.exists():
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
-        self.image_font_size = 12
 
     def check_number(x: Union[str, int, float], key: str):  # type: ignore
         """检查数字
@@ -1233,10 +1232,11 @@ class expertModel:
         draw = ImageDraw.Draw(image_io)
         for rectangle, text in rectangles_with_text:
             line_value = int(0.002 * sum(image_io.size))
+            fontsize = line_value * 6
+            image_font = ImageFont.truetype(str(self.image_font_path), fontsize)
             draw.rectangle(rectangle, outline="blue", width=line_value)
-            image_font = ImageFont.truetype(str(self.image_font_path), line_value*4)
             draw.text(
-                (rectangle[0] - 60, rectangle[1] - self.image_font_size - 15), text, font=image_font, fill="red"
+                (rectangle[0] - fontsize*2, rectangle[1] - fontsize - 15), text, font=image_font, fill="red"
             )
         save_path = tmp_path.joinpath(file_path.stem + "_rect" + file_path.suffix)
         image_io.save(save_path)
@@ -1300,6 +1300,12 @@ class expertModel:
         try:
             rectangles_with_text = []
             for topic, index_range in loc.items():
+                if index_range[0] < 0:
+                    index_range[0] = 0
+                elif index_range[0] > len(content_index):
+                    continue
+                if index_range[1] >= len(content_index):
+                    index_range[1] = len(content_index) - 1
                 msgs = raw_result[index_range[0] : index_range[1] + 1]
                 coordinates = [item[0] for item in msgs]
                 left = min([j for i in coordinates for j in [i[0][0], i[3][0]]])
@@ -1309,7 +1315,7 @@ class expertModel:
                 rectangles_with_text.append(((left, top, right, bottom), topic))
             save_path = self.__plot_rectangle(tmp_path, file_path, rectangles_with_text)
         except Exception as e:
-            ...
+            logger.exception(f"Report interpretation error: {e}")
         remote_image_url = self.__upload_image(save_path)
         return remote_image_url
 
