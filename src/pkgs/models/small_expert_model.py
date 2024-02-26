@@ -659,12 +659,11 @@ class expertModel:
         else:   # 低血压
             level = -1
             rules = []
-            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=5)
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp},
-                                 为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
                                  content
                                 ],
                     "thought": thought,
