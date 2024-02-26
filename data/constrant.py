@@ -910,7 +910,7 @@ CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY = """You are a helpful 
 # 格式要求：
 每次请遵循以下格式回复：
 Thought: 思考推理基于专业性要求，要给出那些方面的分析
-Doctor: 你作为一个医生,结合你的专业知识及提供的所有信息,给患者提供总结意见
+Doctor: 你作为一个医生,结合你的专业知识及提供的所有信息,给患者提供总结意见,不超过150字。
 
 Begins!"""
 

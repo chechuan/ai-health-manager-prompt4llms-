@@ -265,11 +265,12 @@ class CustomChatReportInterpretation(CustomChatModel):
                 msg = history[idx]
                 if msg["role"] == "assistant" and msg.get("function_call"):
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
-                    messages.append({"role": "assistant", "content": content, })
+                    messages.append({"role": "assistant", "content": content})
                 elif msg["role"] == "assistant":
                     messages.append({"role": "assistant", "content": msg["content"]})
                 else:
                     messages.append({"role": msg["role"], "content": msg["content"]})
+                messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
