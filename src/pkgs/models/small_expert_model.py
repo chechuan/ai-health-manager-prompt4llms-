@@ -308,7 +308,7 @@ class expertModel:
             # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
             # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
-            if len(history) > 7:
+            if len(history) >= 7:
                 messages = [{"role": "user", "content": blood_pressure_scheme_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}]
             else:
                 messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] #+ history
