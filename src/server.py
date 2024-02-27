@@ -68,6 +68,7 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
     try:
         while True:
             yield_item = next(generator)
+            yield_item["data"]['appendData'] = yield_item['appendData']
             item = {**yield_item["data"]}
             logger.info("Output (except mid_vars & backend_history):\n" + json.dumps(item, ensure_ascii=False))
             if return_mid_vars:

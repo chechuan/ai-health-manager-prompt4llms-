@@ -24,3 +24,4 @@ openpyxl
 rapidocr_onnxruntime
 pdf2image
 pdfminer.six
+Pillow
