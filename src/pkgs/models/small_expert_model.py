@@ -386,8 +386,9 @@ class expertModel:
                 if (
                     "是的" in history[-1]["content"]
                     or "好的" in history[-1]["content"]
-                    or "需要" in history[-1]["content"]
+                    or ("需要" in history[-1]["content"] and '不需要' not in history[-1]["content"])
                     or "嗯" in history[-1]["content"]
+                    or "可以" in history[-1]["content"]
                 ):
                     return True
                 text = callLLM(
