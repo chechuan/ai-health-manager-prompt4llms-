@@ -902,7 +902,8 @@ class Chat_v2:
         call_120 = False
         is_visit = False
         modi_scheme = ''
-        idx = 0
+        #idx = 0
+        noti_contents = []
         weight_trend_gen = False
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
@@ -945,8 +946,9 @@ class Chat_v2:
             notifi_daughter_doctor = blood_res['notifi_daughter_doctor']
             call_120 = blood_res['call_120']
             is_visit = blood_res['is_visit']
-            idx = blood_res.get('idx', 0)
+            # idx = blood_res.get('idx', 0)
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
+            notify_blood_pressure_contnets = blood_res['notify_doctor_daughter_contnet']
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
             mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation_ask.chat(
@@ -971,7 +973,9 @@ class Chat_v2:
                     'call_120': call_120,
                     'is_visit':is_visit,
                     'modi_scheme':modi_scheme,
-                    'weight_trend_gen':weight_trend_gen
+                    'weight_trend_gen':weight_trend_gen,
+                    "notify_blood_pressure_contents":notify_blood_pressure_contnets
+
                 }
         # if intentCode == "blood_meas":
         #     ct = ''

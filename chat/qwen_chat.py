@@ -470,6 +470,9 @@ class Chat:
         elif intent in ['shared_decision', 'create_food_purchasing_list']:
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
+        elif intent == 'remind_take_blood_pressure':
+            out_text = {'message':'好的，已通知张叔叔测量血压', 'intentCode':intent,
+                    'processCode':'trans_back', 'intentDesc':desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))

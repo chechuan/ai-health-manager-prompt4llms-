@@ -293,7 +293,9 @@ class expertModel:
 
         ihm_health_sbp = kwargs["promptParam"]["ihm_health_sbp"]
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
-        query = kwargs["promptParam"].get("query", "")
+        history = kwargs.get("his", [])
+        b_history = kwargs.get("backend_history", [])
+        query = history[-1]['contnet'] if history else ''
 
         def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp,iq_n=7):
             his = []
@@ -412,6 +414,52 @@ class expertModel:
         def is_pacify(history, query):
             r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
             return True if sum(r) > 0 else False
+        
+        def noti_blood_pressure_content(history):
+            niti_doctor_role_map = {
+                '0': '张辉',
+                '1': '张辉叔叔',
+                '2': '你',
+                '3': '你'
+            }
+            history = [{"role": niti_doctor_role_map.get(str(i["role"]), "张辉"), "content": i["content"]} for i in history]
+            his_prompt = "\n".join(
+                [("张辉" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
+            )
+            prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
+            messages = [{"role": "user", "content": prompt}]
+            noti_doc_cont = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
+            ).strip()
+
+            niti_daughter_role_map = {
+                '0': '张叔叔',
+                '1': '张叔叔',
+                '2': '你',
+                '3': '你'
+            }
+            history = [{"role": niti_daughter_role_map.get(str(i["role"]), "张叔叔"), "content": i["content"]} for i in history]
+            his_prompt = "\n".join(
+                [("张叔叔" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
+            )
+            prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
+            messages = [{"role": "user", "content": prompt}]
+            noti_daughter_cont = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
+            ).strip()
+
+            return noti_doc_cont, noti_daughter_cont
+        
 
         def get_second_hypertension(b_history, history, query, level):
             def get_level(le):
@@ -440,6 +488,8 @@ class expertModel:
                     "notifi_daughter_doctor": True,
                     "call_120": False,
                     "is_visit": False,
+                    "exercise_video": False,
+                    "notify_doctor_daughter_contnet": [],
                 }
             if is_visit(history, query=query):
                 thought, content = blood_pressure_pacify(history, query)
@@ -454,9 +504,12 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": True,
+                    "exercise_video": False,
+                    "notify_doctor_daughter_contnet": [],
                 }
             elif is_pacify(history, query=query):  # 安抚
                 thought, content = blood_pressure_pacify(history, query)
+                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
                     "contents": [content],
@@ -468,6 +521,17 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "exercise_video": True,
+                    "notify_doctor_daughter_contnet": [
+                        {
+                            "target":"doctor",
+                            "content":noti_doc_cont,
+                        },
+                        {
+                            "target":"daughter",
+                            "content":noti_daughter_cont,
+                        },
+                    ],
                 }
             else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query, iq_n=7)
@@ -483,6 +547,8 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "exercise_video": False,
+                        "notify_doctor_daughter_contnet": [],
                     }
                 else:  # 出结论
                     return {
@@ -496,6 +562,8 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "exercise_video": False,
+                        "notify_doctor_daughter_contnet": [],
                     }
 
         ihm_health_sbp_list = [116, 118, 132, 121, 128, 123, 128, 117, 132, 134, 124, 120, 80]
@@ -508,9 +576,6 @@ class expertModel:
                 return 1
             else:
                 return 0
-
-        history = kwargs.get("his", [])
-        b_history = kwargs.get("backend_history", [])
 
         if ihm_health_sbp >= 130 or ihm_health_dbp >= 90:
             a = "偏高"
@@ -539,6 +604,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": True,
                 "is_visit": False,
+                "notify_doctor_daughter_contnet": [],
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
@@ -566,6 +632,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "notify_doctor_daughter_contnet": [],
                     }
                 else:  # 问诊
                     thought, content = blood_pressure_inquiry(history, query, iq_n=6)
@@ -581,6 +648,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
+                            "notify_doctor_daughter_contnet": [],
                         }
                     else:  # 出结论
                         # thought, cont = blood_pressure_pacify(history, query)  #安抚
@@ -595,6 +663,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
+                            "notify_doctor_daughter_contnet": [],
                         }
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
@@ -616,6 +685,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "notify_doctor_daughter_contnet": [],
                 }
 
             elif "？" in content or "?" in content:
@@ -630,6 +700,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":-0,
+                    "notify_doctor_daughter_contnet": [],
                 }
 
             else:
@@ -644,6 +715,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":0,
+                    "notify_doctor_daughter_contnet": [],
                 }
         elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
@@ -659,6 +731,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": False,
                 "is_visit": False,
+                "notify_doctor_daughter_contnet": [],
             }
         else:   # 低血压
             level = -1
@@ -678,6 +751,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "notify_doctor_daughter_contnet": [],
                 }
             else:
                   
@@ -693,6 +767,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "notify_doctor_daughter_contnet": [],
                     }
                 else:  # 出结论
                     # thought, cont = blood_pressure_pacify(history, query)  #安抚
@@ -707,6 +782,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "notify_doctor_daughter_contnet": [],
                     }
 
 
