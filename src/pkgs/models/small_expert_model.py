@@ -458,8 +458,7 @@ class expertModel:
                 model="Qwen-72B-Chat",
             ).strip()
 
-            return noti_doc_cont, noti_daughter_cont
-        
+            return noti_doc_cont, noti_daughter_cont             
 
         def get_second_hypertension(b_history, history, query, level):
             def get_level(le):
@@ -508,11 +507,13 @@ class expertModel:
                     "exercise_video": True,
                     "notify_doctor_daughter_contnet": [
                         {
-                            "target":"doctor",
+                            "eventType":"notice",
+                            "eventCode":"app_notify_daughter_ai_result_req",
                             "content":noti_doc_cont,
                         },
                         {
-                            "target":"daughter",
+                            "eventType":"notice",
+                            "eventCode":"app_notify_doctor_ai_result_req",
                             "content":noti_daughter_cont,
                         },
                     ],
