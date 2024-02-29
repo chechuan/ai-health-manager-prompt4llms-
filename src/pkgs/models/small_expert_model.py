@@ -606,6 +606,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": True,
                 "is_visit": False,
+                "exercise_video": False,
                 "notify_doctor_daughter_contnet": [],
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
@@ -634,6 +635,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "exercise_video": False,
                         "notify_doctor_daughter_contnet": [],
                     }
                 else:  # 问诊
@@ -650,6 +652,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
+                            "exercise_video": False,
                             "notify_doctor_daughter_contnet": [],
                         }
                     else:  # 出结论
@@ -665,6 +668,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
+                            "exercise_video": False,
                             "notify_doctor_daughter_contnet": [],
                         }
 
@@ -687,6 +691,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
 
@@ -702,6 +707,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":-0,
+                    "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
 
@@ -717,6 +723,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":0,
+                    "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
         elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
@@ -733,6 +740,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": False,
                 "is_visit": False,
+                "exercise_video": False,
                 "notify_doctor_daughter_contnet": [],
             }
         else:   # 低血压
@@ -753,6 +761,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
+                    "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
             else:
@@ -769,6 +778,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "exercise_video": False,
                         "notify_doctor_daughter_contnet": [],
                     }
                 else:  # 出结论
@@ -784,6 +794,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
+                        "exercise_video": False,
                         "notify_doctor_daughter_contnet": [],
                     }
 
