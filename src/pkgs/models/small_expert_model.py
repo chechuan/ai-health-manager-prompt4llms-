@@ -508,13 +508,13 @@ class expertModel:
                     "notify_doctor_daughter_contnet": [
                         {
                             "eventType":"notice",
-                            "eventCode":"app_notify_daughter_ai_result_req",
-                            "content":noti_doc_cont,
+                            "eventCode":"app_shangmen_req",
+                            "eventContent":noti_doc_cont,
                         },
                         {
                             "eventType":"notice",
-                            "eventCode":"app_notify_doctor_ai_result_req",
-                            "content":noti_daughter_cont,
+                            "eventCode":"app_notify_daughter_ai_result_req",
+                            "eventContent":noti_daughter_cont,
                         },
                     ],
                 }
