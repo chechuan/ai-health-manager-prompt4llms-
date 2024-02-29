@@ -441,10 +441,10 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
             history=messages,
             temperature=0.7,
             max_tokens=4096,
-            top_p=1,
+            top_p=0.5,
             stream=True,
         )
-        content = accept_stream_response(chat_response, verbose=True)
+        content = accept_stream_response(chat_response, verbose=False)
         logger.info(f"Custom Chat 报告解读Answer LLM Output: \n{content}")
         thought, content = self.__parse_response__(content)
         mid_vars = update_mid_vars(
