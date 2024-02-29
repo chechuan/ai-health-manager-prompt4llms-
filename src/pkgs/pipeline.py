@@ -950,7 +950,7 @@ class Chat_v2:
             # idx = blood_res.get('idx', 0)
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
             notify_blood_pressure_contnets = blood_res['notify_doctor_daughter_contnet']
-            exercise_video = blood_res.get('exercise_video', False)
+            exercise_video = blood_res['exercise_video']
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
             mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation_ask.chat(
