@@ -295,7 +295,7 @@ class expertModel:
         ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
         history = kwargs.get("his", [])
         b_history = kwargs.get("backend_history", [])
-        query = history[-1]['contnet'] if history else ''
+        query = history[-1]['content'] if history else ''
 
         def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp,iq_n=7):
             his = []
