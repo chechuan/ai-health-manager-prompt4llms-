@@ -903,7 +903,7 @@ class Chat_v2:
         is_visit = False
         modi_scheme = ''
         #idx = 0
-        noti_contents = []
+        notify_blood_pressure_contnets = []
         weight_trend_gen = False
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
