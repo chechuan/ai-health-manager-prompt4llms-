@@ -10,6 +10,7 @@ import json
 import pickle
 import sys
 import time
+from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -706,8 +707,8 @@ def curr_weekday():
     return today
 
 
-def dumpJS(obj):
-    return json.dumps(obj, ensure_ascii=False)
+def dumpJS(obj, ensure_ascii=False):
+    return json.dumps(obj, ensure_ascii=ensure_ascii)
 
 
 def format_sse_chat_complete(data: str, event=None) -> str:
@@ -741,6 +742,8 @@ def accept_stream_response(response, verbose=True):
                 content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
+    if verbose:
+        print()
     t_cost = round(time.time() - tst, 2)
     logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
     return content
