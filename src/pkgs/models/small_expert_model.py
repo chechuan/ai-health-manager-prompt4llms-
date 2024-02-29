@@ -426,7 +426,7 @@ class expertModel:
             his_prompt = "\n".join(
                 [("张辉" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
             )
-            prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
+            prompt = remid_doctor_blood_pressre_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
             noti_doc_cont = callLLM(
                 history=messages,
@@ -491,8 +491,9 @@ class expertModel:
                     "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
-            if is_visit(history, query=query):
+            if is_visit(history, query=query):  # 上门
                 thought, content = blood_pressure_pacify(history, query)
+                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
                     "contents": ["您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。", content],
@@ -504,23 +505,6 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": True,
-                    "exercise_video": False,
-                    "notify_doctor_daughter_contnet": [],
-                }
-            elif is_pacify(history, query=query):  # 安抚
-                thought, content = blood_pressure_pacify(history, query)
-                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
-                return {
-                    "level": level,
-                    "contents": [content],
-                    "idx":0,
-                    "thought": thought,
-                    "scheme_gen": -1,
-                    "scene_ending": True,
-                    "blood_trend_gen": False,
-                    "notifi_daughter_doctor": False,
-                    "call_120": False,
-                    "is_visit": False,
                     "exercise_video": True,
                     "notify_doctor_daughter_contnet": [
                         {
@@ -532,6 +516,23 @@ class expertModel:
                             "content":noti_daughter_cont,
                         },
                     ],
+                }
+            elif is_pacify(history, query=query):  # 安抚
+                thought, content = blood_pressure_pacify(history, query)
+                # noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "idx":0,
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": True,
+                    "blood_trend_gen": False,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                    "exercise_video": False,
+                    "notify_doctor_daughter_contnet": [],
                 }
             else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query, iq_n=7)
