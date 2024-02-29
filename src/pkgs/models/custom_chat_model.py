@@ -403,7 +403,7 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
             system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT.format(
                 base_info=base_info, external_knowledge=external_knowledge
             )
-            messages = [{"role": "system", "content": system_prompt}] + messages
+            messages = [{"role": "system", "content": system_prompt, "intentCode": intentCode}] + messages
         for idx in range(len(history)):
             msg = history[idx]
             if msg["role"] == "assistant" and msg.get("function_call"):
