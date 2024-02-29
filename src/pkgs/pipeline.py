@@ -22,7 +22,8 @@ from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
 from src.pkgs.models.custom_chat_model import (CustomChatAuxiliary, CustomChatModel,
-                                               CustomChatReportInterpretation)
+                                               CustomChatReportInterpretationAnswer,
+                                               CustomChatReportInterpretationAsk)
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
@@ -42,7 +43,8 @@ class Chat_v2:
         self.sys_template = PromptTemplate(input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT)
         self.custom_chat_auxiliary = CustomChatAuxiliary(self.gsr)
         self.custom_chat_model = CustomChatModel(self.gsr)
-        self.custom_chat_report_interpretation = CustomChatReportInterpretation(self.gsr)
+        self.custom_chat_report_interpretation_ask = CustomChatReportInterpretationAsk(self.gsr)
+        self.custom_chat_report_interpretation_answer = CustomChatReportInterpretationAnswer(self.gsr)
         self.chatter_assistant = ChatterGailyAssistant()
         self.__initalize_intent_map__()
         self.session = Session()
@@ -947,7 +949,12 @@ class Chat_v2:
             tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
         elif intentCode == "report_interpretation_chat":
             kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
-            mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+            mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation_ask.chat(
+                mid_vars=mid_vars, **kwargs
+            )
+        elif intentCode == "report_interpretation_answer":
+            kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_answer"]
+            mid_vars, chat_history, conts, sch, (thought, content, tool) = self.custom_chat_report_interpretation_answer.chat(
                 mid_vars=mid_vars, **kwargs
             )
         else:

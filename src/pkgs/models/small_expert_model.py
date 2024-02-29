@@ -5,15 +5,18 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+import chunk
 import json
 import re
 import sys
 import time
+from doctest import REPORT_CDIFF
 from email.mime import image
 from os.path import basename
 from pathlib import Path
 
 import openai
+from numpy import isin
 from requests import Session
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
@@ -1166,6 +1169,7 @@ class expertModel:
         self.funcmap = {}
         self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
         self.funcmap["aigc_functions_report_interpretation"] = self.__report_ocr_classification__
+        self.funcmap["aigc_functions_report_summary"] = self.__report_summary__
 
     def __single_choice__(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
@@ -1404,6 +1408,37 @@ class expertModel:
         return self.__report_interpretation_result__(
             ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url
         )
+
+    def __report_summary__(self, **kwargs):
+        """报告内容总结
+        循环
+        """
+        chunk_size = kwargs.get("chunk_size", 1000)
+        assert kwargs["report_content"] is not None, "report_content is None"
+        system_prompt = """You are a helpful assistant.
+# 任务描述
+你是一个经验丰富的医生,你要清楚了解患者的生命熵检查报告内容，根据报告内容给出总结话术，其中包含生命熵熵值，哪些处于失衡状态，哪些有异常
+1. 请你根据自身经验，结合生命熵报告内容，给出摘要总结
+2. 输出内容要求通俗易懂、温柔亲切、符合科学性、上下文通畅，300字以内"""
+        summary_list = []
+        if isinstance(kwargs["report_content"], list):
+            report_content = "\n".join(kwargs["report_content"])
+        else:
+            report_content = kwargs["report_content"]
+        for i in range(0, len(report_content), chunk_size):
+            chunk_text = kwargs["report_content"][i : i + chunk_size]
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": chunk_text},
+            ]
+            response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.8, stream=True)
+            content = accept_stream_response(response, verbose=True)
+            summary_list.append(content)
+        summary = "\n".join(summary_list)
+        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": summary}]
+        response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.8, stream=True)
+        content = accept_stream_response(response, verbose=True)
+        return {"report_summary": content}
 
     def call_function(self, **kwargs):
         """调用函数
