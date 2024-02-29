@@ -491,8 +491,9 @@ class expertModel:
                     "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
-            if is_visit(history, query=query):
+            if is_visit(history, query=query):  # 上门
                 thought, content = blood_pressure_pacify(history, query)
+                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
                     "contents": ["您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。", content],
@@ -505,11 +506,20 @@ class expertModel:
                     "call_120": False,
                     "is_visit": True,
                     "exercise_video": False,
-                    "notify_doctor_daughter_contnet": [],
+                    "notify_doctor_daughter_contnet": [
+                        {
+                            "target":"doctor",
+                            "content":noti_doc_cont,
+                        },
+                        {
+                            "target":"daughter",
+                            "content":noti_daughter_cont,
+                        },
+                    ],
                 }
             elif is_pacify(history, query=query):  # 安抚
                 thought, content = blood_pressure_pacify(history, query)
-                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
+                # noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
                     "contents": [content],
@@ -522,16 +532,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "exercise_video": True,
-                    "notify_doctor_daughter_contnet": [
-                        {
-                            "target":"doctor",
-                            "content":noti_doc_cont,
-                        },
-                        {
-                            "target":"daughter",
-                            "content":noti_daughter_cont,
-                        },
-                    ],
+                    "notify_doctor_daughter_contnet": [],
                 }
             else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query, iq_n=7)
