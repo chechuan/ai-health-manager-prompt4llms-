@@ -505,7 +505,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": True,
-                    "exercise_video": False,
+                    "exercise_video": True,
                     "notify_doctor_daughter_contnet": [
                         {
                             "target":"doctor",
@@ -531,7 +531,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
-                    "exercise_video": True,
+                    "exercise_video": False,
                     "notify_doctor_daughter_contnet": [],
                 }
             else:  # 问诊
