@@ -976,7 +976,7 @@ class Chat_v2:
                     'is_visit':is_visit,
                     'modi_scheme':modi_scheme,
                     'weight_trend_gen':weight_trend_gen,
-                    "notify_blood_pressure_contents":notify_blood_pressure_contnets,
+                    "events":notify_blood_pressure_contnets,
                     "exercise_video":exercise_video
 
                 }
