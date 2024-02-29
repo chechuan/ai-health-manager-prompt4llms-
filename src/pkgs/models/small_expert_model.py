@@ -426,7 +426,7 @@ class expertModel:
             his_prompt = "\n".join(
                 [("张辉" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
             )
-            prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
+            prompt = remid_doctor_blood_pressre_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
             noti_doc_cont = callLLM(
                 history=messages,
