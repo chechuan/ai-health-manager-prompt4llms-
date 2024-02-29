@@ -13,11 +13,9 @@ import random
 import re
 import sys
 from pathlib import Path
-from tabnanny import verbose
-from typing import Any, AnyStr, Dict
-from weakref import proxy
 
-from pytz import timezone
+from typing import Any, AnyStr, Dict
+
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -304,10 +302,12 @@ class FuncCall:
     def call_search_knowledge_decorate_query(self, query: str) -> str:
         """优化要查询的query"""
         model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
-        his = [{"role":"user", "content": query}]
-        logger.debug(f"decorate_search_prompt LLM Input:\n{his}")
+        system_prompt = "我的问题是: {query}\n我需要查询关于此问题哪些方面的知识?请以列表的格式给出最多三条问题,并保持静默模式"
+        prompt = system_prompt.format(query=query)
+        his = [{"role":"user", "content": prompt}]
+        logger.debug(f"装饰知识库查询query LLM Input:\n{his}")
         content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
-        logger.debug(f"decorate_search_prompt LLM Output:\n{content}")
+        logger.debug(f"装饰知识库查询query LLM Output:\n{content}")
         return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
@@ -326,7 +326,8 @@ class FuncCall:
             query = args[0]
     
         payload = {}
-        payload['query'] = query + "\n" + self.call_search_knowledge_decorate_query(query)
+        # payload['query'] = self.call_search_knowledge_decorate_query(query) + "\n" + query
+        payload['query'] = query
         payload["knowledge_base_name"] = knowledge_base_name    # TODO 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name

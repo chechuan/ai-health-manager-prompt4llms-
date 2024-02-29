@@ -4,3 +4,6 @@ aigc_functions_single_choice:
 aigc_functions_report_interpretation:
   desc: 报告解读
   intent_code_list: report_interpretation
+aigc_functions_report_summary:
+  desc: 报告总结
+  intent_code_list: report_summary

@@ -54,6 +54,7 @@ test:
     - call_schedule_create_reply                          # 创建日程的回复
     - call_llm_with_search_engine                         # 与搜索引擎对话
     - custom_chat_auxiliary_diagnosis_summary_diet_rec    # 自定义对话辅助诊断-汇总-饮食建议
+    - aigc_functions_single_choice                        # 单选题
   Qwen-72B-Chat:
     - blood_pressure_trend_analysis                       # 血压心率趋势分析
     - health_warning_solutions_early                      # 预警解决方案
