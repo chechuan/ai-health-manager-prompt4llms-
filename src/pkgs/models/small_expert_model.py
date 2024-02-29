@@ -344,7 +344,9 @@ class expertModel:
                 content = generate_text
             else:
                 outIdx = generate_text.find("Assistant") + 10
-                content = generate_text[outIdx:].split("\n")[0].strip()
+                content = generate_text[outIdx:].strip()
+                if content.find('Assistant') != -1:
+                    content = content[:content.find('Assistant')]
 
             return thought, content
 
