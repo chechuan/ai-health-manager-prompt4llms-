@@ -10,11 +10,9 @@ from typing import Any, AnyStr, Dict, List
 from requests import Session
 from sqlalchemy.engine import base
 
-from data.constrant import (
-    CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
-    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
-    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT,
-)
+from data.constrant import (CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
+                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
+                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT)
 from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
@@ -393,9 +391,13 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
         # 首次补充system信息
         if len(history) == 1 and history[0]["role"] == "user":
             # base_info = kwargs["promptParam"]["report_ocr_result"]
-            base_info = """患者姓名：张叔叔
-张叔叔：年龄68岁，身高170cm，体重70kg，所患疾病：高血压；饮食喜好：喜甜
-用户：张叔叔的女儿"""
+            base_info = (
+                "患者姓名：张叔叔{life_entropy}\n"
+                "张叔叔：年龄68岁，身高170cm，体重70kg，所患疾病：高血压；饮食喜好：喜甜\n"
+                "用户：张叔叔的女儿\n"
+            )
+            life_entropy = kwargs["promptParam"].get("life_entropy", "60.85")
+            base_info = base_info.format(life_entropy=f", 生命熵：{life_entropy}")
             external_knowledge = self.__search_docs__(query=history[-1]["content"])
             logger.debug(f"查询到知识库的内容:\n{external_knowledge}")
             system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT.format(
