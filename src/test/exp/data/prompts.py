@@ -146,3 +146,6 @@ class AuxiliaryDiagnosisPrompt:
     version_list = list(_auxiliary_diagnosis_system_prompt_dict.keys())
     system_prompt_dict = _auxiliary_diagnosis_system_prompt_dict
     system_prompt = _auxiliary_diagnosis_system_prompt_dict[default_version]
+
+class Sysprompt:
+    system_prompt = """You are a helpful assistant."""

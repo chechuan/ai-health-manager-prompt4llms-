@@ -1,2 +1,0 @@
-2023-11-14 16:46:59.959 | DEBUG    | chat.qwen_chat:req_prompt_data_from_mysql:77 - req prompt meta data from mysql.
-2023-11-14 16:46:59.961 | DEBUG    | __main__:server_forever:111 - serve at 0.0.0.0:6500
