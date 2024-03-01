@@ -479,7 +479,7 @@ class expertModel:
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
                         "我已经通知了您的女儿和您的家庭医生。",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
                     "thought": thought,
@@ -597,7 +597,7 @@ class expertModel:
                 "level": level,
                 "contents": [
                     f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
-                    f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
                 "idx":-1,
@@ -625,10 +625,10 @@ class expertModel:
                         "level": level,
                         "contents": [
                             f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                            f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
+                            #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
-                        "idx":2,
+                        "idx":1,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -678,7 +678,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content
                     ],
                     "idx":-1,
@@ -744,7 +744,8 @@ class expertModel:
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", 
+                                 #"健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
                                  content
                                 ],
                     "thought": thought,
