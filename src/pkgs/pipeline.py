@@ -21,20 +21,14 @@ from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
 from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
-from src.pkgs.models.custom_chat_model import CustomChatModel
+from src.pkgs.models.custom_chat_model import CustomChatAuxiliary, CustomChatReportInterpretation, CustomChatModel
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
+from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    curr_time,
-    date_after,
-    get_doc_role,
-    get_intent,
-    make_meta_ret,
-    parse_latest_plugin_call,
-)
+from src.utils.module import (InitAllResource, curr_time, date_after, get_doc_role, get_intent,
+                              make_meta_ret, parse_latest_plugin_call)
 
 
 class Chat_v2:
@@ -45,7 +39,10 @@ class Chat_v2:
         self.promptEngine = CustomPromptEngine(self.gsr)
         self.funcall = FuncCall(self.gsr)
         self.sys_template = PromptTemplate(input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT)
+        self.custom_chat_auxiliary = CustomChatAuxiliary(self.gsr)
         self.custom_chat_model = CustomChatModel(self.gsr)
+        self.custom_chat_report_interpretation = CustomChatReportInterpretation(self.gsr)
+        self.chatter_assistant = ChatterGailyAssistant()
         self.__initalize_intent_map__()
         self.session = Session()
 
@@ -136,7 +133,9 @@ class Chat_v2:
         elif intentCode == "schedule_qry_up":
             content = "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程"
         elif intentCode == "meeting_schedule":
-            content = "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+            content = (
+                "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+            )
         elif intentCode == "auxiliary_diagnosis":
             content = "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
         else:
@@ -368,14 +367,61 @@ class Chat_v2:
         )
         return text
 
+    def __chatter_gaily_compose_func_reply__(self, messages):
+        """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
+        history = []
+        for i in messages:
+            if not i.get("function_call"):
+                history.append(i)
+            else:
+                func_args = i["function_call"]
+                role = i["role"]
+                content = f"{func_args['arguments']}"
+                history.append({"role": role, "content": content})
+        # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+        history = history[-8:]
+        return history
+
     def chatter_gaily(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt"""
+        intentCode = kwargs.get("intentCode", "other")
+        messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        messages = self.__chatter_gaily_compose_func_reply__(messages)
 
-        def compose_func_reply(messages):
-            """拼接func中回复的内容到history中
+        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
+        # process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        process = ""
+        if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role": "system", "content": ext_info}] + messages
 
-            最终的history只有role/content字段
-            """
+        logger.debug(f"闲聊 LLM Input:\n{messages}")
+        content = callLLM("", messages, temperature=0.7, top_p=0.45)
+        logger.debug(f"闲聊 LLM Output: {content}")
+        self.update_mid_vars(
+            mid_vars,
+            key="闲聊",
+            input_text=json.dumps(messages, ensure_ascii=False),
+            output_text=content,
+        )
+        if kwargs.get("return_his"):
+            messages.append(
+                {
+                    "intentCode": "other",
+                    "role": "assistant",
+                    "content": "I know the answer.",
+                    "function_call": {"name": "convComplete", "arguments": content},
+                }
+            )
+            return messages
+        else:
+            return content
+
+    def chatter_gaily_new(self, mid_vars, **kwargs):
+        """组装mysql中闲聊对应的prompt"""
+
+        def __chatter_gaily_compose_func_reply__(messages):
+            """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
             history = []
             for i in messages:
                 if not i.get("function_call"):
@@ -391,29 +437,35 @@ class Chat_v2:
 
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        # messages = __chatter_gaily_compose_func_reply__(messages)
 
-        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
-        process = self.prompt_meta_data["event"][intentCode].get("process", "")
-        if desc or process:  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
-            ext_info = desc + "\n" + process
-            messages = [{"role": "system", "content": ext_info}] + messages
+        next_step, messages = self.chatter_assistant.get_next_step(messages)
+        self.update_mid_vars(mid_vars, key="日常闲聊-next_step", input_text=messages, output_text=next_step)
 
-        logger.debug(f"闲聊 LLM Input:\n{messages}")
-        content = callLLM("", messages, temperature=0.7, top_p=0.8)
-        self.update_mid_vars(
-            mid_vars,
-            key="闲聊",
-            input_text=json.dumps(messages, ensure_ascii=False),
-            output_text=content,
-        )
-        if kwargs.get("return_his"):
-            messages.append(
-                {
-                    "role": "assistant",
-                    "content": "I know the answer.",
-                    "function_call": {"name": "convComplete", "arguments": content},
-                }
+        if next_step == "searchKB":
+            history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+            content = history[-1]["content"]
+            messages[-1]['function_call']['name'] = 'AskHuman'
+            messages[-1]['function_call']['arguments'] = content
+        # elif next_step == "searchEngine":
+        #     history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+        #     content = history[-1]["content"]
+        #     messages[-1]['function_call']['name'] = 'AskHuman'
+        #     messages[-1]['function_call']['arguments'] = content
+        if next_step == "AskHuman":
+            content, messages = self.chatter_assistant.run(messages)
+            self.update_mid_vars(
+                mid_vars,
+                key="日常闲聊",
+                input_text=json.dumps(messages, ensure_ascii=False),
+                output_text=content,
             )
+        else:
+            content = ""
+        # else:
+        #     content, messages = self.chatter_assistant.run(messages)
+        
+        if kwargs.get("return_his"):
             return messages
         else:
             return content
@@ -565,7 +617,7 @@ class Chat_v2:
     def pre_fill_param(self, *args, **kwargs):
         """结合业务逻辑，预构建输入"""
         intentCode = kwargs.get("intentCode")
-        if not self.prompt_meta_data["event"].get(intentCode):
+        if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in ["weight_meas", "blood_meas"]:
             logger.debug(f"not support current event {intentCode}, change intentCode to other.")
             kwargs["intentCode"] = "other"
         if intentCode == "schedule_qry_up" and not kwargs.get("history"):
@@ -580,10 +632,12 @@ class Chat_v2:
         2. history 由backend_history拼接用户输入
         """
         args, kwargs = self.pre_fill_param(*args, **kwargs)
+        kwargs['his'] = kwargs.get("history", [])
         if kwargs.get("history"):
             history = [{**i, "role": role_map.get(str(i["role"]), "user")} for i in kwargs["history"]]
             kwargs["history"] = kwargs["backend_history"] + [history[-1]]
-            kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
+            if not kwargs["history"][-1].get("intentCode"):
+                kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
 
         if kwargs["intentCode"] == "other":
             kwargs["prompt"] = None
@@ -827,9 +881,15 @@ class Chat_v2:
         """
         ...
 
-    def complete(self, mid_vars: List[object], **kwargs):
+    def complete(self, mid_vars: List[object], tool: str = "convComplete", **kwargs):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        weight_res = {}
+        blood_res = {}
+        content = ''
+        sch = False
+        conts = []
+        level = ''
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -844,21 +904,49 @@ class Chat_v2:
             intentCode = self.get_pageName_code(output_text)
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
-            mid_vars, (thought, content) = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+        elif intentCode == "weight_meas":
+            weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = weight_res['content']
+            sch = weight_res['scheme_gen']
+            thought = weight_res['thought']
+            conts = []
+            level = ''
+            tool = 'askHuman' if weight_res['scene_ending'] == False else 'convComplete' 
+        elif intentCode == "blood_meas":
+            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = blood_res['contents'][0]
+            conts = blood_res['contents'][1:]
+            sch = blood_res['scheme_gen']
+            thought = blood_res['thought']
+            level = blood_res['level']
+            tool = 'askHuman' if blood_res['scene_ending'] == False else 'convComplete' 
+        elif intentCode == "report_interpretation_chat":
+            kwargs["history"] = [i for i in kwargs["history"] if i.get("intentCode") == "report_interpretation_chat"]
+            mid_vars, chat_history, (thought, content, tool) = self.custom_chat_report_interpretation.chat(
+                mid_vars=mid_vars, **kwargs
+            )
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
         assert type(content) == str, "only_prompt模式下，返回值必须为str类型"
 
+        appendData = {
+                    "contents": conts,
+                    "scheme_gen": sch,
+                    "level": level
+                }
         chat_history.append(
             {
                 "role": "assistant",
                 "content": thought,
-                "function_call": {"name": "convComplete", "arguments": content},
+                "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
+                #"weight_res": weight_res,
+                #"blood_res": blood_res,
             }
         )
-        return chat_history, intentCode
+        return appendData, chat_history, intentCode
 
     def complete_temporary(self, mid_vars: List[object], **kwargs):
         # XXX 演示临时增加逻辑 2024年01月31日12:39:28
@@ -931,6 +1019,7 @@ class Chat_v2:
         """首次交互"""
         intentCode = kwargs.get("intentCode")
         out_history = None
+        append_data = {}
         if self.prompt_meta_data["event"].get(intentCode):
             # XXX 演示临时增加逻辑 2024年01月31日11:28:00
             # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"是否一致，如果一致，则进入临时逻辑，否则进入正常流程
@@ -947,18 +1036,18 @@ class Chat_v2:
                 out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
             elif intentCode == "other":
                 # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
-                out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
                 # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily_new(mid_vars, **kwargs, return_his=True)
             elif intentCode == "enn_wiki":
                 out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
             elif self.prompt_meta_data["event"][intentCode].get("process_type") in ["only_prompt", "custom_chat"]:
-                out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
+                append_data, out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
                 kwargs["intentCode"] = intentCode
             elif self.prompt_meta_data["event"][intentCode].get("process_type") == "react":
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
         if not out_history:
             out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
-        return out_history, intentCode
+        return append_data, out_history, intentCode
 
     def if_init(self, tool):
         # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
@@ -1002,7 +1091,7 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode")
         mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
-        out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
+        append_data, out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
         while True:
             tool, content, thought = self.parse_last_history(out_history)
 
@@ -1012,11 +1101,12 @@ class Chat_v2:
             ):  # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
                 ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
                 ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
-                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
+                yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history,"append_data": append_data,}
                 yield {
                     "data": ret_thought,
                     "mid_vars": mid_vars,
                     "history": out_history,
+                    "append_data": append_data,
                 }
 
             if self.prompt_meta_data["rollout_tool"].get(tool) or not self.funcall.funcmap.get(tool):
@@ -1040,6 +1130,7 @@ class Chat_v2:
                     "data": ret_function_call,
                     "mid_vars": mid_vars,
                     "history": out_history,
+                    "append_data": append_data,
                 }
                 out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
@@ -1061,12 +1152,12 @@ class Chat_v2:
                 ret_result["appendData"] = purchasing_list
                 ret_result["message"] += "\n为您生成了一份采购清单，请确认"
 
-        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
+        yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history, "append_data": append_data,}
 
 
 if __name__ == "__main__":
     chat = Chat_v2(InitAllResource())
-    ori_input_param = testParam.param_feat_custom_chat_react_auxiliary_diagnosis
+    ori_input_param = testParam.param_dev_report_interpretation_chat
     prompt = ori_input_param["prompt"]
     history = ori_input_param["history"]
     intentCode = ori_input_param["intentCode"]

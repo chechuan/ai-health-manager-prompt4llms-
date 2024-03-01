@@ -13,8 +13,8 @@ sys.path.append('.')
 from langchain.prompts import PromptTemplate
 
 from chat.constant import *
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt
 from data.constrant import INTENT_PROMPT, TOOL_CHOOSE_PROMPT, role_map
+from chat.util import *
 from data.test_param.test import testParam
 from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import callLLM
@@ -161,19 +161,19 @@ class Chat:
     
     def get_parent_intent_name(self, text):
         if '五师' in text:
-            return '呼叫五师意图'
+            return '呼叫五师'
         elif '音频' in text:
-            return '音频播放意图'
+            return '音频播放'
         elif '生活' in text:
-            return '生活工具查询意图'
+            return '生活工具查询'
         elif '医疗' in text:
-            return '医疗健康意图'
+            return '医疗健康'
         elif '饮食' in text:
-            return '饮食营养意图'
-        elif '运动' in text:
-            return '运动咨询意图'
+            return '饮食营养'
+        elif '运动咨询' in text:
+            return '运动咨询'
         elif '日程' in text:
-            return '日程管理意图'
+            return '日程管理'
         else:
             return '其它'
 
@@ -234,35 +234,50 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
+            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'))
+            prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+
+            # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
+            #     scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
+            #     prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+            # else:
+            #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                 temperature=0, do_sample=False, stop=['Thought'])
         logger.debug('父意图识别模型输出：' + generate_text)
+        intentIdx = 0
         if 'Intent:' in  generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
             intentIdx = generate_text.find("\n意图:") + 4 
+        elif '\nFunction:' in generate_text:
+            intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图', '运动咨询意图']:
-            sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
+            # sub_intent_prompt = self.prompt_meta_data['intent'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
                 query = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
                 h_p = '无'
             if kwargs.get('subIntentPrompt', ''):
-                prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
+                prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
             else:
-                prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
+                scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'), parant_intent)
+                prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+                # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
                     temperature=0, do_sample=False, stop=['Thought'])
             logger.debug('子意图模型输出：' + generate_text)
+            intentIdx = 0
             if 'Intent:' in  generate_text:
                 intentIdx = generate_text.find("\nIntent: ") + 9
             elif '意图:' in generate_text:
                 intentIdx = generate_text.find("\n意图:") + 4
+            elif '\nFunction:' in generate_text:
+                intentIdx = generate_text.find("\nFunction:") + 10
             text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
@@ -415,6 +430,18 @@ class Chat:
         mid_vars = kwargs.get('mid_vars', [])
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
+
+        # 应对演示临时添加-240208
+        import json
+        data_demo = json.load(open('data/demo.json', 'r'))
+        data_demo = sorted(data_demo, key=lambda x:len(x['key_words']), reverse=True)
+        for i in data_demo:
+            key_num = sum([1 for k in i['key_words'] if k in
+                history[-1]['contnet']])
+            if key_num == len(i['key_words']) and key_num > 0:
+                return {'message':i['response'], 'intentCode':'other',
+                        'processCode':i['processCode'], 'intentDesc':'日常对话'}
+
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))

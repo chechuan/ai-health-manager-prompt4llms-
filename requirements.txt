@@ -20,3 +20,7 @@ duckduckgo_search
 urllib3==1.26.18
 pysocks
 pretty_errors
+openpyxl
+rapidocr_onnxruntime
+pdf2image
+pdfminer.six

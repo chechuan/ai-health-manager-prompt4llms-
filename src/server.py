@@ -5,6 +5,9 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from crypt import methods
+from fileinput import filename
+
 from gevent import monkey, pywsgi
 
 monkey.patch_all()
@@ -23,14 +26,8 @@ from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import RolePlayRequest
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    NpEncoder,
-    curr_time,
-    decorate_text_stream,
-    dumpJS,
-    format_sse_chat_complete,
-)
+from src.utils.module import (InitAllResource, NpEncoder, curr_time, decorate_text_stream, dumpJS,
+                              format_sse_chat_complete)
 
 
 def accept_param():
@@ -71,6 +68,7 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
     try:
         while True:
             yield_item = next(generator)
+            yield_item["data"]['append_data'] = yield_item['append_data']
             item = {**yield_item["data"]}
             logger.info("Output (except mid_vars & backend_history):\n" + json.dumps(item, ensure_ascii=False))
             if return_mid_vars:
@@ -152,6 +150,7 @@ def create_app():
                 userInfo=param.get("promptParam", ""),
                 intentPrompt=param.get("intentPrompt", ""),
                 subIntentPrompt=param.get("subIntentPrmopt", ""),
+                scene_code=param.get('scene_code', 'default')
             )
             result = make_result(items=item)
         except AssertionError as err:
@@ -287,6 +286,97 @@ def create_app():
         try:
             param = accept_param_purge()
             ret = chat_v2.funcall.call_search_engine(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/aigc/functions", methods=["post"])
+    def _aigc_functions():
+        """aigc函数"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.call_function(**param)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+    
+    @app.route("/aigc/functions/report_interpretation", methods=["post"])
+    def _aigc_functions_report_interpretation():
+        """aigc函数-报告解读"""
+        try:
+            # param = accept_param_purge()
+            upload_file = request.files.get("file")
+            filename = upload_file.filename
+            tmp_path = Path(f".tmp/images")
+            if not tmp_path.exists():
+                tmp_path.mkdir(parents=True)
+            file_path = tmp_path.joinpath(filename)
+            upload_file.save(file_path)
+            ret = expert_model.call_function(intentCode="report_interpretation", file_path=file_path)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+
+    @app.route("/rules/blood_pressure_level", methods=["post"])
+    def _rules_blood_pressure_level():
+        """计算血压等级及处理规则"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.tool_rules_blood_pressure_level(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+    
+    @app.route("/rules/emotions", methods=["post"])
+    def _rules_enotions_level():
+        """情志分级"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.emotions(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/rules/weight_trend", methods=["post"])
+    def _rules_weight_trend():
+        """体重趋势"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.weight_trend(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/rules/fat_reduction", methods=["post"])
+    def _rules_fat_reduction():
+        """体重减脂"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.fat_reduction(**param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
