@@ -17,6 +17,7 @@
     "call_psychologist":"呼叫情志师",
     "call_dietista":"呼叫营养师",
     "call_health_manager":"呼叫健管师",
+    "call_other":"呼叫其他",
     "websearch":"网络搜索",
     "KLLI3.captialInfo":"首都查询",
     "lottery":"彩票",
@@ -57,5 +58,8 @@
     "qr-code":"二维码页面",
     "other": "日常对话",
     "auxiliary_diagnosis":"辅助诊断",
-    "interactive-information":"信息交互页面"
+    "interactive-information":"信息交互页面",
+    "blood_meas": "血压调节",
+    "weight_meas": "体重减脂",
+    "pressure_meas": "压力调节"
 }

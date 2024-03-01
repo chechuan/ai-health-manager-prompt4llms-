@@ -1,62 +1,85 @@
 local:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     schedule_manager: 0.1.0
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
-    call_schedule_create_reply: 0.1.0
+    auxiliary_diagnosis: 1.1.0
+    auxiliary_diagnosis_summary_diet_rec: 1.0.0
+    call_schedule_create_reply: 0.1.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 dev:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.1.0
+    auxiliary_diagnosis_summary_diet_rec: 1.0.0
+    call_schedule_create_reply: 0.1.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 test:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.1.0
+    auxiliary_diagnosis_summary_diet_rec: 1.0.0
+    call_schedule_create_reply: 0.1.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:
 fat:
   event:
-    other: 1.0.3
+    other: 1.1.0
     drug_rec: 0.1.0
     sport_rec: 0.1.0
     chronic_qa: 0.1.0
     schedule_qry_up: 0.1.1
     nutri_knowledge_rec: 0.1.0
-    auxiliary_diagnosis: 1.0.1
+    auxiliary_diagnosis: 1.1.0
+    auxiliary_diagnosis_summary_diet_rec: 1.0.0
+    call_schedule_create_reply: 0.1.1
     warning_solutions_early_continuous: 0.1.0
     warning_solutions_early_not_continuous: 0.1.0
+    reunion_meals_restaurant_selection: 1.0.0
+    aigc_functions_single_choice: 0.0.1
+    report_interpretation_chat: 0.0.1
   character:
   tool:
     创建日程: 0.2.0
     查询日程: 0.1.0
+  intent:

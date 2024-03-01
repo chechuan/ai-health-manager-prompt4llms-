@@ -6,15 +6,15 @@
 '''
 import socket
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from loguru import logger
-from datetime import datetime
 
 logger.remove()
 
 class Logging:
-    def __init__(self, appid = "0", console_level='TRACE', file_level = "DEBUG"):
+    def __init__(self, appid = "0", console_level='TRACE', file_level = "TRACE"):
         """日志记录模块
         :param appid: 应用id
         :param file_level: 保存文件日志logger级别
