@@ -14,9 +14,9 @@ from pathlib import Path
 
 sys.path.append(Path("./").parent.as_posix())
 
+import openai
 import streamlit as st
 from loguru import logger
-from openai import OpenAI
 
 from src.test.exp.data.prompts import Sysprompt
 
@@ -35,7 +35,6 @@ logger.add(
     diagnose=True,
 )
 
-client = OpenAI()
 default_system_prompt = Sysprompt.system_prompt
 
 
@@ -51,15 +50,15 @@ def dumpJS(obj):
 
 def place_sidebar():
     with st.sidebar:
-        client.base_url = st.text_input(
+        openai.api_base = st.text_input(
             "api base",
             key="openai_api_base",
             value=os.environ.get("OPENAI_API_BASE", ""),
         )
         api_key = st.text_input("api key", key="openai_api_key", value=None)
-        client.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
+        openai.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
 
-        model_list = [i.id for i in client.models.list().data]
+        model_list = [i['id'] for i in openai.Model.list()["data"]]
         args.model = st.selectbox("Choose your model", model_list, index=2)
         st.text_area(
             "system prompt",
@@ -94,14 +93,14 @@ def prepare_parameters():
         step=0.05,
         help="模型在生成文本时的概率阈值。这个参数的值在0到1之间，表示模型只会从概率之和大于等于这个值的单词中选择一个。这个参数可以帮助模型过滤掉一些极端的或不相关的单词，提高文本的质量和一致性。",
     )
-    # args.top_k = st.sidebar.slider(
-    #     "Top k",
-    #     min_value=-1,
-    #     max_value=100,
-    #     value=-1,
-    #     step=1,
-    #     help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
-    # )
+    args.top_k = st.sidebar.slider(
+        "Top k",
+        min_value=-1,
+        max_value=100,
+        value=-1,
+        step=1,
+        help="模型在生成文本时的候选单词的数量。这个参数的值是一个整数，表示模型只会从概率最高的这么多个单词中选择一个。这个参数和top_p类似，也可以帮助模型过滤掉一些不合适的单词，但是它不考虑单词的概率，只考虑排名。这个参数在您的代码中被注释掉了，表示不使用它。",
+    )
     args.n = st.sidebar.slider(
         "N",
         min_value=1,
@@ -125,6 +124,22 @@ def prepare_parameters():
         value=0.5,
         step=0.1,
         help="用来控制模型生成文本时避免重复相同的单词或短语。它是一个值，每次生成的单词出现在文本中时，就会加到该单词的对数概率上。这个值越高（接近1），模型就越不倾向于重复单词或短语；这个值越低（接近0），模型就越允许重复。您可以根据您的需求和期望的输出来调整这个参数的值",
+    )
+    args.repetition_penalty = st.sidebar.slider(
+        "Repetition penalty",
+        min_value=0.0,
+        max_value=1.0,
+        value=1.0,
+        step=0.1,
+        help="用来控制模型生成文本时避免重复相同的单词或短语。它是一个值，每次生成的单词出现在文本中时，就会乘以该单词的对数概率上。这个值越高（接近1），模型就越不倾向于重复单词或短语；这个值越低（接近0），模型就越允许重复。您可以根据您的需求和期望的输出来调整这个参数的值",
+    )
+    args.length_penalty = st.sidebar.slider(
+        "Length penalty",
+        min_value=0.0,
+        max_value=1.0,
+        value=1.0,  
+        step=0.1,
+        help="用来控制模型生成的文本的长度。这个参数的值是一个浮点数，表示生成的文本的长度会被乘以这个值。较高的Length_penalty值会导致生成的文本更长，较低的Length_penalty值会导致生成的文本更短。",
     )
     args.stop = ['\nObservation']
 
@@ -179,12 +194,14 @@ if prompt := st.chat_input("Your message"):
         full_response = ""
         logger.debug(f"{dumpJS(args.__dict__)}")
         logger.debug(f"Input: \n{prompt}")
-        for response in client.chat.completions.create(
+        for response in openai.ChatCompletion.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
-            if not response.choices[0].delta.content:
+            if hasattr(response["choices"][0]["delta"], "content"):
+                chunk_text = response["choices"][0]["delta"]["content"]
+            else:
                 continue
-            full_response += response.choices[0].delta.content
+            full_response += chunk_text
             message_placeholder.markdown(full_response + "▌")
         logger.debug(f"Full response:\n{full_response}")
         message_placeholder.markdown(full_response)

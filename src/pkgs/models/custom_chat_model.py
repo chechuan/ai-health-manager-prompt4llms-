@@ -7,17 +7,27 @@
 """
 from typing import Any, AnyStr, Dict, List
 
+from requests import Session
+from sqlalchemy.engine import base
+
+from data.constrant import (CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
+                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
+                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT)
+from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
 from src.utils.Logger import logger
 from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
-from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
-from src.pkgs.models.small_expert_model import expertModel
+
 
 class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
-        self.code_func_map = { "blood_meas": expertModel.tool_rules_blood_pressure_level, "weight_meas": expertModel.fat_reduction}
+        self.code_func_map = {
+            "blood_meas": expertModel.tool_rules_blood_pressure_level,
+            "weight_meas": expertModel.fat_reduction,
+            "pressure_meas": expertModel.emotions,
+        }
 
     def __parameter_check__(self, **kwargs):
         """参数检查"""
@@ -241,50 +251,42 @@ class CustomChatAuxiliary(CustomChatModel):
         return out
 
 
-class CustomChatReportInterpretation(CustomChatModel):
+class CustomChatReportInterpretationAsk(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
         self.code_func_map["report_interpretation_chat"] = self.__chat_report_interpretation__
 
-    def __compose_message__(self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs):
+    def __compose_message__(
+        self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs
+    ):
         """组装消息"""
         messages = []
-        system_prompt = """【问诊和出具报告解读的提示】：
-# 任务描述
-你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
-# 问诊流程专业性要求
-1.我会提供我的医疗检查报告, 请你根据自身经验分析,针对我的个人情况提出相应的问题，每次最多提出两个问题
-2.问题关键点可以包括: 是否出现报告中提及的疾病相关的症状，是否存在该疾病的诱因，平素生活习惯等,同类问题可以总结在一起问
-3.多轮问诊最多2轮，不要打招呼，直接开始问诊，每次输出不超过200字 
-4.当你收集到足够信息后，输出以下内容：概括报告中的异常点；分析导致该影响学表现的可能原因；该疾病可能的病因，可能的症状，生活注意事项、后续建议患者完善的检查项目。
-5.最终输出内容要求通俗易懂、温柔亲切、符合科学性、整体字数在250字以内。
-6.如果报告显示是肺部问题，可以建议进一步检查如：血常规、C反应蛋白等
-如果报告是显示是胆囊炎问题，可以建议进一步检查血常规、肝功能等
- 
-# 已知信息
-{prompt}
-# 格式要求：请遵循以下格式回复
- 
-Thought: 思考针对当前问题应该做什么
-Doctor: 你作为一个医生,分析思考的内容,提出当前想了解我的问题，不要出现序号数字
- 
-Begins!"""
         if not history:
-            content = system_prompt.format(prompt=kwargs["promptParam"]["report_ocr_result"])
+            content = kwargs["promptParam"]["report_ocr_result"]
+            messages.append(
+                {
+                    "role": "system",
+                    "content": CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT,
+                    "intentCode": intentCode,
+                }
+            )
             messages.append({"role": "user", "content": content, "intentCode": intentCode})
         else:
+            # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
+            # 通过此处替换system_prompt控制问诊轮数
+            if len([i for i in history if i["role"] == "user"]) == 3:
+                system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY
+                history[0]["content"] = system_prompt if history[0]["role"] == "system" else ...
             for idx in range(len(history)):
                 msg = history[idx]
-                # if idx == 0 and msg["role"] == "user":
-                #     content = system_prompt.format(prompt=msg["content"])
-                #     messages.append({"role": "user", "content": content})
                 if msg["role"] == "assistant" and msg.get("function_call"):
                     content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
-                    messages.append({"role": "assistant", "content": content, })
+                    messages.append({"role": "assistant", "content": content})
                 elif msg["role"] == "assistant":
                     messages.append({"role": "assistant", "content": msg["content"]})
                 else:
                     messages.append({"role": msg["role"], "content": msg["content"]})
+                messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
@@ -311,14 +313,14 @@ Begins!"""
             model=model,
             history=messages,
             temperature=0.7,
-            max_tokens=512,
-            top_p=0.8,
-            top_k=-1,
-            n=1,
-            presence_penalty=0,
-            frequency_penalty=0,
-            repetition_penalty=1,
-            length_penalty=1,
+            max_tokens=4096,
+            top_p=1,
+            # top_k=-1,
+            # n=1,
+            # presence_penalty=1.15,
+            # frequency_penalty=2,
+            # repetition_penalty=1,
+            # length_penalty=1.2,
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
@@ -327,6 +329,127 @@ Begins!"""
         mid_vars = update_mid_vars(
             kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话"
         )
+        _contents = []
+        sch = -1
         if "?" not in content and "？" not in content:
             tool = "convComplete"
-        return mid_vars, messages, (thought, content, tool)
+            sch = 1
+            if kwargs["promptParam"]["report_type"] == "口腔报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。别担心，我已经帮你智能匹配到奉华林社区卫生服务中心口腔科的滑波医生，他可是廊坊最好的齿科医生了，并告诉了你妈妈，让她尽快带你去看医生。我还为你智能匹配了一个非常适合你的口腔保健服务包，里面有全套的牙齿问诊和保健服务。你近期一定要认真刷牙，我每天早晚会给你按时播放一个专业的刷牙视频，超级专业有趣的，我陪你一起保护牙齿！"
+                ]
+            elif kwargs["promptParam"]["report_type"] == "胸部报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你妈妈，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
+                ]
+            elif kwargs["promptParam"]["report_type"] == "腹部报告":
+                _contents = [
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据您的情况，我为您智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
+                ]
+        return mid_vars, messages, _contents, sch, (thought, content, tool)
+
+
+class CustomChatReportInterpretationAnswer(CustomChatModel):
+    session: Session = Session()
+
+    def __init__(self, gsr: InitAllResource):
+        super().__init__(gsr)
+        self.code_func_map["report_interpretation_answer"] = self.__chat_report_interpretation_answer__
+
+    def __search_docs__(
+        self,
+        query: str = "用户query",
+        knowledge_base_name: str = "新奥百科知识库",
+        top_k: int = 3,
+        score_threshold: float = 0.5,
+    ) -> str:
+        """从指定知识库搜索相关文档"""
+        url = self.gsr.api_config["langchain"] + "/knowledge_base/search_docs"
+        payload = dumpJS(
+            {
+                "query": query,
+                "knowledge_base_name": knowledge_base_name,
+                "top_k": top_k,
+                "score_threshold": score_threshold,
+            },
+            ensure_ascii=True,
+        )
+        docs = self.session.post(url, data=payload).json()
+        if docs:
+            content = "## 相关知识\n"
+            for doc in docs:
+                content += f"{doc['page_content']}\n\n"
+        else:
+            content = "## 相关知识\n无"
+        return content.strip()
+
+    def __compose_message__(
+        self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs
+    ):
+        """组装消息"""
+        messages = []
+        # 首次补充system信息
+        if len(history) == 1 and history[0]["role"] == "user":
+            # base_info = kwargs["promptParam"]["report_ocr_result"]
+            base_info = (
+                "患者姓名：张叔叔{life_entropy}\n"
+                "张叔叔：年龄68岁，身高170cm，体重70kg，所患疾病：高血压；饮食喜好：喜甜\n"
+                "用户：张叔叔的女儿\n"
+            )
+            life_entropy = kwargs["promptParam"].get("life_entropy", "60.85")
+            base_info = base_info.format(life_entropy=f", 生命熵：{life_entropy}")
+            external_knowledge = self.__search_docs__(query=history[-1]["content"])
+            logger.debug(f"查询到知识库的内容:\n{external_knowledge}")
+            system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT.format(
+                base_info=base_info, external_knowledge=external_knowledge
+            )
+            messages = [{"role": "system", "content": system_prompt, "intentCode": intentCode}] + messages
+        for idx in range(len(history)):
+            msg = history[idx]
+            if msg["role"] == "assistant" and msg.get("function_call"):
+                content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
+                messages.append({"role": "assistant", "content": content})
+            elif msg["role"] == "assistant":
+                messages.append({"role": "assistant", "content": msg["content"]})
+            else:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+            messages[-1]["intentCode"] = intentCode
+        return messages
+
+    def __parse_response__(self, text):
+        # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
+        try:
+            thought_index = text.find("Thought:")
+            doctor_index = text.find("\nDoctor:")
+            if thought_index == -1 or doctor_index == -1:
+                return "None", text
+            thought = text[thought_index + 8 : doctor_index].strip()
+            doctor = text[doctor_index + 8 :].strip()
+            return thought, doctor
+        except Exception as err:
+            logger.error(text)
+            return "None", text
+
+    def __chat_report_interpretation_answer__(self, tool: str = "AskHuman", **kwargs):
+        """报告解读"""
+        model = self.gsr.model_config["report_interpretation_chat"]
+        # model = "Qwen-72B-Chat"
+        messages = self.__compose_message__(**kwargs)
+        logger.info(f"Custom Chat 报告解读Answer LLM Input: {dumpJS(messages)}")
+        chat_response = callLLM(
+            model=model,
+            history=messages,
+            temperature=0.7,
+            max_tokens=4096,
+            top_p=0.5,
+            stream=True,
+        )
+        content = accept_stream_response(chat_response, verbose=False)
+        logger.info(f"Custom Chat 报告解读Answer LLM Output: \n{content}")
+        thought, content = self.__parse_response__(content)
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话Answer"
+        )
+        _contents = []
+        sch = -1
+        return mid_vars, messages, _contents, sch, (thought, content, tool)
