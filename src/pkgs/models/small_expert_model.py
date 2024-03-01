@@ -1363,7 +1363,7 @@ class expertModel:
             '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
-        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
+        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": "```json\n" + str(content_index) + "\n```"}]
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
         response = openai.ChatCompletion.create(
@@ -1372,7 +1372,9 @@ class expertModel:
             temperature=0.7,
             n=1,
             top_p=0.3,
-            top_k=-1,
+            top_k=1,
+            repetition_penalty=1.0,
+            length_penalty=1.0,
             presence_penalty=0,
             frequency_penalty=0.5,
             stream=True,
