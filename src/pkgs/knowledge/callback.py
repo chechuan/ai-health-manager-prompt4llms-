@@ -13,11 +13,9 @@ import random
 import re
 import sys
 from pathlib import Path
-from tabnanny import verbose
-from typing import Any, AnyStr, Dict
-from weakref import proxy
 
-from pytz import timezone
+from typing import Any, AnyStr, Dict
+
 from requests import Session
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
@@ -304,10 +302,12 @@ class FuncCall:
     def call_search_knowledge_decorate_query(self, query: str) -> str:
         """优化要查询的query"""
         model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
-        his = [{"role":"user", "content": query}]
-        logger.debug(f"decorate_search_prompt LLM Input:\n{his}")
+        system_prompt = "我的问题是: {query}\n我需要查询关于此问题哪些方面的知识?请以列表的格式给出最多三条问题,并保持静默模式"
+        prompt = system_prompt.format(query=query)
+        his = [{"role":"user", "content": prompt}]
+        logger.debug(f"装饰知识库查询query LLM Input:\n{his}")
         content = callLLM(history=his, temperature=0.7, top_p=0.8, model=model)
-        logger.debug(f"decorate_search_prompt LLM Output:\n{content}")
+        logger.debug(f"装饰知识库查询query LLM Output:\n{content}")
         return content
 
     def call_search_knowledge(self, *args, local_doc_url=False, stream=False, 
@@ -319,12 +319,15 @@ class FuncCall:
         """
         called_method = self.funcmap['searchKB']['method']
         try:
-            query = json.loads(args[0])['query']
+            params = json.loads(args[0])
+            query = params['query']
+            knowledge_base_name = params.get("knowledge_base_name", knowledge_base_name)
         except:
             query = args[0]
     
         payload = {}
-        payload['query'] = query + "\n" + self.call_search_knowledge_decorate_query(query)
+        # payload['query'] = self.call_search_knowledge_decorate_query(query) + "\n" + query
+        payload['query'] = query
         payload["knowledge_base_name"] = knowledge_base_name    # TODO 让模型选择知识库
         payload["local_doc_url"] = local_doc_url
         payload["model_name"] = model_name
@@ -364,7 +367,10 @@ class FuncCall:
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
             dataSource = "知识库: " + '、'.join(doc_name_list)
             content = msg['answer'].strip()
-            self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain")
+            try:
+                self.update_mid_vars(kwargs['mid_vars'], key=f"知识库问答", input_text=payload, output_text=msg, model="langchain") 
+            except:
+                pass
 
         ret = {"content": content, "dataSource": dataSource}
         return ret
@@ -389,9 +395,14 @@ class FuncCall:
         
         使用src/pkgs/knowledge/config/prompt_config.py中定义的拼接模板 (from langchain-Chatchat)
         """
-        query = args[0]
+        try:
+            params = json.loads(args[0])
+            query = params['query']
+        except:
+            query = args[0]
         logger.debug(f"搜索引擎 Input: {query}")
-        search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
+        # search_result = asyncio.run(search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session))
+        search_result = search_engine_chat(query, top_k=kwargs.get("top_k", 3), max_length=500,session=self.session)
         logger.debug(f"搜索引擎检索 Output:\n{search_result}")
         template = get_template("search_engine_chat")
         if search_result:
@@ -462,7 +473,7 @@ class FuncCall:
 
     def _call(self, **kwargs):
         """"""
-        history = kwargs["out_history"]
+        history = copy.deepcopy(kwargs["out_history"])
         function_call = history[-1]['function_call']
         func_name = function_call["name"]
         arguments = function_call["arguments"]
@@ -478,7 +489,7 @@ class FuncCall:
         elif isinstance(ret_obj, dict):
             content = ret_obj['content']
             dataSource = ret_obj['dataSource']
-        history.append({"role": "user", "content": content, "intentCode": kwargs['intentCode']})
+        history.append({"role": "assistant", "content": content, "intentCode": kwargs['intentCode']})
         # logger.debug(f"Observation: {content}")
         return history, dataSource
 

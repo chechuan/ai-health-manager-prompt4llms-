@@ -635,7 +635,7 @@ class scheduleManager:
                 ]
             )
             model = self.model_config["call_schedule_create_reply"]
-            created_schedule_content = [i[1] + ": " + i[0] for i in create_success]
+            created_schedule_content = [i[1] + ": " + i[0] for i in create_success] if create_success else "空"
             prompt = prompt_template.format(
                 created_schedule_content=created_schedule_content
             )

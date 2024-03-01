@@ -58,5 +58,8 @@
     "qr-code":"二维码页面",
     "other": "日常对话",
     "auxiliary_diagnosis":"辅助诊断",
-    "interactive-information":"信息交互页面"
+    "interactive-information":"信息交互页面",
+    "blood_meas": "血压调节",
+    "weight_meas": "体重减脂",
+    "pressure_meas": "压力调节"
 }

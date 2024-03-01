@@ -10,6 +10,7 @@ import json
 import pickle
 import sys
 import time
+from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -115,7 +116,18 @@ class InitAllResource:
         self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[self.args.env]
         model_config = load_yaml(Path("config", "model_config.yaml"))[self.args.env]
         self.model_config = {event: model for model, event_list in model_config.items() for event in event_list}
+        intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
 
+        self.intent_aigcfunc_map = {}
+        _tmp_dict = {}
+        for aigcFuncCode, detail in intent_aigcfunc_map.items():
+            _intent_code_list = [i.strip() for i in detail["intent_code_list"].split(",")]
+            for intentCode in _intent_code_list:
+                if _tmp_dict.get(intentCode):
+                    logger.warning(f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}")
+                else:
+                    _tmp_dict[intentCode] = aigcFuncCode
+                self.intent_aigcfunc_map[intentCode] = aigcFuncCode
         # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
         self.__info_config__(model_config)
 
@@ -170,9 +182,11 @@ class InitAllResource:
             prompt_character = mysql_conn.query("select * from ai_prompt_character")
             prompt_event = mysql_conn.query("select * from ai_prompt_event")
             prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+            prompt_intent = mysql_conn.query("select * from ai_prompt_intent")
             prompt_character = filter_format(prompt_character, splited=True)
             prompt_event = filter_format(prompt_event)
             prompt_tool = filter_format(prompt_tool)
+            prompt_intent = filter_format(prompt_intent)
 
             # 优先使用指定的version 否则使用latest
             if self.args.special_prompt_version:
@@ -184,6 +198,8 @@ class InitAllResource:
                             prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
                         elif key == "tool":
                             prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool}
+                        elif key == "intent":
+                            prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
                     else:
                         if key == "character":
                             for i in prompt_character:
@@ -206,11 +222,19 @@ class InitAllResource:
                                 prompt_meta_data[key][i["name"]] = search_target_version_item(
                                     prompt_tool, "name", i["name"], v
                                 )
+                        elif key == "intent":
+                            for i in prompt_intent:
+                                if prompt_meta_data[key].get(i["name"]):
+                                    continue
+                                prompt_meta_data[key][i["name"]] = search_target_version_item(
+                                    prompt_intent, "name", i["name"], v
+                                )
             else:
                 prompt_meta_data["character"] = {i["name"]: i for i in prompt_character if i["type"] == "event"}
                 prompt_meta_data["role_play"] = {i["name"]: i for i in prompt_character if i["type"] == "role_play"}
                 prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
                 prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool if i["in_used"] == 1}
+                prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
             prompt_meta_data["init_intent"] = {i["code"]: True for i in prompt_tool if i["init_intent"] == 1}
             prompt_meta_data["rollout_tool"] = {i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"}
             prompt_meta_data["rollout_tool_after_complete"] = {
@@ -223,11 +247,11 @@ class InitAllResource:
         else:
             prompt_meta_data = pickle.load(open(data_cache_file, "rb"))
             logger.debug(f"load prompt_meta_data from {data_cache_file}")
-   
-        for name, func in prompt_meta_data['tool'].items():
-            func['params'] = json.loads(func['params']) if func['params'] else func['params']
-        intent_desc_map = {code: item['intent_desc'] for code, item in prompt_meta_data['event'].items()}
-        default_desc_map = loadJS(Path("data","intent_desc_map.json"))
+
+        for name, func in prompt_meta_data["tool"].items():
+            func["params"] = json.loads(func["params"]) if func["params"] else func["params"]
+        intent_desc_map = {code: item["intent_desc"] for code, item in prompt_meta_data["event"].items()}
+        default_desc_map = loadJS(Path("data", "intent_desc_map.json"))
         # 以intent_desc_map.json定义的intent_desc优先
         self.intent_desc_map = {**intent_desc_map, **default_desc_map}
         return prompt_meta_data
@@ -303,6 +327,12 @@ def get_intent(text):
     elif "医疗" in text:
         code = "med_health"
         desc = "医疗健康"
+    elif "血压测量" in text or "测量血压" in text:
+        code = "remind_take_blood_pressure"
+        desc = "提醒他人测量血压"
+    elif "运动切换" in text or '切换运动' in text:
+        code = "switch_exercise"
+        desc = "运动切换"
     elif "运动评价" in text:
         code = "sport_eval"
         desc = "运动评价"
@@ -326,7 +356,7 @@ def get_intent(text):
         desc = "辅助诊断"
     elif "问诊" in text:
         code = "auxiliary_diagnosis"
-        desc = "辅助诊断",
+        desc = ("辅助诊断",)
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"
@@ -523,7 +553,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     return "", ""
 
 
-def parse_latest_plugin_call(text: str):
+def parse_latest_plugin_call(text: str, plugin_name: str = "AskHuman"):
     # TODO 优化解析逻辑
     h = text.find("\nThought:")
     i = text.find("\nAction:")
@@ -534,7 +564,7 @@ def parse_latest_plugin_call(text: str):
     k = k1 if k1 and k1 > 0 else k2
     l = text.find("\nFinal Answer:")
 
-    plugin_name = "AskHuman"
+    # plugin_name = "AskHuman"
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
         if k < j:  # but does not contain `Observation`,
             # then it is likely that `Observation` is ommited by the LLM,
@@ -659,6 +689,7 @@ def date_after_days(days: int):
     date_after = (now + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
+
 def date_after(**kwargs):
     now = datetime.now()
     date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
@@ -676,8 +707,8 @@ def curr_weekday():
     return today
 
 
-def dumpJS(obj):
-    return json.dumps(obj, ensure_ascii=False)
+def dumpJS(obj, ensure_ascii=False):
+    return json.dumps(obj, ensure_ascii=ensure_ascii)
 
 
 def format_sse_chat_complete(data: str, event=None) -> str:
@@ -711,7 +742,8 @@ def accept_stream_response(response, verbose=True):
                 content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
-    print("")
+    if verbose:
+        print()
     t_cost = round(time.time() - tst, 2)
     logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
     return content

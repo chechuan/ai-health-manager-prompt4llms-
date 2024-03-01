@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 from src.utils.Logger import logger
 from src.utils.module import dumpJS
 
+from src.utils.Logger import logger 
+import json
 
 def callLLM(query: str = "", 
               history: List[Dict] = [], 
@@ -84,6 +86,7 @@ def callLLM(query: str = "",
             else:
                 h = history
         kwds['messages'] = h
+        logger.debug('LLM输入：' + json.dumps(kwds, ensure_ascii=False))
         completion = openai.ChatCompletion.create(**kwds)
         if stream:
             return completion
