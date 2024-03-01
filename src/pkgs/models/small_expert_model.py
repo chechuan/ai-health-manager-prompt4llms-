@@ -344,7 +344,9 @@ class expertModel:
                 content = generate_text
             else:
                 outIdx = generate_text.find("Assistant") + 10
-                content = generate_text[outIdx:].split("\n")[0].strip()
+                content = generate_text[outIdx:].strip()
+                if content.find('Assistant') != -1:
+                    content = content[:content.find('Assistant')]
 
             return thought, content
 
@@ -477,7 +479,7 @@ class expertModel:
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
                         "我已经通知了您的女儿和您的家庭医生。",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
                     "thought": thought,
@@ -488,7 +490,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "exercise_video": False,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
             if is_visit(history, query=query):  # 上门
                 thought, content = blood_pressure_pacify(history, query)
@@ -505,7 +507,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": True,
                     "exercise_video": True,
-                    "notify_doctor_daughter_contnet": [
+                    "events": [
                         {
                             "eventType":"notice",
                             "eventCode":"app_shangmen_req",
@@ -533,7 +535,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "exercise_video": False,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
             else:  # 问诊
                 thought, content = blood_pressure_inquiry(history, query, iq_n=7)
@@ -550,7 +552,7 @@ class expertModel:
                         "call_120": False,
                         "is_visit": False,
                         "exercise_video": False,
-                        "notify_doctor_daughter_contnet": [],
+                        "events": [],
                     }
                 else:  # 出结论
                     return {
@@ -565,7 +567,7 @@ class expertModel:
                         "call_120": False,
                         "is_visit": False,
                         "exercise_video": False,
-                        "notify_doctor_daughter_contnet": [],
+                        "events": [],
                     }
 
         ihm_health_sbp_list = [116, 118, 132, 121, 128, 123, 128, 117, 132, 134, 124, 120, 80]
@@ -595,7 +597,7 @@ class expertModel:
                 "level": level,
                 "contents": [
                     f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
-                    f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
                 "idx":-1,
@@ -606,7 +608,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": True,
                 "is_visit": False,
-                "notify_doctor_daughter_contnet": [],
+                "events": [],
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
@@ -623,10 +625,10 @@ class expertModel:
                         "level": level,
                         "contents": [
                             f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                            f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
+                            #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
-                        "idx":2,
+                        "idx":1,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -634,7 +636,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
-                        "notify_doctor_daughter_contnet": [],
+                        "events": [],
                     }
                 else:  # 问诊
                     thought, content = blood_pressure_inquiry(history, query, iq_n=6)
@@ -650,7 +652,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
-                            "notify_doctor_daughter_contnet": [],
+                            "events": [],
                         }
                     else:  # 出结论
                         # thought, cont = blood_pressure_pacify(history, query)  #安抚
@@ -665,7 +667,7 @@ class expertModel:
                             "notifi_daughter_doctor": False,
                             "call_120": False,
                             "is_visit": False,
-                            "notify_doctor_daughter_contnet": [],
+                            "events": [],
                         }
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
@@ -676,7 +678,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content
                     ],
                     "idx":-1,
@@ -687,7 +689,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
 
             elif "？" in content or "?" in content:
@@ -702,7 +704,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":-0,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
 
             else:
@@ -717,7 +719,7 @@ class expertModel:
                     "call_120": False,
                     "is_visit": False,
                     "idx":0,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
         elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
             level = -1
@@ -733,7 +735,7 @@ class expertModel:
                 "notifi_daughter_doctor": False,
                 "call_120": False,
                 "is_visit": False,
-                "notify_doctor_daughter_contnet": [],
+                "events": [],
             }
         else:   # 低血压
             level = -1
@@ -742,7 +744,8 @@ class expertModel:
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", 
+                                 #"健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
                                  content
                                 ],
                     "thought": thought,
@@ -753,7 +756,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
-                    "notify_doctor_daughter_contnet": [],
+                    "events": [],
                 }
             else:
                   
@@ -769,7 +772,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
-                        "notify_doctor_daughter_contnet": [],
+                        "events": [],
                     }
                 else:  # 出结论
                     # thought, cont = blood_pressure_pacify(history, query)  #安抚
@@ -784,7 +787,7 @@ class expertModel:
                         "notifi_daughter_doctor": False,
                         "call_120": False,
                         "is_visit": False,
-                        "notify_doctor_daughter_contnet": [],
+                        "events": [],
                     }
 
 
@@ -921,6 +924,7 @@ class expertModel:
             vars List[int]: 血压等级 [] or [0,2,1,3,2]
             value_list List[int]: 真实血压值列表 收缩压or舒张压
         """
+        value_list = [float(i) for i in value_list]
         if return_str:
             valuemap = {-1: "低血压", 0: "正常", 1: "高血压一级", 2: "高血压二级", 3: "高血压三级"}
             vars = [valuemap.get(i) for i in vars]
@@ -1361,7 +1365,7 @@ class expertModel:
             '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
-        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
+        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": "```json\n" + str(content_index) + "\n```"}]
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
         response = openai.ChatCompletion.create(
@@ -1370,7 +1374,9 @@ class expertModel:
             temperature=0.7,
             n=1,
             top_p=0.3,
-            top_k=-1,
+            top_k=1,
+            repetition_penalty=1.0,
+            length_penalty=1.0,
             presence_penalty=0,
             frequency_penalty=0.5,
             stream=True,
