@@ -923,6 +923,7 @@ class expertModel:
             vars List[int]: 血压等级 [] or [0,2,1,3,2]
             value_list List[int]: 真实血压值列表 收缩压or舒张压
         """
+        value_list = [float(i) for i in value_list]
         if return_str:
             valuemap = {-1: "低血压", 0: "正常", 1: "高血压一级", 2: "高血压二级", 3: "高血压三级"}
             vars = [valuemap.get(i) for i in vars]
