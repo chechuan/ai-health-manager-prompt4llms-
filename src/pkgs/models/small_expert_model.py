@@ -497,7 +497,7 @@ class expertModel:
                 noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
-                    "contents": ["您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。", content],
+                    "contents": ["已通知家庭医生上门为您服务，同时我也会实时监测您的血压情况。", content],
                     "thought": thought,
                     "idx":1,
                     "scheme_gen": -1,
