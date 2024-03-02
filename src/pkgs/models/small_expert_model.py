@@ -347,6 +347,8 @@ class expertModel:
                 content = generate_text[outIdx:].strip()
                 if content.find('Assistant') != -1:
                     content = content[:content.find('Assistant')]
+                if content.find('Thought') != -1:
+                    content = content[:content.find('Thought')]
 
             return thought, content
 
