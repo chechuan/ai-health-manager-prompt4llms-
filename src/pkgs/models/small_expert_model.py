@@ -347,6 +347,8 @@ class expertModel:
                 content = generate_text[outIdx:].strip()
                 if content.find('Assistant') != -1:
                     content = content[:content.find('Assistant')]
+                if content.find('Thought') != -1:
+                    content = content[:content.find('Thought')]
 
             return thought, content
 
@@ -479,7 +481,7 @@ class expertModel:
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
                         "我已经通知了您的女儿和您的家庭医生。",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
                     "thought": thought,
@@ -497,7 +499,7 @@ class expertModel:
                 noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
                 return {
                     "level": level,
-                    "contents": ["您的家庭医生回复10分钟后为您上门诊治。同时我也会实时监测您的血压情况。", content],
+                    "contents": ["已通知家庭医生上门为您服务，同时我也会实时监测您的血压情况。", content],
                     "thought": thought,
                     "idx":1,
                     "scheme_gen": -1,
@@ -597,7 +599,7 @@ class expertModel:
                 "level": level,
                 "contents": [
                     f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
-                    f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
                 "idx":-1,
@@ -625,10 +627,10 @@ class expertModel:
                         "level": level,
                         "contents": [
                             f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                            f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
+                            #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
-                        "idx":2,
+                        "idx":1,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -678,7 +680,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content
                     ],
                     "idx":-1,
@@ -744,7 +746,8 @@ class expertModel:
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", 
+                                 #"健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
                                  content
                                 ],
                     "thought": thought,
