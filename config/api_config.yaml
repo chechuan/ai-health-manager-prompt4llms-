@@ -7,8 +7,7 @@ local:
   llm_token: sk-laikang-aihealthmanager-local
 dev:
   graph: http://10.4.164.240:26925
-  # ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev   # 暂时无法同步数据库部署环境, 接入演示环境后端服务
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+  ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
   algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
