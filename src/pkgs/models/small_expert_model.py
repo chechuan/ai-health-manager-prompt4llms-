@@ -479,7 +479,7 @@ class expertModel:
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
                         "我已经通知了您的女儿和您的家庭医生。",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
                     "thought": thought,
@@ -597,7 +597,7 @@ class expertModel:
                 "level": level,
                 "contents": [
                     f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
-                    f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
                 "idx":-1,
@@ -625,10 +625,10 @@ class expertModel:
                         "level": level,
                         "contents": [
                             f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                            f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
+                            #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
-                        "idx":2,
+                        "idx":1,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -678,7 +678,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
-                        f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content
                     ],
                     "idx":-1,
@@ -744,7 +744,8 @@ class expertModel:
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
+                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", 
+                                 #"健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
                                  content
                                 ],
                     "thought": thought,
@@ -923,6 +924,7 @@ class expertModel:
             vars List[int]: 血压等级 [] or [0,2,1,3,2]
             value_list List[int]: 真实血压值列表 收缩压or舒张压
         """
+        value_list = [float(i) for i in value_list]
         if return_str:
             valuemap = {-1: "低血压", 0: "正常", 1: "高血压一级", 2: "高血压二级", 3: "高血压三级"}
             vars = [valuemap.get(i) for i in vars]
@@ -1363,7 +1365,7 @@ class expertModel:
             '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
         )
         content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
-        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]
+        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": "```json\n" + str(content_index) + "\n```"}]
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
         response = openai.ChatCompletion.create(
@@ -1372,7 +1374,9 @@ class expertModel:
             temperature=0.7,
             n=1,
             top_p=0.3,
-            top_k=-1,
+            top_k=1,
+            repetition_penalty=1.0,
+            length_penalty=1.0,
             presence_penalty=0,
             frequency_penalty=0.5,
             stream=True,
