@@ -1105,7 +1105,7 @@ class Chat_v2:
             elif (
                 kwargs["history"]
                 and len(kwargs["history"]) >= 2
-                and kwargs["history"][-2].get("function_call")
+                and isinstance(kwargs["history"][-2].get("function_call", ""), str)
                 and kwargs["history"][-2]["function_call"]["arguments"].startswith("请您时刻关注自己的病情变化，")
                 and [i for i in ["好的", "行", "可以", "ok", "OK"] if i in kwargs["history"][-1]["content"]]
                 # and set(kwargs["history"][-1]["content"]).intersection(set("好行可以"))
