@@ -320,7 +320,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             history=messages,
             temperature=0.7,
             max_tokens=4096,
-            top_p=0.8,
+            top_p=1,
             # top_k=-1,
             # n=1,
             # presence_penalty=1.15,

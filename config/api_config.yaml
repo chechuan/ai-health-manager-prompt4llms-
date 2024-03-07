@@ -5,6 +5,20 @@ local:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
   llm_token: sk-laikang-aihealthmanager-local
+  model_supply:
+    default: vllm
+    fschat: 
+      api_base: http://10.228.67.99:26921
+      api_key: sk-laikang-aihealthmanager-local
+      support_models:
+        - Qwen-14B-Chat
+        - Qwen-72B-Chat
+        - Baichuan2-7B-Chat
+        - Yi-34B-Chat
+    vllm:
+      api_base: http://10.228.67.99:26920
+      support_models:
+        - Qwen1.5-72B-Chat
 dev:
   graph: http://10.4.164.240:26925
   ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -12,6 +26,7 @@ dev:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
   llm_token: sk-laikang-aihealthmanager-dev
+  vllm: http://10.228.67.99:26920
 test:
   graph: http://10.4.164.240:26925
   ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test

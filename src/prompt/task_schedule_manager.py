@@ -717,7 +717,7 @@ class scheduleManager:
             history=messages, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True
         )
         tdesc = accept_stream_response(response, verbose=False)
-        logger.debug(f"取消日程-提取时间范围描述 LLM Output: \n{tdesc}")
+        logger.debug(f"取消日程-提取时间范围描述 LLM Output: {tdesc}")
         self.__update_mid_vars__(
             kwds["mid_vars"],
             input_text=messages,

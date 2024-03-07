@@ -889,10 +889,10 @@ class expertModel:
         if param.get("ihm_health_hr"):
             content += self.__bpta_compose_value_prompt("心率测量数据: ", param["ihm_health_hr"])
         history.append({"role": "user", "content": content})
-        logger.debug(f"血压趋势分析\n{history}")
+        logger.debug(f"血压趋势分析 LLM Input: {dumpJS(history)}")
         response = callLLM(history=history, temperature=0.8, top_p=1, model=model, stream=True)
         content = accept_stream_response(response, verbose=False)
-        logger.debug(f"趋势分析结果 length - {len(content)}")
+        logger.debug(f"血压趋势分析 Output: {content}")
         return content
 
     def __health_warning_solutions_early_continuous_check__(self, indicatorData: List[Dict]) -> bool:
@@ -1214,6 +1214,7 @@ class expertModel:
                 user_input += f": {content}\n"
                 query += user_input
             messages.append({"role": "user", "content": query})
+            logger.debug(f"共策 LLM Input: {json.dumps(messages, ensure_ascii=False)}")
             response = openai.ChatCompletion.create(
                 model=model,
                 messages=messages,
@@ -1223,24 +1224,9 @@ class expertModel:
                 repetition_penalty=1.1,
                 stream=True,
             )
-
-            t_st = time.time()
-            ret_content = ""
-            for i in response:
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    ret_content += text_stream
-                    print(text_stream, end="", flush=True)
-                    yield make_ret_item(text_stream, False, [])
+            ret_content = accept_stream_response(response, verbose=False)
+            logger.debug(f"共策 LLM Output: {ret_content}")
             messages.append({"role": "assistant", "content": ret_content})
-
-            time_cost = round(time.time() - t_st, 1)
-            logger.debug(f"共策回复: {ret_content}")
-            logger.success(
-                f"Model {model} generate costs summary: " + f"total_texts:{len(ret_content)}, "
-                f"complete cost: {time_cost}s"
-            )
             yield make_ret_item("", True, messages[1:])
         except openai.APIError as e:
             logger.error(f"Model {model} generate error: {e}")
@@ -1371,7 +1357,7 @@ class expertModel:
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
         response = openai.ChatCompletion.create(
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
             messages=messages,
             temperature=0.7,
             n=1,
@@ -1518,12 +1504,12 @@ class expertModel:
                 {"role": "user", "content": chunk_text},
             ]
             response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.8, stream=True)
-            content = accept_stream_response(response, verbose=True)
+            content = accept_stream_response(response, verbose=False)
             summary_list.append(content)
         summary = "\n".join(summary_list)
         messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": summary}]
         response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.8, stream=True)
-        content = accept_stream_response(response, verbose=True)
+        content = accept_stream_response(response, verbose=False)
         return {"report_summary": content}
 
     def call_function(self, **kwargs):

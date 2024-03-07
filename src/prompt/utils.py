@@ -247,7 +247,7 @@ Begin!"""
         logger.debug(f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
         response = openai.ChatCompletion.create(
             messages=messages,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
             temperature=0.7,
             top_p=0.5,
             n=1,
