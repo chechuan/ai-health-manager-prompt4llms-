@@ -520,7 +520,17 @@ class scheduleManager:
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query, head_str=head_str)
         logger.debug(f"日程创建-提取事件-时间对 LLM Input: \n{prompt}")
-        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.8, stop="\n\n", stream=True)
+        response = callLLM(
+            prompt,
+            model=model,
+            temperature=0.7,
+            top_p=1,
+            top_k=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop="\n",
+            stream=True,
+        )
         event_time_pair = head_str + accept_stream_response(response, verbose=False)
         logger.debug(f"日程创建-提取事件-时间对 LLM Output: \n{event_time_pair}")
         event_time_pair = eval(event_time_pair)
