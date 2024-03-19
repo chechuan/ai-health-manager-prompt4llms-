@@ -246,7 +246,7 @@ class ParamServer:
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
-            "model_name": "Baichuan2-13B-Chat-API",
+            "model_name": "Qwen1.5-72B-Chat",
             "query": None,
             "score_threshold": 0.6,
             "stream": False,
@@ -262,14 +262,14 @@ class ParamServer:
             "search_engine_name": "duckduckgo",
             "top_k": 3,
             "stream": False,
-            "model_name": "Baichuan2-13B-Chat-API",
+            "model_name": "Qwen1.5-72B-Chat",
             "temperature": 0.7
         }
 
     @property
     def llm_with_graph(cls):
         return {
-            "model": "Baichuan2-13B-Chat",
+            "model": "Qwen1.5-72B-Chat",
             "messages":[
                 {
                     "role":"user",
@@ -921,7 +921,7 @@ CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT_V2 = """You are a helpful assi
 # 格式要求：
 每次请遵循以下格式回复：
 Thought: 思考推理针对当前问题应该做什么, 怎么做
-Doctor: 你作为一个医生,分析思考的内容,注意: 每次你只能问一个问题
+Doctor: 你作为一个医生,分析思考的内容,注意: 每次你只能问一个问题, 我的身份是患者的家长
 
 Begins!"""
 

@@ -87,10 +87,23 @@ class InitAllResource:
 
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
-        openai.api_base = self.api_config["llm"] + "/v1"
-        openai.api_key = self.api_config["llm_token"]
-        support_model_list = [i["id"] for i in openai.Model.list()["data"]]
-        logger.info(f"Support model list: {support_model_list}")
+        self.__init_model_supplier__()
+
+    def __init_model_supplier__(self) -> None:
+        """初始化模型供应商"""
+        for supplier_name, supplier_config in self.api_config["model_supply"].items():
+            if not isinstance(supplier_config, dict):
+                continue
+            openai.api_base = supplier_config["api_base"] + "/v1"
+            openai.api_key = supplier_config.get("api_key", "EMPTY")
+            models = ",".join([i["id"] for i in openai.Model.list()["data"]])
+            logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
+        default_supplier = self.api_config["model_supply"].get("default", "fschat")
+        openai.api_base = self.api_config["model_supply"][default_supplier]["api_base"] + "/v1"
+        openai.api_key = self.api_config["model_supply"][default_supplier].get("api_key", "EMPTY")
+        # openai.api_base = self.api_config["llm"] + "/v1"
+        # openai.api_key = self.api_config["llm_token"]
+        logger.info(f"Set default supplier [{default_supplier}]")
 
     def __knowledge_connect_check__(self) -> None:
         """检查知识库服务连接"""
@@ -111,7 +124,6 @@ class InitAllResource:
     def __load_config__(self) -> None:
         """指定env加载配置"""
         self.api_config = load_yaml(Path("config", "api_config.yaml"))[self.args.env]
-        # self.api_config = load_yaml(Path("config","api_config.bak.yaml"))[self.args.env]
         self.mysql_config = load_yaml(Path("config", "mysql_config.yaml"))[self.args.env]
         self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[self.args.env]
         model_config = load_yaml(Path("config", "model_config.yaml"))[self.args.env]
@@ -124,11 +136,12 @@ class InitAllResource:
             _intent_code_list = [i.strip() for i in detail["intent_code_list"].split(",")]
             for intentCode in _intent_code_list:
                 if _tmp_dict.get(intentCode):
-                    logger.warning(f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}")
+                    logger.warning(
+                        f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}"
+                    )
                 else:
                     _tmp_dict[intentCode] = aigcFuncCode
                 self.intent_aigcfunc_map[intentCode] = aigcFuncCode
-        # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
         self.__info_config__(model_config)
 
     def __info_config__(self, model_config):
@@ -330,7 +343,7 @@ def get_intent(text):
     elif "血压测量" in text or "测量血压" in text:
         code = "remind_take_blood_pressure"
         desc = "提醒他人测量血压"
-    elif "运动切换" in text or '切换运动' in text:
+    elif "运动切换" in text or "切换运动" in text:
         code = "switch_exercise"
         desc = "运动切换"
     elif "运动评价" in text:
@@ -726,7 +739,8 @@ def decorate_text_stream(generator):
             break
 
 
-def accept_stream_response(response, verbose=True):
+def accept_stream_response(response, verbose=True) -> str:
+    """接受openai.response的stream响应"""
     content = ""
     tst = time.time()
     for chunk in response:
@@ -773,6 +787,23 @@ def compute_blood_pressure_level(x: int, flag: str = "l" or "h") -> int:
             return 2
         else:
             return 3
+
+
+def apply_chat_template(prompt: str, template: str = "chatml"):
+    """应用chatml模板
+<|im_start|>user
+你是什么模型<|im_end|>
+<|im_start|>assistant
+    """
+    if template == "chatml":
+        prompt = (
+            "<|im_start|>system\n" + \
+            "You are a helpful assistant.<|im_end|>\n"
+            "<|im_start|>user\n" + \
+            f"{prompt}<|im_end|>\n" + \
+            "<|im_start|>assistant\n"
+            )
+    return prompt
 
 
 if __name__ == "__main__":

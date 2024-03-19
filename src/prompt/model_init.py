@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
-'''
+"""
 @Time    :   2023-10-30 11:15:48
 @desc    :   XXX
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
-'''
+"""
 import time
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -12,25 +12,28 @@ import openai
 from pydantic import BaseModel, Field
 
 from src.utils.Logger import logger
-from src.utils.module import dumpJS
+from src.utils.module import apply_chat_template, dumpJS
 
-from src.utils.Logger import logger 
-import json
+from src.utils.Logger import logger
 
-def callLLM(query: str = "", 
-              history: List[Dict] = [], 
-              temperature=0.5,
-              top_k=-1,
-              top_p=0.5,
-              repetition_penalty=1.1,
-              max_tokens=512,
-              model="Qwen-14B-Chat",
-              do_sample=True,
-              stop=[],
-              stream=False,
-              **kwargs):
+
+def callLLM(
+    query: str = "",
+    history: List[Dict] = [],
+    temperature=0.5,
+    top_k=-1,
+    top_p=0.5,
+    repetition_penalty=1.1,
+    max_tokens=512,
+    #   model="Qwen-14B-Chat",
+    model="Qwen1.5-72B-Chat",
+    do_sample=True,
+    stop=[],
+    stream=False,
+    **kwargs,
+):
     """chat with qwen api which is serve at http://10.228.67.99:26921
-    
+
     List options
 
     Args:
@@ -40,20 +43,22 @@ def callLLM(query: str = "",
         history (`array[Dict]`, [], Required):
             A list of messages comprising the conversation so far.
         top_k (`float`):
-            Adding some randomness helps make output text more natural. 
+            Adding some randomness helps make output text more natural.
             In top-k decoding, we first shortlist three tokens then sample one of them considering their likelihood scores.
         top_p (`number` or `null` Optional Defaults to 0.5):
-            An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass. 
+            An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
             So 0.1 means only the tokens comprising the top 10% probability mass are considered.
             We generally recommend altering this or temperature but not both.
         repetition_penalty (`float`):
             The parameter for repetition penalty. 1.0 means no penalty.
-        temperature (number or null Optional Defaults to 0.7): 
-            What sampling temperature to use, between 0 and 2. 
+        temperature (number or null Optional Defaults to 0.7):
+            What sampling temperature to use, between 0 and 2.
             Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
         do_sample (bool, optional, defaults to True)
             Whether or not to use sampling ; use greedy decoding otherwise.
     """
+    logger.critical(f"change {model} -> Qwen1.5-72B-Chat")
+    model = "Qwen1.5-72B-Chat"
     t_st = time.time()
     kwds = {
         "model": model,
@@ -65,39 +70,44 @@ def callLLM(query: str = "",
         "stop": stop,
         "stream": stream,
         "repetition_penalty": repetition_penalty,
-        **kwargs
+        **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
     if not history:
-        kwds['prompt'] = query
+        if "qwen1.5" in model.lower():
+            query = apply_chat_template(query)
+        kwds["prompt"] = query
         completion = openai.Completion.create(**kwds)
         if stream:
             return completion
-        ret = completion['choices'][0]['text']    
+        ret = completion["choices"][0]["text"]
     else:
         if query and not isinstance(query, object):
             history += [{"role": "user", "content": query}]
-        msg = ''
+        msg = ""
         for i, n in enumerate(list(reversed(history))):
-            msg += n['content']
+            msg += n["content"]
             if len(msg) > 1200:
                 h = history[-i:]
                 break
             else:
                 h = history
-        kwds['messages'] = h
-        logger.debug('LLM输入：' + json.dumps(kwds, ensure_ascii=False))
+        kwds["messages"] = h
+        # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
         completion = openai.ChatCompletion.create(**kwds)
         if stream:
             return completion
-        ret = completion['choices'][0]['message']['content'].strip()
+        ret = completion["choices"][0]["message"]["content"].strip()
     time_cost = round(time.time() - t_st, 1)
-    logger.info(f"Model {model} generate costs summary: " + 
-                   f"prompt_tokens:{completion['usage']['prompt_tokens']}, " + 
-                   f"completion_tokens:{completion['usage']['completion_tokens']}, " + 
-                   f"total_tokens:{completion['usage']['total_tokens']}, "
-                   f"cost: {time_cost}s")
-    return ret       
+    logger.info(
+        f"Model {model} generate costs summary: "
+        + f"prompt_tokens:{completion['usage']['prompt_tokens']}, "
+        + f"completion_tokens:{completion['usage']['completion_tokens']}, "
+        + f"total_tokens:{completion['usage']['total_tokens']}, "
+        f"cost: {time_cost}s"
+    )
+    return ret
+
 
 class ModelCard(BaseModel):
     id: str
@@ -152,7 +162,5 @@ class ChatCompletionResponseStreamChoice(BaseModel):
 class ChatCompletionResponse(BaseModel):
     model: str
     object: Literal["chat.completion", "chat.completion.chunk"]
-    choices: List[
-        Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]
-    ]
+    choices: List[Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]]
     created: Optional[int] = Field(default_factory=lambda: int(time.time()))

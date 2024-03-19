@@ -60,7 +60,7 @@ class FuncCall:
         """Initlization 搜索qachain"""
         from langchain.llms import openai
         llm = openai.OpenAI(
-            model_name=self.model_config.get('call_llm_with_search_engine', "Baichuan2-7B-Chat"),
+            model_name=self.model_config.get('call_llm_with_search_engine'),
             openai_api_base=self.api_config['llm'] + '/v1', 
             openai_api_key=self.api_config['llm_token']
         )
