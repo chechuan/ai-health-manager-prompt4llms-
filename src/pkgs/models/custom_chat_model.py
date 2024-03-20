@@ -10,9 +10,11 @@ from typing import Any, AnyStr, Dict, List
 from requests import Session
 from sqlalchemy.engine import base
 
-from data.constrant import (CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
-                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
-                            CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT)
+from data.constrant import (
+    CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
+    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
+    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT,
+)
 from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
@@ -346,7 +348,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                 ]
             elif kwargs["promptParam"]["report_type"] == "胸部报告":
                 _contents = [
-                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你妈妈，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你的家人，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
                 ]
             elif kwargs["promptParam"]["report_type"] == "腹部报告":
                 _contents = [
