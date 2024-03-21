@@ -84,3 +84,23 @@ fat:
         - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
     # Yi-34B-Chat:
     #   - reunion_meals_restaurant_selection                  # 共策决策
+prod:
+    Qwen-14B-Chat:
+        - react_modelreact_model # react模型
+        - decorate_search_prompt # 查询知识库装饰
+        - food_purchasing_list_management # 食材清单管理
+        - schedular_time_understand # 日程时间理解
+        - food_purchasing_list_generate_by_content # 基于内容生成食材清单
+        - call_schedule_query # 查询日程最终的组装输出
+        - call_schedule_create_reply # 创建日程的回复
+        - call_llm_with_search_engine # 与搜索引擎对话
+        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
+    Qwen-72B-Chat:
+        - blood_pressure_trend_analysis # 血压心率趋势分析
+        - health_warning_solutions_early # 预警解决方案
+        - reunion_meals_restaurant_selection # 共策决策
+        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
+        - assert_diet_suggest_in_content # 内容中提供饮食建议
+        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
+    # Yi-34B-Chat:
+    #   - reunion_meals_restaurant_selection                  # 共策决策

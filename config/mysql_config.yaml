@@ -22,3 +22,9 @@ fat:
   user: lk_base_n_qa
   passwd: fpBase09@23aQdn
   db_name: lk-h-aihealthmanager-qa
+fat:
+  ip: pc-2ze4844uhi3yuahm8.rwlb.rds.aliyuncs.com
+  port: 3306
+  user: lk_danao_aihealthmanager_pro
+  passwd: dnfpBase09@23aQaigerpro
+  db_name: lk-h-aihealthmanager-pro
