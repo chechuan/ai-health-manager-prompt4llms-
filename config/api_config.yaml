@@ -27,3 +27,10 @@ fat:
   langchain: http://10.228.67.99:26924
   llm: http://10.228.67.99:26921
   llm_token: sk-laikang-aihealthmanager-fat
+prod:
+  graph: http://10.4.164.240:26925
+  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+  algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
+  langchain: http://10.228.67.99:26924
+  llm: http://10.228.67.99:26921
+  llm_token: sk-laikang-aihealthmanager-fat
