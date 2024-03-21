@@ -146,10 +146,10 @@ class expertModel:
     def emotions(**kwargs):
         cur_date = kwargs.get("cur_date", "")
         if not cur_date:
-            cur_date = kwargs.get("romptParam", "").get("cur_date", "")
-        level = kwargs.get("cur_date", "")
+            cur_date = kwargs.get("promptParam", "").get("cur_date", "")
+        level = kwargs.get("level", "")
         if not level:
-            level = kwargs.get("romptParam", "").get("level", "")
+            level = kwargs.get("promptParam", "").get("level", "")
         prompt = emotions_prompt.format(cur_date, level)
         messages = [{"role": "user", "content": prompt}]
         logger.debug("压力模型输入:" + json.dumps(messages, ensure_ascii=False))
