@@ -1,36 +1,36 @@
 local:
-  graph: http://10.4.164.240:26925
-  ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
-  algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-local
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+    algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-local
 dev:
-  graph: http://10.4.164.240:26925
-  # ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev   # 暂时无法同步数据库部署环境, 接入演示环境后端服务
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
-  algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-dev
+    graph: http://10.4.164.240:26925
+    # ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev   # 暂时无法同步数据库部署环境, 接入演示环境后端服务
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+    algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-dev
 test:
-  graph: http://10.4.164.240:26925
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test
-  algo_rec: http://aimp-algo-psc-diet-v5.ef.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-test
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test
+    algo_rec: http://aimp-algo-psc-diet-v5.ef.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-test
 fat:
-  graph: http://10.4.164.240:26925
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
-  algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-fat
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+    algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-fat
 prod:
-  graph: http://10.4.164.240:26925
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
-  algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-fat
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate.op.laikang.com/aihealthmanager
+    algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-fat
