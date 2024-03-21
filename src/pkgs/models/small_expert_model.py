@@ -147,7 +147,7 @@ class expertModel:
         cur_date = kwargs.get("cur_date", "")
         if not cur_date:
             cur_date = kwargs.get("promptParam", "").get("cur_date", "")
-        level = kwargs.get("cur_date", "")
+        level = kwargs.get("level", "")
         if not level:
             level = kwargs.get("promptParam", "").get("level", "")
         prompt = emotions_prompt.format(cur_date, level)
