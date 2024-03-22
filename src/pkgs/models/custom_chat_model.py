@@ -190,7 +190,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 stop=["Observation", "问诊Finished!"],
                 stream=True,
             )
-            content = accept_stream_response(chat_response, verbose=True)
+            content = accept_stream_response(chat_response, verbose=False)
 
             logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
             thought, doctor = self.__parse_response__(content)
@@ -233,7 +233,7 @@ class CustomChatAuxiliary(CustomChatModel):
             stop=["Observation", "问诊Finished!"],
             stream=True,
         )
-        content = accept_stream_response(chat_response, verbose=True)
+        content = accept_stream_response(chat_response, verbose=False)
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
         output = self.__parse_jr_response__(content)
         if "YES" in output:
