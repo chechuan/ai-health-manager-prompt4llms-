@@ -1,24 +1,30 @@
 local:
-  ip: 10.39.10.28
-  port: 3306
-  user: root
-  passwd: "12345678"
-  db_name: ai_health_manager_db
+    ip: 10.39.10.28
+    port: 3306
+    user: root
+    passwd: "12345678"
+    db_name: ai_health_manager_db
 dev:
-  ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
-  port: 3306
-  user: lk_base_n_dev
-  passwd: fpBase09@23aQdn
-  db_name: lk-h-aihealthmanager-alg
+    ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
+    port: 3306
+    user: lk_base_n_dev
+    passwd: fpBase09@23aQdn
+    db_name: lk-h-aihealthmanager-alg
 test:
-  ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
-  port: 3306
-  user: lk_base_n_dev
-  passwd: fpBase09@23aQdn
-  db_name: lk-h-aihealthmanager-dev
+    ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
+    port: 3306
+    user: lk_base_n_dev
+    passwd: fpBase09@23aQdn
+    db_name: lk-h-aihealthmanager-dev
 fat:
-  ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
-  port: 3306
-  user: lk_base_n_qa
-  passwd: fpBase09@23aQdn
-  db_name: lk-h-aihealthmanager-qa
+    ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
+    port: 3306
+    user: lk_base_n_qa
+    passwd: fpBase09@23aQdn
+    db_name: lk-h-aihealthmanager-qa
+prod:
+    ip: pc-2ze4844uhi3yuahm8.rwlb.rds.aliyuncs.com
+    port: 3306
+    user: lk_danao_aihealthmanager_pro
+    passwd: dnfpBase09@23aQaigerpro
+    db_name: lk-h-aihealthmanager-pro

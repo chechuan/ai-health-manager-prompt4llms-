@@ -62,12 +62,33 @@ test:
       support_models:
         - Qwen1.5-72B-Chat
 fat:
-  graph: http://10.4.164.240:26925
-  ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
-  algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
-  langchain: http://10.228.67.99:26924
-  llm: http://10.228.67.99:26921
-  llm_token: sk-laikang-aihealthmanager-fat
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+    algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-fat
+  model_supply:
+    default: vllm
+    fschat: 
+      api_base: http://10.228.67.99:26921
+      api_key: sk-laikang-aihealthmanager-local
+      support_models:
+        - Qwen-14B-Chat
+        - Qwen-72B-Chat
+        - Baichuan2-7B-Chat
+        - Yi-34B-Chat
+    vllm:
+      api_base: http://10.228.67.99:26920
+      support_models:
+        - Qwen1.5-72B-Chat
+prod:
+    graph: http://10.4.164.240:26925
+    ai_backend: https://gate.op.laikang.com/aihealthmanager
+    algo_rec: http://aimp-algo-psc-diet-v5.eo.laikang.com
+    langchain: http://10.228.67.99:26924
+    llm: http://10.228.67.99:26921
+    llm_token: sk-laikang-aihealthmanager-fat
   model_supply:
     default: vllm
     fschat: 
