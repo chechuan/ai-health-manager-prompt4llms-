@@ -326,7 +326,7 @@ class expertModel:
                 #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in hitory]
             hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
-            current_date = datetime.datetime.now().date()
+            current_date = datetime.now().date()
             drug_msg = ''
             drug_situ = ['漏服药物', '正常服药', '正常服药', '正常服药', '漏服药物', '正常服药', '正常服药', '正常服药']
             days = []
