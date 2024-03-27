@@ -295,13 +295,25 @@ class expertModel:
             预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
         """
 
-        ihm_health_sbp = kwargs["promptParam"]["ihm_health_sbp"]
-        ihm_health_dbp = kwargs["promptParam"]["ihm_health_dbp"]
+        bps = kwargs.get("promptParam", {}).get("blood_presure", [])
+        bp_msg = ''
+        ihm_health_sbp_list = []
+        ihm_health_dbp_list = []
+        for b in bps:
+            date = b.get('date', '')
+            sbp = b.get('ihm_health_sbp', '')
+            dbp = b.get('ihm_health_dbp', '')
+            ihm_health_dbp_list.append(dbp)
+            ihm_health_sbp_list.append(sbp)
+            bp_msg += f'{date}|{str(sbp)}|{str(dbp)}|mmHg|\n'
+
         history = kwargs.get("his", [])
         b_history = kwargs.get("backend_history", [])
         query = history[-1]['content'] if history else ''
+        ihm_health_sbp = ihm_health_sbp_list[-1]
+        ihm_health_dbp = ihm_health_dbp_list[-1]
 
-        def inquire_gen(hitory, ihm_health_sbp, ihm_health_dbp,iq_n=7):
+        def inquire_gen(hitory, bp_message, ihm_health_dbp,iq_n=7):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
@@ -313,13 +325,19 @@ class expertModel:
                 # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
                 #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
             history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in hitory]
-            # his_prompt = "\n".join([("Doctor" if not i['role'] == "User" else "User") + f": {i['content']}" for i in history])
-            # prompt = blood_pressure_inquiry_prompt.format(blood_pressure_inquiry_prompt) + f'Doctor: '
             hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
+            current_date = datetime.datetime.now().date()
+            drug_msg = ''
+            drug_situ = ['漏服药物', '正常服药', '正常服药', '正常服药', '漏服药物', '正常服药', '正常服药', '正常服药']
+            days = []
+            for i in range(len(drug_situ)):
+                d = current_date - timedelta(days=len(drug_situ)-i-1)
+                drug_msg += f"|{d}| {drug_situ[i]}"
+                days.append(d)
             if len(history) >= iq_n:
-                messages = [{"role": "user", "content": blood_pressure_scheme_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}]
+                messages = [{"role": "user", "content": blood_pressure_scheme_prompt.format(bp_message, drug_msg, current_date, hist_s)}]
             else:
-                messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(str(ihm_health_sbp), str(ihm_health_dbp), hist_s)}] #+ history
+                messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(bp_message, drug_msg, current_date, hist_s)}] #+ history
             logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
@@ -328,7 +346,7 @@ class expertModel:
             return generate_text
 
         def blood_pressure_inquiry(history, query, iq_n=7):
-            generate_text = inquire_gen(history, ihm_health_sbp, ihm_health_dbp, iq_n=iq_n)
+            generate_text = inquire_gen(history, ihm_health_sbp_list[0], ihm_health_dbp_list[0], iq_n=iq_n)
             #while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
                 # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
