@@ -295,7 +295,7 @@ class expertModel:
             预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
         """
 
-        bps = kwargs.get("promptParam", {}).get("blood_presure", [])
+        bps = kwargs.get("promptParam", {}).get("blood_pressure", [])
         bp_msg = ''
         ihm_health_sbp_list = []
         ihm_health_dbp_list = []
