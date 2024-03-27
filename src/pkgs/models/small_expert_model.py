@@ -313,7 +313,7 @@ class expertModel:
         ihm_health_sbp = ihm_health_sbp_list[-1]
         ihm_health_dbp = ihm_health_dbp_list[-1]
 
-        def inquire_gen(hitory, bp_message, ihm_health_dbp,iq_n=7):
+        def inquire_gen(hitory, bp_message,iq_n=7):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
@@ -346,7 +346,7 @@ class expertModel:
             return generate_text
 
         def blood_pressure_inquiry(history, query, iq_n=7):
-            generate_text = inquire_gen(history, ihm_health_sbp_list[0], ihm_health_dbp_list[0], iq_n=iq_n)
+            generate_text = inquire_gen(history, bp_msg, iq_n=iq_n)
             #while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
                 #thought = generate_text
                 # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
