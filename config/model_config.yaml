@@ -20,7 +20,7 @@ local:
         - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
 dev:
     Qwen1.5-72B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
         - schedular_time_understand # 日程时间理解
@@ -39,7 +39,7 @@ dev:
         - report_interpretation_chat # 报告解读对话
 test:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
         - schedular_time_understand # 日程时间理解
@@ -59,7 +59,7 @@ test:
         - report_interpretation_chat # 报告解读对话
 fat:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
         - schedular_time_understand # 日程时间理解
@@ -78,7 +78,7 @@ fat:
         - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
 prod:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
         - schedular_time_understand # 日程时间理解

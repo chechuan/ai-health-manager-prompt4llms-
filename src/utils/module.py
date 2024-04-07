@@ -339,6 +339,10 @@ class InitAllResource:
         self.intent_desc_map = {**intent_desc_map, **default_desc_map}
         return prompt_meta_data
 
+    def get_model(self, event: str) -> str:
+        """根据事件获取模型"""
+        assert isinstance(event, str) and event in self.model_config, f"event {event} not in model_config"
+        return self.model_config.get(event)
 
 def make_meta_ret(
     end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs

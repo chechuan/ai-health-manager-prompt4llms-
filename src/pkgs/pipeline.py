@@ -217,7 +217,7 @@ class Chat_v2:
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
-        model = self.gsr.model_config["general_react_model"]
+        model = self.gsr.get_model("general_react_model")
         logger.debug(f"ReAct Prompt:\n{prompt}")
         model_output = callLLM(
             prompt,
