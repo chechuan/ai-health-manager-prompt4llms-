@@ -1,6 +1,6 @@
 local:
     Qwen1.5-72B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
         - schedular_time_understand # 日程时间理解
@@ -17,6 +17,7 @@ local:
         - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
         - report_interpretation_chat # 报告解读对话
+        - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
 dev:
     Qwen1.5-72B-Chat:
         - react_modelreact_model # react模型

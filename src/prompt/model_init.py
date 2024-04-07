@@ -57,7 +57,15 @@ def callLLM(
         do_sample (bool, optional, defaults to True)
             Whether or not to use sampling ; use greedy decoding otherwise.
     """
-    logger.critical(f"change {model} -> Qwen1.5-72B-Chat")
+    if model != "Qwen1.5-72B-Chat":
+        logger.warning(
+            f"There will change Model: {model} to Qwen1.5-72B-Chat."
+            + "Please manually check your code use config file to manage which model to use."
+        )
+    if stream and stop:
+        logger.warning(
+            "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
+        )
     model = "Qwen1.5-72B-Chat"
     t_st = time.time()
     kwds = {
@@ -162,5 +170,7 @@ class ChatCompletionResponseStreamChoice(BaseModel):
 class ChatCompletionResponse(BaseModel):
     model: str
     object: Literal["chat.completion", "chat.completion.chunk"]
-    choices: List[Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]]
+    choices: List[
+        Union[ChatCompletionResponseChoice, ChatCompletionResponseStreamChoice]
+    ]
     created: Optional[int] = Field(default_factory=lambda: int(time.time()))

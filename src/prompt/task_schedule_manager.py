@@ -83,7 +83,9 @@ class taskSchedulaManager:
             curr_plan=[],
             tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S"),
         )
-        self.conv_prompt = PromptTemplate(input_variables=["input"], template="用户输入: {input}\n你的输出(json):")
+        self.conv_prompt = PromptTemplate(
+            input_variables=["input"], template="用户输入: {input}\n你的输出(json):"
+        )
         self.session = requests.Session()
 
     def run(self, query, **kwds):
@@ -145,7 +147,9 @@ class taskSchedulaManager:
         resp_js = json.loads(response)
 
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Create schedule org: {orgCode} - uid: {customId} - {cur_time} {task}")
+        logger.info(
+            f"Create schedule org: {orgCode} - uid: {customId} - {cur_time} {task}"
+        )
         return 200
 
     def tool_cancel_schedule(self, msg, schedule, **kwds):
@@ -207,7 +211,9 @@ class taskSchedulaManager:
         assert task, "task name is None"
         assert cur_time, "time is None"
 
-        task_time_ori = [i for i in schedule if i["task"] == arguments["task"]][0]["time"]
+        task_time_ori = [i for i in schedule if i["task"] == arguments["task"]][0][
+            "time"
+        ]
 
         url = self.api_config["ai_backend"] + "/alg-api/schedule/manage"
         input_payload = {
@@ -222,7 +228,9 @@ class taskSchedulaManager:
         response = self.session.post(url, json=payload, headers=self.headers).text
         resp_js = json.loads(response)
         assert resp_js["code"] == 200, resp_js["msg"]
-        logger.info(f"Change schedule org:{orgCode} - uid:{customId} - {task} from {task_time_ori} to {cur_time}.")
+        logger.info(
+            f"Change schedule org:{orgCode} - uid:{customId} - {task} from {task_time_ori} to {cur_time}."
+        )
         return 200
 
     def compose_today_schedule(self, schedule, **kwds):
@@ -239,7 +247,12 @@ class taskSchedulaManager:
         task_dict = {i["task"]: "" for i in schedule}
         for sch in schedule:
             task_dict[sch["task"]] += sch["time"][11:-3]
-        prompt += "\n".join([f"事项：{task_name}，时间：{time}" for task_name, time in task_dict.items()])
+        prompt += "\n".join(
+            [
+                f"事项：{task_name}，时间：{time}"
+                for task_name, time in task_dict.items()
+            ]
+        )
         prompt += "\n\n日程提醒:\n"
         return prompt
 
@@ -256,12 +269,22 @@ class taskSchedulaManager:
         # prompt += f"{schedule}\n\n总结查询到的日程:"
         cur_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
-        today_schedule = [i for i in schedule if i["time"][:10] == cur_time[:10] and i["time"] > cur_time]
+        today_schedule = [
+            i
+            for i in schedule
+            if i["time"][:10] == cur_time[:10] and i["time"] > cur_time
+        ]
         history = [{"role": "system", "content": prompt}]
         user_input = self.compose_today_schedule(today_schedule)
         history.append({"role": "user", "content": user_input})
         raw_content = callLLM(history=history, top_p=0.8, temperature=0.7)
-        mid_vars_item.append({"key": "总结查询到的日程", "input_text": history, "output_text": raw_content})
+        mid_vars_item.append(
+            {
+                "key": "总结查询到的日程",
+                "input_text": history,
+                "output_text": raw_content,
+            }
+        )
         return raw_content, mid_vars_item
 
     def get_real_time_schedule(self, **kwds):
@@ -310,7 +333,9 @@ class taskSchedulaManager:
             msg, mid_vars_item = create_chat_completion(request, schedule)
             logger.debug("Thought:" + msg.content)
         else:
-            mid_vars_item = [{"key": "日程管理", "input_text": intentCode, "output_text": "日程查询"}]
+            mid_vars_item = [
+                {"key": "日程管理", "input_text": intentCode, "output_text": "日程查询"}
+            ]
             msg = ChatMessage(
                 role="assistant",
                 content="",
@@ -321,9 +346,13 @@ class taskSchedulaManager:
                 msg.function_call["name"],
                 msg.function_call["arguments"],
             )
-            yield make_meta_ret(msg=tool_name, code=intentCode, type="Tool"), mid_vars_item
+            yield make_meta_ret(
+                msg=tool_name, code=intentCode, type="Tool"
+            ), mid_vars_item
             if tool_args:
-                yield make_meta_ret(msg=msg.content, code=intentCode, type="Thought"), mid_vars_item
+                yield make_meta_ret(
+                    msg=msg.content, code=intentCode, type="Thought"
+                ), mid_vars_item
 
         if msg.function_call:
             if tool_name == "ask_for_time":
@@ -339,7 +368,9 @@ class taskSchedulaManager:
                 task = self.tool_cancel_schedule(msg, schedule, **kwds)
                 content = f"已为您取消{task}的提醒"
             elif tool_name == "query_schedule":
-                content, mid_vars_item = self.tool_query_schedule(schedule, mid_vars_item, **kwds)
+                content, mid_vars_item = self.tool_query_schedule(
+                    schedule, mid_vars_item, **kwds
+                )
             else:
                 content = "我不清楚你想做什么,请稍后重试"
         meta_ret = make_meta_ret(
@@ -404,7 +435,9 @@ class scheduleManager:
         self, query: str, current: str = curr_time() + " " + curr_weekday(), **kwds
     ) -> Dict:
         """确定查询的时间范围"""
-        output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
+        output_format = (
+            '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
+        )
         # prompt_template = PromptTemplate.from_template(
         #     (
         #         "请你理解用户所说, 解析其描述的时间范围,以下是一些指导:\n"
@@ -418,9 +451,13 @@ class scheduleManager:
         #         "输出:"
         #     )
         # )
-        prompt_str = self.prompt_meta_data["event"]["confirm_query_time_range"]["description"]
+        prompt_str = self.prompt_meta_data["event"]["confirm_query_time_range"][
+            "description"
+        ]
         prompt_template = PromptTemplate.from_template(prompt_str)
-        prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        prompt = prompt_template.format(
+            query=query, current=current, output_format=output_format
+        )
 
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
         logger.debug(f"日程查询-提取时间范围LLM Input: \n{prompt}")
@@ -448,16 +485,22 @@ class scheduleManager:
         model = self.model_config.get("call_schedule_query", "Qwen-14B-Chat")
 
         query = kwds["history"][-2]["content"]
-        query_schedule_template = self.prompt_meta_data["event"]["schedule_qry_up"]["description"]
+        query_schedule_template = self.prompt_meta_data["event"]["schedule_qry_up"][
+            "description"
+        ]
 
         try:
-            time_range = self.__call_query_confirm_query_time_range__(query, current, **kwds)
+            time_range = self.__call_query_confirm_query_time_range__(
+                query, current, **kwds
+            )
         except Exception as err:
             time_range = {"startTime": curr_time(), "endTime": date_after_days(2)}
 
         target_schedule = self.funcmap["get_schedule"]["func"](**time_range, **kwds)
         # target_schedule = [i for i in schedule if time_range['endTime'] > i['time'] > time_range['startTime']]
-        target_schedule_content = "\n".join([f"{i['task']}: {i['time']}" for i in target_schedule])
+        target_schedule_content = "\n".join(
+            [f"{i['task']}: {i['time']}" for i in target_schedule]
+        )
         if not target_schedule_content:
             target_schedule_content = "空"
         if kwds.get("debug", False):  # DEBUG
@@ -468,7 +511,9 @@ class scheduleManager:
 
         messages = [{"role": "user", "content": prompt}]
         logger.debug(f"日程查询-回复 LLM Input: \n{prompt}")
-        response = callLLM(history=messages, top_p=0.8, temperature=0.7, model=model, stream=True)
+        response = callLLM(
+            history=messages, top_p=0.8, temperature=0.7, model=model, stream=True
+        )
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"日程查询-回复 LLM Output: \n{content}")
         self.__update_mid_vars__(
@@ -490,19 +535,28 @@ class scheduleManager:
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
         current_time = curr_time() + " " + curr_weekday()
         prompt = (
-            "你是一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间(%Y-%m-%d %H:%M:%S格式)\n"
+            f"# 任务描述\n"
+            f"1. 请你扮演一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间\n"
+            f"2. 输出的时间应当是未来的时间，位于当前时间点之后\n"
+            f"3. 只输出最终的时间戳\n"
+            f"4. 如果时间描述未指明分钟和秒，默认为0分或者0秒，可以考虑24小时制\n"
+            f"# 提供信息\n"
             f"现在的时间是: {current_time}\n"
-            f"{time_desc}对应的时间是: "
+            f"时间描述:{time_desc}"
         )
         logger.debug(f"日程创建-时间描述->时间点 LLM Input: \n{prompt}")
-        response = callLLM(prompt, model=model, temperature=0.7, top_p=0.5, stream=True, stop="\n")
+        response = callLLM(
+            prompt, model=model, temperature=0.7, top_p=1, stream=True, stop="\n"
+        )
         target_time = accept_stream_response(response, verbose=False)[:19]
         logger.debug(f"日程创建-时间描述->时间点 LLM Output: {target_time}")
         return target_time
 
     def __call_create_extract_event_time_pair__(self, query: str, **kwds):
         head_str = '''[["'''
-        model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
+        model = self.model_config.get(
+            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+        )
         prompt_str = (
             "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
             "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
@@ -600,19 +654,29 @@ class scheduleManager:
                     )
                 else:
                     result_unexpected.append(item)
-                    logger.error(f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}")
+                    logger.error(
+                        f"日程创建失败: \npayload: {payload}\nresponse: {responseJS}"
+                    )
         if len(create_success) == 0:  # 未创建成功过, 回复固定内容指导创建日程话术
             content = "对不起, 您的日程创建失败, 请重新尝试在对话中明确您要提醒做什么及具体的时间。"
         else:  # 创建成功, 告知
             prompt_template = PromptTemplate.from_template(
-                self.prompt_meta_data["event"]["call_schedule_create_reply"]["description"]
+                self.prompt_meta_data["event"]["call_schedule_create_reply"][
+                    "description"
+                ]
             )
             model = self.model_config["call_schedule_create_reply"]
-            created_schedule_content = [i[1] + ": " + i[0] for i in create_success] if create_success else "空"
-            prompt = prompt_template.format(created_schedule_content=created_schedule_content)
+            created_schedule_content = (
+                [i[1] + ": " + i[0] for i in create_success] if create_success else "空"
+            )
+            prompt = prompt_template.format(
+                created_schedule_content=created_schedule_content
+            )
             message = [{"role": "user", "content": prompt}]
             logger.debug(f"日程创建-回复 LLM Input: \n{prompt}")
-            response = callLLM(history=message, model=model, temperature=0.6, top_p=0.5, stream=True)
+            response = callLLM(
+                history=message, model=model, temperature=0.6, top_p=0.5, stream=True
+            )
             content = accept_stream_response(response, verbose=False)
             logger.debug(f"日程创建-回复 LLM Output: \n{content}")
             self.__update_mid_vars__(
@@ -635,19 +699,27 @@ class scheduleManager:
             result_to_create,
             result_unexpected,
         ) = self.__call_create_parse_currect_event_time__(event_time_pair, **kwds)
-        content = self.__call_create_execute_create_schedule__(url, query, result_to_create, result_unexpected, **kwds)
+        content = self.__call_create_execute_create_schedule__(
+            url, query, result_to_create, result_unexpected, **kwds
+        )
         return content
 
     def __cancel_parse_time_desc__(self, query, **kwds):
         """解析时间点或者范围"""
         model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
         current: str = curr_time() + " " + curr_weekday()
-        output_format = '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
-        prompt_str = self.prompt_meta_data["event"]["cancel_parse_time_desc"]["description"]
+        output_format = (
+            '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
+        )
+        prompt_str = self.prompt_meta_data["event"]["cancel_parse_time_desc"][
+            "description"
+        ]
         prompt_template = PromptTemplate.from_template(prompt_str)
         # prompt_str = self.prompt_meta_data['event']['confirm_query_time_range']['description']
         # prompt_template = PromptTemplate.from_template(prompt_str)
-        prompt = prompt_template.format(query=query, current=current, output_format=output_format)
+        prompt = prompt_template.format(
+            query=query, current=current, output_format=output_format
+        )
         logger.debug(f"取消日程-解析时间点 LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
@@ -664,13 +736,24 @@ class scheduleManager:
 
     def __cancel_extract_time_info__(self, query: str, **kwds) -> Dict:
         """取消日程 - 提取时间范围描述 -> 解析为时间戳"""
-        model = self.model_config.get("call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat")
-        prompt_str = self.prompt_meta_data["event"]["cancel_extract_time_info"]["description"]
+        model = self.model_config.get(
+            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+        )
+        prompt_str = self.prompt_meta_data["event"]["cancel_extract_time_info"][
+            "description"
+        ]
         prompt_template = PromptTemplate.from_template(prompt_str)
         prompt = prompt_template.format(query=query)
         logger.debug(f"取消日程-提取时间范围描述 LLM Input: \n{prompt}")
         messages = [{"role": "user", "content": prompt}]
-        response = callLLM(history=messages, model=model, temperature=0.7, top_p=0.5, stop="\n\n", stream=True)
+        response = callLLM(
+            history=messages,
+            model=model,
+            temperature=0.7,
+            top_p=0.5,
+            stop="\n\n",
+            stream=True,
+        )
         tdesc = accept_stream_response(response, verbose=False)
         logger.debug(f"取消日程-提取时间范围描述 LLM Output: {tdesc}")
         self.__update_mid_vars__(
@@ -713,8 +796,12 @@ class scheduleManager:
         """让模型理解query, 从候选列表中提取要取消的日程"""
         current_time = curr_time()
         output_format = '[{"task":"任务", "time":"%Y-%m-%d %H:%M:%S"},...,]'
-        schedule_desc = "\n".join([f"{i['time']}: {i['task']}" for i in target_schedule])
-        prompt_str = self.prompt_meta_data["event"]["cancel_extract_task_info"]["description"]
+        schedule_desc = "\n".join(
+            [f"{i['time']}: {i['task']}" for i in target_schedule]
+        )
+        prompt_str = self.prompt_meta_data["event"]["cancel_extract_task_info"][
+            "description"
+        ]
         sys_template = PromptTemplate.from_template(prompt_str)
         sys_prompt = sys_template.format(
             schedule_desc=schedule_desc,
@@ -741,7 +828,9 @@ class scheduleManager:
             model="Qwen-14B-Chat",
             key="取消日程-提取目标日程",
         )
-        thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(content)
+        thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(
+            content
+        )
         return thought, schedule_to_cancel
 
     def __cancel_check_extract_schedule_to_cancel__(self, schedule, target_schedule):
@@ -752,7 +841,9 @@ class scheduleManager:
                 return True
         return False
 
-    def __call_cancel_execute_cancel_schedule__(self, target_schedule, schedule_to_cancel, **kwds):
+    def __call_cancel_execute_cancel_schedule__(
+        self, target_schedule, schedule_to_cancel, **kwds
+    ):
         """调用操作日程接口取消日程"""
         customId = kwds.get("customId")
         orgCode = kwds.get("orgCode")
@@ -778,7 +869,9 @@ class scheduleManager:
                     r_JS = self.session.post(url, json=payload).json()
                 if r_JS["code"] == 200:
                     cancel_success.append(schedule)
-                    logger.success(f"Cancel schedule org: {orgCode}, uid: {customId}, task: {task}, time: {time}")
+                    logger.success(
+                        f"Cancel schedule org: {orgCode}, uid: {customId}, task: {task}, time: {time}"
+                    )
                 else:
                     cancel_fail.append(schedule)
             else:
@@ -791,7 +884,9 @@ class scheduleManager:
                 content = "抱歉, 取消日程提醒失败, 请重新尝试"
             else:
                 content = "抱歉, 取消日程提醒失败"
-        logger.debug(f"取消日程-执行结果: \ncanncel_success: {cancel_success}\ncancel_fail: {cancel_fail}")
+        logger.debug(
+            f"取消日程-执行结果: \ncanncel_success: {cancel_success}\ncancel_fail: {cancel_fail}"
+        )
         return content
 
     def cancel(self, *args, **kwds):
@@ -807,8 +902,12 @@ class scheduleManager:
         if len(target_schedule) == 0:  # 解析出的时间段内无日程, 直接输出
             return f"抱歉, 您指定的时间({tdesc})没有可取消的日程"
         else:  # 结合已有时间范围的日程列表和用户query, 提取要取消的日程及时间
-            thought, schedule_to_cancel = self.__cancel_extract_task_info__(target_schedule, query, **kwds)
-            content = self.__call_cancel_execute_cancel_schedule__(target_schedule, schedule_to_cancel, **kwds)
+            thought, schedule_to_cancel = self.__cancel_extract_task_info__(
+                target_schedule, query, **kwds
+            )
+            content = self.__call_cancel_execute_cancel_schedule__(
+                target_schedule, schedule_to_cancel, **kwds
+            )
         return content
 
 

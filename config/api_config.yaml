@@ -3,8 +3,8 @@ local:
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    llm: http://10.228.67.99:26921
-    llm_token: sk-laikang-aihealthmanager-local
+    # llm: http://10.228.67.99:26921
+    # llm_token: sk-laikang-aihealthmanager-local
     model_supply:
         default: vllm
         fschat:
@@ -17,6 +17,7 @@ local:
                 - Yi-34B-Chat
         vllm:
             api_base: http://10.228.67.99:26920
+            api_key: sk-laikang-aihealthmanager-local
             support_models:
                 - Qwen1.5-72B-Chat
 dev:
@@ -24,8 +25,8 @@ dev:
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    llm: http://10.228.67.99:26921
-    llm_token: sk-laikang-aihealthmanager-dev
+    # llm: http://10.228.67.99:26921
+    # llm_token: sk-laikang-aihealthmanager-dev
     model_supply:
         default: vllm
         fschat:
@@ -38,6 +39,7 @@ dev:
                 - Yi-34B-Chat
         vllm:
             api_base: http://10.228.67.99:26920
+            api_key: sk-laikang-aihealthmanager-local
             support_models:
                 - Qwen1.5-72B-Chat
 test:
@@ -59,6 +61,7 @@ test:
                 - Yi-34B-Chat
         vllm:
             api_base: http://10.228.67.99:26920
+            api_key: sk-laikang-aihealthmanager-local
             support_models:
                 - Qwen1.5-72B-Chat
 fat:
