@@ -51,7 +51,7 @@ class expertModel:
     session = Session()
     ocr = RapidOCR()
 
-    def __init__(self, gsr) -> None:
+    def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
         self.regist_aigc_functions()
@@ -1599,10 +1599,11 @@ class expertModel:
             {"role": "system", "content": sysprompt},
             {"role": "user", "content": "```json\n" + str(content_index) + "\n```"},
         ]
+        model = self.gsr.get_model("aigc_functions_report_interpretation_text_classify")
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
         response = openai.ChatCompletion.create(
-            model="Qwen1.5-72B-Chat",
+            model=model,
             messages=messages,
             temperature=0.7,
             top_p=0.8,

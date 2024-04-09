@@ -19,7 +19,7 @@ local:
             api_base: http://10.228.67.99:26920
             api_key: sk-laikang-aihealthmanager-local
             support_models:
-                - Qwen1.5-72B-Chat
+                - Qwen1.5-32B-Chat
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -41,7 +41,7 @@ dev:
             api_base: http://10.228.67.99:26920
             api_key: sk-laikang-aihealthmanager-local
             support_models:
-                - Qwen1.5-72B-Chat
+                - Qwen1.5-32B-Chat
 test:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test

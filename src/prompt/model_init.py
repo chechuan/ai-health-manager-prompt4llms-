@@ -16,6 +16,8 @@ from src.utils.module import apply_chat_template, dumpJS
 
 from src.utils.Logger import logger
 
+default_model = "Qwen1.5-32B-Chat"
+
 
 def callLLM(
     query: str = "",
@@ -25,8 +27,7 @@ def callLLM(
     top_p=0.5,
     repetition_penalty=1.1,
     max_tokens=512,
-    #   model="Qwen-14B-Chat",
-    model="Qwen1.5-72B-Chat",
+    model: str = "",
     do_sample=True,
     stop=[],
     stream=False,
@@ -57,16 +58,18 @@ def callLLM(
         do_sample (bool, optional, defaults to True)
             Whether or not to use sampling ; use greedy decoding otherwise.
     """
-    if model != "Qwen1.5-72B-Chat":
+    # TODO: set default model for change global model
+
+    if model != default_model:
         logger.warning(
-            f"There will change Model: {model} to Qwen1.5-72B-Chat."
+            f"There will change Model: {model} to {default_model}."
             + "Please manually check your code use config file to manage which model to use."
         )
     if stream and stop:
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
         )
-    model = "Qwen1.5-72B-Chat"
+    model = default_model
     t_st = time.time()
     kwds = {
         "model": model,

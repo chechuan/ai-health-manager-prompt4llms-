@@ -459,7 +459,7 @@ class scheduleManager:
             query=query, current=current, output_format=output_format
         )
 
-        model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
         logger.debug(f"日程查询-提取时间范围LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
@@ -532,7 +532,7 @@ class scheduleManager:
         - Return
             target_time [str]: %Y-%m-%d %H:%M:%S格式的时间
         """
-        model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
         current_time = curr_time() + " " + curr_weekday()
         prompt = (
             f"# 任务描述\n"
@@ -618,7 +618,9 @@ class scheduleManager:
                 "unexpcept_result": unexpcept_result,
             },
             key="parse_time_desc",
-            model=self.model_config.get("schedular_time_understand", "Qwen-14B-Chat"),
+            model=self.model_config.get(
+                "call_schedular_time_understand", "Qwen-14B-Chat"
+            ),
         )
         return except_result, unexpcept_result
 
@@ -706,7 +708,7 @@ class scheduleManager:
 
     def __cancel_parse_time_desc__(self, query, **kwds):
         """解析时间点或者范围"""
-        model = self.model_config.get("schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
         current: str = curr_time() + " " + curr_weekday()
         output_format = (
             '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'

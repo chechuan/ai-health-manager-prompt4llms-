@@ -65,7 +65,7 @@ class Chat_v2:
         self.custom_chat_report_interpretation_answer = (
             CustomChatReportInterpretationAnswer(self.gsr)
         )
-        self.chatter_assistant = ChatterGailyAssistant()
+        self.chatter_assistant = ChatterGailyAssistant(global_share_resource)
         self.__initalize_intent_map__()
         self.session = Session()
 
