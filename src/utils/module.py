@@ -14,7 +14,7 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, AnyStr, Dict, Tuple
+from typing import Any, AnyStr, Dict, Tuple, Union
 from urllib import parse
 
 import numpy as np
@@ -341,8 +341,11 @@ class InitAllResource:
 
     def get_model(self, event: str) -> str:
         """根据事件获取模型"""
-        assert isinstance(event, str) and event in self.model_config, f"event {event} not in model_config"
+        assert (
+            isinstance(event, str) and event in self.model_config
+        ), f"event {event} not in model_config"
         return self.model_config.get(event)
+
 
 def make_meta_ret(
     end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs
@@ -373,7 +376,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.critical(exc_value.message, exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def load_yaml(path: Path or str):
+def load_yaml(path: Union[Path, str]):
     return yaml.load(open(path, "r"), Loader=yaml.FullLoader)
 
 
