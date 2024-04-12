@@ -525,7 +525,8 @@ class Chat_v2:
         #     content = history[-1]["content"]
         #     messages[-1]['function_call']['name'] = 'AskHuman'
         #     messages[-1]['function_call']['arguments'] = content
-        elif next_step == "AskHuman":
+        # elif next_step == "AskHuman":
+        else:
             content, messages = self.chatter_assistant.run(messages)
             self.update_mid_vars(
                 mid_vars,
@@ -533,8 +534,6 @@ class Chat_v2:
                 input_text=json.dumps(messages, ensure_ascii=False),
                 output_text=content,
             )
-        else:
-            content = ""
         # else:
         #     content, messages = self.chatter_assistant.run(messages)
 

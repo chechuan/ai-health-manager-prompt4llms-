@@ -472,10 +472,12 @@ class FuncCall:
 
         if (
             "未找到相关文档" in msg["answer"]
+            or "未找到相关文档" in msg["docs"][0]
             or "无法回答" in msg["answer"]
             or not msg["docs"]
         ):
             content = msg["answer"]
+            dataSource = "语言模型"
             self.update_mid_vars(
                 kwargs["mid_vars"],
                 key=f"查询知识库",
@@ -483,20 +485,21 @@ class FuncCall:
                 output_text=msg,
                 model=model_name,
             )
+
             # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            try:
-                content = self.funcmap["searchEngine"]["func"](query, **kwargs).strip()
-                dataSource = "搜索引擎"
-            except:
-                content = "对不起,没有检索到相关答案,请稍后再试"
-                dataSource = "语言模型"
-            self.update_mid_vars(
-                kwargs["mid_vars"],
-                key=f"搜索引擎",
-                input_text=query,
-                output_text=content,
-                model="baidu crawler",
-            )
+            # try:
+            #     content = self.funcmap["searchEngine"]["func"](query, **kwargs).strip()
+            #     dataSource = "搜索引擎"
+            # except:
+            #     content = "对不起,没有检索到相关答案,请稍后再试"
+            #     dataSource = "语言模型"
+            # self.update_mid_vars(
+            #     kwargs["mid_vars"],
+            #     key=f"搜索引擎",
+            #     input_text=query,
+            #     output_text=content,
+            #     model="baidu crawler",
+            # )
         else:
             doc_name_list = [
                 re.findall("\[.*?\]", msg["docs"][1][7:])[0][1:-1] for i in msg["docs"]
