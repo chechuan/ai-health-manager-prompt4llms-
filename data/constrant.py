@@ -1,22 +1,23 @@
 # -*- encoding: utf-8 -*-
-'''
+"""
 @Time    :   2023-10-20 14:16:41
 @desc    :   param template
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
-'''
+"""
 
 CACHE_DIR = ".cache"
 DEFAULT_DATA_SOURCE = "语言模型"
 PLAN_MAP = {
-    '辅助诊断': ("对于医学相关问题,请遵循以下流程:\n"
-                "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
-                "2. 得到答案后根据患者症状，推断用户可能患有的疾病，逐步询问患者疾病初诊、鉴别诊断、确诊需要的其他信息, 如家族史、既往史、检查结果等信息\n"
-                "3. 最终给出初步诊断结果，给出可能性最高的几种诊断，并按照可能性排序\n"
-                "4. 用户不喜欢擅自帮他做任何决定，所有外部行为必须询问用户进行二次确认\n"
-                "5. 可以适当忽略与本次对话无关的历史信息,以解决当前问题为主\n"
-                "6. 请严格按照上述流程返回Action Input的内容，不要自由发挥"
-                )
+    "辅助诊断": (
+        "对于医学相关问题,请遵循以下流程:\n"
+        "1. 明确患者主诉信息后，一步一步询问患者持续时间、发生时机、诱因或症状发生部位等信息，每步只问一个问题\n"
+        "2. 得到答案后根据患者症状，推断用户可能患有的疾病，逐步询问患者疾病初诊、鉴别诊断、确诊需要的其他信息, 如家族史、既往史、检查结果等信息\n"
+        "3. 最终给出初步诊断结果，给出可能性最高的几种诊断，并按照可能性排序\n"
+        "4. 用户不喜欢擅自帮他做任何决定，所有外部行为必须询问用户进行二次确认\n"
+        "5. 可以适当忽略与本次对话无关的历史信息,以解决当前问题为主\n"
+        "6. 请严格按照上述流程返回Action Input的内容，不要自由发挥"
+    )
 }
 TEMPLATE_ROLE = "请你扮演一个{var}的角色"
 TEMPLATE_SENCE = "面向{var}"
@@ -29,7 +30,6 @@ TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 # - 直接回复用户问题: 问题过于简单，且无信息缺失，结合历史给出诊断结果
 # - 结束话题: 当前用户问题不属于辅助诊断场景
 # Action的输入,通常为一个query,表示要查询或者询问的内容,一次只问一个问题,询问太多会引起用户厌烦
-
 
 
 # TOOL_CHOOSE_PROMPT_PIPELINE = """{external_information}
@@ -45,7 +45,6 @@ TEMPLATE_PLAN = "遵循以下流程完成任务:\n{var}"
 # Final Answer: the final answer to the original input question
 
 # Begins!"""
-
 
 
 TOOL_CHOOSE_PROMPT = """{external_information}
@@ -111,39 +110,39 @@ task_schedule_return_demo = [
         "occur_time": "2023-10-27 12:00:00",
         "remind_rule": "提前半小时",
         "remind_time": "2023-10-27 11:30:00",
-		"ask": "已为你执行日程操作",
-		"cron": "0 30 11 * * *"
+        "ask": "已为你执行日程操作",
+        "cron": "0 30 11 * * *",
     },
-	{
+    {
         "task": "",
         "event": "search",
         "tmp_time": "2023-10-27 10:45:59",
         "occur_time": "",
         "remind_rule": "",
         "remind_time": "",
-		"ask": "",
-		"cron": ""
+        "ask": "",
+        "cron": "",
     },
-	{
+    {
         "task": "做饭",
         "event": "修改",
         "tmp_time": "2023-10-27 10:45:59",
         "occur_time": "2023-10-27 12:00:00",
         "remind_rule": "提前10分钟",
         "remind_time": "2023-10-27 11:20:00",
-		"ask": "已为你执行日程操作",
-		"cron": ""
+        "ask": "已为你执行日程操作",
+        "cron": "",
     },
-	{
+    {
         "task": "做饭",
         "event": "取消",
         "tmp_time": "2023-10-27 10:45:59",
         "occur_time": "",
         "remind_rule": "",
         "remind_time": "",
-		"ask": "已为你执行日程操作",
-		"cron": ""
-    }
+        "ask": "已为你执行日程操作",
+        "cron": "",
+    },
 ]
 
 # TEMPLATE_TASK_SCHEDULE_MANAGER = """你是一个严谨的时间管理助手，可以帮助用户定制日程、查询日程、根据给出的规则修改日程发生时间和提醒时间、取消日程提醒,以下是一些指导要求:
@@ -228,6 +227,7 @@ Begins!
 
 # Begin!<|im_end|>
 
+
 class ParamServer:
     @property
     def llm_with_documents(cls):
@@ -241,8 +241,8 @@ class ParamServer:
             "model_name": "chatglm2-6b-32k",
             "temperature": 0.7,
             "max_tokens": 0,
-            "prompt_name": "default"
-            }
+            "prompt_name": "default",
+        }
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
@@ -252,9 +252,9 @@ class ParamServer:
             "stream": False,
             "temperature": 0.7,
             "top_k": 3,
-            "prompt_name": "default"
+            "prompt_name": "default",
         }
-    
+
     @property
     def llm_with_search_engine(cls):
         return {
@@ -263,20 +263,16 @@ class ParamServer:
             "top_k": 3,
             "stream": False,
             "model_name": "Baichuan2-13B-Chat-API",
-            "temperature": 0.7
+            "temperature": 0.7,
         }
 
     @property
     def llm_with_graph(cls):
         return {
             "model": "Baichuan2-13B-Chat",
-            "messages":[
-                {
-                    "role":"user",
-                    "content":""
-                }
-            ]
+            "messages": [{"role": "user", "content": ""}],
         }
+
 
 _DEFAULT_RESTAURANT_MESSAGE = """1.七修酒店元善家宴
 评分：4.7
@@ -578,12 +574,7 @@ DEFAULT_RESTAURANT_MESSAGE = """1.七修酒店元善家宴
 张大宝（角色：大儿子）：我想吃西餐，咱们吃西餐吧！"""
 
 
-role_map = {
-    '0': 'user',
-    '1': 'user',
-    '2': 'doctor',
-    '3': 'assistant'
-}
+role_map = {"0": "user", "1": "user", "2": "doctor", "3": "assistant"}
 
 
 # 共测-线下就医 医院信息
@@ -627,7 +618,7 @@ HOSPITAL_MESSAGE = """1. 廊坊市人民医院
 距离新奥集团：2.8公里
 驾车参考时间5分钟"""
 
-blood_pressure_scheme_prompt = '''你扮演一个经验丰富的医生，需要根据用户的血压情况为生成血压调节方案。
+blood_pressure_scheme_prompt = """你扮演一个经验丰富的医生，需要根据用户的血压情况为生成血压调节方案。
 
 # 已知病人信息如下：
 ## 血压数据
@@ -660,9 +651,9 @@ Assistant: 输出血压调节方案
 
 Begins!
 
-'''
+"""
 
-blood_pressure_inquiry_prompt = '''# 任务描述
+blood_pressure_inquiry_prompt = """# 任务描述
 你扮演一个经验丰富的医生，请你协助我进行高血压慢病病人血压测量后的情况进行问诊，请严格遵守问诊要求，并充分利用已知信息。
 
 # 已知病人信息如下：
@@ -699,9 +690,9 @@ Assistant: 你作为一个医生,分析思考的内容,提出当前想了解我�
 
 Begins!
 
-'''
+"""
 
-blood_pressure_pacify_prompt = '''你是一个AI健康管家，今天我血压波动严重，在等待医生上门提供医疗服务，等待医生上门的过程中，你需要陪伴我，安慰我和我进行对话，禁止问我问题，只需要告诉我应该需要做什么就可以。
+blood_pressure_pacify_prompt = """你是一个健康智能伙伴，今天我血压波动严重，在等待医生上门提供医疗服务，等待医生上门的过程中，你需要陪伴我，安慰我和我进行对话，禁止问我问题，只需要告诉我应该需要做什么就可以。
 要求语言简洁概括，字数在50字以内。
 
 历史对话信息： {0}
@@ -711,7 +702,7 @@ Thought: 思考针对当前问题应该做什么
 Doctor: 分析思考的内容,提出当前想了解患者的问题
 
 Begins!
-'''
+"""
 
 blood_pressure_pd_prompt = """你需要判断用户对于问题的回答态度的是肯定的，还是否定的。肯定态度输出'YES'，否定态度输出'NO' 
 问题为：{0}
@@ -852,8 +843,6 @@ remid_doctor_blood_pressre_prompt = """你是一个AI医生，张辉测量血压
 """
 
 
-
-
 CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT_V1 = """You are a helpful assistant.\n# 任务描述
 # 你是一个经验丰富的医生,请你协助我对一份医疗检查报告的情况进行问诊
 
@@ -903,8 +892,9 @@ Doctor: 你作为一个医生,结合你的专业知识及提供的所有信息,�
 
 Begins!"""
 
-CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT = CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT_V2
-
+CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT = (
+    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT_V2
+)
 
 
 CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT = """You are a helpful assistant.

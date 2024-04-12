@@ -80,9 +80,9 @@ class ChatterGailyAssistant:
         ```
         """
         self.prompt_react = """# 角色定义
-你是由来康生命研发的智能健康管家, 你的小名叫`健康智伴`,你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
+你是由来康生命研发的健康智能伙伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
 ## 下面是一些要求:
-1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家, 你可以叫我健康智伴
+1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是健康智能伙伴
 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
 3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务
 4. 对于用户的发散性提问，你不一定要给出答案，你可以用问题回答问题。你可以询问我任何你想了解的信息。
@@ -141,15 +141,23 @@ Begin!"""
                 "description": "AskHuman工具可以进行日常的聊天,自我认知,帮助用户解决简单的问题",
                 "parameters": {
                     "type": "object",
-                    "properties": {"topic": {"type": "string", "description": "闲聊的话题"}},
+                    "properties": {
+                        "topic": {"type": "string", "description": "闲聊的话题"}
+                    },
                     "required": ["topic"],
                 },
             },
         ]
-        tool_descs = "\n\n".join(self.__parser_function__(function) for function in functions)
+        tool_descs = "\n\n".join(
+            self.__parser_function__(function) for function in functions
+        )
         tool_names = ",".join(function["name"] for function in functions)
 
-        return {"tool_descs": tool_descs, "tool_names": tool_names, "functions": functions}
+        return {
+            "tool_descs": tool_descs,
+            "tool_names": tool_names,
+            "functions": functions,
+        }
 
     def __get_default_reply__(self, intentCode):
         """针对不同的意图提供不同的回复指导话术"""
@@ -158,9 +166,7 @@ Begin!"""
         elif intentCode == "schedule_qry_up":
             content = "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程"
         elif intentCode == "meeting_schedule":
-            content = (
-                "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
-            )
+            content = "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
         elif intentCode == "auxiliary_diagnosis":
             content = "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
         else:
@@ -183,7 +189,9 @@ Begin!"""
         else:
             return False
 
-    def __generate_content_verification__(self, out_text, list_of_plugin_info, **kwargs):
+    def __generate_content_verification__(
+        self, out_text, list_of_plugin_info, **kwargs
+    ):
         """ReAct生成内容的校验
 
         1. 校验Tool
@@ -224,11 +232,15 @@ Begin!"""
                 if msg["role"] == "system":
                     messages.append({"role": msg["role"], "content": msg["content"]})
                 elif msg["role"] == "user" and not first_user_input_flag:
-                    messages.append({"role": "user", "content": f"Question: {msg['content']}"})
+                    messages.append(
+                        {"role": "user", "content": f"Question: {msg['content']}"}
+                    )
                     first_user_input_flag = True
                 elif msg["role"] == "user":
                     # TODO 原生不支持role=funtion, 无法产生Observation
-                    messages.append({"role": "user", "content": f"Question: {msg['content']}"})
+                    messages.append(
+                        {"role": "user", "content": f"Question: {msg['content']}"}
+                    )
                     # messages.append({"role": "user", "content": f"Observation: {msg['content']}"})
                 elif msg.get("function_call"):
                     content = (
@@ -241,10 +253,14 @@ Begin!"""
 
         tool_msg = self.__get_predefined_msg__()
         tool_desc, tool_names = tool_msg["tool_descs"], tool_msg["tool_names"]
-        system_prompt = self.prompt_react.format(tool_descs=tool_desc, tool_names=tool_names)
+        system_prompt = self.prompt_react.format(
+            tool_descs=tool_desc, tool_names=tool_names
+        )
         messages = [{"role": "system", "content": system_prompt}] + history
         messages = compose_prompt_react(messages)
-        logger.debug(f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
+        logger.debug(
+            f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
+        )
         response = openai.ChatCompletion.create(
             messages=messages,
             model="Qwen-72B-Chat",
@@ -292,9 +308,9 @@ Begin!"""
         return history
 
     def run(self, history: Dict):
-        system_prompt = """你是由来康生命研发的智能健康管家, 你的小名叫`健康智伴`,你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
+        system_prompt = """你是由来康生命研发的健康智能伙伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
 ###下面是一些要求:###
-1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智能健康管家, 你可以叫我健康智伴
+1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是健康智能伙伴
 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
 3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务
 4. 对于用户的发散性提问，你不一定要给出答案，你可以用问题回答问题。你可以询问我任何你想了解的信息。
@@ -314,7 +330,7 @@ Begin!"""
             n=1,
             frequency_penalty=0.5,
             presence_penalty=0,
-            stream=True
+            stream=True,
         )
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"闲聊 LLM Output: {content}")
