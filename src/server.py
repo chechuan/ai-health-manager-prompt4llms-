@@ -265,22 +265,6 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
-    # @app.route("/aigc/functions", methods=["post"])
-    # def _aigc_functions():
-    #     """aigc函数"""
-    #     try:
-    #         param = await async_accept_param_purge()
-    #         ret = expert_model.call_function(**param)
-    #         ret = make_result(items=ret)
-    #     except RuntimeError as err:
-    #         logger.error(err)
-    #         ret = make_result(head=601, msg=err.args[0])
-    #     except Exception as err:
-    #         logger.exception(err)
-    #         ret = make_result(head=500, msg="Unknown error.")
-    #     finally:
-    #         return ret
-
     @app.route("/aigc/functions", methods=["post"])
     async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
         """aigc函数"""
@@ -301,7 +285,7 @@ def mount_aigc_functions(app: FastAPI):
     def _aigc_functions_report_interpretation(request: Request):
         """aigc函数-报告解读"""
         try:
-            # param = await async_accept_param_purge()
+            # param = await async_accept_param_purge(request)
             upload_file = request.files.get("file")
             filename = upload_file.filename
             tmp_path = Path(f".tmp/images")
@@ -368,7 +352,7 @@ def create_app():
     router = APIRouter()
     prepare_for_all()
 
-    @router.route("/chat_gen", methods=["post"])
+    @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
         global chat
 
@@ -413,7 +397,7 @@ def create_app():
     async def _chat_role_play(request: RolePlayRequest):
         """角色扮演对话"""
         try:
-            param = accept_param()
+            param = await accept_param(request)
             generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -427,13 +411,13 @@ def create_app():
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(result, mimetype="text/event-stream")
+            return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/intent/query", methods=["post"])
-    async def intent_query():
+    async def intent_query(request: Request):
         global chat
         try:
-            param = accept_param()
+            param = await accept_param(request)
             item = chat.intent_query(
                 param.get("history", []),
                 task=param.get("task", ""),
@@ -455,7 +439,7 @@ def create_app():
             return Response(dumpJS(result), content_type="application/json")
 
     @app.route("/reload_prompt", methods=["get"])
-    async def _reload_prompt():
+    async def _reload_prompt(request: Request):
         """重启chat实例"""
         global chat
         try:
@@ -465,10 +449,10 @@ def create_app():
             logger.exception(err)
             ret = {"head": 500, "success": False, "msg": repr(err)}
         finally:
-            return Response(dumpJS(ret), content_type="application/json")
+            return Response(dumpJS(ret), media_type="application/json")
 
     @app.route("/fetch_intent_code", methods=["get"])
-    async def _fetch_intent_code():
+    async def _fetch_intent_code(request: Request):
         """获取意图代码"""
         global chat
         try:
@@ -481,10 +465,10 @@ def create_app():
             return ret
 
     @app.route("/search/duckduckgo", methods=["post"])
-    async def _search_duckduckgo():
+    async def _search_duckduckgo(request: Request):
         """DuckDuckGo搜索"""
         try:
-            param = await async_accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = chat_v2.funcall.search_qa_chain.ddg_search_chain.call(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -494,10 +478,10 @@ def create_app():
             return ret
 
     @app.route("/search/crawler/sougou", methods=["post"])
-    async def _search_crawler_sougou():
+    async def _search_crawler_sougou(request: Request):
         """爬虫 - 搜狗搜索"""
         try:
-            param = await async_accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = chat_v2.funcall.call_search_engine(**param)
             ret = make_result(items=ret)
         except Exception as err:
