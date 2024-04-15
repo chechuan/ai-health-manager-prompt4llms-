@@ -20,7 +20,7 @@ from typing import Any, AnyStr, Dict, List, Optional, Union
 import requests
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup
-from duckduckgo_search import DDGS
+from duckduckgo_search import DDGS, AsyncDDGS
 from langchain.callbacks.manager import CallbackManagerForChainRun
 from langchain.chains.llm import LLMChain
 from langchain.llms import openai
@@ -271,7 +271,7 @@ class DDGSearchChain:
             proxies (Union[dict, str], optional): Proxies for the HTTP client (can be dict or str). Defaults to None.
         """
         self.proxies = proxies
-        self.engine = DDGS(proxies=proxies)
+        self.engine = AsyncDDGS(proxies=proxies)
 
     def call(
         self,

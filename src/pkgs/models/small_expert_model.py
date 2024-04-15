@@ -5,18 +5,13 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import chunk
 import json
 import re
 import sys
-import time
-from doctest import REPORT_CDIFF
-from email.mime import image
 from os.path import basename
 from pathlib import Path
 
 import openai
-from numpy import isin
 from requests import Session
 
 sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
@@ -1433,9 +1428,17 @@ class expertModel:
                 repetition_penalty=1.1,
                 stream=True,
             )
-            ret_content = accept_stream_response(response, verbose=False)
-            logger.debug(f"共策 LLM Output: {ret_content}")
+            ret_content = ""
+            for i in response:
+                msg = i.choices[0].delta.to_dict()
+                text_stream = msg.get("content")
+                if text_stream:
+                    ret_content += text_stream
+                    # print(text_stream, end="", flush=True)
+                    yield make_ret_item(text_stream, False, [])
             messages.append({"role": "assistant", "content": ret_content})
+
+            logger.debug(f"共策 LLM Output: {ret_content}")
             yield make_ret_item("", True, messages[1:])
         except openai.APIError as e:
             logger.error(f"Model {model} generate error: {e}")
@@ -1445,14 +1448,18 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
     def regist_aigc_functions(self):
-        self.funcmap = {}
-        self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
-        self.funcmap["aigc_functions_report_interpretation"] = (
-            self.__report_ocr_classification__
-        )
-        self.funcmap["aigc_functions_report_summary"] = self.__report_summary__
+        self.funcmap = {
+            v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
+        }
+        # self.funcmap["aigc_functions_single_choice"] = self.aigc_functions_single_choice
+        # self.funcmap["aigc_functions_report_interpretation"] = (
+        #     self.aigc_functions_report_interpretation
+        # )
+        # self.funcmap["aigc_functions_report_summary"] = (
+        #     self.aigc_functions_report_summary
+        # )
 
-    def __single_choice__(self, prompt: str, options: List[str], **kwargs):
+    def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
 
         - Args:
@@ -1474,10 +1481,12 @@ class expertModel:
         logger.debug(
             f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}"
         )
-        response = callLLM(
-            history=messages, model=model, temperature=0.7, top_p=0.5, stream=True
+        content = callLLM(
+            history=messages,
+            model=model,
+            temperature=0,
+            repetition_penalty=1.0,
         )
-        content = accept_stream_response(response, verbose=False)
         logger.debug(f"Single choice LLM Output: {content}")
         if content == "选项与要求不符":
             return content
@@ -1642,7 +1651,7 @@ class expertModel:
         remote_image_url = self.__upload_image(save_path)
         return remote_image_url
 
-    def __report_ocr_classification__(
+    def aigc_functions_report_interpretation(
         self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs
     ) -> Dict:
         """报告解读功能
@@ -1733,7 +1742,7 @@ class expertModel:
             ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url
         )
 
-    def __report_summary__(self, **kwargs):
+    def aigc_functions_report_summary(self, **kwargs):
         """报告内容总结
         循环
         """
@@ -1779,7 +1788,7 @@ class expertModel:
         content = accept_stream_response(response, verbose=False)
         return {"report_summary": content}
 
-    def call_function(self, **kwargs):
+    async def call_function(self, **kwargs):
         """调用函数
 
         - Args Example:
@@ -1800,18 +1809,18 @@ class expertModel:
         """
         intent_code = kwargs.get("intentCode")
         # TODO intentCode -> funcCode
-        func_code = (
+        intent_code = (
             self.gsr.intent_aigcfunc_map.get(intent_code)
             if self.gsr.intent_aigcfunc_map.get(intent_code)
             else intent_code
         )
-        if not self.funcmap.get(func_code):
-            logger.error(f"intentCode {func_code} not found in funcmap")
+        if not self.funcmap.get(intent_code):
+            logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
         try:
-            content = self.funcmap.get(func_code)(**kwargs)
+            content = self.funcmap.get(intent_code)(**kwargs)
         except Exception as e:
-            logger.exception(f"call function {func_code} error: {e}")
+            logger.exception(f"call function {intent_code} error: {e}")
             raise RuntimeError(f"Call function error.")
         return content
 

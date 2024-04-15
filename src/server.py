@@ -5,21 +5,23 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import asyncio
-
-from fastapi import FastAPI
-from gevent import monkey, pywsgi
-
-monkey.patch_all()
-import json
+import re
 import sys
+import time
+import json
+import asyncio
 import traceback
+from urllib import response
+from fastapi.responses import StreamingResponse
+import uvicorn
 from pathlib import Path
+from sse_starlette.sse import EventSourceResponse
+from fastapi import FastAPI, Response, Request, APIRouter
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
-import time
 
-from flask import Flask, Response, Request, request
+
+# from flask import Flask, Response, Request, request
 
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
@@ -30,14 +32,13 @@ from src.utils.module import (
     InitAllResource,
     NpEncoder,
     curr_time,
-    decorate_text_stream,
     dumpJS,
     format_sse_chat_complete,
 )
 
 
-def accept_param():
-    p = json.loads(request.data.decode("utf-8"))
+async def accept_param(request: Request):
+    p = await request.json()
     backend_history = p.get("backend_history", [])
     p["backend_history"] = (
         json.loads(backend_history)
@@ -49,27 +50,27 @@ def accept_param():
     return p
 
 
-def accept_param_purge():
-    p = request.get_json()
+def accept_param_purge(request: Request):
+    p = request.json()
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
 
 
 async def async_accept_param_purge(request: Request):
-    p = await request.get_json()
+    p = await request.json()
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
 
 
-def make_result(head=200, msg=None, items=None, cls=False, **kwargs):
+def make_result(head=200, msg=None, items=None, cls=False, **kwargs) -> Response:
     if not items and head == 200:
         head = 600
     res = {"head": head, "msg": msg, "items": items, **kwargs}
-    if cls:
-        res = json.dumps(res, cls=NpEncoder)
-    return res
+    # if cls:
+    res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+    return Response(res, media_type=kwargs.get("media_type", "application/json"))
 
 
 def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
@@ -116,10 +117,10 @@ def decorate_chat_complete(
 
 def mount_rule_endpoints(app: FastAPI):
     @app.route("/rules/blood_pressure_level", methods=["post"])
-    def _rules_blood_pressure_level():
+    async def _rules_blood_pressure_level(request: Request):
         """计算血压等级及处理规则"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.tool_rules_blood_pressure_level(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -129,10 +130,10 @@ def mount_rule_endpoints(app: FastAPI):
             return ret
 
     @app.route("/rules/emotions", methods=["post"])
-    def _rules_enotions_level():
+    async def _rules_enotions_level(request: Request):
         """情志分级"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.emotions(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -142,10 +143,10 @@ def mount_rule_endpoints(app: FastAPI):
             return ret
 
     @app.route("/rules/weight_trend", methods=["post"])
-    def _rules_weight_trend():
+    async def _rules_weight_trend(request: Request):
         """体重趋势"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.weight_trend(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -155,10 +156,10 @@ def mount_rule_endpoints(app: FastAPI):
             return ret
 
     @app.route("/rules/fat_reduction", methods=["post"])
-    def _rules_fat_reduction():
+    async def _rules_fat_reduction(request: Request):
         """体重减脂"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.fat_reduction(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -168,10 +169,10 @@ def mount_rule_endpoints(app: FastAPI):
             return ret
 
     @app.route("/health/blood_pressure_trend_analysis", methods=["post"])
-    def _health_blood_pressure_trend_analysis():
+    async def _health_blood_pressure_trend_analysis(request: Request):
         """血压趋势分析"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.health_blood_pressure_trend_analysis(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -181,10 +182,10 @@ def mount_rule_endpoints(app: FastAPI):
             return ret
 
     @app.route("/health/warning_solutions_early", methods=["post"])
-    def _health_warning_solutions_early():
+    async def _health_warning_solutions_early(request: Request):
         """预警解决方案"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.health_warning_solutions_early(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -197,10 +198,10 @@ def mount_rule_endpoints(app: FastAPI):
 def mount_rec_endpoints(app: FastAPI):
 
     @app.route("/rec/diet/food_purchasing_list/manage", methods=["post"])
-    def _rec_diet_create_food_purchasing_list_manage():
+    async def _rec_diet_create_food_purchasing_list_manage(request: Request):
         """食材采购清单管理"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.food_purchasing_list_manage(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -210,10 +211,12 @@ def mount_rec_endpoints(app: FastAPI):
             return ret
 
     @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
-    def _rec_diet_create_food_purchasing_list_generate_by_content():
+    async def _rec_diet_create_food_purchasing_list_generate_by_content(
+        request: Request,
+    ):
         """食材采购清单管理"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.food_purchasing_list_generate_by_content(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -223,25 +226,33 @@ def mount_rec_endpoints(app: FastAPI):
             return ret
 
     @app.route("/rec/diet/reunion_meals/restaurant_selection", methods=["post"])
-    def _rec_diet_reunion_meals_restaurant_selection():
+    async def _rec_diet_reunion_meals_restaurant_selection(request: Request):
         """年夜饭, 结合群组对话和餐厅信息选择偏好餐厅"""
+
+        async def decorate_text_stream(generator):
+            while True:
+                yield_item = next(generator)
+                yield format_sse_chat_complete(
+                    json.dumps(yield_item, ensure_ascii=False), "delta"
+                )
+                if yield_item["end"] is True:
+                    break
+
         try:
-            param = accept_param_purge()
-            generator = expert_model.rec_diet_reunion_meals_restaurant_selection(
-                **param
-            )
-            ret = decorate_text_stream(generator)
+            param = await async_accept_param_purge(request)
+            resp = expert_model.rec_diet_reunion_meals_restaurant_selection(**param)
+            generator = decorate_text_stream(resp)
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
-            return Response(ret, mimetype="text/event-stream")
+            return StreamingResponse(generator, media_type="text/event-stream")
 
     @app.route("/rec/diet/evaluation", methods=["post"])
-    def _rec_diet_evaluation():
+    async def _rec_diet_evaluation(request: Request):
         """膳食摄入评估"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge(request)
             ret = expert_model.rec_diet_eval(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -251,14 +262,14 @@ def mount_rec_endpoints(app: FastAPI):
             return ret
 
 
-async def mount_aigc_functions(app: FastAPI):
+def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
     # @app.route("/aigc/functions", methods=["post"])
     # def _aigc_functions():
     #     """aigc函数"""
     #     try:
-    #         param = accept_param_purge()
+    #         param = await async_accept_param_purge()
     #         ret = expert_model.call_function(**param)
     #         ret = make_result(items=ret)
     #     except RuntimeError as err:
@@ -271,11 +282,11 @@ async def mount_aigc_functions(app: FastAPI):
     #         return ret
 
     @app.route("/aigc/functions", methods=["post"])
-    async def _async_aigc_functions(request: AigcFunctionsRequest):
+    async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
         """aigc函数"""
         try:
             param = await async_accept_param_purge(request)
-            ret = expert_model.call_function(**param)
+            ret = await expert_model.call_function(**param)
             ret = make_result(items=ret)
         except RuntimeError as err:
             logger.error(err)
@@ -284,13 +295,13 @@ async def mount_aigc_functions(app: FastAPI):
             logger.exception(err)
             ret = make_result(head=500, msg="Unknown error.")
         finally:
-            return ret
+            return Response(ret, media_type="application/json")
 
     @app.route("/aigc/functions/report_interpretation", methods=["post"])
-    def _aigc_functions_report_interpretation():
+    def _aigc_functions_report_interpretation(request: Request):
         """aigc函数-报告解读"""
         try:
-            # param = accept_param_purge()
+            # param = await async_accept_param_purge()
             upload_file = request.files.get("file")
             filename = upload_file.filename
             tmp_path = Path(f".tmp/images")
@@ -309,57 +320,60 @@ async def mount_aigc_functions(app: FastAPI):
             logger.exception(err)
             ret = make_result(head=500, msg="Unknown error.")
         finally:
-            return ret
+            return Response(ret, media_type="application/json")
 
     @app.route("/aigc/functions/consultation_summary", methods=["post"])
-    def _aigc_functions_consultation_summary():
+    def _aigc_functions_consultation_summary(request: Request):
         """aigc函数-问诊摘要"""
         ...
 
     @app.route("/aigc/functions/diagnosis", methods=["post"])
-    def _aigc_functions_diagnosis():
+    def _aigc_functions_diagnosis(request: Request):
         """aigc函数-诊断"""
         ...
 
     @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
-    def _aigc_functions_reason_for_care_plan():
+    def _aigc_functions_reason_for_care_plan(request: Request):
         """aigc函数-康养方案推荐原因"""
         ...
 
     @app.route("/aigc/functions/drug_recommendation", methods=["post"])
-    def _aigc_functions_drug_recommendation():
+    def _aigc_functions_drug_recommendation(request: Request):
         """aigc函数-用药建议"""
         ...
 
     @app.route("/aigc/functions/food_principle", methods=["post"])
-    def _aigc_functions_food_principle():
+    def _aigc_functions_food_principle(request: Request):
         """aigc函数-饮食原则"""
         ...
 
     @app.route("/aigc/functions/sport_principle", methods=["post"])
-    def _aigc_functions_sport_principle():
+    def _aigc_functions_sport_principle(request: Request):
         """aigc函数-运动原则"""
         ...
 
     @app.route("/aigc/functions/chinese_therapy", methods=["post"])
-    def _aigc_functions_chinese_therapy():
+    def _aigc_functions_chinese_therapy(request: Request):
         """aigc函数-中医调理"""
         ...
 
     @app.route("/aigc/functions/mental_principle", methods=["post"])
-    def _aigc_functions_mental_principle():
+    def _aigc_functions_mental_principle(request: Request):
         """aigc函数-情志原则"""
         ...
 
 
-async def create_app():
-    app = Flask(__name__)
+def create_app():
+    app = FastAPI()
+    router = APIRouter()
+    prepare_for_all()
 
-    @app.route("/chat_gen", methods=["post"])
-    def get_chat_gen():
+    @router.route("/chat_gen", methods=["post"])
+    async def get_chat_gen(request: Request):
         global chat
+
         try:
-            param = accept_param()
+            param = await accept_param(request)
             generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -373,13 +387,13 @@ async def create_app():
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(result, mimetype="text/event-stream")
+            return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/chat/complete", methods=["post"])
-    def _chat_complete_stream_midvars():
+    async def _chat_complete_stream_midvars(request: Request):
         """demo,主要用于展示返回的中间变量"""
         try:
-            param = accept_param()
+            param = await accept_param(request)
             generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -393,10 +407,10 @@ async def create_app():
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
         finally:
-            return Response(result, mimetype="text/event-stream")
+            return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/chat/role_play", methods=["post"])
-    def _chat_role_play(request: RolePlayRequest):
+    async def _chat_role_play(request: RolePlayRequest):
         """角色扮演对话"""
         try:
             param = accept_param()
@@ -416,7 +430,7 @@ async def create_app():
             return Response(result, mimetype="text/event-stream")
 
     @app.route("/intent/query", methods=["post"])
-    def intent_query():
+    async def intent_query():
         global chat
         try:
             param = accept_param()
@@ -441,7 +455,7 @@ async def create_app():
             return Response(dumpJS(result), content_type="application/json")
 
     @app.route("/reload_prompt", methods=["get"])
-    def _reload_prompt():
+    async def _reload_prompt():
         """重启chat实例"""
         global chat
         try:
@@ -454,7 +468,7 @@ async def create_app():
             return Response(dumpJS(ret), content_type="application/json")
 
     @app.route("/fetch_intent_code", methods=["get"])
-    def _fetch_intent_code():
+    async def _fetch_intent_code():
         """获取意图代码"""
         global chat
         try:
@@ -467,10 +481,10 @@ async def create_app():
             return ret
 
     @app.route("/search/duckduckgo", methods=["post"])
-    def _search_duckduckgo():
+    async def _search_duckduckgo():
         """DuckDuckGo搜索"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge()
             ret = chat_v2.funcall.search_qa_chain.ddg_search_chain.call(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -480,10 +494,10 @@ async def create_app():
             return ret
 
     @app.route("/search/crawler/sougou", methods=["post"])
-    def _search_crawler_sougou():
+    async def _search_crawler_sougou():
         """爬虫 - 搜狗搜索"""
         try:
-            param = accept_param_purge()
+            param = await async_accept_param_purge()
             ret = chat_v2.funcall.call_search_engine(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -493,18 +507,19 @@ async def create_app():
             return ret
 
     @app.route("/test/sync", methods=["post"])
-    def _test_sync():
+    async def _test_sync(request: Request) -> Response:
         """异步测试"""
+        p = await async_accept_param_purge(request)
         t1 = curr_time()
-        time.sleep(2)
+        await asyncio.sleep(2)
         ret = {"start": t1, "end": curr_time()}
         logger.debug(ret)
-        return Response(dumpJS(ret), content_type="application/json")
+        return Response(dumpJS(ret), media_type="application/json")
 
-    await mount_aigc_functions(app)
+    mount_aigc_functions(app)
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
-
+    app.include_router(router)
     return app
 
 
@@ -522,14 +537,7 @@ def prepare_for_all():
     expert_model = expertModel(global_share_resource)
 
 
-def server_forever():
-    global app
-    server = pywsgi.WSGIServer((args.ip, args.port), app)
-    logger.success(f"serve at http://{args.ip}:{args.port}")
-    server.serve_forever()
-
-
 if __name__ == "__main__":
-    prepare_for_all()
-    app = asyncio.run(create_app())
-    server_forever()
+    app = create_app()
+    uvicorn.run(app, host=args.ip, port=args.port, log_level="info")
+    # uvicorn.run("src.server:app", host=args.ip, port=args.port, log_level="info")

@@ -812,16 +812,6 @@ def format_sse_chat_complete(data: str, event=None) -> str:
     return msg
 
 
-def decorate_text_stream(generator):
-    while True:
-        yield_item = next(generator)
-        yield format_sse_chat_complete(
-            json.dumps(yield_item, ensure_ascii=False), "delta"
-        )
-        if yield_item["end"] is True:
-            break
-
-
 def accept_stream_response(response, verbose=True) -> str:
     """接受openai.response的stream响应"""
     content = ""
