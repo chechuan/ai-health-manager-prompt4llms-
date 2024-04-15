@@ -5,9 +5,9 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-from crypt import methods
-from fileinput import filename
+import asyncio
 
+from fastapi import FastAPI
 from gevent import monkey, pywsgi
 
 monkey.patch_all()
@@ -19,21 +19,31 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 import time
 
-from flask import Flask, Response, request
+from flask import Flask, Response, Request, request
 
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
-from src.utils.api_protocal import RolePlayRequest
+from src.utils.api_protocal import RolePlayRequest, AigcFunctionsRequest
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, NpEncoder, curr_time, decorate_text_stream, dumpJS,
-                              format_sse_chat_complete)
+from src.utils.module import (
+    InitAllResource,
+    NpEncoder,
+    curr_time,
+    decorate_text_stream,
+    dumpJS,
+    format_sse_chat_complete,
+)
 
 
 def accept_param():
     p = json.loads(request.data.decode("utf-8"))
     backend_history = p.get("backend_history", [])
-    p["backend_history"] = json.loads(backend_history) if isinstance(backend_history, str) else backend_history
+    p["backend_history"] = (
+        json.loads(backend_history)
+        if isinstance(backend_history, str)
+        else backend_history
+    )
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
@@ -41,6 +51,13 @@ def accept_param():
 
 def accept_param_purge():
     p = request.get_json()
+    pstr = json.dumps(p, ensure_ascii=False)
+    logger.info(f"Input Param: {pstr}")
+    return p
+
+
+async def async_accept_param_purge(request: Request):
+    p = await request.get_json()
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
@@ -64,13 +81,18 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
     yield res
 
 
-def decorate_chat_complete(generator, return_mid_vars=False, return_backend_history=False):
+def decorate_chat_complete(
+    generator, return_mid_vars=False, return_backend_history=False
+):
     try:
         while True:
             yield_item = next(generator)
-            yield_item["data"]['appendData'] = yield_item['appendData']
+            yield_item["data"]["appendData"] = yield_item["appendData"]
             item = {**yield_item["data"]}
-            logger.info("Output (except mid_vars & backend_history):\n" + json.dumps(item, ensure_ascii=False))
+            logger.info(
+                "Output (except mid_vars & backend_history):\n"
+                + json.dumps(item, ensure_ascii=False)
+            )
             if return_mid_vars:
                 if item["end"] is True:
                     item["mid_vars"] = yield_item["mid_vars"]
@@ -81,7 +103,9 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
                     item["backend_history"] = yield_item["history"]
                 else:
                     item["backend_history"] = []
-            yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), "delta")
+            yield format_sse_chat_complete(
+                json.dumps(item, ensure_ascii=False), "delta"
+            )
             if yield_item["data"]["end"] == True:
                 break
     except Exception as err:
@@ -90,7 +114,245 @@ def decorate_chat_complete(generator, return_mid_vars=False, return_backend_hist
         yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), "delta")
 
 
-def create_app():
+def mount_rule_endpoints(app: FastAPI):
+    @app.route("/rules/blood_pressure_level", methods=["post"])
+    def _rules_blood_pressure_level():
+        """计算血压等级及处理规则"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.tool_rules_blood_pressure_level(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/rules/emotions", methods=["post"])
+    def _rules_enotions_level():
+        """情志分级"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.emotions(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/rules/weight_trend", methods=["post"])
+    def _rules_weight_trend():
+        """体重趋势"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.weight_trend(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/rules/fat_reduction", methods=["post"])
+    def _rules_fat_reduction():
+        """体重减脂"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.fat_reduction(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/health/blood_pressure_trend_analysis", methods=["post"])
+    def _health_blood_pressure_trend_analysis():
+        """血压趋势分析"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.health_blood_pressure_trend_analysis(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/health/warning_solutions_early", methods=["post"])
+    def _health_warning_solutions_early():
+        """预警解决方案"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.health_warning_solutions_early(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+
+def mount_rec_endpoints(app: FastAPI):
+
+    @app.route("/rec/diet/food_purchasing_list/manage", methods=["post"])
+    def _rec_diet_create_food_purchasing_list_manage():
+        """食材采购清单管理"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.food_purchasing_list_manage(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
+    def _rec_diet_create_food_purchasing_list_generate_by_content():
+        """食材采购清单管理"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.food_purchasing_list_generate_by_content(**param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/rec/diet/reunion_meals/restaurant_selection", methods=["post"])
+    def _rec_diet_reunion_meals_restaurant_selection():
+        """年夜饭, 结合群组对话和餐厅信息选择偏好餐厅"""
+        try:
+            param = accept_param_purge()
+            generator = expert_model.rec_diet_reunion_meals_restaurant_selection(
+                **param
+            )
+            ret = decorate_text_stream(generator)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return Response(ret, mimetype="text/event-stream")
+
+    @app.route("/rec/diet/evaluation", methods=["post"])
+    def _rec_diet_evaluation():
+        """膳食摄入评估"""
+        try:
+            param = accept_param_purge()
+            ret = expert_model.rec_diet_eval(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+
+async def mount_aigc_functions(app: FastAPI):
+    """挂载aigc函数"""
+
+    # @app.route("/aigc/functions", methods=["post"])
+    # def _aigc_functions():
+    #     """aigc函数"""
+    #     try:
+    #         param = accept_param_purge()
+    #         ret = expert_model.call_function(**param)
+    #         ret = make_result(items=ret)
+    #     except RuntimeError as err:
+    #         logger.error(err)
+    #         ret = make_result(head=601, msg=err.args[0])
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         ret = make_result(head=500, msg="Unknown error.")
+    #     finally:
+    #         return ret
+
+    @app.route("/aigc/functions", methods=["post"])
+    async def _async_aigc_functions(request: AigcFunctionsRequest):
+        """aigc函数"""
+        try:
+            param = await async_accept_param_purge(request)
+            ret = expert_model.call_function(**param)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+
+    @app.route("/aigc/functions/report_interpretation", methods=["post"])
+    def _aigc_functions_report_interpretation():
+        """aigc函数-报告解读"""
+        try:
+            # param = accept_param_purge()
+            upload_file = request.files.get("file")
+            filename = upload_file.filename
+            tmp_path = Path(f".tmp/images")
+            if not tmp_path.exists():
+                tmp_path.mkdir(parents=True)
+            file_path = tmp_path.joinpath(filename)
+            upload_file.save(file_path)
+            ret = expert_model.call_function(
+                intentCode="report_interpretation", file_path=file_path
+            )
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
+
+    @app.route("/aigc/functions/consultation_summary", methods=["post"])
+    def _aigc_functions_consultation_summary():
+        """aigc函数-问诊摘要"""
+        ...
+
+    @app.route("/aigc/functions/diagnosis", methods=["post"])
+    def _aigc_functions_diagnosis():
+        """aigc函数-诊断"""
+        ...
+
+    @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
+    def _aigc_functions_reason_for_care_plan():
+        """aigc函数-康养方案推荐原因"""
+        ...
+
+    @app.route("/aigc/functions/drug_recommendation", methods=["post"])
+    def _aigc_functions_drug_recommendation():
+        """aigc函数-用药建议"""
+        ...
+
+    @app.route("/aigc/functions/food_principle", methods=["post"])
+    def _aigc_functions_food_principle():
+        """aigc函数-饮食原则"""
+        ...
+
+    @app.route("/aigc/functions/sport_principle", methods=["post"])
+    def _aigc_functions_sport_principle():
+        """aigc函数-运动原则"""
+        ...
+
+    @app.route("/aigc/functions/chinese_therapy", methods=["post"])
+    def _aigc_functions_chinese_therapy():
+        """aigc函数-中医调理"""
+        ...
+
+    @app.route("/aigc/functions/mental_principle", methods=["post"])
+    def _aigc_functions_mental_principle():
+        """aigc函数-情志原则"""
+        ...
+
+
+async def create_app():
     app = Flask(__name__)
 
     @app.route("/chat_gen", methods=["post"])
@@ -99,9 +361,14 @@ def create_app():
         try:
             param = accept_param()
             generator = chat_v2.general_yield_result(
-                sys_prompt=param.get("prompt"), mid_vars=[], use_sys_prompt=False, **param
+                sys_prompt=param.get("prompt"),
+                mid_vars=[],
+                use_sys_prompt=False,
+                **param,
             )
-            result = decorate_chat_complete(generator, return_mid_vars=False, return_backend_history=True)
+            result = decorate_chat_complete(
+                generator, return_mid_vars=False, return_backend_history=True
+            )
         except Exception as err:
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
@@ -114,9 +381,14 @@ def create_app():
         try:
             param = accept_param()
             generator = chat_v2.general_yield_result(
-                sys_prompt=param.get("prompt"), mid_vars=[], use_sys_prompt=True, **param
+                sys_prompt=param.get("prompt"),
+                mid_vars=[],
+                use_sys_prompt=True,
+                **param,
             )
-            result = decorate_chat_complete(generator, return_mid_vars=True, return_backend_history=True)
+            result = decorate_chat_complete(
+                generator, return_mid_vars=True, return_backend_history=True
+            )
         except Exception as err:
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
@@ -129,9 +401,14 @@ def create_app():
         try:
             param = accept_param()
             generator = chat_v2.general_yield_result(
-                sys_prompt=param.get("prompt"), mid_vars=[], use_sys_prompt=True, **param
+                sys_prompt=param.get("prompt"),
+                mid_vars=[],
+                use_sys_prompt=True,
+                **param,
             )
-            result = decorate_chat_complete(generator, return_mid_vars=True, return_backend_history=True)
+            result = decorate_chat_complete(
+                generator, return_mid_vars=True, return_backend_history=True
+            )
         except Exception as err:
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
@@ -150,7 +427,7 @@ def create_app():
                 userInfo=param.get("promptParam", ""),
                 intentPrompt=param.get("intentPrompt", ""),
                 subIntentPrompt=param.get("subIntentPrmopt", ""),
-                scene_code=param.get('scene_code', 'default')
+                scene_code=param.get("scene_code", "default"),
             )
             result = make_result(items=item)
         except AssertionError as err:
@@ -189,84 +466,6 @@ def create_app():
         finally:
             return ret
 
-    @app.route("/rec/diet/food_purchasing_list/manage", methods=["post"])
-    def _rec_diet_create_food_purchasing_list_manage():
-        """食材采购清单管理"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.food_purchasing_list_manage(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
-    @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
-    def _rec_diet_create_food_purchasing_list_generate_by_content():
-        """食材采购清单管理"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.food_purchasing_list_generate_by_content(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
-    @app.route("/rec/diet/reunion_meals/restaurant_selection", methods=["post"])
-    def _rec_diet_reunion_meals_restaurant_selection():
-        """年夜饭, 结合群组对话和餐厅信息选择偏好餐厅"""
-        try:
-            param = accept_param_purge()
-            generator = expert_model.rec_diet_reunion_meals_restaurant_selection(**param)
-            ret = decorate_text_stream(generator)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return Response(ret, mimetype="text/event-stream")
-
-    @app.route("/rec/diet/evaluation", methods=["post"])
-    def _rec_diet_evaluation():
-        """膳食摄入评估"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.rec_diet_eval(param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
-    @app.route("/health/blood_pressure_trend_analysis", methods=["post"])
-    def _health_blood_pressure_trend_analysis():
-        """血压趋势分析"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.health_blood_pressure_trend_analysis(param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
-    @app.route("/health/warning_solutions_early", methods=["post"])
-    def _health_warning_solutions_early():
-        """预警解决方案"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.health_warning_solutions_early(param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
     @app.route("/search/duckduckgo", methods=["post"])
     def _search_duckduckgo():
         """DuckDuckGo搜索"""
@@ -293,97 +492,6 @@ def create_app():
         finally:
             return ret
 
-    @app.route("/aigc/functions", methods=["post"])
-    def _aigc_functions():
-        """aigc函数"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.call_function(**param)
-            ret = make_result(items=ret)
-        except RuntimeError as err:
-            logger.error(err)
-            ret = make_result(head=601, msg=err.args[0])
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg="Unknown error.")
-        finally:
-            return ret
-    
-    @app.route("/aigc/functions/report_interpretation", methods=["post"])
-    def _aigc_functions_report_interpretation():
-        """aigc函数-报告解读"""
-        try:
-            # param = accept_param_purge()
-            upload_file = request.files.get("file")
-            filename = upload_file.filename
-            tmp_path = Path(f".tmp/images")
-            if not tmp_path.exists():
-                tmp_path.mkdir(parents=True)
-            file_path = tmp_path.joinpath(filename)
-            upload_file.save(file_path)
-            ret = expert_model.call_function(intentCode="report_interpretation", file_path=file_path)
-            ret = make_result(items=ret)
-        except RuntimeError as err:
-            logger.error(err)
-            ret = make_result(head=601, msg=err.args[0])
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg="Unknown error.")
-        finally:
-            return ret
-
-    @app.route("/rules/blood_pressure_level", methods=["post"])
-    def _rules_blood_pressure_level():
-        """计算血压等级及处理规则"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.tool_rules_blood_pressure_level(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-    
-    @app.route("/rules/emotions", methods=["post"])
-    def _rules_enotions_level():
-        """情志分级"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.emotions(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-        
-    @app.route("/rules/weight_trend", methods=["post"])
-    def _rules_weight_trend():
-        """体重趋势"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.weight_trend(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-        
-    @app.route("/rules/fat_reduction", methods=["post"])
-    def _rules_fat_reduction():
-        """体重减脂"""
-        try:
-            param = accept_param_purge()
-            ret = expert_model.fat_reduction(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
-
     @app.route("/test/sync", methods=["post"])
     def _test_sync():
         """异步测试"""
@@ -392,6 +500,10 @@ def create_app():
         ret = {"start": t1, "end": curr_time()}
         logger.debug(ret)
         return Response(dumpJS(ret), content_type="application/json")
+
+    await mount_aigc_functions(app)
+    mount_rule_endpoints(app)
+    mount_rec_endpoints(app)
 
     return app
 
@@ -419,5 +531,5 @@ def server_forever():
 
 if __name__ == "__main__":
     prepare_for_all()
-    app = create_app()
+    app = asyncio.run(create_app())
     server_forever()
