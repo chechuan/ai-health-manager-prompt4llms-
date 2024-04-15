@@ -11,11 +11,9 @@ import time
 import json
 import asyncio
 import traceback
-from urllib import response
 from fastapi.responses import StreamingResponse
 import uvicorn
 from pathlib import Path
-from sse_starlette.sse import EventSourceResponse
 from fastapi import FastAPI, Response, Request, APIRouter
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
@@ -80,39 +78,6 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
     if cls:
         res = json.dumps(res, cls=NpEncoder)
     yield res
-
-
-def decorate_chat_complete(
-    generator, return_mid_vars=False, return_backend_history=False
-):
-    try:
-        while True:
-            yield_item = next(generator)
-            yield_item["data"]["appendData"] = yield_item["appendData"]
-            item = {**yield_item["data"]}
-            logger.info(
-                "Output (except mid_vars & backend_history):\n"
-                + json.dumps(item, ensure_ascii=False)
-            )
-            if return_mid_vars:
-                if item["end"] is True:
-                    item["mid_vars"] = yield_item["mid_vars"]
-                else:
-                    item["mid_vars"] = []
-            if return_backend_history:
-                if item["end"] is True:
-                    item["backend_history"] = yield_item["history"]
-                else:
-                    item["backend_history"] = []
-            yield format_sse_chat_complete(
-                json.dumps(item, ensure_ascii=False), "delta"
-            )
-            if yield_item["data"]["end"] == True:
-                break
-    except Exception as err:
-        logger.exception(err)
-        item = make_result(head=600, message=repr(err), end=True)
-        yield format_sse_chat_complete(json.dumps(item, ensure_ascii=False), "delta")
 
 
 def mount_rule_endpoints(app: FastAPI):
@@ -266,6 +231,14 @@ def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
     @app.route("/aigc/functions", methods=["post"])
+    @app.route("/aigc/functions/consultation_summary", methods=["post"])
+    @app.route("/aigc/functions/diagnosis", methods=["post"])
+    @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
+    @app.route("/aigc/functions/drug_recommendation", methods=["post"])
+    @app.route("/aigc/functions/food_principle", methods=["post"])
+    @app.route("/aigc/functions/sport_principle", methods=["post"])
+    @app.route("/aigc/functions/chinese_therapy", methods=["post"])
+    @app.route("/aigc/functions/mental_principle", methods=["post"])
     async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
         """aigc函数"""
         try:
@@ -279,10 +252,10 @@ def mount_aigc_functions(app: FastAPI):
             logger.exception(err)
             ret = make_result(head=500, msg="Unknown error.")
         finally:
-            return Response(ret, media_type="application/json")
+            return ret
 
     @app.route("/aigc/functions/report_interpretation", methods=["post"])
-    def _aigc_functions_report_interpretation(request: Request):
+    async def _aigc_functions_report_interpretation(request: Request):
         """aigc函数-报告解读"""
         try:
             # param = await async_accept_param_purge(request)
@@ -306,51 +279,173 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return Response(ret, media_type="application/json")
 
-    @app.route("/aigc/functions/consultation_summary", methods=["post"])
-    def _aigc_functions_consultation_summary(request: Request):
-        """aigc函数-问诊摘要"""
-        ...
+        # @app.route("/aigc/functions/consultation_summary", methods=["post"])
+        # async def _aigc_functions_consultation_summary(request: Request):
+        #     """aigc函数-问诊摘要"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/diagnosis", methods=["post"])
-    def _aigc_functions_diagnosis(request: Request):
-        """aigc函数-诊断"""
-        ...
+        # @app.route("/aigc/functions/diagnosis", methods=["post"])
+        # async def _aigc_functions_diagnosis(request: Request):
+        #     """aigc函数-诊断"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
-    def _aigc_functions_reason_for_care_plan(request: Request):
-        """aigc函数-康养方案推荐原因"""
-        ...
+        # @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
+        # async def _aigc_functions_reason_for_care_plan(request: Request):
+        #     """aigc函数-康养方案推荐原因"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/drug_recommendation", methods=["post"])
-    def _aigc_functions_drug_recommendation(request: Request):
-        """aigc函数-用药建议"""
-        ...
+        # @app.route("/aigc/functions/drug_recommendation", methods=["post"])
+        # async def _aigc_functions_drug_recommendation(request: Request):
+        #     """aigc函数-用药建议"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/food_principle", methods=["post"])
-    def _aigc_functions_food_principle(request: Request):
-        """aigc函数-饮食原则"""
-        ...
+        # @app.route("/aigc/functions/food_principle", methods=["post"])
+        # async def _aigc_functions_food_principle(request: Request):
+        #     """aigc函数-饮食原则"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/sport_principle", methods=["post"])
-    def _aigc_functions_sport_principle(request: Request):
-        """aigc函数-运动原则"""
-        ...
+        # @app.route("/aigc/functions/sport_principle", methods=["post"])
+        # async def _aigc_functions_sport_principle(request: Request):
+        #     """aigc函数-运动原则"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/chinese_therapy", methods=["post"])
-    def _aigc_functions_chinese_therapy(request: Request):
-        """aigc函数-中医调理"""
-        ...
+        # @app.route("/aigc/functions/chinese_therapy", methods=["post"])
+        # async def _aigc_functions_chinese_therapy(request: Request):
+        #     """aigc函数-中医调理"""
+        #     try:
+        #         param = await async_accept_param_purge(request)
+        #         ret = await expert_model.call_function(**param)
+        #         ret = make_result(items=ret)
+        #     except RuntimeError as err:
+        #         logger.error(err)
+        #         ret = make_result(head=601, msg=err.args[0])
+        #     except Exception as err:
+        #         logger.exception(err)
+        #         ret = make_result(head=500, msg="Unknown error.")
+        #     finally:
+        #         return ret
 
-    @app.route("/aigc/functions/mental_principle", methods=["post"])
-    def _aigc_functions_mental_principle(request: Request):
+        # @app.route("/aigc/functions/mental_principle", methods=["post"])
+        # async def _aigc_functions_mental_principle(request: Request):
         """aigc函数-情志原则"""
-        ...
+        try:
+            param = await async_accept_param_purge(request)
+            ret = await expert_model.call_function(**param)
+            ret = make_result(items=ret)
+        except RuntimeError as err:
+            logger.error(err)
+            ret = make_result(head=601, msg=err.args[0])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg="Unknown error.")
+        finally:
+            return ret
 
 
 def create_app():
     app = FastAPI()
     router = APIRouter()
     prepare_for_all()
+
+    def decorate_chat_complete(
+        generator, return_mid_vars=False, return_backend_history=False
+    ):
+        try:
+            while True:
+                yield_item = next(generator)
+                yield_item["data"]["appendData"] = yield_item["appendData"]
+                item = {**yield_item["data"]}
+                logger.info(
+                    "Output (except mid_vars & backend_history):\n"
+                    + json.dumps(item, ensure_ascii=False)
+                )
+                if return_mid_vars:
+                    if item["end"] is True:
+                        item["mid_vars"] = yield_item["mid_vars"]
+                    else:
+                        item["mid_vars"] = []
+                if return_backend_history:
+                    if item["end"] is True:
+                        item["backend_history"] = yield_item["history"]
+                    else:
+                        item["backend_history"] = []
+                yield format_sse_chat_complete(
+                    json.dumps(item, ensure_ascii=False), "delta"
+                )
+                if yield_item["data"]["end"] == True:
+                    break
+        except Exception as err:
+            logger.exception(err)
+            item = make_result(head=600, message=repr(err), end=True)
+            yield format_sse_chat_complete(
+                json.dumps(item, ensure_ascii=False), "delta"
+            )
 
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):

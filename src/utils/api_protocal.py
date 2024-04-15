@@ -41,8 +41,93 @@ class RolePlayRequest(BaseModel):
     stop: Optional[List[str]] = None
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant", "system", "function"]
+    content: str
+
+
+class UserProfileAge(BaseModel):
+    age: int = Field(ge=1, le=100)  # 年龄
+    desc: str = "年龄"
+
+
+class UserProfileGender(BaseModel):
+    gender: Literal["male", "female"] = Field(description="性别")
+    desc: str = "性别"
+
+
+class UserProfileHeight(BaseModel):
+    height: float = Field(ge=0.1, le=3)  # 身高
+    desc: str = "身高"
+
+
+class UserProfileWeight(BaseModel):
+    weight: float = Field(ge=1, le=300)  # 体重
+    desc: str = "体重"
+
+
+class UserProfileDiseaseHistory(BaseModel):
+    disease_history: List[str] = []  # 疾病史
+    desc: str = "疾病史"
+
+
+class UserProfileAllergicHistory(BaseModel):
+    allergic_history: List[str] = []  # 过敏史
+    desc: str = "过敏史"
+
+
+class UserProfileSurgeryHistory(BaseModel):
+    surgery_history: List[str] = []  # 手术史
+    desc: str = "手术史"
+
+
+USER_PROFILE_KEY_MAP = {
+    "age": "年龄",
+    "gender": "性别",
+    "height": "身高",
+    "weight": "体重",
+    "disease_history": "疾病史",
+    "allergic_history": "过敏史",
+    "surgery_history": "手术史",
+    "drug_name": "药品名称",
+    "dosage": "剂量",
+    "frequency": "频次",
+    "usage": "用法",
+    "precautions": "注意事项",
+    "contraindication": "禁忌",
+}
+
+
+class DrugPlanItem(BaseModel):
+    drug_name: str  # 药品名称
+    dosage: str  # 剂量
+    frequency: str  # 频次
+    usage: str  # 用法
+    precautions: str  # 注意事项
+    contraindication: str  # 禁忌
+
+
+class UserProfile(BaseModel):
+    age: Optional[UserProfileAge] = None  # 年龄
+    gender: Optional[UserProfileGender] = None  # 性别
+    height: Optional[UserProfileHeight] = None  # 身高
+    weight: Optional[UserProfileWeight] = None  # 体重
+    disease_history: Optional[UserProfileDiseaseHistory] = None  # 疾病史
+    allergic_history: Optional[UserProfileAllergicHistory] = None  # 过敏史
+    surgery_history: Optional[UserProfileSurgeryHistory] = None  # 手术史
+
+
 class AigcFunctionsRequest(BaseModel):
     url: Optional[str] = None
     intentCode: str
     prompt: Optional[str] = None
     options: Optional[List[str]] = None
+    user_profile: Optional[UserProfile]
+    messages: Optional[List[ChatMessage]] = []
+    stream: Optional[bool] = False
+    durg_plan: Optional[List[DrugPlanItem]] = None  # 药方
+    diagnosis: Optional[str] = None  # 诊断
+    food_principle: Optional[str] = None  # 饮食原则
+    sport_principle: Optional[str] = None  # 运动原则
+    mental_principle: Optional[str] = None  # 心理原则
+    chinese_therapy: Optional[str] = None  # 中医疗法

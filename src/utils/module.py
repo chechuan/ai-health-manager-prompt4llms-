@@ -346,6 +346,14 @@ class InitAllResource:
         ), f"event {event} not in model_config"
         return self.model_config.get(event)
 
+    def get_event_item(self, event: str) -> Dict:
+        """根据事件获取对应item"""
+        assert isinstance(event, str) and self.prompt_meta_data["event"].get(
+            event
+        ), f"event {event} not in prompt_meta_data"
+        prompt_item = self.prompt_meta_data["event"][event]
+        return prompt_item
+
 
 def make_meta_ret(
     end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs
