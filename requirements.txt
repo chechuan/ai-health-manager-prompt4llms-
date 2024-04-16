@@ -1,6 +1,8 @@
-flask
+fastapi
+uvicorn
+pydantic
+pyyaml
 gevent
-flask_cors
 openai
 langchain==0.0.330
 langchain_community

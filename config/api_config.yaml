@@ -3,8 +3,6 @@ local:
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    # llm: http://10.228.67.99:26921
-    # llm_token: sk-laikang-aihealthmanager-local
     model_supply:
         default: vllm
         fschat:
@@ -25,21 +23,19 @@ dev:
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    # llm: http://10.228.67.99:26921
-    # llm_token: sk-laikang-aihealthmanager-dev
     model_supply:
         default: vllm
         fschat:
             api_base: http://10.228.67.99:26921
-            api_key: sk-laikang-aihealthmanager-local
+            api_key: sk-laikang-aihealthmanager-dev
             support_models:
                 - Qwen-14B-Chat
                 - Qwen-72B-Chat
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
-            api_base: http://10.228.67.99:26920
-            api_key: sk-laikang-aihealthmanager-local
+            api_base: http://10.228.67.99:26928
+            api_key: sk-DiRD8g7WtTGSleHyB7Cc11E7D7D54455AdF7D57505F6C368
             support_models:
                 - Qwen1.5-32B-Chat
 test:

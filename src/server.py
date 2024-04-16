@@ -19,8 +19,6 @@ from fastapi import FastAPI, Response, Request, APIRouter
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 
-# from flask import Flask, Response, Request, request
-
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
