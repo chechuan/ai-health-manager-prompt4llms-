@@ -111,9 +111,10 @@ class InitAllResource:
         for supplier_name, supplier_config in self.api_config["model_supply"].items():
             if not isinstance(supplier_config, dict):
                 continue
-            openai.base_url = supplier_config["api_base"] + "/v1"
-            openai.api_key = supplier_config.get("api_key", "EMPTY")
-            client = openai.OpenAI()
+            client = openai.OpenAI(
+                base_url=supplier_config["api_base"] + "/v1",
+                api_key=supplier_config.get("api_key"),
+            )
             models = ",".join([i.id for i in client.models.list().data])
             logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
         default_supplier = self.api_config["model_supply"].get("default", "fschat")
