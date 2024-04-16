@@ -13,7 +13,6 @@ from os.path import basename
 from pathlib import Path
 
 import openai
-from pikepdf import ContentStreamInlineImage
 from requests import Session
 
 from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
