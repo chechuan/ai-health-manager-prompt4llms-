@@ -52,17 +52,17 @@ class UserProfileAge(BaseModel):
 
 
 class UserProfileGender(BaseModel):
-    gender: Literal["male", "female"] = Field(description="性别")
+    gender: Literal["男", "女"] = Field(description="性别")
     desc: str = "性别"
 
 
 class UserProfileHeight(BaseModel):
-    height: float = Field(ge=0.1, le=3)  # 身高
+    height: str = None  # 身高
     desc: str = "身高"
 
 
 class UserProfileWeight(BaseModel):
-    weight: float = Field(ge=1, le=300)  # 体重
+    weight: str = None  # 体重
     desc: str = "体重"
 
 
