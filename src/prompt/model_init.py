@@ -120,6 +120,16 @@ def __callLLM(
     return ret
 
 
+def pre_process_model_args(**kwargs) -> Dict:
+    if kwargs.get("repetition_penalty"):
+        del kwargs["repetition_penalty"]
+    if kwargs.get("do_sample"):
+        del kwargs["do_sample"]
+    if kwargs.get("top_k"):
+        del kwargs["top_k"]
+    return kwargs
+
+
 def callLLM(
     query: str = "",
     history: List[Dict] = [],
@@ -153,13 +163,7 @@ def callLLM(
         stream (bool, optional, defaults to False):
             Whether to stream the response or return the full response at once.
     """
-    if kwargs.get("repetition_penalty"):
-        del kwargs["repetition_penalty"]
-    if kwargs.get("do_sample"):
-        del kwargs["do_sample"]
-    if kwargs.get("top_k"):
-        del kwargs["top_k"]
-    # TODO: set default model for change global model
+    kwargs = pre_process_model_args(**kwargs)
     client = openai.OpenAI()
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
     if model != default_model:
@@ -176,13 +180,10 @@ def callLLM(
     kwds = {
         "model": model,
         "top_p": top_p,
-        # "top_k": top_k,
         "temperature": temperature,
         "max_tokens": max_tokens,
-        # "do_sample": do_sample,
         "stop": stop,
         "stream": stream,
-        # "repetition_penalty": repetition_penalty,
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
@@ -255,7 +256,7 @@ async def acallLLM(
         stream (bool, optional, defaults to False):
             Whether to stream the response or return the full response at once.
     """
-    # TODO: set default model for change global model
+    kwargs = pre_process_model_args(**kwargs)
     aclient = openai.AsyncOpenAI()
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
     if model != default_model:
