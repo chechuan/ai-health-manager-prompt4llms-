@@ -8,18 +8,15 @@
 import json
 import re
 import sys
-from textwrap import indent
 import json5
 from os.path import basename
 from pathlib import Path
 
 import openai
 from requests import Session
-from sympy import content
 
 from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
 
-# sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
 sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
 from typing import Dict, Generator, List, Literal, Union
@@ -2110,7 +2107,7 @@ class expertModel:
             "{diagnosis}\n"
             "# 任务描述\n"
             "请你扮演一位经验丰富的中医健康管理师，分析客户病史信息，提供给我该客户适合的中医调理原则，原则包括针灸推拿、药膳调理、茶饮调养三个方面\n"
-            "## 输出内容要求\n" 
+            "## 输出内容要求\n"
             "1. 每个原则内容不要太长，应当简明扼要\n"
             "2. 你给的建议应当是对于用户描述病情或者症状有帮助的\n"
             "## 示例\n"
