@@ -14,10 +14,14 @@ local:
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
-            api_base: http://10.228.67.99:26920
-            api_key: sk-laikang-aihealthmanager-local
+            api_base: http://10.228.67.99:26928
+            api_key: sk-0afNS66vdMwkraLu4d9e24F913804aFeBbCd8a355035BbC3
             support_models:
+                - Baichuan2-7B-Chat
                 - Qwen1.5-32B-Chat
+                - Qwen1.5-72B-Chat
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -37,6 +41,7 @@ dev:
             api_base: http://10.228.67.99:26928
             api_key: sk-DiRD8g7WtTGSleHyB7Cc11E7D7D54455AdF7D57505F6C368
             support_models:
+                - Baichuan2-7B-Chat
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat

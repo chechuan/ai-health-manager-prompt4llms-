@@ -161,6 +161,7 @@ def callLLM(
     """
     # TODO: set default model for change global model
     client = openai.OpenAI()
+    logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
     if model != default_model:
         logger.warning(
             f"There will change Model: {model} to {default_model}."
