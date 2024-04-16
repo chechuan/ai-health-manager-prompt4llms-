@@ -7,8 +7,6 @@
 """
 
 from typing import Dict, List, Literal, Optional, Tuple, Union
-
-from httpx import options
 from pydantic import BaseModel, Field
 
 
@@ -95,6 +93,20 @@ USER_PROFILE_KEY_MAP = {
     "usage": "用法",
     "precautions": "注意事项",
     "contraindication": "禁忌",
+    "main_diagnosis_of_western_medicine": "西医主要诊断",
+    "secondary_diagnosis_of_western_medicine": "西医次要诊断",
+    "traditional_chinese_medicine_diagnosis": "中医诊断",
+    "traditional_chinese_medicine_syndrome_types": "中医证型",
+    "body_temperature": "体温(摄氏度)",
+    "respiratory_rate": "呼吸频率(次/分)",
+    "pulse_rate": "脉搏(次/分)",
+    "diastolic_blood_pressure": "舒张压(mmHg)",
+    "systolic_blood_pressure": "收缩压(mmHg)",
+    "chief_complaint": "主诉",
+    "history_of_present_illness": "现病史",
+    "past_history_of_present_illness": "既往史",
+    "specialist_check": "专科检查",
+    "disposal_plan": "处置方案",
 }
 
 
@@ -115,6 +127,20 @@ class UserProfile(BaseModel):
     disease_history: Optional[UserProfileDiseaseHistory] = None  # 疾病史
     allergic_history: Optional[UserProfileAllergicHistory] = None  # 过敏史
     surgery_history: Optional[UserProfileSurgeryHistory] = None  # 手术史
+    main_diagnosis_of_western_medicine: Optional[str] = None  # 西医主要诊断
+    secondary_diagnosis_of_western_medicine: Optional[str] = None  # 西医次要诊断
+    traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
+    traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
+    body_temperature: Optional[str] = None  # 体温(摄氏度)
+    respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
+    pulse_rate: Optional[str] = None  # 脉搏(次/分)
+    diastolic_blood_pressure: Optional[Union[float, int]] = None  # 舒张压(mmHg)
+    systolic_blood_pressure: Optional[Union[float, int]] = None  # 收缩压(mmHg)
+    chief_complaint: Optional[str] = None  # 主诉
+    history_of_present_illness: Optional[str] = None  # 现病史
+    past_history_of_present_illness: Optional[str] = None  # 既往史
+    specialist_check: Optional[str] = None  # 专科检查
+    disposal_plan: Optional[str] = None  # 处置方案
 
 
 class AigcFunctionsRequest(BaseModel):
