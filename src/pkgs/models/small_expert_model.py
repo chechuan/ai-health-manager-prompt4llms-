@@ -13,6 +13,7 @@ from os.path import basename
 from pathlib import Path
 
 import openai
+from pikepdf import ContentStreamInlineImage
 from requests import Session
 
 from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
@@ -1829,146 +1830,54 @@ class expertModel:
     def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
         _event = "问诊摘要"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一个经验丰富的医生,请你根据患者与医生的问诊会话记录，总结生成针对会话的问诊摘要。\n"
-            "# 输出要求\n"
-            "1. 通过患者的患者画像以及患者与医生的会话信息进行提炼患者的关键信息，例如患者主诉、现病史、诊断、辅助检查等结果。\n"
-            "2. 如果会话中没有上述信息，则不需要展示，只根据实际情况总结输出包含的内容。\n"
-            "3. 不需要额外拓展没有的诊断信息以及治疗建议。\n"
-            "4. 整体字数尽量在300字以内。\n"
-            "5. 输出格式参考：\n"
-            "主诉：\n"
-            "现病史：\n"
-            "......\n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 会话记录\n"
-            "{messages}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(user_profile=user_profile, messages=messages)
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(model=model, query=prompt, temperature=0.7, top_p=0.8)
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
+        model_args = {"temperature": 0.7, "top_p": 0.8}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
         return content
 
     def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
         _event = "诊断"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一个经验丰富的医生,请你根据患者与医生的问诊会话记录，判断医生是否对患者的情况做出了诊断。\n"
-            "# 输出要求\n"
-            "1.如果做出了诊断，需要输出诊断结果。直接输出疾病名称。\n"
-            "2.如果没有做出诊断，你只需要输出:`无`\n"
-            "# 患者画像\n"
-            "{user_profile}\n"
-            "# 会话记录\n"
-            "{messages}\n"
-            "Begins!"
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
+        model_args = {"temperature": 0.7, "top_p": 0.8, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
-        logger.warning(
-            f"AIGC Functions {_event} 1 prompt_template: \n{prompt_template}"
-        )
-        model = self.gsr.get_model(
-            "aigc_functions_diagnosis_assert_is_provided_diagnosis"
-        )
-        prompt = prompt_template.format(user_profile=user_profile, messages=messages)
-        logger.debug(f"AIGC Functions {_event} 1 LLM Input: \n{prompt}")
-        content = callLLM(
-            query=prompt,
-            model=model,
-            temperature=0.7,
-            top_p=0.8,
-            repetition_penalty=1.0,
-        )
-        logger.info(f"AIGC Functions {_event} 1 LLM Output: \n{content}")
 
         if content == "无":
-            model = self.gsr.get_model("aigc_functions_diagnosis")
-            prompt_template = (
-                "# 会话记录\n"
-                "{messages}\n"
-                "# 患者画像\n"
-                "{user_profile}\n"
-                "# 任务描述\n"
-                "你是一个经验丰富的医生,请你根据患者与医生的历史会话信息、患者画像，协助我进行疾病的诊断，输出若干个患者可能的最初诊断\n\n"
-                "# 输出要求\n"
-                "输出患者最有可能患有的1个疾病,不需要额外的其他信息\n"
-                "Begins!"
+            kwargs["intentCode"] = "aigc_functions_diagnosis_result"
+            model_args = {"temperature": 0, "top_p": 0.8, "repetition_penalty": 1.0}
+            content: str = self.aigc_functions_general(
+                _event, prompt_vars, model_args, **kwargs
             )
-            logger.warning(
-                f"AIGC Functions {_event} 2 prompt_template: \n{prompt_template}"
-            )
-            prompt = prompt_template.format(
-                user_profile=user_profile, messages=messages
-            )
-            logger.debug(f"AIGC Functions {_event} 2 LLM Input: \n{prompt}")
-            content = callLLM(
-                query=prompt,
-                model=model,
-                temperature=0,
-                top_p=0.8,
-                repetition_penalty=1.0,
-            )
-            logger.info(f"AIGC Functions {_event} 2 LLM Output: \n{content}")
         return content
 
     def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
         """用药建议"""
         _event = "用药建议"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一个经验丰富的医生,请你根据患者与医生的问诊会话记录、诊断，给出适合患者的用药建议，输出结构化表格\n"
-            "# 输出要求\n"
-            "1.用药建议包含：药物名称、用量、频次、用法、注意事项、禁忌\n"
-            "2.按List[Dict]的格式输出,Dict字段包含`drug_name`,`dosage`,`frequency`,`usage`,`precautions`,`contraindication`\n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(
-            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(
-            model=model, query=prompt, temperature=0, top_p=1, repetition_penalty=1.0
-        )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         try:
             content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
             result = dumpJS(json5.loads(content))
@@ -1980,201 +1889,75 @@ class expertModel:
     def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
         _event = "饮食原则"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一位经验丰富的智能营养师，请你根据输出要求、已知信息，为患者输出适合的饮食调理原则。\n"
-            "# 输出要求\n"
-            "1. 根据已知信息如患者画像、患者和医生的会话记录信息、患者的诊断，为我输出饮食调理原则，"
-            "包含饮食调理的目标是什么，以及推荐的饮食方案的名称和简单介绍，总字数不超过100字。 \n"
-            "2. 不要重复说明患者的信息，饮食方案的名称字数在10字以内，要符合营养学。 \n"
-            "3. 你可以从以下饮食方案名称中匹配一个合适的，你也可以结合已知信息，根据自身经验输出一个科学合理的。"
-            "如： 平衡膳食模式、限制能量平衡膳食、高蛋白质膳食、高蛋白低脂肪膳食、低GI均衡膳食、限制嘌呤均衡膳食。 \n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(
-            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(
-            model=model, query=prompt, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
     def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
         _event = "运动原则"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一位经验丰富的智能运动师，请你根据输出要求、收集到的患者信息，为患者制定合理的运动方案原则。\n"
-            "# 输出要求\n"
-            "1. 根据患者画像、患者与医生的会话记录、患者的诊断，综合分析告知患者适合的运动方案原则。"
-            "不要重复说明患者的信息，重点原则字数在100字以内，要通俗易懂，符合运动学观点。\n"
-            "2. 如果患者出现了不适合运动的情况，也要进行提示。 \n"
-            "3. 方案原则尽量包含推荐的运动类型、运动项目、运动时间、注意事项、运动的最大心率、最佳的运动心率等信息。\n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(
-            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(
-            model=model, query=prompt, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
     def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
         _event = "情志原则"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一位经验丰富的情志调理师，请你根据输出要求、患者画像、医生与患者的会话记录、患者诊断，为患者输出适合的情志调理的方案原则。\n\n"
-            "# 输出要求\n"
-            "1. 输出内容为情志调理原则，目的是来促进患者的整体健康状态，总字数不超过100字。\n"
-            "2. 输出内容可以包含一些具体的调理方法，如冥想、音乐、睡眠调整的方法等。\n"
-            "3. 不要包含饮食建议。\n"
-            "4. 不要重复说明患者的信息。\n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
-        user_profile = self.__compose_user_msg__(
-            "user_profile",
-            user_profile=kwargs["user_profile"],
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(
-            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(
-            model=model, query=prompt, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
     def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "# 任务描述\n"
-            "请你扮演一位经验丰富的中医健康管理师，分析客户病史信息，提供给我该客户适合的中医调理原则，原则包括针灸推拿、药膳调理、茶饮调养三个方面\n"
-            "## 输出内容要求\n"
-            "1. 每个原则内容不要太长，应当简明扼要\n"
-            "2. 你给的建议应当是对于用户描述病情或者症状有帮助的\n"
-            "## 示例\n"
-            "针灸推拿：以调和气血、疏通经络为主，选择能够活血化瘀、调节脏腑功能的穴位进行针刺治疗，"
-            "药膳调理：侧重选用具有活血化瘀、健脾益气作用的食物或药物入膳，如丹参、田七、桃仁、红花等，搭配营养富的食材制作药膳，"
-            "旨在通过日常饮食调理，逐步改善患者的瘀血内停状况，同时增强体质，提高机体免疫力。\n"
-            "茶饮调养：推荐饮用具有活血化瘀、清热解毒、疏肝理气等功能的草药茶，如三七花茶、山楂玫瑰茶等，"
-            "作为辅助疗法，日积月累地调整体内气血状态，从而缓解瘀血内停的症状。\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt = prompt_template.format(
-            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
-        )
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content: str = callLLM(
-            model=model,
-            query=prompt,
-            temperature=0,
-            top_p=1,
-            repetition_penalty=1.0,
-        )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        content: str = self.aigc_functions_general(_event, prompt_vars, **kwargs)
         return content
 
     def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        # prompt_template = self.gsr.get_event_item(event, "")
-        prompt_template = (
-            "# 任务描述\n"
-            "你是一位经验丰富的医师，请你根据输出要求、患者画像、医生与患者的会话记录、患者诊断、三济康养方案内容，分析为患者输三济康养方案的原因。\n\n"
-            "# 输出要求\n"
-            "1. 重点结合医生与患者的对话内容、患者的诊断、三济康养方案，综合分析原因，输出总字数不超过100字。\n"
-            "2. 不要包含三济方案的具体内容。\n"
-            "3. 不要重复说明患者的信息，只说明原因。\n"
-            "# 患者用户画像\n"
-            "{user_profile}\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
-            "# 三济方案\n"
-            "## 用药\n"
-            "{drug_plan}\n"
-            "## 饮食原则\n"
-            "{food_principle}\n"
-            "## 运动原则\n"
-            "{sport_principle}\n"
-            "## 情志调理原则\n"
-            "{mental_principle}\n"
-            "## 中医经络调理原则\n"
-            "{chinese_therapy}\n"
-            "Begins!"
-        )
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
-
         user_profile = self.__compose_user_msg__(
             "user_profile",
             user_profile=kwargs["user_profile"],
@@ -2183,26 +1966,47 @@ class expertModel:
         drug_plan = self.__compose_user_msg__(
             "drug_plan", drug_plan=kwargs["drug_plan"]
         )
-        prompt = prompt_template.format(
-            user_profile=user_profile,
-            messages=messages,
-            drug_plan=drug_plan,
-            diagnosis=kwargs["diagnosis"],
-            food_principle=kwargs.get("food_principle", ""),
-            sport_principle=kwargs.get("sport_principle", ""),
-            mental_principle=kwargs["mental_principle"],
-            chinese_therapy=kwargs["chinese_therapy"],
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "drug_plan": drug_plan,
+            "diagnosis": kwargs["diagnosis"],
+            "food_principle": kwargs.get("food_principle", ""),
+            "sport_principle": kwargs.get("sport_principle", ""),
+            "mental_principle": kwargs["mental_principle"],
+            "chinese_therapy": kwargs["chinese_therapy"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = self.aigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
         )
+        return content
+
+    def aigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: dict = {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        },
+        **kwargs,
+    ):
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        prompt_template: str = self.gsr.get_event_item(event)["description"]
+        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
+        prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content = callLLM(
-            model=model, query=prompt, temperature=0.7, top_p=1, repetition_penalty=1.0
+        content: str = callLLM(
+            model=model,
+            query=prompt,
+            **model_args,
         )
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
-
-    def aigc_functions_general(self, **kwargs):
-        """通用生成"""
-        ...
 
     async def call_function(self, **kwargs) -> Union[str, Generator]:
         """调用函数

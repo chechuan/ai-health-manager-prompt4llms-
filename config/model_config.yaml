@@ -29,6 +29,7 @@ local:
         - aigc_functions_mental_principle # 情志原则
         - aigc_functions_reason_for_care_plan # 康养方案推荐原因
         - aigc_functions_chinese_therapy # 中医调理
+        - aigc_functions_diagnosis_result # 诊断-给出结论
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -60,6 +61,7 @@ dev:
         - aigc_functions_mental_principle # 情志原则
         - aigc_functions_reason_for_care_plan # 康养方案推荐原因
         - aigc_functions_chinese_therapy # 中医调理
+        - aigc_functions_diagnosis_result # 诊断-给出结论
 test:
     Qwen-14B-Chat:
         - general_react_model # react模型
