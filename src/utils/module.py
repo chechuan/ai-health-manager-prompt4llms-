@@ -809,8 +809,8 @@ def curr_weekday():
     return today
 
 
-def dumpJS(obj, ensure_ascii=False):
-    return json.dumps(obj, ensure_ascii=ensure_ascii)
+def dumpJS(obj, ensure_ascii=False, **kwargs):
+    return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
 
 
 def format_sse_chat_complete(data: str, event=None) -> str:

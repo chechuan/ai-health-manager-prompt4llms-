@@ -8,6 +8,7 @@
 import json
 import re
 import sys
+from textwrap import indent
 import json5
 from os.path import basename
 from pathlib import Path
@@ -18,7 +19,8 @@ from sympy import content
 
 from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
 
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+# sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
 from typing import Dict, Generator, List, Literal, Union
 
@@ -2093,6 +2095,54 @@ class expertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
+    def aigc_functions_chinese_therapy(self, **kwargs):
+        """中医调理"""
+        _event = "中医调理"
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        # prompt_template = self.gsr.get_event_item(event, "")
+        prompt_template = (
+            "你是一名经验丰富的中医健康管理师，请你协助我对收集的客户病史信息进行分析，提供给我该客户适合的中医调理原则，"
+            "原则包括针灸推拿、药膳调理、茶饮调养三个方面，下面是对分析流程的描述\n\n"
+            "1.在对话中我会提供客户的病史信息，请你根据自身经验进行分析\n"
+            "2.结合获取到的信息给出中医调理原则,例如:\n"
+            "针灸推拿：以调和气血、疏通经络为主，选择能够活血化瘀、调节脏腑功能的穴位进行针刺治疗，"
+            "药膳调理：侧重选用具有活血化瘀、健脾益气作用的食物或药物入膳，如丹参、田七、桃仁、红花等，搭配营养富的食材制作药膳，"
+            "旨在通过日常饮食调理，逐步改善患者的瘀血内停状况，同时增强体质，提高机体免疫力。\n"
+            "茶饮调养：推荐饮用具有活血化瘀、清热解毒、疏肝理气等功能的草药茶，如三七花茶、山楂玫瑰茶等，"
+            "作为辅助疗法，日积月累地调整体内气血状态，从而缓解瘀血内停的症状。\n"
+            "# 患者与医生的会话信息\n"
+            "{messages}\n"
+            "# 诊断\n"
+            "{diagnosis}\n"
+            "Begins!"
+        )
+        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
+
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt = prompt_template.format(
+            messages=messages, diagnosis=kwargs["diagnosis"]
+        )
+        history: List[Dict] = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_profile},
+        ]
+        logger.debug(
+            f"AIGC Functions {_event} LLM Input: \n{dumpJS(history, indent=4)}"
+        )
+        content: str = callLLM(
+            model=model,
+            history=history,
+            temperature=0.7,
+            top_p=1,
+            repetition_penalty=1.0,
+        )
+        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+
     def aigc_functions_reason_for_care_plan(self, **kwargs):
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"
@@ -2151,10 +2201,6 @@ class expertModel:
         )
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
-
-    def aigc_functions_chinese_therapy(self, **kwargs):
-        """中医调理"""
-        ...
 
     def aigc_functions_general(self, **kwargs):
         """通用生成"""
