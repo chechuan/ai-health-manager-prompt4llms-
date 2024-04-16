@@ -2102,19 +2102,23 @@ class expertModel:
         model = self.gsr.get_model(event)
         # prompt_template = self.gsr.get_event_item(event, "")
         prompt_template = (
-            "你是一名经验丰富的中医健康管理师，请你协助我对收集的客户病史信息进行分析，提供给我该客户适合的中医调理原则，"
-            "原则包括针灸推拿、药膳调理、茶饮调养三个方面，下面是对分析流程的描述\n\n"
-            "1.在对话中我会提供客户的病史信息，请你根据自身经验进行分析\n"
-            "2.结合获取到的信息给出中医调理原则,例如:\n"
+            "# 患者用户画像\n"
+            "{user_profile}\n"
+            "# 患者与医生的会话信息\n"
+            "{messages}\n"
+            "# 诊断\n"
+            "{diagnosis}\n"
+            "# 任务描述\n"
+            "请你扮演一位经验丰富的中医健康管理师，分析客户病史信息，提供给我该客户适合的中医调理原则，原则包括针灸推拿、药膳调理、茶饮调养三个方面\n"
+            "## 输出内容要求\n" 
+            "1. 每个原则内容不要太长，应当简明扼要\n"
+            "2. 你给的建议应当是对于用户描述病情或者症状有帮助的\n"
+            "## 示例\n"
             "针灸推拿：以调和气血、疏通经络为主，选择能够活血化瘀、调节脏腑功能的穴位进行针刺治疗，"
             "药膳调理：侧重选用具有活血化瘀、健脾益气作用的食物或药物入膳，如丹参、田七、桃仁、红花等，搭配营养富的食材制作药膳，"
             "旨在通过日常饮食调理，逐步改善患者的瘀血内停状况，同时增强体质，提高机体免疫力。\n"
             "茶饮调养：推荐饮用具有活血化瘀、清热解毒、疏肝理气等功能的草药茶，如三七花茶、山楂玫瑰茶等，"
             "作为辅助疗法，日积月累地调整体内气血状态，从而缓解瘀血内停的症状。\n"
-            "# 患者与医生的会话信息\n"
-            "{messages}\n"
-            "# 诊断\n"
-            "{diagnosis}\n"
             "Begins!"
         )
         logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
@@ -2124,19 +2128,13 @@ class expertModel:
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt = prompt_template.format(
-            messages=messages, diagnosis=kwargs["diagnosis"]
+            user_profile=user_profile, messages=messages, diagnosis=kwargs["diagnosis"]
         )
-        history: List[Dict] = [
-            {"role": "system", "content": prompt},
-            {"role": "user", "content": user_profile},
-        ]
-        logger.debug(
-            f"AIGC Functions {_event} LLM Input: \n{dumpJS(history, indent=4)}"
-        )
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: str = callLLM(
             model=model,
-            history=history,
-            temperature=0.7,
+            query=prompt,
+            temperature=0,
             top_p=1,
             repetition_penalty=1.0,
         )
