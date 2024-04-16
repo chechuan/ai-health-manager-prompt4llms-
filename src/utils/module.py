@@ -92,6 +92,8 @@ class InitAllResource:
         logger.info(f"Initialize args: {self.args}")
 
         self.session = requests.Session()
+        self.client = openai.OpenAI()
+        self.aclient = openai.AsyncOpenAI()
 
         self.cache_dir = Path(CACHE_DIR)
         if not self.cache_dir.exists():
@@ -109,12 +111,13 @@ class InitAllResource:
         for supplier_name, supplier_config in self.api_config["model_supply"].items():
             if not isinstance(supplier_config, dict):
                 continue
-            openai.api_base = supplier_config["api_base"] + "/v1"
+            openai.base_url = supplier_config["api_base"] + "/v1"
             openai.api_key = supplier_config.get("api_key", "EMPTY")
-            models = ",".join([i["id"] for i in openai.Model.list()["data"]])
+            client = openai.OpenAI()
+            models = ",".join([i.id for i in client.models.list().data])
             logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
         default_supplier = self.api_config["model_supply"].get("default", "fschat")
-        openai.api_base = (
+        openai.base_url = (
             self.api_config["model_supply"][default_supplier]["api_base"] + "/v1"
         )
         openai.api_key = self.api_config["model_supply"][default_supplier].get(
@@ -825,24 +828,23 @@ def accept_stream_response(response, verbose=True) -> str:
     content = ""
     tst = time.time()
     for chunk in response:
-        if chunk.get("object") == "text_completion":
-            if hasattr(chunk["choices"][0], "text"):
-                chunk_text = chunk["choices"][0]["text"]
+        if chunk.object == "text_completion":
+            if hasattr(chunk.choices[0], "text"):
+                chunk_text = chunk.choices[0].text
                 content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
         else:
-            if hasattr(chunk["choices"][0]["delta"], "content"):
-                chunk_text = chunk["choices"][0]["delta"]["content"]
-                content += chunk_text
+            if hasattr(chunk.choices[0].delta, "content"):
+                chunk_text = chunk.choices[0].delta.content
+                if chunk_text:
+                    content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
     if verbose:
         print()
     t_cost = round(time.time() - tst, 2)
-    logger.debug(
-        f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s"
-    )
+    logger.debug(f"Model {chunk.model}, Generate {len(content)} words, Cost {t_cost}s")
     return content
 
 

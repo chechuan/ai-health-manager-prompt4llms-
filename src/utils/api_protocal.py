@@ -125,7 +125,7 @@ class AigcFunctionsRequest(BaseModel):
     user_profile: Optional[UserProfile]
     messages: Optional[List[ChatMessage]] = []
     stream: Optional[bool] = False
-    durg_plan: Optional[List[DrugPlanItem]] = None  # 药方
+    durg_plan: List[DrugPlanItem] = None  # 药方
     diagnosis: Optional[str] = None  # 诊断
     food_principle: Optional[str] = None  # 饮食原则
     sport_principle: Optional[str] = None  # 运动原则

@@ -48,6 +48,7 @@ class expertModel:
     }
     session = Session()
     ocr = RapidOCR()
+    client = openai.OpenAI()
 
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
@@ -1341,7 +1342,7 @@ class expertModel:
 
     def rec_diet_reunion_meals_restaurant_selection(
         self, history=[], backend_history: List = [], **kwds
-    ) -> str:
+    ) -> Generator:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -1422,7 +1423,8 @@ class expertModel:
                 query += user_input
             messages.append({"role": "user", "content": query})
             logger.debug(f"共策 LLM Input: {json.dumps(messages, ensure_ascii=False)}")
-            response = openai.ChatCompletion.create(
+
+            response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=0.9,
@@ -1611,7 +1613,7 @@ class expertModel:
         model = self.gsr.get_model("aigc_functions_report_interpretation_text_classify")
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.7,
@@ -1968,10 +1970,10 @@ class expertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         try:
             content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
-            result = json5.loads(content)
+            result = dumpJS(json5.loads(content))
         except Exception as e:
             logger.exception(f"AIGC Functions {_event} json5.loads error: {e}")
-            result = []
+            result = dumpJS([])
         return result
 
     def aigc_functions_food_principle(self, **kwargs) -> str:
@@ -2092,7 +2094,7 @@ class expertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
-    def aigc_functions_chinese_therapy(self, **kwargs):
+    def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
         event = kwargs.get("intentCode")
@@ -2138,7 +2140,7 @@ class expertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
-    def aigc_functions_reason_for_care_plan(self, **kwargs):
+    def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"
         event = kwargs.get("intentCode")
