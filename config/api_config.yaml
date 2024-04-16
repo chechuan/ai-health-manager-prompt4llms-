@@ -5,14 +5,14 @@ local:
     langchain: http://10.228.67.99:26924
     model_supply:
         default: vllm
-        fschat:
-            api_base: http://10.228.67.99:26921
-            api_key: sk-laikang-aihealthmanager-local
-            support_models:
-                - Qwen-14B-Chat
-                - Qwen-72B-Chat
-                - Baichuan2-7B-Chat
-                - Yi-34B-Chat
+        # fschat:
+        #     api_base: http://10.228.67.99:26921
+        #     api_key: sk-laikang-aihealthmanager-local
+        #     support_models:
+        #         - Qwen-14B-Chat
+        #         - Qwen-72B-Chat
+        #         - Baichuan2-7B-Chat
+        #         - Yi-34B-Chat
         vllm:
             api_base: http://10.228.67.99:26928
             api_key: sk-0afNS66vdMwkraLu4d9e24F913804aFeBbCd8a355035BbC3

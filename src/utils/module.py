@@ -8,6 +8,7 @@ import argparse
 import functools
 import json
 import pickle
+import os
 import sys
 import time
 from base64 import encode
@@ -117,13 +118,13 @@ class InitAllResource:
             )
             models = ",".join([i.id for i in client.models.list().data])
             logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
-        default_supplier = self.api_config["model_supply"].get("default", "fschat")
-        openai.base_url = (
+        default_supplier = self.api_config["model_supply"].get("default", "vllm")
+        os.environ["OPENAI_BASE_URL"] = (
             self.api_config["model_supply"][default_supplier]["api_base"] + "/v1"
         )
-        openai.api_key = self.api_config["model_supply"][default_supplier].get(
-            "api_key", "EMPTY"
-        )
+        os.environ["OPENAI_API_KEY"] = self.api_config["model_supply"][
+            default_supplier
+        ]["api_key"]
         # openai.api_base = self.api_config["llm"] + "/v1"
         # openai.api_key = self.api_config["llm_token"]
         logger.info(f"Set default supplier [{default_supplier}]")
