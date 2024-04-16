@@ -1675,7 +1675,7 @@ class expertModel:
                 else:
                     content += f"{role_map[message['role']]}: {message['content']}\n"
         elif mode == "drug_plan":
-            for item in loadJS(drug_plan):
+            for item in json5.loads(drug_plan):
                 content += (
                     ", ".join(
                         [f"{USER_PROFILE_KEY_MAP.get(k)}: {v}" for k, v in item.items()]
