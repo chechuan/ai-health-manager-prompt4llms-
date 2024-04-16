@@ -37,6 +37,7 @@ from src.utils.module import (
     compute_blood_pressure_level,
     dumpJS,
     get_intent,
+    loadJS,
 )
 
 
@@ -1660,7 +1661,7 @@ class expertModel:
         mode: Literal["user_profile", "messages", "drug_plan"],
         user_profile: UserProfile = None,
         messages: List[ChatMessage] = [],
-        drug_plan: List[DrugPlanItem] = [],
+        drug_plan: "List[DrugPlanItem]" = "[]",
     ) -> str:
         content = ""
         if mode == "user_profile":
@@ -1674,7 +1675,7 @@ class expertModel:
                 else:
                     content += f"{role_map[message['role']]}: {message['content']}\n"
         elif mode == "drug_plan":
-            for item in drug_plan:
+            for item in loadJS(drug_plan):
                 content += (
                     ", ".join(
                         [f"{USER_PROFILE_KEY_MAP.get(k)}: {v}" for k, v in item.items()]
