@@ -1431,8 +1431,6 @@ class expertModel:
                 messages=messages,
                 temperature=0.9,
                 top_p=0.8,
-                top_k=-1,
-                repetition_penalty=1.1,
                 stream=True,
             )
             ret_content = ""

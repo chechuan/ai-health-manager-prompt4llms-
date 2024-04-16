@@ -178,7 +178,6 @@ class CustomChatAuxiliary(CustomChatModel):
             top_p=0.8,
             n=1,
             presence_penalty=0,
-            repetition_penalty=1,
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
@@ -205,7 +204,6 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                repetition_penalty=1,
                 stop=["\nObservation:", "问诊Finished!"],
                 stream=False,
             )

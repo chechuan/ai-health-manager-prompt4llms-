@@ -153,6 +153,12 @@ def callLLM(
         stream (bool, optional, defaults to False):
             Whether to stream the response or return the full response at once.
     """
+    if kwargs.get("repetition_penalty"):
+        del kwargs["repetition_penalty"]
+    if kwargs.get("do_sample"):
+        del kwargs["do_sample"]
+    if kwargs.get("top_k"):
+        del kwargs["top_k"]
     # TODO: set default model for change global model
     client = openai.OpenAI()
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
