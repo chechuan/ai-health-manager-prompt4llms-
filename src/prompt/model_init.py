@@ -124,12 +124,9 @@ def callLLM(
     query: str = "",
     history: List[Dict] = [],
     temperature=0.5,
-    top_k=-1,
     top_p=0.5,
-    repetition_penalty=1.1,
     max_tokens=512,
     model: str = "",
-    do_sample=True,
     stop=[],
     stream=False,
     **kwargs,
@@ -144,20 +141,17 @@ def callLLM(
             If query, history will append {{"role":"user", "content": query}}
         history (`array[Dict]`, [], Required):
             A list of messages comprising the conversation so far.
-        top_k (`float`):
-            Adding some randomness helps make output text more natural.
-            In top-k decoding, we first shortlist three tokens then sample one of them considering their likelihood scores.
         top_p (`number` or `null` Optional Defaults to 0.5):
             An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
             So 0.1 means only the tokens comprising the top 10% probability mass are considered.
             We generally recommend altering this or temperature but not both.
-        repetition_penalty (`float`):
-            The parameter for repetition penalty. 1.0 means no penalty.
         temperature (number or null Optional Defaults to 0.7):
             What sampling temperature to use, between 0 and 2.
             Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
-        do_sample (bool, optional, defaults to True)
-            Whether or not to use sampling ; use greedy decoding otherwise.
+        stop (List[str], optional, defaults to []):
+            A list of stop words to stop the chat.
+        stream (bool, optional, defaults to False):
+            Whether to stream the response or return the full response at once.
     """
     # TODO: set default model for change global model
     client = openai.OpenAI()
@@ -208,6 +202,98 @@ def callLLM(
         kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
         completion = client.chat.completions.create(**kwds)
+        if stream:
+            return completion
+        ret = completion["choices"][0]["message"]["content"].strip()
+    time_cost = round(time.time() - t_st, 1)
+    logger.info(
+        f"Model {model} generate costs summary: "
+        + f"prompt_tokens:{completion.usage.prompt_tokens}, "
+        + f"completion_tokens:{completion.usage.completion_tokens}, "
+        + f"total_tokens:{completion.usage.total_tokens}, "
+        f"cost: {time_cost}s"
+    )
+    return ret
+
+
+async def acallLLM(
+    query: str = "",
+    history: List[Dict] = [],
+    temperature=0.5,
+    top_p=0.5,
+    max_tokens=512,
+    model: str = "",
+    stop=[],
+    stream=False,
+    **kwargs,
+):
+    """chat with qwen api which is serve at http://10.228.67.99:26921
+
+    List options
+
+    Args:
+        query (string or null, Required):
+            Can be None or emtpy string.
+            If query, history will append {{"role":"user", "content": query}}
+        history (`array[Dict]`, [], Required):
+            A list of messages comprising the conversation so far.
+        top_p (`number` or `null` Optional Defaults to 0.5):
+            An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
+            So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+            We generally recommend altering this or temperature but not both.
+        temperature (number or null Optional Defaults to 0.7):
+            What sampling temperature to use, between 0 and 2.
+            Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+        stop (List[str], optional, defaults to []):
+            A list of stop words to stop the chat.
+        stream (bool, optional, defaults to False):
+            Whether to stream the response or return the full response at once.
+    """
+    # TODO: set default model for change global model
+    aclient = openai.AsyncOpenAI()
+    # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
+    if model != default_model:
+        logger.warning(
+            f"There will change Model: {model} to {default_model}."
+            + "Please manually check your code use config file to manage which model to use."
+        )
+    if stream and stop:
+        logger.warning(
+            "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
+        )
+    model = default_model
+    t_st = time.time()
+    kwds = {
+        "model": model,
+        "top_p": top_p,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stop": stop,
+        "stream": stream,
+        **kwargs,
+    }
+    logger.trace(f"callLLM with {dumpJS(kwds)}")
+    if not history:
+        if "qwen1.5" in model.lower():
+            query = apply_chat_template(query)
+        kwds["prompt"] = query
+        completion = await aclient.completions.create(**kwds)
+        if stream:
+            return completion
+        ret = completion.choices[0].text
+    else:
+        if query and not isinstance(query, object):
+            history += [{"role": "user", "content": query}]
+        msg = ""
+        for i, n in enumerate(list(reversed(history))):
+            msg += n["content"]
+            if len(msg) > 1200:
+                h = history[-i:]
+                break
+            else:
+                h = history
+        kwds["messages"] = h
+        completion = await aclient.chat.completions.create(**kwds)
         if stream:
             return completion
         ret = completion["choices"][0]["message"]["content"].strip()

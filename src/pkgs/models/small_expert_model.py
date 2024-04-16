@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import json5
+import asyncio
 from os.path import basename
 from pathlib import Path
 
@@ -28,7 +29,7 @@ from rapidocr_onnxruntime import RapidOCR
 from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
-from src.prompt.model_init import ChatMessage, callLLM
+from src.prompt.model_init import ChatMessage, callLLM, acallLLM
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -1826,7 +1827,7 @@ class expertModel:
         content = accept_stream_response(response, verbose=False)
         return {"report_summary": content}
 
-    def aigc_functions_consultation_summary(self, **kwargs) -> str:
+    async def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
         _event = "问诊摘要"
         user_profile: str = self.__compose_user_msg__(
@@ -1835,12 +1836,15 @@ class expertModel:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         model_args = {"temperature": 0.7, "top_p": 0.8}
-        content: str = self.aigc_functions_general(
+        # content: str = self.aigc_functions_general(
+        #     _event, prompt_vars, model_args, **kwargs
+        # )
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    def aigc_functions_diagnosis(self, **kwargs) -> str:
+    async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
         _event = "诊断"
         user_profile: str = self.__compose_user_msg__(
@@ -1849,19 +1853,19 @@ class expertModel:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         model_args = {"temperature": 0.7, "top_p": 0.8, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
 
         if content == "无":
             kwargs["intentCode"] = "aigc_functions_diagnosis_result"
             model_args = {"temperature": 0, "top_p": 0.8, "repetition_penalty": 1.0}
-            content: str = self.aigc_functions_general(
+            content: str = await self.aaigc_functions_general(
                 _event, prompt_vars, model_args, **kwargs
             )
         return content
 
-    def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
+    async def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
         """用药建议"""
         _event = "用药建议"
         user_profile: str = self.__compose_user_msg__(
@@ -1874,7 +1878,7 @@ class expertModel:
             "diagnosis": kwargs["diagnosis"],
         }
         model_args = {"temperature": 0, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         try:
@@ -1885,7 +1889,7 @@ class expertModel:
             result = dumpJS([])
         return result
 
-    def aigc_functions_food_principle(self, **kwargs) -> str:
+    async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
         _event = "饮食原则"
         user_profile: str = self.__compose_user_msg__(
@@ -1898,12 +1902,12 @@ class expertModel:
             "diagnosis": kwargs["diagnosis"],
         }
         model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    def aigc_functions_sport_principle(self, **kwargs) -> str:
+    async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
         _event = "运动原则"
         user_profile: str = self.__compose_user_msg__(
@@ -1916,12 +1920,12 @@ class expertModel:
             "diagnosis": kwargs["diagnosis"],
         }
         model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    def aigc_functions_mental_principle(self, **kwargs) -> str:
+    async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
         _event = "情志原则"
         user_profile: str = self.__compose_user_msg__(
@@ -1934,12 +1938,12 @@ class expertModel:
             "diagnosis": kwargs["diagnosis"],
         }
         model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    def aigc_functions_chinese_therapy(self, **kwargs) -> str:
+    async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
         user_profile: str = self.__compose_user_msg__(
@@ -1951,10 +1955,10 @@ class expertModel:
             "messages": messages,
             "diagnosis": kwargs["diagnosis"],
         }
-        content: str = self.aigc_functions_general(_event, prompt_vars, **kwargs)
+        content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
         return content
 
-    def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
+    async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"
         user_profile = self.__compose_user_msg__(
@@ -1976,7 +1980,7 @@ class expertModel:
             "chinese_therapy": kwargs["chinese_therapy"],
         }
         model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = self.aigc_functions_general(
+        content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
@@ -2007,6 +2011,32 @@ class expertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
+    async def aaigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: dict = {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        },
+        **kwargs,
+    ):
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        prompt_template: str = self.gsr.get_event_item(event)["description"]
+        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        content: str = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+
     async def call_function(self, **kwargs) -> Union[str, Generator]:
         """调用函数
         - Args:
@@ -2028,7 +2058,11 @@ class expertModel:
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
         try:
-            content = self.funcmap.get(intent_code)(**kwargs)
+            func = self.funcmap.get(intent_code)
+            if asyncio.iscoroutinefunction(func):
+                content = await func(**kwargs)
+            else:
+                content = func(**kwargs)
         except Exception as e:
             logger.exception(f"call function {intent_code} error: {e}")
             raise RuntimeError(f"Call function error.")
