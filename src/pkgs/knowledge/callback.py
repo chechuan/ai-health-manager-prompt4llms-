@@ -79,12 +79,12 @@ class FuncCall:
         """Initlization 搜索qachain"""
         from langchain.llms import openai
 
+        default_model_supplier = self.api_config["model_supply"]["default"]
+        api_config = self.api_config["model_supply"][default_model_supplier]
         llm = openai.OpenAI(
-            model_name=self.model_config.get(
-                "call_llm_with_search_engine", "Baichuan2-7B-Chat"
-            ),
-            openai_api_base=self.api_config["llm"] + "/v1",
-            openai_api_key=self.api_config["llm_token"],
+            model_name=self.model_config.get("call_llm_with_search_engine"),
+            openai_api_base=api_config["api_base"] + "/v1",
+            openai_api_key=api_config["api_key"],
         )
         self.search_qa_chain = SearchQAChain.from_llm(
             llm=llm, return_only_outputs=False, verbose=False
@@ -426,7 +426,7 @@ class FuncCall:
         *args,
         local_doc_url=False,
         stream=False,
-        score_threshold=2,
+        score_threshold=1,
         temperature=0.7,
         top_k=3,
         top_p=0.8,
@@ -485,13 +485,14 @@ class FuncCall:
                 output_text=msg,
                 model=model_name,
             )
+
             # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
             # try:
             #     content = self.funcmap["searchEngine"]["func"](query, **kwargs).strip()
             #     dataSource = "搜索引擎"
             # except:
-            #     content = "没有检索到相关答案"
-
+            #     content = "对不起,没有检索到相关答案,请稍后再试"
+            #     dataSource = "语言模型"
             # self.update_mid_vars(
             #     kwargs["mid_vars"],
             #     key=f"搜索引擎",

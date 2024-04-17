@@ -13,7 +13,11 @@ from typing import Dict
 
 import openai
 
-from src.utils.module import accept_stream_response, parse_latest_plugin_call
+from src.utils.module import (
+    accept_stream_response,
+    parse_latest_plugin_call,
+    InitAllResource,
+)
 
 sys.path.append(".")
 from src.prompt.model_init import callLLM
@@ -22,7 +26,8 @@ from src.utils.Logger import logger
 
 class ChatterGailyAssistant:
 
-    def __init__(self) -> None: ...
+    def __init__(self, gsr: InitAllResource) -> None:
+        self.gsr: InitAllResource = gsr
 
     def has_chinese_chars(self, data) -> bool:
         text = f"{data}"
@@ -261,9 +266,10 @@ Begin!"""
         logger.debug(
             f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
         )
-        response = openai.ChatCompletion.create(
+        model = self.gsr.get_model("custom_chat_gaily_assistant")
+        response = self.gsr.client.chat.completions.create(
             messages=messages,
-            model="Qwen-72B-Chat",
+            model=model,
             temperature=0.7,
             top_p=0.5,
             n=1,
@@ -309,7 +315,7 @@ Begin!"""
 
     def run(self, history: Dict):
         system_prompt = """你是由来康生命研发的健康智能伙伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
-###下面是一些要求:###
+###下面是一些要求:
 1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是健康智能伙伴
 2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
 3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务

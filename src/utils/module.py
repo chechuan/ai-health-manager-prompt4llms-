@@ -8,23 +8,24 @@ import argparse
 import functools
 import json
 import pickle
+import os
 import sys
 import time
 from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, AnyStr, Dict, Tuple
+from typing import Any, Dict, Literal, Tuple, Union
 from urllib import parse
-
 import numpy as np
 import openai
 import pandas as pd
 import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
-
+from typing import Optional
 from data.constrant import CACHE_DIR
+from src.utils.api_protocal import AigcFunctionsRequest
 
 try:
     from src.utils.Logger import logger
@@ -50,11 +51,20 @@ def clock(func):
     return clocked
 
 
-def update_mid_vars(mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs):
+def update_mid_vars(
+    mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs
+):
     """更新中间变量"""
     lth = len(mid_vars) + 1
     mid_vars.append(
-        {"id": lth, "key": key, "input_text": input_text, "output_text": output_text, "model": model, **kwargs}
+        {
+            "id": lth,
+            "key": key,
+            "input_text": input_text,
+            "output_text": output_text,
+            "model": model,
+            **kwargs,
+        }
     )
     return mid_vars
 
@@ -63,11 +73,17 @@ class InitAllResource:
     def __init__(self) -> None:
         """初始化公共资源"""
         parser = argparse.ArgumentParser()
-        parser.add_argument("--env", type=str, default="local", help="env: local, dev, test, prod")
+        parser.add_argument(
+            "--env", type=str, default="local", help="env: local, dev, test, prod"
+        )
         parser.add_argument("--ip", type=str, default="0.0.0.0", help="ip")
         parser.add_argument("--port", type=int, default=6500, help="port")
-        parser.add_argument("--use_proxy", action="store_true", help="whether use proxy")
-        parser.add_argument("--use_cache", action="store_true", help="是否使用缓存, Default为False")
+        parser.add_argument(
+            "--use_proxy", action="store_true", help="whether use proxy"
+        )
+        parser.add_argument(
+            "--use_cache", action="store_true", help="是否使用缓存, Default为False"
+        )
         parser.add_argument(
             "--special_prompt_version",
             action="store_true",
@@ -77,6 +93,8 @@ class InitAllResource:
         logger.info(f"Initialize args: {self.args}")
 
         self.session = requests.Session()
+        self.client = openai.OpenAI()
+        self.aclient = openai.AsyncOpenAI()
 
         self.cache_dir = Path(CACHE_DIR)
         if not self.cache_dir.exists():
@@ -87,10 +105,29 @@ class InitAllResource:
 
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
-        openai.api_base = self.api_config["llm"] + "/v1"
-        openai.api_key = self.api_config["llm_token"]
-        support_model_list = [i["id"] for i in openai.Model.list()["data"]]
-        logger.info(f"Support model list: {support_model_list}")
+        self.__init_model_supplier__()
+
+    def __init_model_supplier__(self) -> None:
+        """初始化模型供应商"""
+        for supplier_name, supplier_config in self.api_config["model_supply"].items():
+            if not isinstance(supplier_config, dict):
+                continue
+            client = openai.OpenAI(
+                base_url=supplier_config["api_base"] + "/v1",
+                api_key=supplier_config.get("api_key"),
+            )
+            models = ",".join([i.id for i in client.models.list().data])
+            logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
+        default_supplier = self.api_config["model_supply"].get("default", "vllm")
+        os.environ["OPENAI_BASE_URL"] = (
+            self.api_config["model_supply"][default_supplier]["api_base"] + "/v1"
+        )
+        os.environ["OPENAI_API_KEY"] = self.api_config["model_supply"][
+            default_supplier
+        ]["api_key"]
+        # openai.api_base = self.api_config["llm"] + "/v1"
+        # openai.api_key = self.api_config["llm_token"]
+        logger.info(f"Set default supplier [{default_supplier}]")
 
     def __knowledge_connect_check__(self) -> None:
         """检查知识库服务连接"""
@@ -111,24 +148,34 @@ class InitAllResource:
     def __load_config__(self) -> None:
         """指定env加载配置"""
         self.api_config = load_yaml(Path("config", "api_config.yaml"))[self.args.env]
-        # self.api_config = load_yaml(Path("config","api_config.bak.yaml"))[self.args.env]
-        self.mysql_config = load_yaml(Path("config", "mysql_config.yaml"))[self.args.env]
-        self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[self.args.env]
+        self.mysql_config = load_yaml(Path("config", "mysql_config.yaml"))[
+            self.args.env
+        ]
+        self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[
+            self.args.env
+        ]
         model_config = load_yaml(Path("config", "model_config.yaml"))[self.args.env]
-        self.model_config = {event: model for model, event_list in model_config.items() for event in event_list}
+        self.model_config = {
+            event: model
+            for model, event_list in model_config.items()
+            for event in event_list
+        }
         intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
 
         self.intent_aigcfunc_map = {}
         _tmp_dict = {}
         for aigcFuncCode, detail in intent_aigcfunc_map.items():
-            _intent_code_list = [i.strip() for i in detail["intent_code_list"].split(",")]
+            _intent_code_list = [
+                i.strip() for i in detail["intent_code_list"].split(",")
+            ]
             for intentCode in _intent_code_list:
                 if _tmp_dict.get(intentCode):
-                    logger.warning(f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}")
+                    logger.warning(
+                        f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}"
+                    )
                 else:
                     _tmp_dict[intentCode] = aigcFuncCode
                 self.intent_aigcfunc_map[intentCode] = aigcFuncCode
-        # self.model_config = load_yaml(Path("config","model_config.bak.yaml"))[self.args.env]
         self.__info_config__(model_config)
 
     def __info_config__(self, model_config):
@@ -165,14 +212,20 @@ class InitAllResource:
                 for item in item_list:
                     if item[ikey] == curr_item_id:
                         if item["version"] == spec_version:
-                            logger.debug(f"load spec version {ikey} - {curr_item_id} - {spec_version}")
+                            logger.debug(
+                                f"load spec version {ikey} - {curr_item_id} - {spec_version}"
+                            )
                             return item
                         else:
                             latest_item = item
                     else:
                         continue
             else:
-                latest_item = [i for i in item_list if i[ikey] == curr_item_id and i["version"] == "latest"][0]
+                latest_item = [
+                    i
+                    for i in item_list
+                    if i[ikey] == curr_item_id and i["version"] == "latest"
+                ][0]
             return latest_item
 
         data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
@@ -193,54 +246,84 @@ class InitAllResource:
                 for key, v in self.prompt_version.items():
                     if not v:
                         if key == "character":
-                            prompt_meta_data["character"] = {i["name"]: i for i in prompt_character}
+                            prompt_meta_data["character"] = {
+                                i["name"]: i for i in prompt_character
+                            }
                         elif key == "event":
-                            prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
+                            prompt_meta_data["event"] = {
+                                i["intent_code"]: i for i in prompt_event
+                            }
                         elif key == "tool":
-                            prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool}
+                            prompt_meta_data["tool"] = {
+                                i["name"]: i for i in prompt_tool
+                            }
                         elif key == "intent":
-                            prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
+                            prompt_meta_data["intent"] = {
+                                i["name"]: i for i in prompt_intent
+                            }
                     else:
                         if key == "character":
                             for i in prompt_character:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_character, "name", i["name"], v
+                                prompt_meta_data[key][i["name"]] = (
+                                    search_target_version_item(
+                                        prompt_character, "name", i["name"], v
+                                    )
                                 )
                         elif key == "event":
                             for i in prompt_event:
                                 if prompt_meta_data[key].get(i["intent_code"]):
                                     continue
-                                prompt_meta_data[key][i["intent_code"]] = search_target_version_item(
-                                    prompt_event, "intent_code", i["intent_code"], v
+                                prompt_meta_data[key][i["intent_code"]] = (
+                                    search_target_version_item(
+                                        prompt_event, "intent_code", i["intent_code"], v
+                                    )
                                 )
                         elif key == "tool":
                             for i in prompt_tool:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_tool, "name", i["name"], v
+                                prompt_meta_data[key][i["name"]] = (
+                                    search_target_version_item(
+                                        prompt_tool, "name", i["name"], v
+                                    )
                                 )
                         elif key == "intent":
                             for i in prompt_intent:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_intent, "name", i["name"], v
+                                prompt_meta_data[key][i["name"]] = (
+                                    search_target_version_item(
+                                        prompt_intent, "name", i["name"], v
+                                    )
                                 )
             else:
-                prompt_meta_data["character"] = {i["name"]: i for i in prompt_character if i["type"] == "event"}
-                prompt_meta_data["role_play"] = {i["name"]: i for i in prompt_character if i["type"] == "role_play"}
+                prompt_meta_data["character"] = {
+                    i["name"]: i for i in prompt_character if i["type"] == "event"
+                }
+                prompt_meta_data["role_play"] = {
+                    i["name"]: i for i in prompt_character if i["type"] == "role_play"
+                }
                 prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
-                prompt_meta_data["tool"] = {i["name"]: i for i in prompt_tool if i["in_used"] == 1}
+                prompt_meta_data["tool"] = {
+                    i["name"]: i for i in prompt_tool if i["in_used"] == 1
+                }
                 prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
-            prompt_meta_data["init_intent"] = {i["code"]: True for i in prompt_tool if i["init_intent"] == 1}
-            prompt_meta_data["rollout_tool"] = {i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"}
-            prompt_meta_data["rollout_tool_after_complete"] = {
-                i["code"]: 1 for i in prompt_tool if i["requirement"] == "complete_rollout"
+            prompt_meta_data["init_intent"] = {
+                i["code"]: True for i in prompt_tool if i["init_intent"] == 1
             }
-            prompt_meta_data["prompt_tool_code_map"] = {i["code"]: i["name"] for i in prompt_tool if i["code"]}
+            prompt_meta_data["rollout_tool"] = {
+                i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"
+            }
+            prompt_meta_data["rollout_tool_after_complete"] = {
+                i["code"]: 1
+                for i in prompt_tool
+                if i["requirement"] == "complete_rollout"
+            }
+            prompt_meta_data["prompt_tool_code_map"] = {
+                i["code"]: i["name"] for i in prompt_tool if i["code"]
+            }
             pickle.dump(prompt_meta_data, open(data_cache_file, "wb"))
             logger.debug(f"dump prompt_meta_data to {data_cache_file}")
             del mysql_conn
@@ -249,15 +332,37 @@ class InitAllResource:
             logger.debug(f"load prompt_meta_data from {data_cache_file}")
 
         for name, func in prompt_meta_data["tool"].items():
-            func["params"] = json.loads(func["params"]) if func["params"] else func["params"]
-        intent_desc_map = {code: item["intent_desc"] for code, item in prompt_meta_data["event"].items()}
+            func["params"] = (
+                json.loads(func["params"]) if func["params"] else func["params"]
+            )
+        intent_desc_map = {
+            code: item["intent_desc"]
+            for code, item in prompt_meta_data["event"].items()
+        }
         default_desc_map = loadJS(Path("data", "intent_desc_map.json"))
         # 以intent_desc_map.json定义的intent_desc优先
         self.intent_desc_map = {**intent_desc_map, **default_desc_map}
         return prompt_meta_data
 
+    def get_model(self, event: str) -> str:
+        """根据事件获取模型"""
+        assert (
+            isinstance(event, str) and event in self.model_config
+        ), f"event {event} not in model_config"
+        return self.model_config.get(event)
 
-def make_meta_ret(end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs):
+    def get_event_item(self, event: str) -> Dict:
+        """根据事件获取对应item"""
+        assert isinstance(event, str) and self.prompt_meta_data["event"].get(
+            event
+        ), f"event {event} not in prompt_meta_data"
+        prompt_item = self.prompt_meta_data["event"][event]
+        return prompt_item
+
+
+def make_meta_ret(
+    end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs
+):
     ret = {
         "end": end,
         "message": msg,
@@ -284,7 +389,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     logger.critical(exc_value.message, exc_info=(exc_type, exc_value, exc_traceback))
 
 
-def load_yaml(path: Path or str):
+def load_yaml(path: Union[Path, str]):
     return yaml.load(open(path, "r"), Loader=yaml.FullLoader)
 
 
@@ -330,7 +435,7 @@ def get_intent(text):
     elif "血压测量" in text or "测量血压" in text:
         code = "remind_take_blood_pressure"
         desc = "提醒他人测量血压"
-    elif "运动切换" in text or '切换运动' in text:
+    elif "运动切换" in text or "切换运动" in text:
         code = "switch_exercise"
         desc = "运动切换"
     elif "运动评价" in text:
@@ -699,7 +804,9 @@ def date_after(**kwargs):
 def this_sunday():
     """返回下周一0点0分0秒"""
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
-    return datetime.strftime(today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S")
+    return datetime.strftime(
+        today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
+    )
 
 
 def curr_weekday():
@@ -707,8 +814,8 @@ def curr_weekday():
     return today
 
 
-def dumpJS(obj, ensure_ascii=False):
-    return json.dumps(obj, ensure_ascii=ensure_ascii)
+def dumpJS(obj, ensure_ascii=False, **kwargs):
+    return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
 
 
 def format_sse_chat_complete(data: str, event=None) -> str:
@@ -718,34 +825,28 @@ def format_sse_chat_complete(data: str, event=None) -> str:
     return msg
 
 
-def decorate_text_stream(generator):
-    while True:
-        yield_item = next(generator)
-        yield format_sse_chat_complete(json.dumps(yield_item, ensure_ascii=False), "delta")
-        if yield_item["end"] is True:
-            break
-
-
-def accept_stream_response(response, verbose=True):
+def accept_stream_response(response, verbose=True) -> str:
+    """接受openai.response的stream响应"""
     content = ""
     tst = time.time()
     for chunk in response:
-        if chunk.get("object") == "text_completion":
-            if hasattr(chunk["choices"][0], "text"):
-                chunk_text = chunk["choices"][0]["text"]
+        if chunk.object == "text_completion":
+            if hasattr(chunk.choices[0], "text"):
+                chunk_text = chunk.choices[0].text
                 content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
         else:
-            if hasattr(chunk["choices"][0]["delta"], "content"):
-                chunk_text = chunk["choices"][0]["delta"]["content"]
-                content += chunk_text
+            if hasattr(chunk.choices[0].delta, "content"):
+                chunk_text = chunk.choices[0].delta.content
+                if chunk_text:
+                    content += chunk_text
                 if verbose:
                     print(chunk_text, end="", flush=True)
     if verbose:
         print()
     t_cost = round(time.time() - tst, 2)
-    logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
+    logger.debug(f"Model {chunk.model}, Generate {len(content)} words, Cost {t_cost}s")
     return content
 
 
@@ -773,6 +874,31 @@ def compute_blood_pressure_level(x: int, flag: str = "l" or "h") -> int:
             return 2
         else:
             return 3
+
+
+def apply_chat_template(prompt: str, template: str = "chatml"):
+    """应用chatml模板
+    <|im_start|>user
+    你是什么模型<|im_end|>
+    <|im_start|>assistant
+    """
+    if template == "chatml":
+        prompt = (
+            "<|im_start|>system\n" + "You are a helpful assistant.<|im_end|>\n"
+            "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
+        )
+    return prompt
+
+
+async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Optional[str]:
+    ret = None
+    if "intentCode" not in param:
+        ret = "intentCode not found in request"
+    if "messages" not in param:
+        ret = "messages not found in request"
+    elif not param.get("messages"):
+        ret = "messages cannot be empty or None in request"
+    return ret
 
 
 if __name__ == "__main__":

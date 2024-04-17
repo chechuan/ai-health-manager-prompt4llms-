@@ -20,6 +20,8 @@ from loguru import logger
 
 from src.test.exp.data.prompts import Sysprompt
 
+client = openai.OpenAI()
+
 logger.remove()
 logger.add(sink=sys.stderr, level="TRACE", backtrace=True, diagnose=True)
 logger.remove()
@@ -58,7 +60,7 @@ def place_sidebar():
         api_key = st.text_input("api key", key="openai_api_key", value=None)
         openai.api_key = api_key if api_key else os.environ.get("OPENAI_API_KEY", "")
 
-        model_list = [i['id'] for i in openai.Model.list()["data"]]
+        model_list = [i["id"] for i in openai.Model.list()["data"]]
         args.model = st.selectbox("Choose your model", model_list, index=2)
         st.text_area(
             "system prompt",
@@ -76,7 +78,9 @@ def place_sidebar():
 def prepare_parameters():
     """Initialize the parameters for the llm"""
     global args
-    args.max_tokens = st.sidebar.slider("Max tokens", min_value=1, max_value=32000, value=4096, step=1)
+    args.max_tokens = st.sidebar.slider(
+        "Max tokens", min_value=1, max_value=32000, value=4096, step=1
+    )
     args.temperature = st.sidebar.slider(
         "Temperature",
         min_value=0.0,
@@ -137,17 +141,19 @@ def prepare_parameters():
         "Length penalty",
         min_value=0.0,
         max_value=1.0,
-        value=1.0,  
+        value=1.0,
         step=0.1,
         help="用来控制模型生成的文本的长度。这个参数的值是一个浮点数，表示生成的文本的长度会被乘以这个值。较高的Length_penalty值会导致生成的文本更长，较低的Length_penalty值会导致生成的文本更短。",
     )
-    args.stop = ['\nObservation']
+    args.stop = ["\nObservation"]
 
 
 def initlize_system_prompt():
     """Initialize the system prompt"""
     st.session_state.messages = []
-    st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
+    st.session_state.messages.append(
+        {"role": "system", "content": st.session_state.system_prompt}
+    )
 
     # logger.debug(f"Update system_prompt:\n{st.session_state.system_prompt}")
 
@@ -177,7 +183,9 @@ if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
     if st.session_state.system_prompt:
-        st.session_state.messages.append({"role": "system", "content": st.session_state.system_prompt})
+        st.session_state.messages.append(
+            {"role": "system", "content": st.session_state.system_prompt}
+        )
 
 
 for message in st.session_state.messages:
@@ -194,7 +202,7 @@ if prompt := st.chat_input("Your message"):
         full_response = ""
         logger.debug(f"{dumpJS(args.__dict__)}")
         logger.debug(f"Input: \n{prompt}")
-        for response in openai.ChatCompletion.create(
+        for response in client.chat.completions.create(
             **args.__dict__, messages=st.session_state.messages, stream=True
         ):
             if hasattr(response["choices"][0]["delta"], "content"):

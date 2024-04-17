@@ -65,7 +65,7 @@ class Chat_v2:
         self.custom_chat_report_interpretation_answer = (
             CustomChatReportInterpretationAnswer(self.gsr)
         )
-        self.chatter_assistant = ChatterGailyAssistant()
+        self.chatter_assistant = ChatterGailyAssistant(global_share_resource)
         self.__initalize_intent_map__()
         self.session = Session()
 
@@ -217,13 +217,14 @@ class Chat_v2:
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
+        model = self.gsr.get_model("general_react_model")
         logger.debug(f"ReAct Prompt:\n{prompt}")
         model_output = callLLM(
             prompt,
             temperature=0.7,
             top_p=0.5,
             max_tokens=max_tokens,
-            model="Qwen-14B-Chat",
+            model=model,
             stop=["\nObservation"],
         )
         model_output = "\nThought: " + model_output
@@ -233,7 +234,7 @@ class Chat_v2:
             key="Chat ReAct",
             input_text=prompt,
             output_text=model_output,
-            model="Qwen-14B-Chat",
+            model=model,
         )
 
         # model_output = """Thought: 任务名和时间都没有提供，无法创建日程。\nAction: AskHuman\nAction Input: {"message": "请提供任务名和时间。"}"""

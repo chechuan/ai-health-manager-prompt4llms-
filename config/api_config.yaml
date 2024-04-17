@@ -3,16 +3,49 @@ local:
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    llm: http://10.228.67.99:26921
-    llm_token: sk-laikang-aihealthmanager-local
+    model_supply:
+        default: vllm
+        # fschat:
+        #     api_base: http://10.228.67.99:26921
+        #     api_key: sk-laikang-aihealthmanager-local
+        #     support_models:
+        #         - Qwen-14B-Chat
+        #         - Qwen-72B-Chat
+        #         - Baichuan2-7B-Chat
+        #         - Yi-34B-Chat
+        vllm:
+            api_base: http://10.228.67.99:26928
+            api_key: sk-0afNS66vdMwkraLu4d9e24F913804aFeBbCd8a355035BbC3
+            support_models:
+                - Baichuan2-7B-Chat
+                - Qwen1.5-32B-Chat
+                - Qwen1.5-72B-Chat
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
 dev:
     graph: http://10.4.164.240:26925
-    # ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev   # 暂时无法同步数据库部署环境, 接入演示环境后端服务
-    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
+    ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
-    llm: http://10.228.67.99:26921
-    llm_token: sk-laikang-aihealthmanager-dev
+    model_supply:
+        default: vllm
+        fschat:
+            api_base: http://10.228.67.99:26921
+            api_key: sk-laikang-aihealthmanager-dev
+            support_models:
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
+                - Baichuan2-7B-Chat
+                - Yi-34B-Chat
+        vllm:
+            api_base: http://10.228.67.99:26928
+            api_key: sk-DiRD8g7WtTGSleHyB7Cc11E7D7D54455AdF7D57505F6C368
+            support_models:
+                - Baichuan2-7B-Chat
+                - Qwen1.5-32B-Chat
+                - Qwen1.5-72B-Chat
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
 test:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test
@@ -20,6 +53,21 @@ test:
     langchain: http://10.228.67.99:26924
     llm: http://10.228.67.99:26921
     llm_token: sk-laikang-aihealthmanager-test
+    model_supply:
+        default: vllm
+        fschat:
+            api_base: http://10.228.67.99:26921
+            api_key: sk-laikang-aihealthmanager-local
+            support_models:
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
+                - Baichuan2-7B-Chat
+                - Yi-34B-Chat
+        vllm:
+            api_base: http://10.228.67.99:26920
+            api_key: sk-laikang-aihealthmanager-local
+            support_models:
+                - Qwen1.5-72B-Chat
 fat:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
@@ -27,6 +75,20 @@ fat:
     langchain: http://10.228.67.99:26924
     llm: http://10.228.67.99:26921
     llm_token: sk-laikang-aihealthmanager-fat
+    model_supply:
+        default: vllm
+        fschat:
+            api_base: http://10.228.67.99:26921
+            api_key: sk-laikang-aihealthmanager-local
+            support_models:
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
+                - Baichuan2-7B-Chat
+                - Yi-34B-Chat
+        vllm:
+            api_base: http://10.228.67.99:26920
+            support_models:
+                - Qwen1.5-72B-Chat
 prod:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate.op.laikang.com/aihealthmanager
@@ -34,3 +96,17 @@ prod:
     langchain: http://10.228.67.99:26924
     llm: http://10.228.67.99:26921
     llm_token: sk-laikang-aihealthmanager-fat
+    model_supply:
+        default: vllm
+        fschat:
+            api_base: http://10.228.67.99:26921
+            api_key: sk-laikang-aihealthmanager-local
+            support_models:
+                - Qwen-14B-Chat
+                - Qwen-72B-Chat
+                - Baichuan2-7B-Chat
+                - Yi-34B-Chat
+        vllm:
+            api_base: http://10.228.67.99:26920
+            support_models:
+                - Qwen1.5-72B-Chat

@@ -1,10 +1,10 @@
 # -*- encoding: utf-8 -*-
-'''
+"""
 @Time    :   2023-12-25 13:47:22
 @desc    :   XXX
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
-'''
+"""
 
 
 import json
@@ -15,7 +15,7 @@ import openai
 openai.api_base = "http://10.228.67.99:26921/v1"
 openai.api_key = "EMPTY"
 
-support_model_list = [i['id'] for i in openai.Model.list()['data']]
+support_model_list = [i["id"] for i in openai.Model.list()["data"]]
 print(f"Support model list: {support_model_list}")
 
 餐厅信息 = """1.七修酒店元善家宴
@@ -182,35 +182,41 @@ print(f"Support model list: {support_model_list}")
 奶奶: 好啊，过年人多点好，热闹
 """
 messages = [
-    {"role":"system", "content":f"{餐厅信息}\n{系统提示}"},
-    {"role":"user", "content":f"{聊天信息}"},
+    {"role": "system", "content": f"{餐厅信息}\n{系统提示}"},
+    {"role": "user", "content": f"{聊天信息}"},
     # {"role":"assistant", "content":f"{回复结果}"},
     # {"role":"user", "content":f"{聊天信息1}"}
 ]
 start_time = time.time()
-model_list = ['Baichuan2-7B-Chat', 'Qwen-14B-Chat', 'Qwen-1_8B-Chat', 'Qwen-72B-Chat', 'Yi-34B-Chat']
-response = openai.ChatCompletion.create(
+model_list = [
+    "Baichuan2-7B-Chat",
+    "Qwen-14B-Chat",
+    "Qwen-1_8B-Chat",
+    "Qwen-72B-Chat",
+    "Yi-34B-Chat",
+]
+client = openai.OpenAI()
+response = client.chat.completions.create(
     model=model_list[-2],
     messages=messages,
     temperature=0.9,
     top_p=0.8,
     top_k=-1,
     repetition_penalty=1.1,
-    stream=True
+    stream=True,
 )
 
 response_time = time.time()
-print(f'latency {response_time - start_time:.2f} s -> response')
+print(f"latency {response_time - start_time:.2f} s -> response")
 content = ""
 printed = False
 for i in response:
     t = time.time()
     msg = i.choices[0].delta.to_dict()
-    text_stream = msg.get('content')
+    text_stream = msg.get("content")
     if text_stream:
         if not printed:
-            print(f'latency first token {t - start_time:.2f} s')
+            print(f"latency first token {t - start_time:.2f} s")
             printed = True
         content += text_stream
         print(text_stream, flush=True, end="")
-    

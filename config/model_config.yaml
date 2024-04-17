@@ -1,55 +1,76 @@
 local:
-    Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+    Qwen1.5-32B-Chat:
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
-        - schedular_time_understand # 日程时间理解
         - food_purchasing_list_generate_by_content # 基于内容生成食材清单
+        - call_schedular_time_understand # 日程时间理解
         - call_schedule_query # 查询日程最终的组装输出
+        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
-        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
-        - aigc_functions_single_choice # 单选题
-    Qwen-72B-Chat:
         - blood_pressure_trend_analysis # 血压心率趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
-        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
         - report_interpretation_chat # 报告解读对话
-        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-    # Yi-34B-Chat:
-    #   - reunion_meals_restaurant_selection                  # 共策决策
+        - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
+        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
+        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
+        - custom_chat_gaily_assistant # 自定义对话-闲聊
+        - aigc_functions_single_choice # 单选题
+        - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
+        - aigc_functions_consultation_summary # 问诊摘要
+        - aigc_functions_diagnosis # 诊断
+        - aigc_functions_diagnosis_assert_is_provided_diagnosis # 判断医生是否已提供诊断
+        - aigc_functions_drug_recommendation # 药品推荐
+        - aigc_functions_food_principle # 饮食原则
+        - aigc_functions_sport_principle # 运动原则
+        - aigc_functions_mental_principle # 情志原则
+        - aigc_functions_reason_for_care_plan # 康养方案推荐原因
+        - aigc_functions_chinese_therapy # 中医调理
+        - aigc_functions_diagnosis_result # 诊断-给出结论
 dev:
-    Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+    Qwen1.5-32B-Chat:
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
-        - schedular_time_understand # 日程时间理解
         - food_purchasing_list_generate_by_content # 基于内容生成食材清单
+        - call_schedular_time_understand # 日程时间理解
         - call_schedule_query # 查询日程最终的组装输出
+        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
-        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
-        - aigc_functions_single_choice # 单选题
-    Qwen-72B-Chat:
         - blood_pressure_trend_analysis # 血压心率趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
-        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
         - report_interpretation_chat # 报告解读对话
-        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-    # Yi-34B-Chat:
-    #   - reunion_meals_restaurant_selection                  # 共策决策
+        - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
+        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
+        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
+        - custom_chat_gaily_assistant # 自定义对话-闲聊
+        - aigc_functions_single_choice # 单选题
+        - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
+        - aigc_functions_consultation_summary # 问诊摘要
+        - aigc_functions_diagnosis # 诊断
+        - aigc_functions_diagnosis_assert_is_provided_diagnosis # 判断医生是否已提供诊断
+        - aigc_functions_drug_recommendation # 药品推荐
+        - aigc_functions_food_principle # 饮食原则
+        - aigc_functions_sport_principle # 运动原则
+        - aigc_functions_mental_principle # 情志原则
+        - aigc_functions_reason_for_care_plan # 康养方案推荐原因
+        - aigc_functions_chinese_therapy # 中医调理
+        - aigc_functions_diagnosis_result # 诊断-给出结论
 test:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
-        - schedular_time_understand # 日程时间理解
+        - call_schedular_time_understand # 日程时间理解
         - food_purchasing_list_generate_by_content # 基于内容生成食材清单
         - call_schedule_query # 查询日程最终的组装输出
+        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
         - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
@@ -61,15 +82,12 @@ test:
         - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
         - report_interpretation_chat # 报告解读对话
-        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-    # Yi-34B-Chat:
-    #   - reunion_meals_restaurant_selection                  # 共策决策
 fat:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
-        - schedular_time_understand # 日程时间理解
+        - call_schedular_time_understand # 日程时间理解
         - food_purchasing_list_generate_by_content # 基于内容生成食材清单
         - call_schedule_query # 查询日程最终的组装输出
         - call_schedule_create_reply # 创建日程的回复
@@ -82,16 +100,13 @@ fat:
         - reunion_meals_restaurant_selection # 共策决策
         - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
-        - report_interpretation_chat # 报告解读对话
         - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-    # Yi-34B-Chat:
-    #   - reunion_meals_restaurant_selection                  # 共策决策
 prod:
     Qwen-14B-Chat:
-        - react_modelreact_model # react模型
+        - general_react_model # react模型
         - decorate_search_prompt # 查询知识库装饰
         - food_purchasing_list_management # 食材清单管理
-        - schedular_time_understand # 日程时间理解
+        - call_schedular_time_understand # 日程时间理解
         - food_purchasing_list_generate_by_content # 基于内容生成食材清单
         - call_schedule_query # 查询日程最终的组装输出
         - call_schedule_create_reply # 创建日程的回复
@@ -104,7 +119,4 @@ prod:
         - reunion_meals_restaurant_selection # 共策决策
         - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
         - assert_diet_suggest_in_content # 内容中提供饮食建议
-        - report_interpretation_chat # 报告解读对话
         - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-    # Yi-34B-Chat:
-    #   - reunion_meals_restaurant_selection                  # 共策决策

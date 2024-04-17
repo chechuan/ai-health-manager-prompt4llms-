@@ -19,7 +19,12 @@ from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
 from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
 from src.utils.Logger import logger
-from src.utils.module import InitAllResource, accept_stream_response, dumpJS, update_mid_vars
+from src.utils.module import (
+    InitAllResource,
+    accept_stream_response,
+    dumpJS,
+    update_mid_vars,
+)
 
 
 class CustomChatModel:
@@ -40,14 +45,18 @@ class CustomChatModel:
         # if not kwargs.get("history", []):
         #     raise ValueError("history is empty")
 
-    def __extract_event_from_gsr__(self, gsr: InitAllResource, code: str) -> Dict[str, Any]:
+    def __extract_event_from_gsr__(
+        self, gsr: InitAllResource, code: str
+    ) -> Dict[str, Any]:
         """从global_share_resource中提取事件数据"""
         event = {}
         if gsr.prompt_meta_data["event"].get(code):
             event = gsr.prompt_meta_data["event"][code]
             return event
         else:
-            raise ValueError(f"event code {code} not found in gsr.prompt_meta_data['event']")
+            raise ValueError(
+                f"event code {code} not found in gsr.prompt_meta_data['event']"
+            )
 
     def chat(self, **kwargs):
         """自定义对话"""
@@ -108,7 +117,9 @@ class CustomChatAuxiliary(CustomChatModel):
             logger.error(text)
             return "None"
 
-    def __compose_auxiliary_diagnosis_message__(self, history: List[Dict[str, str]]) -> List[DeltaMessage]:
+    def __compose_auxiliary_diagnosis_message__(
+        self, history: List[Dict[str, str]]
+    ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
         event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
         sys_prompt = event["description"] + "\n" + event["process"]
@@ -133,7 +144,9 @@ class CustomChatAuxiliary(CustomChatModel):
             messages[idx] = n.dict()
         return messages
 
-    def __chat_auxiliary_diagnosis_summary_diet_rec__(self, history: List[Dict]) -> AnyStr:
+    def __chat_auxiliary_diagnosis_summary_diet_rec__(
+        self, history: List[Dict]
+    ) -> AnyStr:
         """辅助诊断总结、饮食建议
 
         Args:
@@ -142,7 +155,9 @@ class CustomChatAuxiliary(CustomChatModel):
         Returns:
             AnyStr: 辅助诊断总结、饮食建议
         """
-        event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis_summary_diet_rec")
+        event = self.__extract_event_from_gsr__(
+            self.gsr, "auxiliary_diagnosis_summary_diet_rec"
+        )
         prompt_template_str = event["process"]
         compose_message = ""
         for i in history:
@@ -154,14 +169,15 @@ class CustomChatAuxiliary(CustomChatModel):
         prompt = prompt_template_str.replace("{MESSAGE}", compose_message)
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
-            model=self.gsr.model_config.get("custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"),
+            model=self.gsr.model_config.get(
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+            ),
             history=messages,
             temperature=0,
             max_tokens=512,
             top_p=0.8,
             n=1,
             presence_penalty=0,
-            repetition_penalty=1,
             stream=True,
         )
         content = accept_stream_response(chat_response, verbose=True)
@@ -172,30 +188,30 @@ class CustomChatAuxiliary(CustomChatModel):
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        history = [i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"]
+        history = [
+            i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
+        ]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
         for _ in range(2):
-            chat_response = callLLM(
+            content = callLLM(
                 model=model,
                 history=messages,
                 temperature=0,
-                max_tokens=512,
+                max_tokens=1024,
                 top_p=0.8,
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                repetition_penalty=1,
-                stop=["Observation", "问诊Finished!"],
-                stream=True,
+                stop=["\nObservation:", "问诊Finished!"],
+                stream=False,
             )
-            content = accept_stream_response(chat_response, verbose=False)
 
             logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
             thought, doctor = self.__parse_response__(content)
             is_repeat = self.judge_repeat(history, doctor, model)
-            logger.debug(f"辅助问诊 重复判断 结果: \n{is_repeat}")
+            logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
             if is_repeat:
                 valid = False
                 continue
@@ -210,7 +226,11 @@ class CustomChatAuxiliary(CustomChatModel):
         else:
             ...
         mid_vars = update_mid_vars(
-            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义辅助诊断对话"
+            kwargs["mid_vars"],
+            input_text=messages,
+            output_text=content,
+            model=model,
+            key="自定义辅助诊断对话",
         )
         return mid_vars, (thought, doctor)
 
@@ -220,8 +240,9 @@ class CustomChatAuxiliary(CustomChatModel):
         judge_p = _auxiliary_diagnosis_judgment_repetition_prompt.format(his, content)
         logger.debug(f"问诊重复判断LLM输入：{judge_p}")
         h = [{"role": "user", "content": judge_p}]
-        chat_response = callLLM(
-            model="Qwen-72B-Chat",
+        model = self.gsr.model_config["auxiliary_diagnosis_judgment_repetition"]
+        content = callLLM(
+            model=model,
             history=h,
             temperature=0,
             max_tokens=512,
@@ -231,16 +252,20 @@ class CustomChatAuxiliary(CustomChatModel):
             frequency_penalty=0.5,
             repetition_penalty=1,
             stop=["Observation", "问诊Finished!"],
-            stream=True,
+            stream=False,
         )
-        content = accept_stream_response(chat_response, verbose=False)
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
         output = self.__parse_jr_response__(content)
         if "YES" in output:
             return True
         elif "No" in output:
             return False
-        elif "没有回答" in content or "没有被回答" in content or "未回答" in content or "未被回答" in content:
+        elif (
+            "没有回答" in content
+            or "没有被回答" in content
+            or "未回答" in content
+            or "未被回答" in content
+        ):
             return False
         elif "回答过" in content or "回答了" in content:
             return True
@@ -256,10 +281,15 @@ class CustomChatAuxiliary(CustomChatModel):
 class CustomChatReportInterpretationAsk(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
-        self.code_func_map["report_interpretation_chat"] = self.__chat_report_interpretation__
+        self.code_func_map["report_interpretation_chat"] = (
+            self.__chat_report_interpretation__
+        )
 
     def __compose_message__(
-        self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs
+        self,
+        history: List[Dict[str, str]],
+        intentCode: str = "report_interpretation_chat",
+        **kwargs,
     ):
         """组装消息"""
         messages = []
@@ -272,17 +302,23 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                     "intentCode": intentCode,
                 }
             )
-            messages.append({"role": "user", "content": content, "intentCode": intentCode})
+            messages.append(
+                {"role": "user", "content": content, "intentCode": intentCode}
+            )
         else:
             # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
             # 通过此处替换system_prompt控制问诊轮数
             if len([i for i in history if i["role"] == "user"]) >= 3:
                 system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY
-                history[0]["content"] = system_prompt if history[0]["role"] == "system" else ...
+                history[0]["content"] = (
+                    system_prompt if history[0]["role"] == "system" else ...
+                )
                 for idx in range(len(history)):
                     msg = history[idx]
                     if msg["role"] != "assistant":
-                        messages.append({"role": msg["role"], "content": msg["content"]})
+                        messages.append(
+                            {"role": msg["role"], "content": msg["content"]}
+                        )
                     messages[-1]["intentCode"] = intentCode
             else:
                 for idx in range(len(history)):
@@ -291,9 +327,13 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         content = f"Thought: {msg['content']}\nDoctor: {msg['function_call']['arguments']}"
                         messages.append({"role": "assistant", "content": content})
                     elif msg["role"] == "assistant":
-                        messages.append({"role": "assistant", "content": msg["content"]})
+                        messages.append(
+                            {"role": "assistant", "content": msg["content"]}
+                        )
                     else:
-                        messages.append({"role": msg["role"], "content": msg["content"]})
+                        messages.append(
+                            {"role": msg["role"], "content": msg["content"]}
+                        )
                     messages[-1]["intentCode"] = intentCode
         return messages
 
@@ -322,7 +362,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             history=messages,
             temperature=0.7,
             max_tokens=4096,
-            top_p=0.8,
+            top_p=1,
             # top_k=-1,
             # n=1,
             # presence_penalty=1.15,
@@ -335,7 +375,11 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         logger.info(f"Custom Chat 报告解读 LLM Output: \n{content}")
         thought, content = self.__parse_response__(content)
         mid_vars = update_mid_vars(
-            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话"
+            kwargs["mid_vars"],
+            input_text=messages,
+            output_text=content,
+            model=model,
+            key="自定义报告解读对话",
         )
         _contents = []
         sch = -1
@@ -362,7 +406,9 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
 
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
-        self.code_func_map["report_interpretation_answer"] = self.__chat_report_interpretation_answer__
+        self.code_func_map["report_interpretation_answer"] = (
+            self.__chat_report_interpretation_answer__
+        )
 
     def __search_docs__(
         self,
@@ -392,7 +438,10 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
         return content.strip()
 
     def __compose_message__(
-        self, history: List[Dict[str, str]], intentCode: str = "report_interpretation_chat", **kwargs
+        self,
+        history: List[Dict[str, str]],
+        intentCode: str = "report_interpretation_chat",
+        **kwargs,
     ):
         """组装消息"""
         messages = []
@@ -411,7 +460,9 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
             system_prompt = CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT.format(
                 base_info=base_info, external_knowledge=external_knowledge
             )
-            messages = [{"role": "system", "content": system_prompt, "intentCode": intentCode}] + messages
+            messages = [
+                {"role": "system", "content": system_prompt, "intentCode": intentCode}
+            ] + messages
         for idx in range(len(history)):
             msg = history[idx]
             if msg["role"] == "assistant" and msg.get("function_call"):
@@ -456,7 +507,11 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
         logger.info(f"Custom Chat 报告解读Answer LLM Output: \n{content}")
         thought, content = self.__parse_response__(content)
         mid_vars = update_mid_vars(
-            kwargs["mid_vars"], input_text=messages, output_text=content, model=model, key="自定义报告解读对话Answer"
+            kwargs["mid_vars"],
+            input_text=messages,
+            output_text=content,
+            model=model,
+            key="自定义报告解读对话Answer",
         )
         _contents = []
         sch = -1

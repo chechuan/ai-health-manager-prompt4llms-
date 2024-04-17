@@ -36,13 +36,17 @@ def accept_stream_response(response, verbose=True):
                 if verbose:
                     print(chunk_text, end="", flush=True)
     t_cost = round(time.time() - tst, 2)
-    logger.debug(f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s")
+    logger.debug(
+        f"Model {chunk['model']}, Generate {len(content)} words, Cost {t_cost}s"
+    )
     return content
 
 
 ocr = RapidOCR(lang="zh")
 
-result, _ = ocr("/home/tico/workspace/ai-health-manager-prompt4llms/.tmp/images/肺炎.jpeg")
+result, _ = ocr(
+    "/home/tico/workspace/ai-health-manager-prompt4llms/.tmp/images/肺炎.jpeg"
+)
 
 
 sysprompt = """You are a helpful assistant.
@@ -56,11 +60,14 @@ sysprompt = """You are a helpful assistant.
 
 
 content_index = {idx: text for idx, text in enumerate([i[1] for i in result])}
-messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": str(content_index)}]  
+messages = [
+    {"role": "system", "content": sysprompt},
+    {"role": "user", "content": str(content_index)},
+]
 
 print(json.dumps(messages, ensure_ascii=False))
-
-# response = openai.ChatCompletion.create(
+client = openai.OpenAI()
+# response = openai.chat.completions.create(
 #     model="Qwen-72B-Chat",
 #     messages=messages,
 #     temperature=0.7,

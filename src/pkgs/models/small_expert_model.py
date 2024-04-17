@@ -5,23 +5,22 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import chunk
 import json
 import re
 import sys
-import time
-from doctest import REPORT_CDIFF
-from email.mime import image
+import json5
+import asyncio
 from os.path import basename
 from pathlib import Path
 
 import openai
-from numpy import isin
 from requests import Session
 
-sys.path.append(str(Path(__file__).parent.parent.parent.parent.absolute()))
+from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
+
+sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
-from typing import Dict, List, Union
+from typing import Dict, Generator, List, Literal, Optional, Union
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -30,25 +29,37 @@ from rapidocr_onnxruntime import RapidOCR
 from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
-from src.prompt.model_init import callLLM
+from src.prompt.model_init import ChatMessage, callLLM, acallLLM
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, dumpJS, get_intent)
+from src.utils.module import (
+    InitAllResource,
+    accept_stream_response,
+    clock,
+    compute_blood_pressure_level,
+    dumpJS,
+)
 
 
 class expertModel:
-    indicatorCodeMap = {"收缩压": "lk1589863365641", "舒张压": "lk1589863365791", "心率": "XYZBXY001005"}
+    indicatorCodeMap = {
+        "收缩压": "lk1589863365641",
+        "舒张压": "lk1589863365791",
+        "心率": "XYZBXY001005",
+    }
     session = Session()
     ocr = RapidOCR()
+    client = openai.OpenAI()
 
-    def __init__(self, gsr) -> None:
+    def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
         self.regist_aigc_functions()
         self.load_image_config()
 
     def load_image_config(self):
-        self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath("data/font/simsun.ttc")
+        self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath(
+            "data/font/simsun.ttc"
+        )
         if not self.image_font_path.exists():
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
@@ -77,8 +88,12 @@ class expertModel:
         """
         assert type(weight) is float or int, "type `weight` must be a number"
         assert type(height) is float or int, "type `height` must be a number"
-        assert weight > 0 and weight < 300, f"value `weigth`={weight} is not valid ∈ (0, 300)"
-        assert height > 0 and height < 2.5, f"value `height`={height} is not valid ∈ (0, 2.5)"
+        assert (
+            weight > 0 and weight < 300
+        ), f"value `weigth`={weight} is not valid ∈ (0, 300)"
+        assert (
+            height > 0 and height < 2.5
+        ), f"value `height`={height} is not valid ∈ (0, 2.5)"
         bmi = round(weight / height**2, 1)
         return bmi
 
@@ -154,7 +169,12 @@ class expertModel:
         messages = [{"role": "user", "content": prompt}]
         logger.debug("压力模型输入:" + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(
-            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+            history=messages,
+            max_tokens=1024,
+            top_p=0.8,
+            temperature=0.0,
+            do_sample=False,
+            model="Qwen-72B-Chat",
         )
         logger.debug("压力模型输出:" + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -178,7 +198,12 @@ class expertModel:
         prompt = weight_trend_prompt.format(cur_date, weight)
         messages = [{"role": "user", "content": prompt}]
         generate_text = callLLM(
-            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+            history=messages,
+            max_tokens=1024,
+            top_p=0.8,
+            temperature=0.0,
+            do_sample=False,
+            model="Qwen-72B-Chat",
         )
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -211,12 +236,21 @@ class expertModel:
             logger.debug("进入体重方案修改流程。。。")
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
-            prompt = fat_reduction_prompt.format(cur_date, weight, "减脂效果不好，怎么改善？")
+            prompt = fat_reduction_prompt.format(
+                cur_date, weight, "减脂效果不好，怎么改善？"
+            )
             logger.debug("进入体重出方案流程。。。")
         messages = [{"role": "user", "content": prompt}]
-        logger.debug("体重方案/修改模型输入： " + json.dumps(messages, ensure_ascii=False))
+        logger.debug(
+            "体重方案/修改模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
         generate_text = callLLM(
-            history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+            history=messages,
+            max_tokens=1024,
+            top_p=0.8,
+            temperature=0.0,
+            do_sample=False,
+            model="Qwen-72B-Chat",
         )
         logger.debug("体重方案/修改模型输出： " + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -229,7 +263,7 @@ class expertModel:
             content = generate_text[outIdx:].split("\n")[0].strip()
         if not query:
             try:
-                num = round(float(weight.replace('kg', '')) - 75.4, 1)
+                num = round(float(weight.replace("kg", "")) - 75.4, 1)
                 if num < 0:
                     cnt = f"体重较上周减少{num}kg。"
                 else:
@@ -238,7 +272,12 @@ class expertModel:
             except Exception as err:
                 return {
                     "thought": thought,
-                    "contents": [f"您今日体重为{weight}。", "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
+                    "contents": [
+                        f"您今日体重为{weight}。",
+                        "健康报告显示您的健康处于平衡状态。"
+                        + content
+                        + "这里是您下周的方案，请查收。",
+                    ],
                     "scene_ending": False,
                     "scheme_gen": 1,
                     "modi_scheme": "scheme_no_change",
@@ -247,7 +286,13 @@ class expertModel:
             finally:
                 return {
                     "thought": thought,
-                    "contents": [f"您今日体重为{weight}。", cnt, "健康报告显示您的健康处于平衡状态。" + content + "这里是您下周的方案，请查收。"],
+                    "contents": [
+                        f"您今日体重为{weight}。",
+                        cnt,
+                        "健康报告显示您的健康处于平衡状态。"
+                        + content
+                        + "这里是您下周的方案，请查收。",
+                    ],
                     "scene_ending": False,
                     "scheme_gen": 2,
                     "modi_scheme": "scheme_no_change",
@@ -255,13 +300,14 @@ class expertModel:
                 }
         else:
             modi_type = get_scheme_modi_type(content)
-            return {"thought": thought, 
-                    "contents": ['好的，已重新帮您生成了健康方案，请查收。'], 
-                    "scene_ending": False, 
-                    "scheme_gen": 0, 
-                    "modi_scheme":modi_type,
-                    "weight_trend_gen":False,
-                }
+            return {
+                "thought": thought,
+                "contents": ["好的，已重新帮您生成了健康方案，请查收。"],
+                "scene_ending": False,
+                "scheme_gen": 0,
+                "modi_scheme": modi_type,
+                "weight_trend_gen": False,
+            }
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -296,68 +342,105 @@ class expertModel:
         """
 
         bps = kwargs.get("promptParam", {}).get("blood_pressure", [])
-        bp_msg = ''
+        bp_msg = ""
         ihm_health_sbp_list = []
         ihm_health_dbp_list = []
         for b in bps:
-            date = b.get('date', '')
-            sbp = b.get('ihm_health_sbp', '')
-            dbp = b.get('ihm_health_dbp', '')
+            date = b.get("date", "")
+            sbp = b.get("ihm_health_sbp", "")
+            dbp = b.get("ihm_health_dbp", "")
             ihm_health_dbp_list.append(dbp)
             ihm_health_sbp_list.append(sbp)
-            bp_msg += f'{date}|{str(sbp)}|{str(dbp)}|mmHg|\n'
+            bp_msg += f"{date}|{str(sbp)}|{str(dbp)}|mmHg|\n"
 
         history = kwargs.get("his", [])
         b_history = kwargs.get("backend_history", [])
-        query = history[-1]['content'] if history else ''
+        query = history[-1]["content"] if history else ""
         ihm_health_sbp = ihm_health_sbp_list[-1]
         ihm_health_dbp = ihm_health_dbp_list[-1]
 
-        def inquire_gen(hitory, bp_message,iq_n=7):
+        def inquire_gen(hitory, bp_message, iq_n=7):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
             #         his.append({'role':'user','content':i['content']})
             #     else:
             #         his.append({'role':'assistant','content':i['match_cont']})
-                # if i['role'] == 'User' or i['role'] == 'user':
-                #     his.append({'role':'User', 'content':i['content']})
-                # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
-                #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
-            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in hitory]
-            hist_s = '\n'.join([f"{i['role']}: {i['content']}" for i in history])
+            # if i['role'] == 'User' or i['role'] == 'user':
+            #     his.append({'role':'User', 'content':i['content']})
+            # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
+            #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
+            history = [
+                {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+                for i in hitory
+            ]
+            hist_s = "\n".join([f"{i['role']}: {i['content']}" for i in history])
             current_date = datetime.now().date()
-            drug_msg = ''
-            drug_situ = ['漏服药物', '正常服药', '正常服药', '正常服药', '漏服药物', '正常服药', '正常服药', '正常服药']
+            drug_msg = ""
+            drug_situ = [
+                "漏服药物",
+                "正常服药",
+                "正常服药",
+                "正常服药",
+                "漏服药物",
+                "正常服药",
+                "正常服药",
+                "正常服药",
+            ]
             days = []
             for i in range(len(drug_situ)):
-                d = current_date - timedelta(days=len(drug_situ)-i-1)
+                d = current_date - timedelta(days=len(drug_situ) - i - 1)
                 drug_msg += f"|{d}| {drug_situ[i]}"
                 days.append(d)
             if len(history) >= iq_n:
-                messages = [{"role": "user", "content": blood_pressure_scheme_prompt.format(bp_message, drug_msg, current_date, hist_s)}]
+                messages = [
+                    {
+                        "role": "user",
+                        "content": blood_pressure_scheme_prompt.format(
+                            bp_message, drug_msg, current_date, hist_s
+                        ),
+                    }
+                ]
             else:
-                messages = [{"role": "user", "content": blood_pressure_inquiry_prompt.format(bp_message, drug_msg, current_date, hist_s)}] #+ history
-            logger.debug("血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False))
+                messages = [
+                    {
+                        "role": "user",
+                        "content": blood_pressure_inquiry_prompt.format(
+                            bp_message, drug_msg, current_date, hist_s
+                        ),
+                    }
+                ]  # + history
+            logger.debug(
+                "血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
             generate_text = callLLM(
-                history=messages, max_tokens=1024, top_p=0.9, temperature=0.8, do_sample=True, model="Qwen-72B-Chat"
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen-72B-Chat",
             )
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
         def blood_pressure_inquiry(history, query, iq_n=7):
             generate_text = inquire_gen(history, bp_msg, iq_n=iq_n)
-            #while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
-                #thought = generate_text
-                # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
-            #thoughtIdx = generate_text.find("Thought") + 8
+            # while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
+            # thought = generate_text
+            # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
+            # thoughtIdx = generate_text.find("Thought") + 8
             # thoughtIdx = 0
             # thought = generate_text[thoughtIdx:].split("\n")[0].strip()
             # outIdx = generate_text.find("\nassistant") + 11
             # content = generate_text[outIdx:].split("\n")[0].strip()
             if generate_text.find("Thought") == -1:
-                lis = ['结合用户个人血压信息，为用户提供帮助。', '结合用户情况，帮助用户降低血压。']
+                lis = [
+                    "结合用户个人血压信息，为用户提供帮助。",
+                    "结合用户情况，帮助用户降低血压。",
+                ]
                 import random
+
                 thought = random.choice(lis)
             else:
                 thoughtIdx = generate_text.find("Thought") + 8
@@ -367,25 +450,41 @@ class expertModel:
             else:
                 outIdx = generate_text.find("Assistant") + 10
                 content = generate_text[outIdx:].strip()
-                if content.find('Assistant') != -1:
-                    content = content[:content.find('Assistant')]
+                if content.find("Assistant") != -1:
+                    content = content[: content.find("Assistant")]
+                if content.find("Thought") != -1:
+                    content = content[: content.find("Thought")]
 
             return thought, content
 
         def blood_pressure_pacify(history, query):
-            history = [{"role": role_map.get(str(i["role"]), "user"), "content": i["content"]} for i in history]
+            history = [
+                {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+                for i in history
+            ]
             his_prompt = "\n".join(
-                [("Doctor" if not i["role"] == "user" else "user") + f": {i['content']}" for i in history]
+                [
+                    ("Doctor" if not i["role"] == "user" else "user")
+                    + f": {i['content']}"
+                    for i in history
+                ]
             )
             prompt = blood_pressure_pacify_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
-            logger.debug("血压安抚模型输入： " + json.dumps(messages, ensure_ascii=False))
+            logger.debug(
+                "血压安抚模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
             generate_text = callLLM(
-                history=messages, max_tokens=1024, top_p=0.8, temperature=0.0, do_sample=False, model="Qwen-72B-Chat"
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
             )
             logger.debug("血压安抚模型输出： " + generate_text)
             if generate_text.find("\nThought") == -1:
-                thought = '在等待医生上门的过程中，我应该安抚患者的情绪，让他保持平静，同时提供一些有助于降低血压的建议。'
+                thought = "在等待医生上门的过程中，我应该安抚患者的情绪，让他保持平静，同时提供一些有助于降低血压的建议。"
             else:
                 thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -415,7 +514,10 @@ class expertModel:
                 if (
                     "是的" in history[-1]["content"]
                     or "好的" in history[-1]["content"]
-                    or ("需要" in history[-1]["content"] and '不需要' not in history[-1]["content"])
+                    or (
+                        "需要" in history[-1]["content"]
+                        and "不需要" not in history[-1]["content"]
+                    )
                     or "嗯" in history[-1]["content"]
                     or "可以" in history[-1]["content"]
                 ):
@@ -438,17 +540,21 @@ class expertModel:
         def is_pacify(history, query):
             r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
             return True if sum(r) > 0 else False
-        
+
         def noti_blood_pressure_content(history):
-            niti_doctor_role_map = {
-                '0': '张辉',
-                '1': '张辉叔叔',
-                '2': '你',
-                '3': '你'
-            }
-            history = [{"role": niti_doctor_role_map.get(str(i["role"]), "张辉"), "content": i["content"]} for i in history]
+            niti_doctor_role_map = {"0": "张辉", "1": "张辉叔叔", "2": "你", "3": "你"}
+            history = [
+                {
+                    "role": niti_doctor_role_map.get(str(i["role"]), "张辉"),
+                    "content": i["content"],
+                }
+                for i in history
+            ]
             his_prompt = "\n".join(
-                [("张辉" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
+                [
+                    ("张辉" if not i["role"] == "你" else "你") + f": {i['content']}"
+                    for i in history
+                ]
             )
             prompt = remid_doctor_blood_pressre_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
@@ -462,14 +568,23 @@ class expertModel:
             ).strip()
 
             niti_daughter_role_map = {
-                '0': '张叔叔',
-                '1': '张叔叔',
-                '2': '你',
-                '3': '你'
+                "0": "张叔叔",
+                "1": "张叔叔",
+                "2": "你",
+                "3": "你",
             }
-            history = [{"role": niti_daughter_role_map.get(str(i["role"]), "张叔叔"), "content": i["content"]} for i in history]
+            history = [
+                {
+                    "role": niti_daughter_role_map.get(str(i["role"]), "张叔叔"),
+                    "content": i["content"],
+                }
+                for i in history
+            ]
             his_prompt = "\n".join(
-                [("张叔叔" if not i["role"] == "你" else "你") + f": {i['content']}" for i in history]
+                [
+                    ("张叔叔" if not i["role"] == "你" else "你") + f": {i['content']}"
+                    for i in history
+                ]
             )
             prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
             messages = [{"role": "user", "content": prompt}]
@@ -482,7 +597,7 @@ class expertModel:
                 model="Qwen-72B-Chat",
             ).strip()
 
-            return noti_doc_cont, noti_daughter_cont             
+            return noti_doc_cont, noti_daughter_cont
 
         def get_second_hypertension(b_history, history, query, level):
             def get_level(le):
@@ -495,13 +610,13 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(history, query,iq_n=7)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
                 return {
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
                         "我已经通知了您的女儿和您的家庭医生。",
-                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
                     "thought": thought,
@@ -521,7 +636,7 @@ class expertModel:
                     "level": level,
                     "contents": [content],
                     "thought": thought,
-                    "idx":1,
+                    "idx": 1,
                     "scheme_gen": -1,
                     "scene_ending": False,
                     "blood_trend_gen": False,
@@ -531,14 +646,14 @@ class expertModel:
                     "exercise_video": True,
                     "events": [
                         {
-                            "eventType":"notice",
-                            "eventCode":"app_shangmen_req",
-                            "eventContent":noti_doc_cont,
+                            "eventType": "notice",
+                            "eventCode": "app_shangmen_req",
+                            "eventContent": noti_doc_cont,
                         },
                         {
-                            "eventType":"notice",
-                            "eventCode":"app_notify_daughter_ai_result_req",
-                            "eventContent":noti_daughter_cont,
+                            "eventType": "notice",
+                            "eventCode": "app_notify_daughter_ai_result_req",
+                            "eventContent": noti_daughter_cont,
                         },
                     ],
                 }
@@ -548,7 +663,7 @@ class expertModel:
                 return {
                     "level": level,
                     "contents": [content],
-                    "idx":0,
+                    "idx": 0,
                     "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": True,
@@ -565,7 +680,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content],
-                        "idx":0,
+                        "idx": 0,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -580,7 +695,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content, "您需要家庭医生上门帮您服务吗？"],
-                        "idx":0,
+                        "idx": 0,
                         "thought": thought,
                         "scheme_gen": 0,
                         "scene_ending": False,
@@ -592,7 +707,21 @@ class expertModel:
                         "events": [],
                     }
 
-        ihm_health_sbp_list = [116, 118, 132, 121, 128, 123, 128, 117, 132, 134, 124, 120, 80]
+        ihm_health_sbp_list = [
+            116,
+            118,
+            132,
+            121,
+            128,
+            123,
+            128,
+            117,
+            132,
+            134,
+            124,
+            120,
+            80,
+        ]
         ihm_health_dbp_list = [82, 86, 86, 78, 86, 80, 92, 88, 85, 86, 86, 82, 60]
 
         # 计算血压波动率,和血压列表的均值对比
@@ -619,10 +748,10 @@ class expertModel:
                 "level": level,
                 "contents": [
                     f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
-                    #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                     "我已为您呼叫120。",
                 ],
-                "idx":-1,
+                "idx": -1,
                 "thought": "",
                 "scheme_gen": -1,
                 "scene_ending": True,
@@ -647,10 +776,10 @@ class expertModel:
                         "level": level,
                         "contents": [
                             f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                            #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
+                            # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较大。",
                             content,
                         ],
-                        "idx":1,
+                        "idx": 1,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -666,7 +795,7 @@ class expertModel:
                         return {
                             "level": level,
                             "contents": [content],
-                            "idx":0,
+                            "idx": 0,
                             "thought": thought,
                             "scheme_gen": -1,
                             "scene_ending": False,
@@ -681,7 +810,7 @@ class expertModel:
                         return {
                             "level": level,
                             "contents": [content],
-                            "idx":0,
+                            "idx": 0,
                             "thought": thought,
                             "scheme_gen": 0,
                             "scene_ending": True,
@@ -700,10 +829,10 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
-                        #f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
-                        content
+                        # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        content,
                     ],
-                    "idx":-1,
+                    "idx": -1,
                     "thought": thought,
                     "scheme_gen": -1,
                     "scene_ending": False,
@@ -725,7 +854,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
-                    "idx":-0,
+                    "idx": -0,
                     "events": [],
                 }
 
@@ -740,7 +869,7 @@ class expertModel:
                     "notifi_daughter_doctor": False,
                     "call_120": False,
                     "is_visit": False,
-                    "idx":0,
+                    "idx": 0,
                     "events": [],
                 }
         elif 90 <= ihm_health_sbp < 120 and 80 > ihm_health_dbp >= 60:  # 正常血压
@@ -748,9 +877,11 @@ class expertModel:
             rules = []
             return {
                 "level": 0,
-                "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围"],
+                "contents": [
+                    f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围"
+                ],
                 "thought": "用户血压正常",
-                "idx":-1,
+                "idx": -1,
                 "scheme_gen": -1,
                 "scene_ending": True,
                 "blood_trend_gen": True,
@@ -759,19 +890,20 @@ class expertModel:
                 "is_visit": False,
                 "events": [],
             }
-        else:   # 低血压
+        else:  # 低血压
             level = -1
             rules = []
             thought, content = blood_pressure_inquiry(history, query, iq_n=5)
             if not history:
                 return {
                     "level": -1,
-                    "contents": [f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围", 
-                                 #"健康报告显示您的健康处于为中度失衡状态，本次血压偏低。", 
-                                 content
-                                ],
+                    "contents": [
+                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为低血压范围",
+                        # "健康报告显示您的健康处于为中度失衡状态，本次血压偏低。",
+                        content,
+                    ],
                     "thought": thought,
-                    "idx":1,
+                    "idx": 1,
                     "scheme_gen": -1,
                     "scene_ending": False,
                     "blood_trend_gen": True,
@@ -781,12 +913,12 @@ class expertModel:
                     "events": [],
                 }
             else:
-                  
-                if "？" in content or "?" in content:   # 问诊
+
+                if "？" in content or "?" in content:  # 问诊
                     return {
                         "level": level,
                         "contents": [content],
-                        "idx":0,
+                        "idx": 0,
                         "thought": thought,
                         "scheme_gen": -1,
                         "scene_ending": False,
@@ -801,7 +933,7 @@ class expertModel:
                     return {
                         "level": level,
                         "contents": [content],
-                        "idx":0,
+                        "idx": 0,
                         "thought": thought,
                         "scheme_gen": 0,
                         "scene_ending": True,
@@ -811,7 +943,6 @@ class expertModel:
                         "is_visit": False,
                         "events": [],
                     }
-
 
     @clock
     def rec_diet_eval(self, param):
@@ -848,7 +979,10 @@ class expertModel:
 
         recipes_prompt = "\n".join(recipes_prompt_list)
         prompt += recipes_prompt
-        history = [{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}]
+        history = [
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": prompt},
+        ]
 
         logger.debug(f"饮食点评 Prompt:\n{json.dumps(history, ensure_ascii=False)}")
 
@@ -896,26 +1030,38 @@ class expertModel:
         """
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         history = []
-        sys_prompt = self.gsr.prompt_meta_data["event"]["blood_pressure_trend_analysis"]["description"]
+        sys_prompt = self.gsr.prompt_meta_data["event"][
+            "blood_pressure_trend_analysis"
+        ]["description"]
         history.append({"role": "system", "content": sys_prompt})
 
         tst = param["ihm_health_sbp"][0]["date"]
         ted = param["ihm_health_sbp"][-1]["date"]
         content = f"从{tst}至{ted}期间\n"
         if param.get("ihm_health_sbp"):
-            content += self.__bpta_compose_value_prompt("收缩压测量数据: ", param["ihm_health_sbp"])
+            content += self.__bpta_compose_value_prompt(
+                "收缩压测量数据: ", param["ihm_health_sbp"]
+            )
         if param.get("ihm_health_dbp"):
-            content += self.__bpta_compose_value_prompt("舒张压测量数据: ", param["ihm_health_dbp"])
+            content += self.__bpta_compose_value_prompt(
+                "舒张压测量数据: ", param["ihm_health_dbp"]
+            )
         if param.get("ihm_health_hr"):
-            content += self.__bpta_compose_value_prompt("心率测量数据: ", param["ihm_health_hr"])
+            content += self.__bpta_compose_value_prompt(
+                "心率测量数据: ", param["ihm_health_hr"]
+            )
         history.append({"role": "user", "content": content})
-        logger.debug(f"血压趋势分析\n{history}")
-        response = callLLM(history=history, temperature=0.8, top_p=1, model=model, stream=True)
+        logger.debug(f"血压趋势分析 LLM Input: {dumpJS(history)}")
+        response = callLLM(
+            history=history, temperature=0.8, top_p=1, model=model, stream=True
+        )
         content = accept_stream_response(response, verbose=False)
-        logger.debug(f"趋势分析结果 length - {len(content)}")
+        logger.debug(f"血压趋势分析 Output: {content}")
         return content
 
-    def __health_warning_solutions_early_continuous_check__(self, indicatorData: List[Dict]) -> bool:
+    def __health_warning_solutions_early_continuous_check__(
+        self, indicatorData: List[Dict]
+    ) -> bool:
         """判断指标数据近五天是否连续"""
 
         def get_day_before(days):
@@ -948,7 +1094,13 @@ class expertModel:
         """
         value_list = [float(i) for i in value_list]
         if return_str:
-            valuemap = {-1: "低血压", 0: "正常", 1: "高血压一级", 2: "高血压二级", 3: "高血压三级"}
+            valuemap = {
+                -1: "低血压",
+                0: "正常",
+                1: "高血压一级",
+                2: "高血压二级",
+                3: "高血压三级",
+            }
             vars = [valuemap.get(i) for i in vars]
             return vars
         if not vars:
@@ -988,22 +1140,34 @@ class expertModel:
             param["indicatorData"]
         )  # 通过数据校验判断处理逻辑
 
-        time_range = {i["date"][:10] for i in param["indicatorData"][0]["data"]}  # 当前的时间范围
+        time_range = {
+            i["date"][:10] for i in param["indicatorData"][0]["data"]
+        }  # 当前的时间范围
         bpl = []
         ihm_health_sbp, ihm_health_dbp, ihm_health_hr = [], [], []
         if is_continuous:
-            prompt_str = self.gsr.prompt_meta_data["event"]["warning_solutions_early_continuous"]["description"]
+            prompt_str = self.gsr.prompt_meta_data["event"][
+                "warning_solutions_early_continuous"
+            ]["description"]
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param["indicatorData"]:
                 if i["code"] == self.indicatorCodeMap["收缩压"]:  # 收缩压
                     ihm_health_sbp = [j["value"] for j in i["data"]]
-                    bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_sbp)
+                    bpl = self.__health_warning_update_blood_pressure_level__(
+                        bpl, ihm_health_sbp
+                    )
                 elif i["code"] == self.indicatorCodeMap["舒张压"]:  # 舒张压
                     ihm_health_dbp = [j["value"] for j in i["data"]]
-                    bpl = self.__health_warning_update_blood_pressure_level__(bpl, ihm_health_dbp)
+                    bpl = self.__health_warning_update_blood_pressure_level__(
+                        bpl, ihm_health_dbp
+                    )
                 elif i["code"] == self.indicatorCodeMap["心率"]:  # 心率
                     ihm_health_hr = [j["value"] for j in i["data"]]
-            ihm_health_blood_pressure_level = self.__health_warning_update_blood_pressure_level__(bpl, return_str=True)
+            ihm_health_blood_pressure_level = (
+                self.__health_warning_update_blood_pressure_level__(
+                    bpl, return_str=True
+                )
+            )
             prompt = prompt_template.format(
                 time_start=min(time_range),
                 time_end=max(time_range),
@@ -1013,7 +1177,9 @@ class expertModel:
                 ihm_health_hr=ihm_health_hr,
             )
         else:  # 非连续，只取当日指标
-            prompt_str = self.gsr.prompt_meta_data["event"]["warning_solutions_early_not_continuous"]["description"]
+            prompt_str = self.gsr.prompt_meta_data["event"][
+                "warning_solutions_early_not_continuous"
+            ]["description"]
             prompt_template = PromptTemplate.from_template(prompt_str)
             for i in param["indicatorData"]:
                 if i["code"] == self.indicatorCodeMap["收缩压"]:
@@ -1030,7 +1196,9 @@ class expertModel:
                 ihm_health_hr=ihm_health_hr,
             )
         history = [{"role": "user", "content": prompt}]
-        response = callLLM(history=history, temperature=0.7, top_p=0.8, model=model, stream=True)
+        response = callLLM(
+            history=history, temperature=0.7, top_p=0.8, model=model, stream=True
+        )
         content = accept_stream_response(response, verbose=False)
         return content
 
@@ -1050,7 +1218,9 @@ class expertModel:
         """
 
         def parse_model_response(content):
-            first_match_content = re.findall("```json(.*?)```", content, re.S)[0].strip()
+            first_match_content = re.findall("```json(.*?)```", content, re.S)[
+                0
+            ].strip()
             ret = json.loads(first_match_content)
             reply, purchasing_list = ret["content"], ret["purchasing_list"]
             return reply, purchasing_list
@@ -1061,7 +1231,9 @@ class expertModel:
         event_msg = self.gsr.prompt_meta_data["event"][intentCode]
         sys_prompt = event_msg["description"] + event_msg["process"]
         model = self.gsr.model_config["food_purchasing_list_management"]
-        sys_prompt = sys_prompt.replace("{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False))
+        sys_prompt = sys_prompt.replace(
+            "{purchasing_list}", json.dumps(purchasing_list, ensure_ascii=False)
+        )
         query = sys_prompt + f"\n用户说: {prompt}\n" + f"现采购清单:\n```json\n"
         history = [{"role": "user", "content": query}]
         logger.debug(f"食材采购清单管理 LLM Input: \n{history}")
@@ -1090,7 +1262,9 @@ class expertModel:
             "content": reply,
             "intentCode": intentCode,
             "dataSource": "语言模型",
-            "intentDesc": self.gsr.intent_desc_map.get(intentCode, "食材采购清单管理-unknown intentCode desc error"),
+            "intentDesc": self.gsr.intent_desc_map.get(
+                intentCode, "食材采购清单管理-unknown intentCode desc error"
+            ),
         }
         return ret
 
@@ -1119,7 +1293,9 @@ class expertModel:
         ret = list(sorted(items, key=lambda x: cat_map.get(x["classify"])))
         return ret
 
-    def food_purchasing_list_generate_by_content(self, query: str, *args, **kwargs) -> Dict:
+    def food_purchasing_list_generate_by_content(
+        self, query: str, *args, **kwargs
+    ) -> Dict:
         """根据用户输入内容生成食材采购清单"""
         if not query:
             raise ValueError("query can't be empty")
@@ -1142,9 +1318,13 @@ class expertModel:
             "6. 输出示例:\n```json\n```\n\n"
             "医生建议: \n{{ prompt }}"
         )
-        prompt = prompt_template_str.replace("{{ example_item_js }}", example_item_js).replace("{{ prompt }}", query)
+        prompt = prompt_template_str.replace(
+            "{{ example_item_js }}", example_item_js
+        ).replace("{{ prompt }}", query)
         history = [{"role": "user", "content": prompt}]
-        logger.debug(f"根据用户输入生成采购清单 LLM Input: {json.dumps(history, ensure_ascii=False)}")
+        logger.debug(
+            f"根据用户输入生成采购清单 LLM Input: {json.dumps(history, ensure_ascii=False)}"
+        )
         response = callLLM(
             history=history,
             temperature=0.3,
@@ -1160,7 +1340,9 @@ class expertModel:
         purchasing_list = self.__sort_purchasing_list_by_category__(purchasing_list)
         return purchasing_list
 
-    def rec_diet_reunion_meals_restaurant_selection(self, history=[], backend_history: List = [], **kwds) -> str:
+    def rec_diet_reunion_meals_restaurant_selection(
+        self, history=[], backend_history: List = [], **kwds
+    ) -> Generator:
         """聚餐场景
         提供各餐厅信息
         群组中各角色聊天内容
@@ -1193,7 +1375,9 @@ class expertModel:
                 else HOSPITAL_MESSAGE
             )
             event_msg = (
-                self.gsr.prompt_meta_data["event"]["reunion_meals_restaurant_selection"]["description"]
+                self.gsr.prompt_meta_data["event"][
+                    "reunion_meals_restaurant_selection"
+                ]["description"]
                 if not kwds.get("event_msg")
                 else kwds.get("event_msg")
             )
@@ -1218,7 +1402,11 @@ class expertModel:
         try:
             query = ""
             for item in history:
-                name, role, content = item.get("name"), item.get("role"), item.get("content")
+                name, role, content = (
+                    item.get("name"),
+                    item.get("role"),
+                    item.get("content"),
+                )
                 # {"name": "管家","role": "hb_qa@39238","content": "欢迎韩伟娜进入本群，您可以在这里畅所欲言了。"}  管家的信息无用, 过滤    2024年1月11日10:41:02
                 if name == "管家":
                     continue
@@ -1234,33 +1422,26 @@ class expertModel:
                 user_input += f": {content}\n"
                 query += user_input
             messages.append({"role": "user", "content": query})
-            response = openai.ChatCompletion.create(
+            logger.debug(f"共策 LLM Input: {json.dumps(messages, ensure_ascii=False)}")
+
+            response = self.client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=0.9,
                 top_p=0.8,
-                top_k=-1,
-                repetition_penalty=1.1,
                 stream=True,
             )
-
-            t_st = time.time()
             ret_content = ""
             for i in response:
                 msg = i.choices[0].delta.to_dict()
                 text_stream = msg.get("content")
                 if text_stream:
                     ret_content += text_stream
-                    print(text_stream, end="", flush=True)
+                    # print(text_stream, end="", flush=True)
                     yield make_ret_item(text_stream, False, [])
             messages.append({"role": "assistant", "content": ret_content})
 
-            time_cost = round(time.time() - t_st, 1)
-            logger.debug(f"共策回复: {ret_content}")
-            logger.success(
-                f"Model {model} generate costs summary: " + f"total_texts:{len(ret_content)}, "
-                f"complete cost: {time_cost}s"
-            )
+            logger.debug(f"共策 LLM Output: {ret_content}")
             yield make_ret_item("", True, messages[1:])
         except openai.APIError as e:
             logger.error(f"Model {model} generate error: {e}")
@@ -1270,12 +1451,15 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
     def regist_aigc_functions(self):
-        self.funcmap = {}
-        self.funcmap["aigc_functions_single_choice"] = self.__single_choice__
-        self.funcmap["aigc_functions_report_interpretation"] = self.__report_ocr_classification__
-        self.funcmap["aigc_functions_report_summary"] = self.__report_summary__
+        self.funcmap = {
+            v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
+        }
+        for obj_str in dir(self):
+            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+                self.funcmap[obj_str] = getattr(self, obj_str)
+        ...
 
-    def __single_choice__(self, prompt: str, options: List[str], **kwargs):
+    def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
         """单项选择功能
 
         - Args:
@@ -1285,14 +1469,24 @@ class expertModel:
         - Returns:
             str: 答案
         """
-        model = self.gsr.model_config.get("aigc_functions_single_choice", "Qwen-14B-Chat")
-        prompt_template_str = self.gsr.prompt_meta_data["event"]["aigc_functions_single_choice"]["description"]
+        model = self.gsr.model_config.get(
+            "aigc_functions_single_choice", "Qwen-14B-Chat"
+        )
+        prompt_template_str = self.gsr.prompt_meta_data["event"][
+            "aigc_functions_single_choice"
+        ]["description"]
         prompt_template = PromptTemplate.from_template(prompt_template_str)
         query = prompt_template.format(options=options, prompt=prompt)
         messages = [{"role": "user", "content": query}]
-        logger.debug(f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}")
-        response = callLLM(history=messages, model=model, temperature=0.7, top_p=0.5, stream=True)
-        content = accept_stream_response(response, verbose=False)
+        logger.debug(
+            f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}"
+        )
+        content = callLLM(
+            history=messages,
+            model=model,
+            temperature=0,
+            repetition_penalty=1.0,
+        )
         logger.debug(f"Single choice LLM Output: {content}")
         if content == "选项与要求不符":
             return content
@@ -1308,7 +1502,9 @@ class expertModel:
         docs = ""
         if raw_result:
             process_ocr_result = [line[1] for line in raw_result]
-            logger.debug(f"Report interpretation OCR result: {dumpJS(process_ocr_result)}")
+            logger.debug(
+                f"Report interpretation OCR result: {dumpJS(process_ocr_result)}"
+            )
             docs += "\n".join(process_ocr_result)
         else:
             logger.error(f"Report interpretation OCR result is empty")
@@ -1338,7 +1534,7 @@ class expertModel:
             "image_retc": remote_image_url,
         }
 
-    def __plot_rectangle(self, tmp_path, file_path, rectangles_with_text):
+    def __plot_rectangle__(self, tmp_path, file_path, rectangles_with_text):
         """为识别的报告内容画出矩形框"""
         image_io = Image.open(file_path)
         draw = ImageDraw.Draw(image_io)
@@ -1348,14 +1544,17 @@ class expertModel:
             image_font = ImageFont.truetype(str(self.image_font_path), fontsize)
             draw.rectangle(rectangle, outline="blue", width=line_value)
             draw.text(
-                (rectangle[0] - fontsize*2, rectangle[1] - fontsize - 15), text, font=image_font, fill="red"
+                (rectangle[0] - fontsize * 2, rectangle[1] - fontsize - 15),
+                text,
+                font=image_font,
+                fill="red",
             )
         save_path = tmp_path.joinpath(file_path.stem + "_rect" + file_path.suffix)
         image_io.save(save_path)
         logger.debug(f"Plot rectangle image saved to {save_path}")
         return save_path
 
-    def __upload_image(self, save_path):
+    def __upload_image__(self, save_path):
         """上传图片到服务器"""
         url = self.gsr.api_config["ai_backend"] + "/file/uploadFile"
         payload = {"businessType": "reportAnalysis"}
@@ -1364,7 +1563,16 @@ class expertModel:
         elif save_path.suffix.lower() in [".png"]:
             files = [("file", (save_path.name, open(save_path, "rb"), "image/png"))]
         else:
-            files = [("file", (save_path.name, open(save_path, "rb"), f"image/{save_path.suffix.lower()[1:]}"))]
+            files = [
+                (
+                    "file",
+                    (
+                        save_path.name,
+                        open(save_path, "rb"),
+                        f"image/{save_path.suffix.lower()[1:]}",
+                    ),
+                )
+            ]
         resp = self.session.post(url, data=payload, files=files)
         if resp.status_code == 200:
             remote_image_url = resp.json()["data"]
@@ -1377,30 +1585,37 @@ class expertModel:
         self, file_path: Union[str, Path], raw_result, tmp_path, **kwargs
     ) -> str:
         """报告OCR结果分组"""
+
+        # "3. 可选类别有[报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生]\n"
         sysprompt = (
             "You are a helpful assistant.\n"
             "# 任务描述\n"
             "1. 下面我将给你报告OCR提取的内容，它是有序的，优先从上到下从左到右\n"
             "2. 请你参考给出的内容的前后信息，按内容的前后顺序对报告的内容进行归类，类别最多5个\n"
-            # "3. 可选类别有[报告标题,基础信息,影像图片,影像所见,诊断意见,医疗建议,检查方法,检查医生]\n"
             "3. 只给出各类别开始内容和结尾内容对应的index, 所有内容的index都应当被包含\n"
-            '4. 输出格式参考:\n```json\n{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n```其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1'
+            "# 输出格式要求\n"
+            "## 格式参考\n"
+            "```json\n"
+            '{"分类1": [start_idx_1, end_idx_1], "分类2": [start_idx_2, end_idx_2], "分类3": [start_idx_3, end_idx_3],...}\n'
+            "```\n"
+            "## 特殊要求\n"
+            "其中start_idx_2=end_idx_1+1, start_idx_3=end_idx_2+1\n"
         )
-        content_index = {idx: text for idx, text in enumerate([i[1] for i in raw_result])}
-        messages = [{"role": "system", "content": sysprompt}, {"role": "user", "content": "```json\n" + str(content_index) + "\n```"}]
+        content_index = {
+            idx: text for idx, text in enumerate([i[1] for i in raw_result])
+        }
+        messages = [
+            {"role": "system", "content": sysprompt},
+            {"role": "user", "content": "```json\n" + str(content_index) + "\n```"},
+        ]
+        model = self.gsr.get_model("aigc_functions_report_interpretation_text_classify")
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
-        response = openai.ChatCompletion.create(
-            model="Qwen-72B-Chat",
+        response = self.client.chat.completions.create(
+            model=model,
             messages=messages,
             temperature=0.7,
-            n=1,
-            top_p=0.3,
-            top_k=1,
-            repetition_penalty=1.0,
-            length_penalty=1.0,
-            presence_penalty=0,
-            frequency_penalty=0.5,
+            top_p=0.8,
             stream=True,
         )
         content = accept_stream_response(response, verbose=False)
@@ -1414,6 +1629,8 @@ class expertModel:
         try:
             rectangles_with_text = []
             for topic, index_range in loc.items():
+                if index_range[0] > index_range[1]:
+                    index_range[0], index_range[1] = index_range[1], index_range[0]
                 if index_range[0] < 0:
                     index_range[0] = 0
                 elif index_range[0] > len(content_index):
@@ -1427,13 +1644,47 @@ class expertModel:
                 right = max([j for i in coordinates for j in [i[1][0], i[2][0]]])
                 bottom = max([j for i in coordinates for j in [i[2][1], i[3][1]]])
                 rectangles_with_text.append(((left, top, right, bottom), topic))
-            save_path = self.__plot_rectangle(tmp_path, file_path, rectangles_with_text)
+            save_path = self.__plot_rectangle__(
+                tmp_path, file_path, rectangles_with_text
+            )
         except Exception as e:
             logger.exception(f"Report interpretation error: {e}")
-        remote_image_url = self.__upload_image(save_path)
+            pass
+        remote_image_url = self.__upload_image__(save_path)
         return remote_image_url
 
-    def __report_ocr_classification__(
+    def __compose_user_msg__(
+        self,
+        mode: Literal["user_profile", "messages", "drug_plan"],
+        user_profile: UserProfile = None,
+        messages: List[ChatMessage] = [],
+        drug_plan: "List[DrugPlanItem]" = "[]",
+    ) -> str:
+        content = ""
+        if mode == "user_profile":
+            for key, value in user_profile.items():
+                content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "messages":
+            role_map = {"assistant": "医生", "user": "患者"}
+            for message in messages:
+                if message["role"] == "assistant":
+                    content += f"{role_map[message['role']]}: {message['content']}\n"
+                else:
+                    content += f"{role_map[message['role']]}: {message['content']}\n"
+        elif mode == "drug_plan":
+            for item in json5.loads(drug_plan):
+                content += (
+                    ", ".join(
+                        [f"{USER_PROFILE_KEY_MAP.get(k)}: {v}" for k, v in item.items()]
+                    )
+                    + "\n"
+                )
+            content = content.strip()
+        else:
+            logger.error(f"Compose user profile error: mode {mode} not supported")
+        return content
+
+    def aigc_functions_report_interpretation(
         self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs
     ) -> Dict:
         """报告解读功能
@@ -1460,7 +1711,7 @@ class expertModel:
                     f.write(r.content)
             elif kwargs.get("file_path"):
                 file_path = kwargs.get("file_path")
-                image_url = self.__upload_image(file_path)
+                image_url = self.__upload_image__(file_path)
             else:
                 logger.error(f"Report interpretation error: file_path or url not found")
             return image_url, file_path
@@ -1468,7 +1719,13 @@ class expertModel:
         def jude_report_type(docs: str, options: List[str]) -> str:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
-            response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5, stream=True)
+            response = callLLM(
+                history=messages,
+                model="Qwen-72B-Chat",
+                temperature=0.7,
+                top_p=0.5,
+                stream=True,
+            )
             report_type = accept_stream_response(response, verbose=False)
             logger.debug(f"Report interpretation report type: {report_type}")
             if report_type not in options:
@@ -1489,10 +1746,13 @@ class expertModel:
         docs, raw_result, process_ocr_result = self.__ocr_report__(file_path)
         if not docs:
             return self.__report_interpretation_result__(
-                msg="未识别出报告内容，请重新尝试", ocr_result="您的报告内容无法解析，请重新尝试."
+                msg="未识别出报告内容，请重新尝试",
+                ocr_result="您的报告内容无法解析，请重新尝试.",
             )
         try:
-            remote_image_url = self.__report_ocr_classification_make_text_group__(file_path, raw_result, tmp_path)
+            remote_image_url = self.__report_ocr_classification_make_text_group__(
+                file_path, raw_result, tmp_path
+            )
             if not remote_image_url:
                 remote_image_url = image_url
         except Exception as e:
@@ -1515,17 +1775,19 @@ class expertModel:
             ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url
         )
 
-    def __report_summary__(self, **kwargs):
+    def aigc_functions_report_summary(self, **kwargs):
         """报告内容总结
         循环
         """
         chunk_size = kwargs.get("chunk_size", 1000)
         assert kwargs["report_content"] is not None, "report_content is None"
-        system_prompt = """You are a helpful assistant.
-# 任务描述
-你是一个经验丰富的医生,你要清楚了解患者的生命熵检查报告内容，根据报告内容给出总结话术，其中包含生命熵熵值，哪些处于失衡状态，哪些有异常
-1. 请你根据自身经验，结合生命熵报告内容，给出摘要总结
-2. 输出内容要求通俗易懂、温柔亲切、符合科学性、上下文通畅，300字以内"""
+        system_prompt = (
+            "You are a helpful assistant.\n"
+            "# 任务描述\n"
+            "你是一个经验丰富的医生,你要清楚了解患者的生命熵检查报告内容，根据报告内容给出总结话术，其中包含生命熵熵值，哪些处于失衡状态，哪些有异常\n"
+            "1. 请你根据自身经验，结合生命熵报告内容，给出摘要总结\n"
+            "2. 请你根据总结，给出建议，并说明原因\n"
+        )
         summary_list = []
         if isinstance(kwargs["report_content"], list):
             report_content = "\n".join(kwargs["report_content"])
@@ -1537,26 +1799,253 @@ class expertModel:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": chunk_text},
             ]
-            response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.8, stream=True)
-            content = accept_stream_response(response, verbose=True)
+            response = callLLM(
+                history=messages,
+                model="Qwen-14B-Chat",
+                temperature=0.7,
+                top_p=0.8,
+                stream=True,
+            )
+            content = accept_stream_response(response, verbose=False)
             summary_list.append(content)
         summary = "\n".join(summary_list)
-        messages = [{"role": "system", "content": system_prompt}, {"role": "user", "content": summary}]
-        response = callLLM(history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.8, stream=True)
-        content = accept_stream_response(response, verbose=True)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": summary},
+        ]
+        response = callLLM(
+            history=messages,
+            model="Qwen-72B-Chat",
+            temperature=0.7,
+            top_p=0.8,
+            stream=True,
+        )
+        content = accept_stream_response(response, verbose=False)
         return {"report_summary": content}
 
-    def call_function(self, **kwargs):
-        """调用函数
+    async def aigc_functions_consultation_summary(self, **kwargs) -> str:
+        """问诊摘要"""
 
-        - Args Example:
-            ```json
-            {
-                "intentCode": "",
-                "prompt": "",
-                "options": []
+        def update_model_args(kwargs) -> Dict:
+
+            model_args = {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                **kwargs.get("model_args", {}),
             }
-            ```
+            if kwargs.get("model_args"):
+                del kwargs["model_args"]
+            return model_args
+
+        _event = "问诊摘要"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
+
+        model_args = update_model_args(kwargs)
+        content: Union[str, Generator] = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_diagnosis(self, **kwargs) -> str:
+        """诊断"""
+        _event = "诊断"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
+        model_args = {"temperature": 0.7, "top_p": 0.8, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+
+        if content == "无":
+            kwargs["intentCode"] = "aigc_functions_diagnosis_result"
+            model_args = {"temperature": 0, "top_p": 0.8, "repetition_penalty": 1.0}
+            content: str = await self.aaigc_functions_general(
+                _event, prompt_vars, model_args, **kwargs
+            )
+        return content
+
+    async def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
+        """用药建议"""
+        _event = "用药建议"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        try:
+            content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
+            result = dumpJS(json5.loads(content))
+        except Exception as e:
+            logger.exception(f"AIGC Functions {_event} json5.loads error: {e}")
+            result = dumpJS([])
+        return result
+
+    async def aigc_functions_food_principle(self, **kwargs) -> str:
+        """饮食原则"""
+        _event = "饮食原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_sport_principle(self, **kwargs) -> str:
+        """运动原则"""
+        _event = "运动原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_mental_principle(self, **kwargs) -> str:
+        """情志原则"""
+        _event = "情志原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
+        """中医调理"""
+        _event = "中医调理"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs["diagnosis"],
+        }
+        content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
+        return content
+
+    async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
+        """康养方案推荐原因"""
+        _event = "康养方案推荐原因"
+        user_profile = self.__compose_user_msg__(
+            "user_profile",
+            user_profile=kwargs["user_profile"],
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        drug_plan = self.__compose_user_msg__(
+            "drug_plan", drug_plan=kwargs["drug_plan"]
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "drug_plan": drug_plan,
+            "diagnosis": kwargs["diagnosis"],
+            "food_principle": kwargs.get("food_principle", ""),
+            "sport_principle": kwargs.get("sport_principle", ""),
+            "mental_principle": kwargs["mental_principle"],
+            "chinese_therapy": kwargs["chinese_therapy"],
+        }
+        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
+        return content
+
+    def aigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: dict = {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        },
+        **kwargs,
+    ):
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        prompt_template: str = self.gsr.get_event_item(event)["description"]
+        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        content: str = callLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+
+    async def aaigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: dict = {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        },
+        **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        prompt_template: str = self.gsr.get_event_item(event)["description"]
+        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        content: Union[str, Generator] = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+
+    async def call_function(self, **kwargs) -> Union[str, Generator]:
+        """调用函数
         - Args:
             intentCode (str): 意图代码
             prompt (str): 问题
@@ -1567,18 +2056,22 @@ class expertModel:
         """
         intent_code = kwargs.get("intentCode")
         # TODO intentCode -> funcCode
-        func_code = (
+        intent_code = (
             self.gsr.intent_aigcfunc_map.get(intent_code)
             if self.gsr.intent_aigcfunc_map.get(intent_code)
             else intent_code
         )
-        if not self.funcmap.get(func_code):
-            logger.error(f"intentCode {func_code} not found in funcmap")
+        if not self.funcmap.get(intent_code):
+            logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
         try:
-            content = self.funcmap.get(func_code)(**kwargs)
+            func = self.funcmap.get(intent_code)
+            if asyncio.iscoroutinefunction(func):
+                content = await func(**kwargs)
+            else:
+                content = func(**kwargs)
         except Exception as e:
-            logger.exception(f"call function {func_code} error: {e}")
+            logger.exception(f"call function {intent_code} error: {e}")
             raise RuntimeError(f"Call function error.")
         return content
 

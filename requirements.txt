@@ -1,7 +1,9 @@
-flask
+fastapi
+uvicorn
+pydantic
+pyyaml
 gevent
-flask_cors
-openai==0.28.1
+openai
 langchain==0.0.330
 langchain_community
 SQLAlchemy==1.4.49
@@ -25,3 +27,4 @@ rapidocr_onnxruntime
 pdf2image
 pdfminer.six
 Pillow
+sse_starlette
