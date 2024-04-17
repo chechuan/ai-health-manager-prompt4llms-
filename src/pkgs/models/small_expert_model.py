@@ -48,13 +48,13 @@ class expertModel:
     }
     session = Session()
     ocr = RapidOCR()
-    client = openai.OpenAI()
 
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
         self.regist_aigc_functions()
         self.load_image_config()
+        self.client = openai.OpenAI()
 
     def load_image_config(self):
         self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath(
