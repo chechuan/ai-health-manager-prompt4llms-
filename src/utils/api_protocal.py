@@ -44,41 +44,6 @@ class ChatMessage(BaseModel):
     content: str
 
 
-class UserProfileAge(BaseModel):
-    age: int = Field(ge=1, le=100)  # 年龄
-    desc: str = "年龄"
-
-
-class UserProfileGender(BaseModel):
-    gender: Literal["男", "女"] = Field(description="性别")
-    desc: str = "性别"
-
-
-class UserProfileHeight(BaseModel):
-    height: str = None  # 身高
-    desc: str = "身高"
-
-
-class UserProfileWeight(BaseModel):
-    weight: str = None  # 体重
-    desc: str = "体重"
-
-
-class UserProfileDiseaseHistory(BaseModel):
-    disease_history: List[str] = []  # 疾病史
-    desc: str = "疾病史"
-
-
-class UserProfileAllergicHistory(BaseModel):
-    allergic_history: List[str] = []  # 过敏史
-    desc: str = "过敏史"
-
-
-class UserProfileSurgeryHistory(BaseModel):
-    surgery_history: List[str] = []  # 手术史
-    desc: str = "手术史"
-
-
 USER_PROFILE_KEY_MAP = {
     "age": "年龄",
     "gender": "性别",
@@ -120,13 +85,13 @@ class DrugPlanItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: Optional[UserProfileAge] = None  # 年龄
-    gender: Optional[UserProfileGender] = None  # 性别
-    height: Optional[UserProfileHeight] = None  # 身高
-    weight: Optional[UserProfileWeight] = None  # 体重
-    disease_history: Optional[UserProfileDiseaseHistory] = None  # 疾病史
-    allergic_history: Optional[UserProfileAllergicHistory] = None  # 过敏史
-    surgery_history: Optional[UserProfileSurgeryHistory] = None  # 手术史
+    age: int = Field(ge=1, le=100)  # 年龄
+    gender: Literal["男", "女"] = Field(description="性别")
+    height: str = None  # 身高
+    weight: str = None  # 体重
+    disease_history: List[str] = []  # 疾病史
+    allergic_history: List[str] = []  # 过敏史
+    surgery_history: List[str] = []  # 手术史
     main_diagnosis_of_western_medicine: Optional[str] = None  # 西医主要诊断
     secondary_diagnosis_of_western_medicine: Optional[str] = None  # 西医次要诊断
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
@@ -148,9 +113,8 @@ class AigcFunctionsRequest(BaseModel):
     intentCode: str
     prompt: Optional[str] = None
     options: Optional[List[str]] = None
-    user_profile: Optional[UserProfile]
+    user_profile: UserProfile
     messages: Optional[List[ChatMessage]] = []
-    stream: Optional[bool] = False
     durg_plan: List[DrugPlanItem] = None  # 药方
     diagnosis: Optional[str] = None  # 诊断
     food_principle: Optional[str] = None  # 饮食原则

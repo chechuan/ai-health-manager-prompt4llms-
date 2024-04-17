@@ -451,7 +451,11 @@ def mount_aigc_functions(app: FastAPI):
 
 
 def create_app():
-    app = FastAPI()
+    app = FastAPI(
+        title="智能健康管家-算法",
+        description="",
+        version="0.0.0",
+    )
     router = APIRouter()
     prepare_for_all()
 
