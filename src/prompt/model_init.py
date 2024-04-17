@@ -211,7 +211,7 @@ def callLLM(
         completion = client.chat.completions.create(**kwds)
         if stream:
             return completion
-        ret = completion["choices"][0]["message"]["content"].strip()
+        ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
     logger.info(
         f"Model {model} generate costs summary: "
