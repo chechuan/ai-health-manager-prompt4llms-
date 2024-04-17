@@ -23,7 +23,7 @@ import pandas as pd
 import requests
 import yaml
 from sqlalchemy import MetaData, Table, create_engine
-
+from typing import Optional
 from data.constrant import CACHE_DIR
 
 try:
