@@ -15,11 +15,8 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, AnyStr, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 from urllib import parse
-
-from altair import Optional
-from fastapi.responses import JSONResponse
 import numpy as np
 import openai
 import pandas as pd
@@ -28,7 +25,6 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 
 from data.constrant import CACHE_DIR
-from src.utils.api_protocal import AigcFunctionsRequest
 
 try:
     from src.utils.Logger import logger
