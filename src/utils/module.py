@@ -15,7 +15,7 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Literal, Tuple, Union
 from urllib import parse
 import numpy as np
 import openai
@@ -25,6 +25,7 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 from typing import Optional
 from data.constrant import CACHE_DIR
+from src.utils.api_protocal import AigcFunctionsRequest
 
 try:
     from src.utils.Logger import logger
@@ -889,10 +890,12 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
     return prompt
 
 
-async def check_aigc_request(param: Dict) -> Optional[str]:
+async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Optional[str]:
     ret = None
     if not param.get("intentCode"):
         ret = "intentCode not found in request"
+    if not param.get("messages") or param.get("messages") == []:
+        ret = "messages not found in request"
     return ret
 
 
