@@ -892,10 +892,12 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
 
 async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Optional[str]:
     ret = None
-    if not param.get("intentCode"):
+    if "intentCode" not in param:
         ret = "intentCode not found in request"
-    if not param.get("messages") or param.get("messages") == []:
+    if "messages" not in param:
         ret = "messages not found in request"
+    elif not param.get("messages"):
+        ret = "messages cannot be empty or None in request"
     return ret
 
 
