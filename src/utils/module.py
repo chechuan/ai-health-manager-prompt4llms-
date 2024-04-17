@@ -18,6 +18,8 @@ from pathlib import Path
 from typing import Any, AnyStr, Dict, Tuple, Union
 from urllib import parse
 
+from altair import Optional
+from fastapi.responses import JSONResponse
 import numpy as np
 import openai
 import pandas as pd
@@ -26,6 +28,7 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 
 from data.constrant import CACHE_DIR
+from src.utils.api_protocal import AigcFunctionsRequest
 
 try:
     from src.utils.Logger import logger
@@ -888,6 +891,13 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
             "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
         )
     return prompt
+
+
+async def check_aigc_request(param: Dict) -> Optional[str]:
+    ret = None
+    if not param.get("intentCode"):
+        ret = "intentCode not found in request"
+    return ret
 
 
 if __name__ == "__main__":

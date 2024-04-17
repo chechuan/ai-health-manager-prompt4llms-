@@ -11,6 +11,7 @@ import time
 import json
 import asyncio
 import traceback
+from typing import AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union
 from fastapi.responses import StreamingResponse
 import uvicorn
 from pathlib import Path
@@ -22,9 +23,14 @@ sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel
 from src.pkgs.pipeline import Chat_v2
-from src.utils.api_protocal import RolePlayRequest, AigcFunctionsRequest
+from src.utils.api_protocal import (
+    AigcFunctionsResponse,
+    RolePlayRequest,
+    AigcFunctionsRequest,
+)
 from src.utils.Logger import logger
 from src.utils.module import (
+    check_aigc_request,
     InitAllResource,
     NpEncoder,
     curr_time,
@@ -60,13 +66,25 @@ async def async_accept_param_purge(request: Request):
     return p
 
 
-def make_result(head=200, msg=None, items=None, cls=False, **kwargs) -> Response:
-    if not items and head == 200:
-        head = 600
-    res = {"head": head, "msg": msg, "items": items, **kwargs}
-    # if cls:
-    res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
-    return Response(res, media_type=kwargs.get("media_type", "application/json"))
+def make_result(
+    head=200, msg=None, items=None, ret_response=True, **kwargs
+) -> Union[Response, StreamingResponse]:
+    if not isinstance(items, AsyncGenerator):
+        if not items and head == 200:
+            head = 600
+        res = {"head": head, "msg": msg, "items": items, **kwargs}
+        res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+        if ret_response:
+            return Response(
+                res, media_type=kwargs.get("media_type", "application/json")
+            )
+        else:
+            return res
+    else:
+        return StreamingResponse(items, media_type="text/event-stream")
+
+
+def make_stream_result(): ...
 
 
 def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
@@ -239,16 +257,42 @@ def mount_aigc_functions(app: FastAPI):
     @app.route("/aigc/functions/mental_principle", methods=["post"])
     async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
         """aigc函数"""
+
+        async def response_generator(response) -> AsyncGenerator:
+            """异步生成器
+            处理`openai.AsyncStream`
+            """
+            async for chunk in response:
+                if chunk.object == "text_completion":
+                    content = chunk.choices[0].text
+                else:
+                    content = chunk.choices[0].delta.content
+                if content:
+                    chunk_resp = AigcFunctionsResponse(
+                        items=content,
+                        head=200,
+                        msg="success",
+                    )
+                    yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+            chunk_resp = AigcFunctionsResponse(
+                items="",
+                head=200,
+                msg="stop",
+            )
+            yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+
         try:
             param = await async_accept_param_purge(request)
+            err_check_ret = await check_aigc_request(param)
+            if err_check_ret is not None:
+                raise AssertionError(err_check_ret)
             ret = await expert_model.call_function(**param)
+            if param.get("model_args") and param["model_args"].get("stream"):
+                ret: AsyncGenerator = response_generator(ret)
             ret = make_result(items=ret)
-        except RuntimeError as err:
+        except Exception as err:
             logger.error(err)
             ret = make_result(head=601, msg=err.args[0])
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg="Unknown error.")
         finally:
             return ret
 

@@ -20,7 +20,7 @@ from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_M
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
-from typing import Dict, Generator, List, Literal, Union
+from typing import Dict, Generator, List, Literal, Optional, Union
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -1825,17 +1825,27 @@ class expertModel:
 
     async def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
+
+        def update_model_args(kwargs) -> Dict:
+
+            model_args = {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                **kwargs.get("model_args", {}),
+            }
+            if kwargs.get("model_args"):
+                del kwargs["model_args"]
+            return model_args
+
         _event = "问诊摘要"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
-        model_args = {"temperature": 0.7, "top_p": 0.8}
-        # content: str = self.aigc_functions_general(
-        #     _event, prompt_vars, model_args, **kwargs
-        # )
-        content: str = await self.aaigc_functions_general(
+
+        model_args = update_model_args(kwargs)
+        content: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
@@ -2017,7 +2027,7 @@ class expertModel:
             "repetition_penalty": 1.0,
         },
         **kwargs,
-    ):
+    ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
@@ -2025,12 +2035,13 @@ class expertModel:
         logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
-        content: str = await acallLLM(
+        content: Union[str, Generator] = await acallLLM(
             model=model,
             query=prompt,
             **model_args,
         )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
     async def call_function(self, **kwargs) -> Union[str, Generator]:

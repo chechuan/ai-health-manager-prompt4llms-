@@ -157,3 +157,9 @@ class AigcFunctionsRequest(BaseModel):
     sport_principle: Optional[str] = None  # 运动原则
     mental_principle: Optional[str] = None  # 心理原则
     chinese_therapy: Optional[str] = None  # 中医疗法
+
+
+class AigcFunctionsResponse(BaseModel):
+    head: int = 200
+    msg: str = Literal["success", "stop"]
+    items: str
