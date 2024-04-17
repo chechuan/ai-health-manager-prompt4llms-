@@ -67,6 +67,7 @@ test:
         sport_rec: 0.1.0
         chronic_qa: 0.1.0
         schedule_qry_up: 0.1.1
+        schedule_manager: 0.1.0
         nutri_knowledge_rec: 0.1.0
         auxiliary_diagnosis: 1.1.0
         auxiliary_diagnosis_summary_diet_rec: 1.0.0
@@ -74,8 +75,17 @@ test:
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
-        aigc_functions_single_choice: 0.0.1
         report_interpretation_chat: 0.0.1
+        aigc_functions_single_choice: 0.0.2
+        aigc_functions_consultation_summary: 0.0.1
+        aigc_functions_diagnosis: 0.0.1
+        aigc_functions_diagnosis_result: 0.0.1
+        aigc_functions_drug_recommendation: 0.0.1
+        aigc_functions_food_principle: 0.0.1
+        aigc_functions_sport_principle: 0.0.1
+        aigc_functions_mental_principle: 0.0.1
+        aigc_functions_chinese_therapy: 0.0.1
+        aigc_functions_reason_for_care_plan: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
