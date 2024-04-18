@@ -51,6 +51,18 @@ def clock(func):
     return clocked
 
 
+def param_check(func):
+    async def wrap(*args, **kwargs):
+        if "messages" not in kwargs:
+            raise ValueError("No messages passed.")
+        elif kwargs["messages"] is None or kwargs["messages"] == []:
+            raise ValueError("messages can't be empty")
+        result = await func(*args, **kwargs)
+        return result
+
+    return wrap
+
+
 def update_mid_vars(
     mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs
 ):

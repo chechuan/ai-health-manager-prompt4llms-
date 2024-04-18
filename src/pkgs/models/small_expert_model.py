@@ -35,6 +35,7 @@ from src.utils.module import (
     InitAllResource,
     accept_stream_response,
     clock,
+    param_check,
     compute_blood_pressure_level,
     dumpJS,
 )
@@ -1449,18 +1450,6 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
 
-def param_check(func):
-    async def wrap(*args, **kwargs):
-        if "messages" not in kwargs:
-            raise ValueError("No messages passed.")
-        elif kwargs["messages"] is None or kwargs["messages"] == []:
-            raise ValueError("messages can't be empty")
-        result = await func(*args, **kwargs)
-        return result
-
-    return wrap
-
-
 class Agents:
     session = Session()
     ocr = RapidOCR()
@@ -1647,25 +1636,30 @@ class Agents:
         content = ""
         if mode == "user_profile":
             for key, value in user_profile.items():
-                content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+                if value:
+                    content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
             role_map = {"assistant": "医生", "user": "患者"}
             for message in messages:
-                if message["role"] == "assistant":
+                if role_map.get(message["role"]):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
                 else:
-                    content += f"{role_map[message['role']]}: {message['content']}\n"
+                    content += f"{message['content']}\n"
         elif mode == "drug_plan":
-            for item in json5.loads(drug_plan):
-                content += (
-                    ", ".join(
-                        [f"{USER_PROFILE_KEY_MAP.get(k)}: {v}" for k, v in item.items()]
+            if drug_plan:
+                for item in json5.loads(drug_plan):
+                    content += (
+                        ", ".join(
+                            [
+                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                for k, v in item.items()
+                            ]
+                        )
+                        + "\n"
                     )
-                    + "\n"
-                )
-            content = content.strip()
+                content = content.strip()
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -2024,7 +2018,11 @@ class Agents:
         )
         return content
 
-    # async def aigc_functions
+    async def aigc_functions_plan_difference_finder(self, **kwargs) -> str:
+        """差异点发现"""
+        ...
+
+    # async def aigc_functions_
 
     def aigc_functions_general(
         self,
@@ -2041,7 +2039,6 @@ class Agents:
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         prompt_template: str = self.gsr.get_event_item(event)["description"]
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: str = callLLM(
@@ -2067,7 +2064,6 @@ class Agents:
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         prompt_template: str = self.gsr.get_event_item(event)["description"]
-        logger.warning(f"AIGC Functions {_event} prompt_template: \n{prompt_template}")
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: Union[str, Generator] = await acallLLM(
@@ -2106,7 +2102,7 @@ class Agents:
             else:
                 content = func(**kwargs)
         except Exception as e:
-            logger.error(f"call_function {intent_code} error: {e}")
+            logger.exception(f"call_function {intent_code} error: {e}")
             raise e
         return content
 
