@@ -21,7 +21,7 @@ sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 
 from chat.qwen_chat import Chat
-from src.pkgs.models.small_expert_model import expertModel
+from src.pkgs.models.small_expert_model import expertModel, Agents
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsResponse,
@@ -36,6 +36,7 @@ from src.utils.module import (
     curr_time,
     dumpJS,
     format_sse_chat_complete,
+    response_generator,
 )
 
 
@@ -257,195 +258,18 @@ def mount_aigc_functions(app: FastAPI):
     @app.route("/aigc/functions/mental_principle", methods=["post"])
     async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
         """aigc函数"""
-
-        async def response_generator(response) -> AsyncGenerator:
-            """异步生成器
-            处理`openai.AsyncStream`
-            """
-            async for chunk in response:
-                if chunk.object == "text_completion":
-                    content = chunk.choices[0].text
-                else:
-                    content = chunk.choices[0].delta.content
-                if content:
-                    chunk_resp = AigcFunctionsResponse(
-                        items=content,
-                        head=200,
-                        msg="success",
-                    )
-                    yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
-            chunk_resp = AigcFunctionsResponse(
-                items="",
-                head=200,
-                msg="stop",
-            )
-            yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
-
         try:
             param = await async_accept_param_purge(request)
             err_check_ret = await check_aigc_request(param)
             if err_check_ret is not None:
                 raise AssertionError(err_check_ret)
-            ret = await expert_model.call_function(**param)
+            ret = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream"):
                 ret: AsyncGenerator = response_generator(ret)
             ret = make_result(items=ret)
         except Exception as err:
             logger.error(err)
             ret = make_result(head=601, msg=err.args[0])
-        finally:
-            return ret
-
-    @app.route("/aigc/functions/report_interpretation", methods=["post"])
-    async def _aigc_functions_report_interpretation(request: Request):
-        """aigc函数-报告解读"""
-        try:
-            # param = await async_accept_param_purge(request)
-            upload_file = request.files.get("file")
-            filename = upload_file.filename
-            tmp_path = Path(f".tmp/images")
-            if not tmp_path.exists():
-                tmp_path.mkdir(parents=True)
-            file_path = tmp_path.joinpath(filename)
-            upload_file.save(file_path)
-            ret = expert_model.call_function(
-                intentCode="report_interpretation", file_path=file_path
-            )
-            ret = make_result(items=ret)
-        except RuntimeError as err:
-            logger.error(err)
-            ret = make_result(head=601, msg=err.args[0])
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg="Unknown error.")
-        finally:
-            return Response(ret, media_type="application/json")
-
-        # @app.route("/aigc/functions/consultation_summary", methods=["post"])
-        # async def _aigc_functions_consultation_summary(request: Request):
-        #     """aigc函数-问诊摘要"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/diagnosis", methods=["post"])
-        # async def _aigc_functions_diagnosis(request: Request):
-        #     """aigc函数-诊断"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
-        # async def _aigc_functions_reason_for_care_plan(request: Request):
-        #     """aigc函数-康养方案推荐原因"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/drug_recommendation", methods=["post"])
-        # async def _aigc_functions_drug_recommendation(request: Request):
-        #     """aigc函数-用药建议"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/food_principle", methods=["post"])
-        # async def _aigc_functions_food_principle(request: Request):
-        #     """aigc函数-饮食原则"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/sport_principle", methods=["post"])
-        # async def _aigc_functions_sport_principle(request: Request):
-        #     """aigc函数-运动原则"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/chinese_therapy", methods=["post"])
-        # async def _aigc_functions_chinese_therapy(request: Request):
-        #     """aigc函数-中医调理"""
-        #     try:
-        #         param = await async_accept_param_purge(request)
-        #         ret = await expert_model.call_function(**param)
-        #         ret = make_result(items=ret)
-        #     except RuntimeError as err:
-        #         logger.error(err)
-        #         ret = make_result(head=601, msg=err.args[0])
-        #     except Exception as err:
-        #         logger.exception(err)
-        #         ret = make_result(head=500, msg="Unknown error.")
-        #     finally:
-        #         return ret
-
-        # @app.route("/aigc/functions/mental_principle", methods=["post"])
-        # async def _aigc_functions_mental_principle(request: Request):
-        """aigc函数-情志原则"""
-        try:
-            param = await async_accept_param_purge(request)
-            ret = await expert_model.call_function(**param)
-            ret = make_result(items=ret)
-        except RuntimeError as err:
-            logger.error(err)
-            ret = make_result(head=601, msg=err.args[0])
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg="Unknown error.")
         finally:
             return ret
 
@@ -653,13 +477,15 @@ def prepare_for_all():
     global args
     global chat_v2
     global expert_model
-    global global_share_resource
+    global gsr
+    global agents
 
-    global_share_resource = InitAllResource()
-    args = global_share_resource.args
-    chat = Chat(global_share_resource)
-    chat_v2 = Chat_v2(global_share_resource)
-    expert_model = expertModel(global_share_resource)
+    gsr = InitAllResource()
+    args = gsr.args
+    chat = Chat(gsr)
+    chat_v2 = Chat_v2(gsr)
+    expert_model = expertModel(gsr)
+    agents = Agents(gsr)
 
 
 if __name__ == "__main__":

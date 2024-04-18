@@ -15,7 +15,7 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Literal, Tuple, Union
+from typing import Any, AsyncGenerator, Dict, Literal, Tuple, Union
 from urllib import parse
 import numpy as np
 import openai
@@ -25,7 +25,7 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 from typing import Optional
 from data.constrant import CACHE_DIR
-from src.utils.api_protocal import AigcFunctionsRequest
+from src.utils.api_protocal import AigcFunctionsRequest, AigcFunctionsResponse
 
 try:
     from src.utils.Logger import logger
@@ -899,6 +899,30 @@ async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Option
     elif not param.get("messages"):
         ret = "messages cannot be empty or None in request"
     return ret
+
+
+async def response_generator(response) -> AsyncGenerator:
+    """异步生成器
+    处理`openai.AsyncStream`
+    """
+    async for chunk in response:
+        if chunk.object == "text_completion":
+            content = chunk.choices[0].text
+        else:
+            content = chunk.choices[0].delta.content
+        if content:
+            chunk_resp = AigcFunctionsResponse(
+                items=content,
+                head=200,
+                msg="success",
+            )
+            yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+    chunk_resp = AigcFunctionsResponse(
+        items="",
+        head=200,
+        msg="stop",
+    )
+    yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 
 if __name__ == "__main__":

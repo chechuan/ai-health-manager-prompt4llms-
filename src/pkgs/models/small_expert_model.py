@@ -52,8 +52,6 @@ class expertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
         self.gsr.expert_model = self
-        self.regist_aigc_functions()
-        self.load_image_config()
         self.client = openai.OpenAI()
 
     def load_image_config(self):
@@ -1450,51 +1448,25 @@ class expertModel:
             logger.error(f"Model {model} generate error: {err}")
             yield make_ret_item(repr(err), True, [])
 
-    def regist_aigc_functions(self):
-        self.funcmap = {
-            v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
-        }
-        for obj_str in dir(self):
-            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
-                self.funcmap[obj_str] = getattr(self, obj_str)
-        ...
 
-    def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
-        """单项选择功能
+class Agents:
+    session = Session()
+    ocr = RapidOCR()
 
-        - Args:
-            prompt (str): 问题
-            options (List[str]): 选项列表
+    def __init__(self, gsr: InitAllResource) -> None:
+        self.gsr: InitAllResource = gsr
+        setattr(gsr, "agents", self)
+        self.regist_aigc_functions()
+        self.__load_image_config__()
+        self.client = openai.OpenAI()
 
-        - Returns:
-            str: 答案
-        """
-        model = self.gsr.model_config.get(
-            "aigc_functions_single_choice", "Qwen-14B-Chat"
+    def __load_image_config__(self):
+        self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath(
+            "data/font/simsun.ttc"
         )
-        prompt_template_str = self.gsr.prompt_meta_data["event"][
-            "aigc_functions_single_choice"
-        ]["description"]
-        prompt_template = PromptTemplate.from_template(prompt_template_str)
-        query = prompt_template.format(options=options, prompt=prompt)
-        messages = [{"role": "user", "content": query}]
-        logger.debug(
-            f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}"
-        )
-        content = callLLM(
-            history=messages,
-            model=model,
-            temperature=0,
-            repetition_penalty=1.0,
-        )
-        logger.debug(f"Single choice LLM Output: {content}")
-        if content == "选项与要求不符":
-            return content
-        else:
-            if content not in options:
-                logger.error(f"Single choice error: {content} not in options")
-                return "选项与要求不符"
-        return content
+        if not self.image_font_path.exists():
+            logger.error(f"font file not found: {self.image_font_path}")
+            exit(1)
 
     def __ocr_report__(self, file_path):
         """报告OCR功能"""
@@ -1682,6 +1654,51 @@ class expertModel:
             content = content.strip()
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
+        return content
+
+    def regist_aigc_functions(self) -> None:
+        self.funcmap = {
+            v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
+        }
+        for obj_str in dir(self):
+            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+                self.funcmap[obj_str] = getattr(self, obj_str)
+
+    def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
+        """单项选择功能
+
+        - Args:
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            str: 答案
+        """
+        model = self.gsr.model_config.get(
+            "aigc_functions_single_choice", "Qwen-14B-Chat"
+        )
+        prompt_template_str = self.gsr.prompt_meta_data["event"][
+            "aigc_functions_single_choice"
+        ]["description"]
+        prompt_template = PromptTemplate.from_template(prompt_template_str)
+        query = prompt_template.format(options=options, prompt=prompt)
+        messages = [{"role": "user", "content": query}]
+        logger.debug(
+            f"Single choice LLM Input: {json.dumps(messages, ensure_ascii=False)}"
+        )
+        content = callLLM(
+            history=messages,
+            model=model,
+            temperature=0,
+            repetition_penalty=1.0,
+        )
+        logger.debug(f"Single choice LLM Output: {content}")
+        if content == "选项与要求不符":
+            return content
+        else:
+            if content not in options:
+                logger.error(f"Single choice error: {content} not in options")
+                return "选项与要求不符"
         return content
 
     def aigc_functions_report_interpretation(
@@ -2001,7 +2018,7 @@ class expertModel:
             "repetition_penalty": 1.0,
         },
         **kwargs,
-    ):
+    ) -> str:
         """通用生成"""
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
@@ -2077,20 +2094,8 @@ class expertModel:
 
 
 if __name__ == "__main__":
-    expert_model = expertModel(InitAllResource())
-    # expert_model.__rec_diet_eval__(param)sss
-
-    # param = testParam.param_pressure_trend
-    # expert_model.__blood_pressure_trend_analysis__(param)
-
-    # param = testParam.param_rec_diet_reunion_meals_restaurant_selection
-    # generator = expert_model.__rec_diet_reunion_meals_restaurant_selection__(**param)
-    # while True:
-    #     yield_item = next(generator)
-    #     print(yield_item)
-
-    # param = testParam.param_dev_single_choice
+    gsr = InitAllResource()
+    expert_model = expertModel(gsr)
+    agents = Agents(gsr)
     param = testParam.param_dev_report_interpretation
-    expert_model.call_function(**param)
-    # param = testParam.param_dev_tool_compute_blood_pressure
-    # expert_model.tool_compute_blood_pressure(**param)
+    agents.call_function(**param)
