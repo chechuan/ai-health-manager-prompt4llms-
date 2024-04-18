@@ -401,7 +401,7 @@ def create_app():
             logger.error(traceback.format_exc())
             result = make_result(msg=repr(err), items=param)
         finally:
-            return Response(dumpJS(result), content_type="application/json")
+            return result
 
     @app.route("/reload_prompt", methods=["get"])
     async def _reload_prompt(request: Request):
