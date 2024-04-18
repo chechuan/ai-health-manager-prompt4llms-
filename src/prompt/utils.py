@@ -267,8 +267,8 @@ Begin!"""
             f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
         )
         model = self.gsr.get_model("custom_chat_gaily_assistant")
-        response = self.gsr.client.chat.completions.create(
-            messages=messages,
+        response = callLLM(
+            history=messages,
             model=model,
             temperature=0.7,
             top_p=0.5,
