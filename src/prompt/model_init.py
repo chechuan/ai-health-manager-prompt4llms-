@@ -20,12 +20,13 @@ default_model = "Qwen1.5-32B-Chat"
 
 
 def pre_process_model_args(**kwargs) -> Dict:
-    if "repetition_penalty" in kwargs:
-        del kwargs["repetition_penalty"]
-    if "do_sample" in kwargs:
-        del kwargs["do_sample"]
-    if "top_k" in kwargs:
-        del kwargs["top_k"]
+    keywords = ["repetition_penalty", "do_sample", "top_k", "verbose"]
+    for k in keywords:
+        if k in kwargs:
+            logger.warning(
+                f"Keyword {k} is not supported in callLLM, please remove it."
+            )
+            del kwargs[k]
     return kwargs
 
 
