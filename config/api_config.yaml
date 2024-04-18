@@ -48,7 +48,7 @@ dev:
                 - Qwen-72B-Chat
 test:
     graph: http://10.4.164.240:26925
-    ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
     model_supply:
@@ -72,7 +72,7 @@ test:
                 - Qwen-72B-Chat
 fat:
     graph: http://10.4.164.240:26925
-    ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+    ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
     model_supply:
@@ -96,7 +96,7 @@ fat:
                 - Qwen-72B-Chat
 prod:
     graph: http://10.4.164.240:26925
-    ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
+    ai_backend: https://gate.op.laikang.com/aihealthmanager
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
     langchain: http://10.228.67.99:26924
     model_supply:

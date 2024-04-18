@@ -2018,11 +2018,17 @@ class Agents:
         )
         return content
 
-    async def aigc_functions_plan_difference_finder(self, **kwargs) -> str:
+    async def aigc_functions_plan_difference_finder(self, **kwargs) -> Union[str, Generator]:
         """差异点发现"""
         ...
 
-    # async def aigc_functions_
+    async def aigc_functions_plan_difference_analysis(self, **kwargs) -> Union[str, Generator]:
+        """差异能力分析"""
+        ...
+    
+    async def aigc_functions_plan_adjustment_suggestion(self, **kwargs) -> Union[str, Generator]:
+        """方案调整建议生成"""
+        ...
 
     def aigc_functions_general(
         self,
