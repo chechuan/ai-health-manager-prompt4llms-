@@ -20,11 +20,11 @@ default_model = "Qwen1.5-32B-Chat"
 
 
 def pre_process_model_args(**kwargs) -> Dict:
-    if kwargs.get("repetition_penalty"):
+    if "repetition_penalty" in kwargs:
         del kwargs["repetition_penalty"]
-    if kwargs.get("do_sample"):
+    if "do_sample" in kwargs:
         del kwargs["do_sample"]
-    if kwargs.get("top_k"):
+    if "top_k" in kwargs:
         del kwargs["top_k"]
     return kwargs
 

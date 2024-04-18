@@ -1999,6 +1999,8 @@ class Agents:
         )
         return content
 
+    # async def aigc_functions
+
     def aigc_functions_general(
         self,
         _event: str = "",
