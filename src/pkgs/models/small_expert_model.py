@@ -1449,6 +1449,18 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
 
+def param_check(func):
+    async def wrap(*args, **kwargs):
+        if "messages" not in kwargs:
+            raise ValueError("No messages passed.")
+        elif kwargs["messages"] is None or kwargs["messages"] == []:
+            raise ValueError("messages can't be empty")
+        result = await func(*args, **kwargs)
+        return result
+
+    return wrap
+
+
 class Agents:
     session = Session()
     ocr = RapidOCR()
@@ -1637,6 +1649,8 @@ class Agents:
             for key, value in user_profile.items():
                 content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
+            assert messages is not None, "messages can't be None"
+            assert messages is not [], "messages can't be empty list"
             role_map = {"assistant": "医生", "user": "患者"}
             for message in messages:
                 if message["role"] == "assistant":
@@ -1831,6 +1845,7 @@ class Agents:
         )
         return {"report_summary": content}
 
+    @param_check
     async def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
 
@@ -1858,6 +1873,7 @@ class Agents:
         )
         return content
 
+    @param_check
     async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
         _event = "诊断"
@@ -1879,6 +1895,7 @@ class Agents:
             )
         return content
 
+    @param_check
     async def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
         """用药建议"""
         _event = "用药建议"
@@ -1906,6 +1923,7 @@ class Agents:
                 result = dumpJS([])
         return result
 
+    @param_check
     async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
         _event = "饮食原则"
@@ -1924,6 +1942,7 @@ class Agents:
         )
         return content
 
+    @param_check
     async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
         _event = "运动原则"
@@ -1942,6 +1961,7 @@ class Agents:
         )
         return content
 
+    @param_check
     async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
         _event = "情志原则"
@@ -1960,6 +1980,7 @@ class Agents:
         )
         return content
 
+    @param_check
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
@@ -1975,6 +1996,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
         return content
 
+    @param_check
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"
@@ -2084,8 +2106,8 @@ class Agents:
             else:
                 content = func(**kwargs)
         except Exception as e:
-            logger.exception(f"call function {intent_code} error: {e}")
-            raise RuntimeError(f"Call function error.")
+            logger.error(f"call_function {intent_code} error: {e}")
+            raise e
         return content
 
 

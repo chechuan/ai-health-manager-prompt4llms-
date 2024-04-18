@@ -268,7 +268,6 @@ def mount_aigc_functions(app: FastAPI):
                 ret: AsyncGenerator = response_generator(ret)
             ret = make_result(items=ret)
         except Exception as err:
-            logger.error(err)
             ret = make_result(head=601, msg=err.args[0])
         finally:
             return ret
