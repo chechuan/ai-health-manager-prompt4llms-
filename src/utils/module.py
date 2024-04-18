@@ -72,6 +72,24 @@ def update_mid_vars(
 class InitAllResource:
     def __init__(self) -> None:
         """初始化公共资源"""
+        self.__parse_args__()
+        self.session = requests.Session()
+        self.cache_dir = Path(CACHE_DIR)
+        if not self.cache_dir.exists():
+            self.cache_dir.mkdir()
+
+        self.__load_config__()
+        self.__knowledge_connect_check__()
+
+        self.prompt_meta_data = self.req_prompt_data_from_mysql()
+
+        self.__init_model_supplier__()
+        self.client = openai.OpenAI()
+        self.aclient = openai.AsyncOpenAI()
+
+    def __parse_args__(
+        self,
+    ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
             "--env", type=str, default="local", help="env: local, dev, test, prod"
@@ -91,21 +109,6 @@ class InitAllResource:
         )
         self.args = parser.parse_args()
         logger.info(f"Initialize args: {self.args}")
-
-        self.session = requests.Session()
-        self.client = openai.OpenAI()
-        self.aclient = openai.AsyncOpenAI()
-
-        self.cache_dir = Path(CACHE_DIR)
-        if not self.cache_dir.exists():
-            self.cache_dir.mkdir()
-
-        self.__load_config__()
-        self.__knowledge_connect_check__()
-
-        self.prompt_meta_data = self.req_prompt_data_from_mysql()
-
-        self.__init_model_supplier__()
 
     def __init_model_supplier__(self) -> None:
         """初始化模型供应商"""
