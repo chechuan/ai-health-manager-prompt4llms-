@@ -1896,11 +1896,14 @@ class Agents:
             _event, prompt_vars, model_args, **kwargs
         )
         try:
-            content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
-            result = dumpJS(json5.loads(content))
+            result = json5.loads(content)
         except Exception as e:
-            logger.exception(f"AIGC Functions {_event} json5.loads error: {e}")
-            result = dumpJS([])
+            try:
+                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
+                result = dumpJS(json5.loads(content))
+            except Exception as e:
+                logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
+                result = dumpJS([])
         return result
 
     async def aigc_functions_food_principle(self, **kwargs) -> str:
