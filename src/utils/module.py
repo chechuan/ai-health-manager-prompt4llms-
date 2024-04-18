@@ -894,10 +894,10 @@ async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Option
     ret = None
     if "intentCode" not in param:
         ret = "intentCode not found in request"
-    if "messages" not in param:
-        ret = "messages not found in request"
-    elif not param.get("messages"):
-        ret = "messages cannot be empty or None in request"
+    # if "messages" not in param:
+    #     ret = "messages not found in request"
+    # elif not param.get("messages"):
+    #     ret = "messages cannot be empty or None in request"
     return ret
 
 

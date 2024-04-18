@@ -1459,6 +1459,7 @@ class Agents:
         self.regist_aigc_functions()
         self.__load_image_config__()
         self.client = openai.OpenAI()
+        self.aclient = openai.AsyncOpenAI()
 
     def __load_image_config__(self):
         self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath(
@@ -1553,7 +1554,7 @@ class Agents:
             remote_image_url = ""
         return remote_image_url
 
-    def __report_ocr_classification_make_text_group__(
+    async def __report_ocr_classification_make_text_group__(
         self, file_path: Union[str, Path], raw_result, tmp_path, **kwargs
     ) -> str:
         """报告OCR结果分组"""
@@ -1583,15 +1584,14 @@ class Agents:
         model = self.gsr.get_model("aigc_functions_report_interpretation_text_classify")
 
         logger.debug(f"报告解读文本分组 LLM Input:\n{dumpJS(messages)}")
-        response = self.client.chat.completions.create(
+        response = await self.aclient.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.7,
             top_p=0.8,
-            stream=True,
         )
-        content = accept_stream_response(response, verbose=False)
-        logger.debug(f"报告解读文本分组: {content}")
+        content = response.choices[0].message.content
+        logger.debug(f"报告解读文本分组 LLM Output: {content}")
 
         content = re.findall("```json(.*?)```", content, re.S)[0].strip()
         try:
@@ -1701,7 +1701,7 @@ class Agents:
                 return "选项与要求不符"
         return content
 
-    def aigc_functions_report_interpretation(
+    async def aigc_functions_report_interpretation(
         self, options: List[str] = ["口腔报告", "胸部报告", "腹部报告"], **kwargs
     ) -> Dict:
         """报告解读功能
@@ -1733,17 +1733,12 @@ class Agents:
                 logger.error(f"Report interpretation error: file_path or url not found")
             return image_url, file_path
 
-        def jude_report_type(docs: str, options: List[str]) -> str:
+        async def jude_report_type(docs: str, options: List[str]) -> str:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
-            response = callLLM(
-                history=messages,
-                model="Qwen-72B-Chat",
-                temperature=0.7,
-                top_p=0.5,
-                stream=True,
+            report_type = callLLM(
+                history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5
             )
-            report_type = accept_stream_response(response, verbose=False)
             logger.debug(f"Report interpretation report type: {report_type}")
             if report_type not in options:
                 if "口腔" in docs and "口腔报告" in options:
@@ -1767,7 +1762,7 @@ class Agents:
                 ocr_result="您的报告内容无法解析，请重新尝试.",
             )
         try:
-            remote_image_url = self.__report_ocr_classification_make_text_group__(
+            remote_image_url = await self.__report_ocr_classification_make_text_group__(
                 file_path, raw_result, tmp_path
             )
             if not remote_image_url:
@@ -1785,14 +1780,14 @@ class Agents:
 
         # 增加报告类型判断
         if options:
-            report_type = jude_report_type(docs, options)
+            report_type = await jude_report_type(docs, options)
         else:
             report_type = "其他"
         return self.__report_interpretation_result__(
             ocr_result=docs, report_type=report_type, remote_image_url=remote_image_url
         )
 
-    def aigc_functions_report_summary(self, **kwargs):
+    async def aigc_functions_report_summary(self, **kwargs):
         """报告内容总结
         循环
         """
@@ -1816,28 +1811,24 @@ class Agents:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": chunk_text},
             ]
-            response = callLLM(
+            content = await acallLLM(
                 history=messages,
                 model="Qwen-14B-Chat",
                 temperature=0.7,
                 top_p=0.8,
-                stream=True,
             )
-            content = accept_stream_response(response, verbose=False)
             summary_list.append(content)
         summary = "\n".join(summary_list)
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": summary},
         ]
-        response = callLLM(
+        content: str = await acallLLM(
             history=messages,
             model="Qwen-72B-Chat",
             temperature=0.7,
             top_p=0.8,
-            stream=True,
         )
-        content = accept_stream_response(response, verbose=False)
         return {"report_summary": content}
 
     async def aigc_functions_consultation_summary(self, **kwargs) -> str:
