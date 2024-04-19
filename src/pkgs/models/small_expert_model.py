@@ -1988,7 +1988,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
         return content
 
-    @param_check
+    @param_check(check_params=[("messages", List)])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
         _event = "康养方案推荐原因"

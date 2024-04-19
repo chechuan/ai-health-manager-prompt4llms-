@@ -15,7 +15,7 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Literal, Tuple, Union
+from typing import Any, AnyStr, AsyncGenerator, Dict, List, Literal, Tuple, Union
 from urllib import parse
 import numpy as np
 import openai
@@ -51,16 +51,22 @@ def clock(func):
     return clocked
 
 
-def param_check(func):
-    async def wrap(*args, **kwargs):
-        if "messages" not in kwargs:
-            raise ValueError("No messages passed.")
-        elif kwargs["messages"] is None or kwargs["messages"] == []:
-            raise ValueError("messages can't be empty")
-        result = await func(*args, **kwargs)
-        return result
+def param_check(check_params: List[AnyStr] = []):
+    def dector(func):
+        async def wrap(*args, **kwargs):
+            for key, _type in check_params:
+                if key not in kwargs:
+                    raise ValueError(f"No {key} passed.")
+                elif kwargs[key] is None or kwargs[key] == []:
+                    raise ValueError(f"{key} can't be empty")
+                elif not isinstance(key, _type):
+                    raise
+            result = await func(*args, **kwargs)
+            return result
 
-    return wrap
+        return wrap
+
+    return dector
 
 
 def update_mid_vars(
