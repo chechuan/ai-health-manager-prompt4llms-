@@ -11,8 +11,9 @@ import time
 import json
 import asyncio
 import traceback
-from typing import AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union
+from typing import AnyStr, AsyncGenerator, Dict, Generator, List, Literal, Tuple, Union
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
 from fastapi import FastAPI, Response, Request, APIRouter
@@ -24,6 +25,7 @@ from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import expertModel, Agents
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
+    AigcFunctionsCompletionResponse,
     AigcFunctionsResponse,
     RolePlayRequest,
     AigcFunctionsRequest,
@@ -37,6 +39,7 @@ from src.utils.module import (
     dumpJS,
     format_sse_chat_complete,
     response_generator,
+    build_aigc_functions_response,
 )
 
 
@@ -70,19 +73,14 @@ async def async_accept_param_purge(request: Request):
 def make_result(
     head=200, msg=None, items=None, ret_response=True, **kwargs
 ) -> Union[Response, StreamingResponse]:
-    if not isinstance(items, AsyncGenerator):
-        if not items and head == 200:
-            head = 600
-        res = {"head": head, "msg": msg, "items": items, **kwargs}
-        res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
-        if ret_response:
-            return Response(
-                res, media_type=kwargs.get("media_type", "application/json")
-            )
-        else:
-            return res
+    if not items and head == 200:
+        head = 600
+    res = {"head": head, "msg": msg, "items": items, **kwargs}
+    res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+    if ret_response:
+        return Response(res, media_type=kwargs.get("media_type", "application/json"))
     else:
-        return StreamingResponse(items, media_type="text/event-stream")
+        return res
 
 
 def make_stream_result(): ...
@@ -263,14 +261,23 @@ def mount_aigc_functions(app: FastAPI):
             err_check_ret = await check_aigc_request(param)
             if err_check_ret is not None:
                 raise AssertionError(err_check_ret)
-            ret = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get("stream"):
-                ret: AsyncGenerator = response_generator(ret)
-            ret = make_result(items=ret)
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            if param.get("model_args") and param["model_args"].get(
+                "stream"
+            ):  # 处理流式响应 构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
         except Exception as err:
-            ret = make_result(head=601, msg=err.args[0])
+            response = AigcFunctionsCompletionResponse(
+                head=601, msg=err.args[0], items=""
+            )
+            _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
-            return ret
+            return build_aigc_functions_response(_return)
 
 
 def create_app():

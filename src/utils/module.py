@@ -15,8 +15,20 @@ from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Any, AnyStr, AsyncGenerator, Dict, List, Literal, Tuple, Union
+from typing import (
+    Any,
+    AnyStr,
+    AsyncGenerator,
+    Dict,
+    Generator,
+    List,
+    Literal,
+    Tuple,
+    Union,
+)
 from urllib import parse
+from fastapi import Response
+from fastapi.responses import StreamingResponse
 import numpy as np
 import openai
 import pandas as pd
@@ -54,13 +66,11 @@ def clock(func):
 def param_check(check_params: List[AnyStr] = []):
     def dector(func):
         async def wrap(*args, **kwargs):
-            for key, _type in check_params:
+            for key in check_params:
                 if key not in kwargs:
                     raise ValueError(f"No {key} passed.")
                 elif kwargs[key] is None or kwargs[key] == []:
                     raise ValueError(f"{key} can't be empty")
-                elif not isinstance(key, _type):
-                    raise
             result = await func(*args, **kwargs)
             return result
 
@@ -932,18 +942,17 @@ async def response_generator(response) -> AsyncGenerator:
         else:
             content = chunk.choices[0].delta.content
         if content:
-            chunk_resp = AigcFunctionsResponse(
-                items=content,
-                head=200,
-                msg="success",
-            )
+            chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
             yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
-    chunk_resp = AigcFunctionsResponse(
-        items="",
-        head=200,
-        msg="stop",
-    )
+    chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+
+
+def build_aigc_functions_response(ret):
+    if isinstance(ret, str):
+        return Response(ret, media_type="application/json")
+    elif isinstance(ret, Union[Generator, AsyncGenerator]):
+        return StreamingResponse(ret, media_type="text/event-stream")
 
 
 if __name__ == "__main__":

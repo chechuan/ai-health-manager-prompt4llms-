@@ -126,6 +126,12 @@ class AigcFunctionsRequest(BaseModel):
 
 
 class AigcFunctionsResponse(BaseModel):
+    code: int = 200
+    message: str = ""
+    end: bool = False
+
+
+class AigcFunctionsCompletionResponse(BaseModel):
     head: int = 200
-    msg: str = Literal["success", "stop"]
-    items: str
+    items: str = ""
+    msg: str = ""
