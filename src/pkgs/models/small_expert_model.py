@@ -1872,7 +1872,7 @@ class Agents:
 
         def update_model_args(kwargs) -> Dict:
             model_args = {
-                "temperature": 0.7,
+                "temperature": 0,
                 "top_p": 0.8,
                 "repetition_penalty": 1.0,
                 **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
@@ -1889,12 +1889,18 @@ class Agents:
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event,
+            prompt_vars,
+            model_args={
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "repetition_penalty": 1.0,
+            },
+            **kwargs,
         )
 
         if content == "无":
             kwargs["intentCode"] = "aigc_functions_diagnosis_result"
-            model_args = {"temperature": 0, "top_p": 0.8, "repetition_penalty": 1.0}
             content: str = await self.aaigc_functions_general(
                 _event, prompt_vars, model_args, **kwargs
             )
