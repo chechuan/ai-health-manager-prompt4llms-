@@ -8,6 +8,7 @@
 import json
 import re
 import sys
+from urllib import response
 import json5
 import asyncio
 from os.path import basename
@@ -20,7 +21,7 @@ from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_M
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
-from typing import Dict, Generator, List, Literal, Optional, Union
+from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -1925,19 +1926,21 @@ class Agents:
             "diagnosis": kwargs["diagnosis"],
         }
         model_args = update_model_args(kwargs)
-        content: str = await self.aaigc_functions_general(
+        response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
+        if isinstance(response, openai.AsyncStream):
+            return response
         try:
-            result = json5.loads(content)
+            content = json5.loads(response)
         except Exception as e:
             try:
-                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
-                result = dumpJS(json5.loads(content))
+                content = re.findall("```json(.*?)```", response, re.DOTALL)[0]
+                content = dumpJS(json5.loads(content))
             except Exception as e:
                 logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
-                result = dumpJS([])
-        return result
+                content = dumpJS([])
+        return content
 
     @param_check(check_params=["messages"])
     async def aigc_functions_food_principle(self, **kwargs) -> str:
