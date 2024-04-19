@@ -1865,16 +1865,28 @@ class Agents:
         )
         return content
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "repetition_penalty": 1.0,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "诊断"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
-        model_args = {"temperature": 0.7, "top_p": 0.8, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1887,9 +1899,21 @@ class Agents:
             )
         return content
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
         """用药建议"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "用药建议"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1900,7 +1924,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs["diagnosis"],
         }
-        model_args = {"temperature": 0, "top_p": 1, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1915,9 +1939,21 @@ class Agents:
                 result = dumpJS([])
         return result
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {
+                "temperature": 0.7,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "饮食原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1928,15 +1964,26 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs["diagnosis"],
         }
-        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+            model_args = {
+                **model_args,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "运动原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1947,15 +1994,26 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs["diagnosis"],
         }
-        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+            model_args = {
+                **model_args,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "情志原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1966,13 +2024,13 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs["diagnosis"],
         }
-        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
         return content
 
-    @param_check
+    @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
@@ -1996,6 +2054,9 @@ class Agents:
             model_args = {
                 "temperature": 0.7,
                 "top_p": 1,
+            }
+            model_args = {
+                **model_args,
                 **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
             }
             if "model_args" in kwargs:
