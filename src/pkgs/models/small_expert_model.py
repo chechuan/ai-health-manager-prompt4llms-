@@ -1991,6 +1991,17 @@ class Agents:
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
+
+        def update_model_args(kwargs) -> Dict:
+            model_args = {
+                "temperature": 0.7,
+                "top_p": 1,
+                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
+            }
+            if "model_args" in kwargs:
+                del kwargs["model_args"]
+            return model_args
+
         _event = "康养方案推荐原因"
         user_profile = self.__compose_user_msg__(
             "user_profile",
@@ -2010,7 +2021,7 @@ class Agents:
             "mental_principle": kwargs["mental_principle"],
             "chinese_therapy": kwargs["chinese_therapy"],
         }
-        model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
+        model_args = update_model_args(kwargs)
         response: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )

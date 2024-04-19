@@ -272,9 +272,7 @@ def mount_aigc_functions(app: FastAPI):
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
         except Exception as err:
-            response = AigcFunctionsCompletionResponse(
-                head=601, msg=err.args[0], items=""
-            )
+            ret = AigcFunctionsCompletionResponse(head=601, msg=err.args[0], items="")
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
             return build_aigc_functions_response(_return)
