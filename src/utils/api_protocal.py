@@ -121,6 +121,8 @@ class AigcFunctionsRequest(BaseModel):
     sport_principle: Optional[str] = None  # 运动原则
     mental_principle: Optional[str] = None  # 心理原则
     chinese_therapy: Optional[str] = None  # 中医疗法
+    plan_ai: Optional[str] = None  # AI方案
+    plan_human: Optional[str] = None  # 人工方案
 
 
 class AigcFunctionsResponse(BaseModel):

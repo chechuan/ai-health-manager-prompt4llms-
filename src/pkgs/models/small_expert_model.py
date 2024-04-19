@@ -47,8 +47,6 @@ class expertModel:
         "舒张压": "lk1589863365791",
         "心率": "XYZBXY001005",
     }
-    session = Session()
-    ocr = RapidOCR()
 
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
@@ -2013,22 +2011,68 @@ class Agents:
             "chinese_therapy": kwargs["chinese_therapy"],
         }
         model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-        content: str = await self.aaigc_functions_general(
+        response: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
-        return content
+        return response
 
-    async def aigc_functions_plan_difference_finder(self, **kwargs) -> Union[str, Generator]:
+    @param_check(check_params=["plan_ai", "plan_human"])
+    async def aigc_functions_plan_difference_finder(
+        self, **kwargs
+    ) -> Union[str, Generator]:
         """差异点发现"""
-        ...
+        _event = "差异点发现"
+        prompt_template = (
+            "You are a helpful assistant.\n"
+            "# ai方案\n{plan_ai}\n"
+            "# 人工方案\n{plan_human}\n"
+            "# 任务描述\n"
+            "请你分析以上两个方案的差异点"
+        )
+        prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
+        model_args = {"temperature": 1, "top_p": 0.8}
+        response: Union[str, Generator] = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, prompt_template, **kwargs
+        )
+        return response
 
-    async def aigc_functions_plan_difference_analysis(self, **kwargs) -> Union[str, Generator]:
+    async def aigc_functions_plan_difference_analysis(
+        self, **kwargs
+    ) -> Union[str, Generator]:
         """差异能力分析"""
-        ...
-    
-    async def aigc_functions_plan_adjustment_suggestion(self, **kwargs) -> Union[str, Generator]:
+        _event = "差异能力分析"
+        prompt_template = (
+            "You are a helpful assistant.\n"
+            "# ai方案\n{plan_ai}\n"
+            "# 人工方案\n{plan_human}\n"
+            "# 任务描述\n"
+            "请你分析以上两个方案的差异点"
+        )
+        prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
+        model_args = {"temperature": 1, "top_p": 0.8}
+        response: Union[str, Generator] = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, prompt_template, **kwargs
+        )
+        return response
+
+    async def aigc_functions_plan_adjustment_suggestion(
+        self, **kwargs
+    ) -> Union[str, Generator]:
         """方案调整建议生成"""
-        ...
+        _event = "方案调整建议生成"
+        prompt_template = (
+            "You are a helpful assistant.\n"
+            "# ai方案\n{plan_ai}\n"
+            "# 人工方案\n{plan_human}\n"
+            "# 任务描述\n"
+            "请你分析以上两个方案的差异点"
+        )
+        prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
+        model_args = {"temperature": 1, "top_p": 0.8}
+        response: Union[str, Generator] = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, prompt_template, **kwargs
+        )
+        return response
 
     def aigc_functions_general(
         self,
@@ -2064,12 +2108,17 @@ class Agents:
             "top_p": 1,
             "repetition_penalty": 1.0,
         },
+        prompt_template: str = "",
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
-        prompt_template: str = self.gsr.get_event_item(event)["description"]
+        prompt_template: str = (
+            prompt_template
+            if prompt_template
+            else self.gsr.get_event_item(event)["description"]
+        )
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: Union[str, Generator] = await acallLLM(
