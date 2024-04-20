@@ -936,19 +936,22 @@ async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Option
     return ret
 
 
-async def response_generator(response) -> AsyncGenerator:
+async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
     """
-    async for chunk in response:
-        if chunk.object == "text_completion":
-            content = chunk.choices[0].text
-        else:
-            content = chunk.choices[0].delta.content
-        if content:
-            chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
-            yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
-    chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
+    if not error:
+        async for chunk in response:
+            if chunk.object == "text_completion":
+                content = chunk.choices[0].text
+            else:
+                content = chunk.choices[0].delta.content
+            if content:
+                chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
+                yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+        chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
+    else:
+        chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 

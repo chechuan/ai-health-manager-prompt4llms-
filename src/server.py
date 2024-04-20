@@ -40,6 +40,7 @@ from src.utils.module import (
     format_sse_chat_complete,
     response_generator,
     build_aigc_functions_response,
+    construct_naive_response_generator,
 )
 
 
@@ -262,9 +263,8 @@ def mount_aigc_functions(app: FastAPI):
             if err_check_ret is not None:
                 raise AssertionError(err_check_ret)
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get(
-                "stream"
-            ):  # 处理流式响应 构造返回数据的AsyncGenerator
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
@@ -272,7 +272,13 @@ def mount_aigc_functions(app: FastAPI):
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
         except Exception as err:
-            ret = AigcFunctionsCompletionResponse(head=601, msg=repr(err), items="")
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
             return build_aigc_functions_response(_return)
