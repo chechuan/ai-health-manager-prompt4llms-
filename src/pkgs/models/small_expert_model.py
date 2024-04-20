@@ -1935,7 +1935,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
@@ -1977,7 +1977,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2007,7 +2007,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2037,7 +2037,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2056,7 +2056,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
         return content
@@ -2091,7 +2091,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "drug_plan": drug_plan,
-            "diagnosis": kwargs.get("diagnosis", ""),
+            "diagnosis": kwargs.get("diagnosis", "无"),
             "food_principle": kwargs.get("food_principle", ""),
             "sport_principle": kwargs.get("sport_principle", ""),
             "mental_principle": kwargs["mental_principle"],
