@@ -1866,7 +1866,7 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    @param_check(check_params=["messages", "user_profile"])
     async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
 
