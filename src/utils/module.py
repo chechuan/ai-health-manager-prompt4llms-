@@ -37,9 +37,8 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 from typing import Optional
 from data.constrant import CACHE_DIR
-from src.utils.api_protocal import (
-    AigcFunctionsRequest,
-    AigcFunctionsResponse,
+from src.utils.api_protocal import AigcFunctionsRequest, AigcFunctionsResponse
+from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
 )
