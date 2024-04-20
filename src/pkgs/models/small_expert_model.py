@@ -36,6 +36,7 @@ from src.utils.module import (
     InitAllResource,
     accept_stream_response,
     clock,
+    construct_naive_response_generator,
     param_check,
     compute_blood_pressure_level,
     dumpJS,
@@ -1888,6 +1889,8 @@ class Agents:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         model_args = update_model_args(kwargs)
+
+        # 诊断1阶段必须直接返回字符串用于判断下一步逻辑
         content: str = await self.aaigc_functions_general(
             _event,
             prompt_vars,
@@ -1904,6 +1907,9 @@ class Agents:
             content: str = await self.aaigc_functions_general(
                 _event, prompt_vars, model_args, **kwargs
             )
+        else:
+            if model_args.get("stream") is True:
+                content: AsyncGenerator = construct_naive_response_generator(content)
         return content
 
     @param_check(check_params=["messages"])

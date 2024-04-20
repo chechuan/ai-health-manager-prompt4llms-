@@ -37,7 +37,12 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 from typing import Optional
 from data.constrant import CACHE_DIR
-from src.utils.api_protocal import AigcFunctionsRequest, AigcFunctionsResponse
+from src.utils.api_protocal import (
+    AigcFunctionsRequest,
+    AigcFunctionsResponse,
+    CompletionResponseStreamChoice,
+    CompletionStreamResponse,
+)
 
 try:
     from src.utils.Logger import logger
@@ -946,6 +951,16 @@ async def response_generator(response) -> AsyncGenerator:
             yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
     chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+
+
+async def construct_naive_response_generator(response: str) -> AsyncGenerator:
+    """异步生成器
+    处理`openai.AsyncStream`
+    """
+    for index, content in enumerate(response):
+        choice_chunk = CompletionResponseStreamChoice(index=index, text=content)
+        repsonse = CompletionStreamResponse(model="", choices=[choice_chunk])
+        yield repsonse
 
 
 def build_aigc_functions_response(ret):
