@@ -133,5 +133,5 @@ class AigcFunctionsResponse(BaseModel):
 
 class AigcFunctionsCompletionResponse(BaseModel):
     head: int = 200
-    items: str = ""
+    items: Union[str, object] = ""
     msg: str = ""
