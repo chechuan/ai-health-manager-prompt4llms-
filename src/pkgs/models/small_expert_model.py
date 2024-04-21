@@ -1850,7 +1850,7 @@ class Agents:
                 "top_p": 0.8,
                 **kwargs.get("model_args", {}),
             }
-            if kwargs.get("model_args"):
+            if "model_args" in kwargs:
                 del kwargs["model_args"]
             return model_args
 
@@ -2217,6 +2217,16 @@ class Agents:
             logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
+    async def __preprocess_function_args__(self, kwargs) -> dict:
+        """处理aigc functions入参"""
+        if not kwargs.get("model_args"):
+            kwargs["model_args"] = {}
+        if not kwargs.get("user_profile"):
+            kwargs["user_profile"] = {}
+        if not kwargs.get("diagnosis"):
+            kwargs["diagnosis"] = ""
+        return kwargs
+
     async def call_function(self, **kwargs) -> Union[str, Generator]:
         """调用函数
         - Args:
@@ -2237,6 +2247,7 @@ class Agents:
         if not self.funcmap.get(intent_code):
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
+        kwargs = await self.__preprocess_function_args__(kwargs)
         try:
             func = self.funcmap.get(intent_code)
             if asyncio.iscoroutinefunction(func):
