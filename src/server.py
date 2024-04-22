@@ -34,7 +34,6 @@ from src.utils.api_protocal import (
 from src.utils.Logger import logger
 from src.utils.module import (
     MakeFastAPIOffline,
-    check_aigc_request,
     InitAllResource,
     NpEncoder,
     curr_time,
@@ -260,9 +259,6 @@ def mount_aigc_functions(app: FastAPI):
         """aigc函数"""
         try:
             param = await async_accept_param_purge(request_model)
-            err_check_ret = await check_aigc_request(param)
-            if err_check_ret is not None:
-                raise AssertionError(err_check_ret)
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator

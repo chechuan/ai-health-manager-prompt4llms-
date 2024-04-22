@@ -89,7 +89,6 @@ USER_PROFILE_KEY_MAP = {
     "past_history_of_present_illness": "既往史",
     "specialist_check": "专科检查",
     "disposal_plan": "处置方案",
-    "nation": "民族",
 }
 
 
@@ -103,15 +102,19 @@ class DrugPlanItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: int = Field(description="年龄", ge=1, le=100)  # 年龄
+    age: int = Field(description="年龄", ge=0, le=200)
     gender: Literal["男", "女"] = Field(description="性别", examples=["男", "女"])
-    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])  # 身高
-    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])  # 体重
+    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
+    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
     disease_history: Union[None, List[str]] = []  # 疾病史
     allergic_history: Union[None, List[str]] = []  # 过敏史
     surgery_history: Union[None, List[str]] = []  # 手术史
-    main_diagnosis_of_western_medicine: Optional[str] = None  # 西医主要诊断
-    secondary_diagnosis_of_western_medicine: Optional[str] = None  # 西医次要诊断
+    main_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医主要诊断", examples=["高血压"]
+    )
+    secondary_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医次要诊断"
+    )
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
     traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
     body_temperature: Optional[str] = None  # 体温(摄氏度)
@@ -125,6 +128,9 @@ class UserProfile(BaseModel):
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
     nation: str = Field(None, description="民族", example=["汉族"])
+    daily_physical_labor_intensity: Optional[str] = Field(
+        None, description="日常体力劳动水平", examples=["中"]
+    )
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -139,6 +145,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_mental_principle",
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
+        "aigc_functions_doctor_recommend",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -284,3 +291,12 @@ class AigcFunctionsCompletionResponse(BaseModel):
     head: int = Field(200, description="API status code")
     items: Union[str, object] = Field(None, description="返回内容")
     msg: str = Field("", description="报错信息")
+
+
+class DoctorInfo(BaseModel):
+    name: str = Field(..., description="医生姓名")
+    info: str = Field(None, description="医生信息")
+    adept: str = Field(None, description="医生擅长")
+
+    def format(self) -> str:
+        return f"姓名: {self.name}\n医生信息:{self.info}\n医生擅长:{self.adept}"

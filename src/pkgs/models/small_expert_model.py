@@ -9,15 +9,22 @@ import json
 import re
 import sys
 from urllib import response
+from fastapi.exceptions import ValidationException
 import json5
 import asyncio
 from os.path import basename
 from pathlib import Path
 
 import openai
+from pydantic import Field, ValidationError
 from requests import Session
 
-from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
+from src.utils.api_protocal import (
+    DoctorInfo,
+    DrugPlanItem,
+    UserProfile,
+    USER_PROFILE_KEY_MAP,
+)
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
@@ -1636,7 +1643,7 @@ class Agents:
         content = ""
         if mode == "user_profile":
             for key, value in user_profile.items():
-                if value:
+                if value and USER_PROFILE_KEY_MAP.get(key):
                     content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
@@ -2104,6 +2111,44 @@ class Agents:
         )
         return response
 
+    async def aigc_functions_doctor_recommend(self, **kwargs) -> Union[str, Generator]:
+        if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
+            raise ValidationException("医生推荐 model_args.stream can't be True")
+
+        _event = "医生推荐"
+        prompt_template = (
+            "# 任务描述\n"
+            "你是一位经验丰富的智能健康助手，请你根据输出要求、我的诉求、已知信息，为我推荐符合我病情的医生。\n"
+            "# 已知信息\n"
+            "{diagnosis_result}\n"
+            "{user_demands}\n"
+            "# 医生信息\n"
+            "{doctor_message}\n"
+            "# 输出要求\n"
+            "1.根据已知信息、我的诉求、医生信息列表，帮我推荐最符合我情况的5个医生名称\n"
+            "2.你综合考虑以下信息来帮我推荐医生：医生的专业匹配度、医生职称、医生工作年限、地理位置\n"
+            "3.只输出医生姓名,以`,`分隔"
+        )
+        # TODO 从外部加载医生数据
+        doctor_example = json.load(open(".cache/docter_example.json", "r"))
+        docter_message = "\n\n".join([DoctorInfo(**i).format() for i in doctor_example])
+        prompt_vars = {
+            "doctor_message": docter_message,
+            "diagnosis_result": "用户诊断结果：病毒性感冒",
+            "user_demands": "我想找一个擅长中医调理的医生",
+        }
+        model_args = await self.__update_model_args__(kwargs, temperature=1, top_p=0.8)
+        response: Union[str, Generator] = await self.aaigc_functions_general(
+            _event, prompt_vars, prompt_template, model_args, **kwargs
+        )
+        try:
+            # raise AssertionError("未定义err")
+            result = [i.strip() for i in response.split(",")]
+        except Exception as err:
+            logger.error(repr(err))
+            result = err
+        return result
+
     def aigc_functions_general(
         self,
         _event: str = "",
@@ -2133,8 +2178,8 @@ class Agents:
         self,
         _event: str = "",
         prompt_vars: dict = {},
-        model_args: dict = {},
         prompt_template: str = "",
+        model_args: Dict = {},
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
