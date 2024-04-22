@@ -1664,6 +1664,16 @@ class Agents:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
 
+    async def __update_model_args__(self, kwargs, **args) -> Dict:
+        if "model_args" in kwargs:
+            if kwargs.get("model_args"):
+                args = {
+                    **args,
+                    **kwargs["model_args"],
+                }
+            del kwargs["model_args"]
+        return args
+
     def regist_aigc_functions(self) -> None:
         self.funcmap = {
             v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
@@ -1839,16 +1849,6 @@ class Agents:
         )
         return {"report_summary": content}
 
-    def __update_model_args__(self, kwargs, **args) -> Dict:
-        if "model_args" in kwargs:
-            if kwargs.get("model_args"):
-                args = {
-                    **args,
-                    **kwargs["model_args"],
-                }
-            del kwargs["model_args"]
-        return args
-
     @param_check(check_params=["messages"])
     async def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
@@ -1860,7 +1860,9 @@ class Agents:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
 
-        model_args = self.__update_model_args__(kwargs, temperature=0.7, top_p=0.8)
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.8
+        )
         content: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1874,7 +1876,7 @@ class Agents:
             "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        model_args = self.__update_model_args__(
+        model_args = await self.__update_model_args__(
             kwargs, temperature=0, top_p=0.8, repetition_penalty=1.0
         )
 
@@ -1914,7 +1916,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = self.__update_model_args__(
+        model_args = await self.__update_model_args__(
             kwargs, temperature=0, top_p=1, repetition_penalty=1.0
         )
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
@@ -1946,7 +1948,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = self.__update_model_args__(
+        model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1
         )
         content: str = await self.aaigc_functions_general(
@@ -1967,7 +1969,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = self.__update_model_args__(
+        model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
@@ -1989,7 +1991,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = self.__update_model_args__(
+        model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
@@ -2010,7 +2012,7 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = self.__update_model_args__(kwargs)
+        model_args = await self.__update_model_args__(kwargs)
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -2038,7 +2040,7 @@ class Agents:
             "mental_principle": kwargs["mental_principle"],
             "chinese_therapy": kwargs["chinese_therapy"],
         }
-        model_args = self.__update_model_args__(kwargs, temperature=0.7, top_p=1)
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1)
         response: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )

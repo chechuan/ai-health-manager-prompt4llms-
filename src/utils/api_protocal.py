@@ -102,8 +102,8 @@ class DrugPlanItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: int = Field(None, description="年龄", ge=1, le=100)  # 年龄
-    gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    age: int = Field(description="年龄", ge=1, le=100)  # 年龄
+    gender: Literal["男", "女"] = Field(description="性别", examples=["男", "女"])
     height: str = Body(None, description="身高", examples=["175cm", "1.8米"])  # 身高
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])  # 体重
     disease_history: Union[None, List[str]] = []  # 疾病史
@@ -133,7 +133,7 @@ class AigcFunctionsRequest(BaseModel):
     prompt: Optional[str] = None
     options: Optional[List[str]] = None
     user_profile: UserProfile = Field(
-        None,
+        {},
         description="用户基本信息",
         type="object",
         example=UserProfile(age=18, gender="男", weight="65kg"),
