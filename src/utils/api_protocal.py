@@ -89,6 +89,7 @@ USER_PROFILE_KEY_MAP = {
     "past_history_of_present_illness": "既往史",
     "specialist_check": "专科检查",
     "disposal_plan": "处置方案",
+    "nation": "民族",
 }
 
 
@@ -123,6 +124,7 @@ class UserProfile(BaseModel):
     past_history_of_present_illness: Optional[str] = None  # 既往史
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
+    nation: str = Field(None, description="民族", example=["汉族"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -227,45 +229,45 @@ class AigcFunctionsRequest(BaseModel):
             ]
         ],
     )
-    diagnosis: str = Field(
+    diagnosis: Union[str, None] = Field(
         None,
         description="诊断结果",
         examples=["急性肠胃炎"],
     )
-    food_principle: str = Field(
+    food_principle: Union[str, None] = Field(
         None,
         description="饮食原则",
         examples=[
             '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
     )
-    sport_principle: str = Field(
+    sport_principle: Union[str, None] = Field(
         None,
         description="运动原则",
         examples=[
             "由于你被诊断为急性肠胃炎，建议暂时避免剧烈运动，等待病情恢复。在症状缓解后，可以逐步开始轻度运动，如散步、瑜伽。运动时间可从每次15分钟开始，逐渐增加到30分钟，每天1-2次。注意运动时不要吃得过饱，避免饭后立即运动。最佳运动心率保持在最大心率的50%-70%之间，即约112-156次/分钟。最大心率=220-年龄。恢复期间，保持良好的饮食习惯和充足的休息，有助于身体康复。如果运动过程中感到不适，应立即停止并就医。"
         ],
     )
-    mental_principle: str = Field(
+    mental_principle: Union[str, None] = Field(
         None,
         description="情志原则",
         examples=[
             "情志调理原则：保持心情愉悦，减轻焦虑。进行深呼吸练习，每日冥想10-15分钟。选择轻松的音乐助眠，保证7-9小时高质量睡眠。避免剧烈运动，做如瑜伽等轻柔运动促进身体舒缓。定期与亲朋交流，分享心情。如疼痛持续或加重，请及时就医。"
         ],
     )
-    chinese_therapy: str = Field(
+    chinese_therapy: Union[str, None] = Field(
         None,
         description="中医疗法",
         examples=[
             "针灸推拿：针对急性肠胃炎，可选取中脘、气海、天枢、足三里等穴位进行温和的针灸治疗，以调理脾胃，缓解腹痛和恶心。配合轻柔的腹部推拿，促进气血流通，加速炎症消退。\n\n药膳调理：建议采用健脾和胃、清热解毒的食材。如山药、薏米、白术、黄连、金银花等，可煮粥或炖汤食用。同时，减少油腻、辛辣食物，以减轻肠胃负担。\n\n茶饮调养：推荐饮用陈皮茶，以理气消胀；搭配薄荷叶，可缓解恶心感；再加点菊花，清热解毒。每日适量饮用，有助于肠胃功能恢复。避免冷饮，以防加重肠胃负担。同时，多饮温开水，保持水分平衡。\n\n此外，生活调理也至关重要，保持规律作息，避免过度劳累，保持心情舒畅，有助于身体的康复。如有必要，可配合中药汤剂，但需在专业中医师指导下使用。"
         ],
     )
-    plan_ai: str = Field(
+    plan_ai: Union[str, None] = Field(
         None,
         description="AI给出的方案",
         examples=["AI方案示例"],
     )
-    plan_human: str = Field(
+    plan_human: Union[str, None] = Field(
         None,
         description="专家修改后的方案",
         examples=["专家方案示例"],
