@@ -27,7 +27,7 @@ from typing import (
     Union,
 )
 from urllib import parse
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 import numpy as np
 import openai
@@ -970,6 +970,13 @@ def build_aigc_functions_response(ret):
         return Response(ret, media_type="application/json")
     elif isinstance(ret, Union[Generator, AsyncGenerator]):
         return StreamingResponse(ret, media_type="text/event-stream")
+
+
+async def async_accept_param_purge(request: Request):
+    p = await request.json()
+    pstr = json.dumps(p, ensure_ascii=False)
+    logger.info(f"Input Param: {pstr}")
+    return p
 
 
 def MakeFastAPIOffline(

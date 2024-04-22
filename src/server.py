@@ -5,14 +5,11 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import re
-import os
 import sys
-import time
 import json
 import asyncio
 import traceback
-from typing import AnyStr, AsyncGenerator, Dict, Generator, List, Literal, Tuple, Union
+from typing import AsyncGenerator, Union
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 import uvicorn
@@ -72,7 +69,10 @@ def accept_param_purge(request: Request):
 
 
 async def async_accept_param_purge(request: Request):
-    p = await request.json()
+    if isinstance(request, BaseModel):
+        p = request.model_dump()
+    else:
+        p = await request.json()
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
@@ -253,19 +253,10 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
-    @app.route("/aigc/functions", methods=["post"])
-    @app.route("/aigc/functions/consultation_summary", methods=["post"])
-    @app.route("/aigc/functions/diagnosis", methods=["post"])
-    @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
-    @app.route("/aigc/functions/drug_recommendation", methods=["post"])
-    @app.route("/aigc/functions/food_principle", methods=["post"])
-    @app.route("/aigc/functions/sport_principle", methods=["post"])
-    @app.route("/aigc/functions/chinese_therapy", methods=["post"])
-    @app.route("/aigc/functions/mental_principle", methods=["post"])
-    async def _async_aigc_functions(request: AigcFunctionsRequest) -> Response:
+    async def _async_aigc_functions(request_model: AigcFunctionsRequest) -> Response:
         """aigc函数"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(request_model)
             err_check_ret = await check_aigc_request(param)
             if err_check_ret is not None:
                 raise AssertionError(err_check_ret)
@@ -289,6 +280,16 @@ def mount_aigc_functions(app: FastAPI):
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
             return build_aigc_functions_response(_return)
+
+    app.post("/aigc/functions")(_async_aigc_functions)
+    # @app.route("/aigc/functions/consultation_summary", methods=["post"])
+    # @app.route("/aigc/functions/diagnosis", methods=["post"])
+    # @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
+    # @app.route("/aigc/functions/drug_recommendation", methods=["post"])
+    # @app.route("/aigc/functions/food_principle", methods=["post"])
+    # @app.route("/aigc/functions/sport_principle", methods=["post"])
+    # @app.route("/aigc/functions/chinese_therapy", methods=["post"])
+    # @app.route("/aigc/functions/mental_principle", methods=["post"])
 
 
 def create_app():
@@ -336,9 +337,19 @@ def create_app():
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
+    async def _test_sync(request_model: TestRequest) -> JSONResponse:
+        """异步测试response_model=BaseResponse"""
+        p = accept_param_purge(request_model)
+        t1 = curr_time()
+        await asyncio.sleep(2)
+        ret = {"start": t1, "end": curr_time()}
+        logger.debug(ret)
+        return JSONResponse(ret, media_type="application/json")
+
     app.get("/", response_model=BaseResponse, summary="swagger 文档")(document)
 
-    # 分隔符
+    app.post("/test/sync")(_test_sync)
+
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
         global chat
@@ -477,16 +488,6 @@ def create_app():
         finally:
             return ret
 
-    @app.post("/test/sync")
-    async def _test_sync(request_model: TestRequest) -> JSONResponse:
-        """异步测试response_model=BaseResponse"""
-        p = accept_param_purge(request_model)
-        t1 = curr_time()
-        await asyncio.sleep(2)
-        ret = {"start": t1, "end": curr_time()}
-        logger.debug(ret)
-        return JSONResponse(ret, media_type="application/json")
-
     mount_aigc_functions(app)
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
@@ -510,10 +511,10 @@ def prepare_for_all():
     agents = Agents(gsr)
 
 
-app = create_app()
+# app = create_app()
 
 if __name__ == "__main__":
-    # app = create_app()
-    # uvicorn.run(app, host=args.ip, port=args.port, log_level="info")
-    name_app = os.path.splitext(os.path.basename(__file__))[0]
-    uvicorn.run(app=f"{name_app}:app", host=args.ip, port=args.port)
+    app = create_app()
+    uvicorn.run(app, host=args.ip, port=args.port, log_level="info")
+    # name_app = os.path.splitext(os.path.basename(__file__))[0]
+    # uvicorn.run(app=f"{name_app}:app", host=args.ip, port=args.port)

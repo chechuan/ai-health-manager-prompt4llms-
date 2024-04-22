@@ -1839,20 +1839,19 @@ class Agents:
         )
         return {"report_summary": content}
 
+    def __update_model_args__(self, kwargs, **args) -> Dict:
+        if "model_args" in kwargs:
+            if kwargs.get("model_args"):
+                args = {
+                    **args,
+                    **kwargs["model_args"],
+                }
+            del kwargs["model_args"]
+        return args
+
     @param_check(check_params=["messages"])
     async def aigc_functions_consultation_summary(self, **kwargs) -> str:
         """问诊摘要"""
-
-        def update_model_args(kwargs) -> Dict:
-
-            model_args = {
-                "temperature": 0.7,
-                "top_p": 0.8,
-                **kwargs.get("model_args", {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
 
         _event = "问诊摘要"
         user_profile: str = self.__compose_user_msg__(
@@ -1861,7 +1860,7 @@ class Agents:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
 
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(kwargs, temperature=0.7, top_p=0.8)
         content: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1870,26 +1869,16 @@ class Agents:
     @param_check(check_params=["messages", "user_profile"])
     async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {
-                "temperature": 0,
-                "top_p": 0.8,
-                "repetition_penalty": 1.0,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
-
         _event = "诊断"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
-        prompt_vars = {"user_profile": user_profile, "messages": messages}
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0, top_p=0.8, repetition_penalty=1.0
+        )
 
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
         # 诊断1阶段必须直接返回字符串用于判断下一步逻辑
         content: str = await self.aaigc_functions_general(
             _event,
@@ -1915,18 +1904,6 @@ class Agents:
     @param_check(check_params=["messages"])
     async def aigc_functions_drug_recommendation(self, **kwargs) -> List[Dict]:
         """用药建议"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {
-                "temperature": 0,
-                "top_p": 1,
-                "repetition_penalty": 1.0,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
-
         _event = "用药建议"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1937,7 +1914,9 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0, top_p=1, repetition_penalty=1.0
+        )
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1957,18 +1936,6 @@ class Agents:
     @param_check(check_params=["messages"])
     async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {
-                "temperature": 0.7,
-                "top_p": 1,
-                "repetition_penalty": 1.0,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
-
         _event = "饮食原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -1979,7 +1946,9 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1
+        )
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -1988,17 +1957,6 @@ class Agents:
     @param_check(check_params=["messages"])
     async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-            model_args = {
-                **model_args,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
-
         _event = "运动原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -2009,7 +1967,9 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -2018,16 +1978,6 @@ class Agents:
     @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {"temperature": 0.7, "top_p": 1, "repetition_penalty": 1.0}
-            model_args = {
-                **model_args,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
 
         _event = "情志原则"
         user_profile: str = self.__compose_user_msg__(
@@ -2039,7 +1989,9 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
         content: str = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -2058,26 +2010,15 @@ class Agents:
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
-        content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
+        model_args = self.__update_model_args__(kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event, prompt_vars, model_args, **kwargs
+        )
         return content
 
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
         """康养方案推荐原因"""
-
-        def update_model_args(kwargs) -> Dict:
-            model_args = {
-                "temperature": 0.7,
-                "top_p": 1,
-            }
-            model_args = {
-                **model_args,
-                **(kwargs.get("model_args", {}) if kwargs.get("model_args") else {}),
-            }
-            if "model_args" in kwargs:
-                del kwargs["model_args"]
-            return model_args
-
         _event = "康养方案推荐原因"
         user_profile = self.__compose_user_msg__(
             "user_profile",
@@ -2097,7 +2038,7 @@ class Agents:
             "mental_principle": kwargs["mental_principle"],
             "chinese_therapy": kwargs["chinese_therapy"],
         }
-        model_args = update_model_args(kwargs)
+        model_args = self.__update_model_args__(kwargs, temperature=0.7, top_p=1)
         response: Union[str, Generator] = await self.aaigc_functions_general(
             _event, prompt_vars, model_args, **kwargs
         )
@@ -2190,17 +2131,22 @@ class Agents:
         self,
         _event: str = "",
         prompt_vars: dict = {},
-        model_args: dict = {
-            "temperature": 0,
-            "top_p": 1,
-            "repetition_penalty": 1.0,
-        },
+        model_args: dict = {},
         prompt_template: str = "",
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
         prompt_template: str = (
             prompt_template
             if prompt_template
@@ -2247,7 +2193,7 @@ class Agents:
         if not self.funcmap.get(intent_code):
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
-        kwargs = await self.__preprocess_function_args__(kwargs)
+        # kwargs = await self.__preprocess_function_args__(kwargs)
         try:
             func = self.funcmap.get(intent_code)
             if asyncio.iscoroutinefunction(func):

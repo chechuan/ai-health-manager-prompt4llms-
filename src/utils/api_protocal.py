@@ -6,9 +6,11 @@
 @Contact :   1627635056@qq.com
 """
 
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Tuple, Union, Optional
 from pydantic import BaseModel, Field
 from fastapi import Body
+
+BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
 
 class ihmHealthData(BaseModel):
@@ -100,13 +102,13 @@ class DrugPlanItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: int = Field(ge=1, le=100)  # 年龄
-    gender: Literal["男", "女"] = Field(description="性别")
-    height: str = None  # 身高
-    weight: str = None  # 体重
-    disease_history: List[str] = []  # 疾病史
-    allergic_history: List[str] = []  # 过敏史
-    surgery_history: List[str] = []  # 手术史
+    age: int = Field(None, description="年龄", ge=1, le=100)  # 年龄
+    gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    height: str = Body(None, description="身高", examples=["175cm", "1.8米"])  # 身高
+    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])  # 体重
+    disease_history: Union[None, List[str]] = []  # 疾病史
+    allergic_history: Union[None, List[str]] = []  # 过敏史
+    surgery_history: Union[None, List[str]] = []  # 手术史
     main_diagnosis_of_western_medicine: Optional[str] = None  # 西医主要诊断
     secondary_diagnosis_of_western_medicine: Optional[str] = None  # 西医次要诊断
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
@@ -124,13 +126,28 @@ class UserProfile(BaseModel):
 
 
 class AigcFunctionsRequest(BaseModel):
-    url: Optional[str] = None
-    intentCode: str
+    intentCode: str = Field(
+        "aigc_functions_consultation_summary", description="意图编码/事件编码"
+    )
+    url: str = Field(None, description="请求地址")
     prompt: Optional[str] = None
     options: Optional[List[str]] = None
-    user_profile: UserProfile
-    messages: Optional[List[ChatMessage]] = []
-    durg_plan: List[DrugPlanItem] = None  # 药方
+    user_profile: UserProfile = Field(
+        None,
+        description="用户基本信息",
+        example=UserProfile(age=18, gender="男", weight="65kg"),
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        example=[{"role": "user", "content": "最近早上经常咳嗽,怎么办"}],
+    )
+    model_args: Dict = Field(
+        None,
+        description="模型参数",
+        example={"stream": False},
+    )
+    durg_plan: Optional[List[DrugPlanItem]] = None  # 药方
     diagnosis: Optional[str] = None  # 诊断
     food_principle: Optional[str] = None  # 饮食原则
     sport_principle: Optional[str] = None  # 运动原则
