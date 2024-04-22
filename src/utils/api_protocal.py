@@ -135,6 +135,7 @@ class AigcFunctionsRequest(BaseModel):
     user_profile: UserProfile = Field(
         None,
         description="用户基本信息",
+        type="object",
         example=UserProfile(age=18, gender="男", weight="65kg"),
     )
     messages: Optional[List[ChatMessage]] = Field(
@@ -142,7 +143,7 @@ class AigcFunctionsRequest(BaseModel):
         description="对话历史",
         example=[{"role": "user", "content": "最近早上经常咳嗽,怎么办"}],
     )
-    model_args: Dict = Field(
+    model_args: Union[Dict, None] = Field(
         None,
         description="模型参数",
         example={"stream": False},
