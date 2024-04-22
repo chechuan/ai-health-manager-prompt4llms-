@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from datetime import datetime
 import sys
 import json
 import asyncio
@@ -298,7 +299,7 @@ def create_app():
     app: FastAPI = FastAPI(
         title="智能健康管家-算法",
         description="",
-        version="0.0.0",
+        version=f"{datetime.now().strftime("%Y.%m.%d %H:%M:%S")}",
     )
     prepare_for_all()
 
