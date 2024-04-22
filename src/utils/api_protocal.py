@@ -6,8 +6,9 @@
 @Contact :   1627635056@qq.com
 """
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from pydantic import BaseModel, Field
+from fastapi import Body
 
 
 class ihmHealthData(BaseModel):
@@ -42,6 +43,20 @@ class RolePlayRequest(BaseModel):
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system", "function"]
     content: str
+
+
+class BaseResponse(BaseModel):
+    code: int = Field(200, description="API status code")
+    msg: str = Field("success", description="API status message")
+    items: Any = Field(None, description="API data")
+
+    class Config:
+        json_schema_extra = {"example": {"code": 200, "msg": "success", "items": ""}}
+
+
+class TestRequest(BaseModel):
+    body: Any = Body("", description="对话框ID")
+    items: str = Field("test string", description="测试字符串输入")
 
 
 USER_PROFILE_KEY_MAP = {
@@ -133,5 +148,5 @@ class AigcFunctionsResponse(BaseModel):
 
 class AigcFunctionsCompletionResponse(BaseModel):
     head: int = 200
-    items: str = ""
+    items: Union[str, object] = ""
     msg: str = ""

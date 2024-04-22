@@ -36,6 +36,7 @@ from src.utils.module import (
     InitAllResource,
     accept_stream_response,
     clock,
+    construct_naive_response_generator,
     param_check,
     compute_blood_pressure_level,
     dumpJS,
@@ -1849,7 +1850,7 @@ class Agents:
                 "top_p": 0.8,
                 **kwargs.get("model_args", {}),
             }
-            if kwargs.get("model_args"):
+            if "model_args" in kwargs:
                 del kwargs["model_args"]
             return model_args
 
@@ -1866,7 +1867,7 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    @param_check(check_params=["messages", "user_profile"])
     async def aigc_functions_diagnosis(self, **kwargs) -> str:
         """诊断"""
 
@@ -1888,6 +1889,8 @@ class Agents:
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         model_args = update_model_args(kwargs)
+
+        # 诊断1阶段必须直接返回字符串用于判断下一步逻辑
         content: str = await self.aaigc_functions_general(
             _event,
             prompt_vars,
@@ -1904,6 +1907,9 @@ class Agents:
             content: str = await self.aaigc_functions_general(
                 _event, prompt_vars, model_args, **kwargs
             )
+        else:
+            if model_args.get("stream") is True:
+                content: AsyncGenerator = construct_naive_response_generator(content)
         return content
 
     @param_check(check_params=["messages"])
@@ -1929,7 +1935,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
@@ -1971,7 +1977,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2001,7 +2007,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2031,7 +2037,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = update_model_args(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -2050,7 +2056,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
         }
         content: str = await self.aaigc_functions_general(_event, prompt_vars, **kwargs)
         return content
@@ -2085,7 +2091,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "drug_plan": drug_plan,
-            "diagnosis": kwargs["diagnosis"],
+            "diagnosis": kwargs.get("diagnosis", "无"),
             "food_principle": kwargs.get("food_principle", ""),
             "sport_principle": kwargs.get("sport_principle", ""),
             "mental_principle": kwargs["mental_principle"],
@@ -2211,6 +2217,16 @@ class Agents:
             logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
         return content
 
+    async def __preprocess_function_args__(self, kwargs) -> dict:
+        """处理aigc functions入参"""
+        if not kwargs.get("model_args"):
+            kwargs["model_args"] = {}
+        if not kwargs.get("user_profile"):
+            kwargs["user_profile"] = {}
+        if not kwargs.get("diagnosis"):
+            kwargs["diagnosis"] = ""
+        return kwargs
+
     async def call_function(self, **kwargs) -> Union[str, Generator]:
         """调用函数
         - Args:
@@ -2231,6 +2247,7 @@ class Agents:
         if not self.funcmap.get(intent_code):
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
+        kwargs = await self.__preprocess_function_args__(kwargs)
         try:
             func = self.funcmap.get(intent_code)
             if asyncio.iscoroutinefunction(func):

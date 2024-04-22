@@ -6,17 +6,18 @@
 @Contact :   1627635056@qq.com
 """
 import re
+import os
 import sys
 import time
 import json
 import asyncio
 import traceback
 from typing import AnyStr, AsyncGenerator, Dict, Generator, List, Literal, Tuple, Union
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 import uvicorn
 from pathlib import Path
-from fastapi import FastAPI, Response, Request, APIRouter
+from fastapi import FastAPI, Response, Request
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
@@ -27,11 +28,14 @@ from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsResponse,
+    BaseResponse,
     RolePlayRequest,
     AigcFunctionsRequest,
+    TestRequest,
 )
 from src.utils.Logger import logger
 from src.utils.module import (
+    MakeFastAPIOffline,
     check_aigc_request,
     InitAllResource,
     NpEncoder,
@@ -40,6 +44,7 @@ from src.utils.module import (
     format_sse_chat_complete,
     response_generator,
     build_aigc_functions_response,
+    construct_naive_response_generator,
 )
 
 
@@ -57,7 +62,10 @@ async def accept_param(request: Request):
 
 
 def accept_param_purge(request: Request):
-    p = request.json()
+    if isinstance(request, BaseModel):
+        p = request.model_dump()
+    elif isinstance(request, Request):
+        p = request.json()
     pstr = json.dumps(p, ensure_ascii=False)
     logger.info(f"Input Param: {pstr}")
     return p
@@ -262,9 +270,8 @@ def mount_aigc_functions(app: FastAPI):
             if err_check_ret is not None:
                 raise AssertionError(err_check_ret)
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get(
-                "stream"
-            ):  # 处理流式响应 构造返回数据的AsyncGenerator
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
@@ -272,19 +279,24 @@ def mount_aigc_functions(app: FastAPI):
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
         except Exception as err:
-            ret = AigcFunctionsCompletionResponse(head=601, msg=err.args[0], items="")
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
             return build_aigc_functions_response(_return)
 
 
 def create_app():
-    app = FastAPI(
+    app: FastAPI = FastAPI(
         title="智能健康管家-算法",
         description="",
         version="0.0.0",
     )
-    router = APIRouter()
     prepare_for_all()
 
     def decorate_chat_complete(
@@ -321,6 +333,12 @@ def create_app():
                 json.dumps(item, ensure_ascii=False), "delta"
             )
 
+    async def document():  # 用于展示接口文档
+        return RedirectResponse(url="/docs")
+
+    app.get("/", response_model=BaseResponse, summary="swagger 文档")(document)
+
+    # 分隔符
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
         global chat
@@ -459,20 +477,20 @@ def create_app():
         finally:
             return ret
 
-    @app.route("/test/sync", methods=["post"])
-    async def _test_sync(request: Request) -> Response:
-        """异步测试"""
-        p = await async_accept_param_purge(request)
+    @app.post("/test/sync")
+    async def _test_sync(request_model: TestRequest) -> JSONResponse:
+        """异步测试response_model=BaseResponse"""
+        p = accept_param_purge(request_model)
         t1 = curr_time()
         await asyncio.sleep(2)
         ret = {"start": t1, "end": curr_time()}
         logger.debug(ret)
-        return Response(dumpJS(ret), media_type="application/json")
+        return JSONResponse(ret, media_type="application/json")
 
     mount_aigc_functions(app)
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
-    app.include_router(router)
+    MakeFastAPIOffline(app)
     return app
 
 
@@ -492,7 +510,10 @@ def prepare_for_all():
     agents = Agents(gsr)
 
 
+app = create_app()
+
 if __name__ == "__main__":
-    app = create_app()
-    uvicorn.run(app, host=args.ip, port=args.port, log_level="info")
-    # uvicorn.run("src.server:app", host=args.ip, port=args.port, log_level="info")
+    # app = create_app()
+    # uvicorn.run(app, host=args.ip, port=args.port, log_level="info")
+    name_app = os.path.splitext(os.path.basename(__file__))[0]
+    uvicorn.run(app=f"{name_app}:app", host=args.ip, port=args.port)
