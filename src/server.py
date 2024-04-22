@@ -253,7 +253,9 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
-    async def _async_aigc_functions(request_model: AigcFunctionsRequest) -> Response:
+    async def _async_aigc_functions(
+        request_model: AigcFunctionsRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
             param = await async_accept_param_purge(request_model)
@@ -281,7 +283,7 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
-    app.post("/aigc/functions")(_async_aigc_functions)
+    app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
     # @app.route("/aigc/functions/consultation_summary", methods=["post"])
     # @app.route("/aigc/functions/diagnosis", methods=["post"])
     # @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])

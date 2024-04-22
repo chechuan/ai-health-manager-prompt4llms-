@@ -104,7 +104,7 @@ class DrugPlanItem(BaseModel):
 class UserProfile(BaseModel):
     age: int = Field(description="年龄", ge=1, le=100)  # 年龄
     gender: Literal["男", "女"] = Field(description="性别", examples=["男", "女"])
-    height: str = Body(None, description="身高", examples=["175cm", "1.8米"])  # 身高
+    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])  # 身高
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])  # 体重
     disease_history: Union[None, List[str]] = []  # 疾病史
     allergic_history: Union[None, List[str]] = []  # 过敏史
@@ -135,36 +135,86 @@ class AigcFunctionsRequest(BaseModel):
     user_profile: UserProfile = Field(
         {},
         description="用户基本信息",
-        type="object",
-        example=UserProfile(age=18, gender="男", weight="65kg"),
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
     )
     messages: Optional[List[ChatMessage]] = Field(
         None,
         description="对话历史",
-        example=[{"role": "user", "content": "最近早上经常咳嗽,怎么办"}],
+        examples=[[{"role": "user", "content": "最近早上经常咳嗽,怎么办"}]],
     )
     model_args: Union[Dict, None] = Field(
         None,
         description="模型参数",
-        example={"stream": False},
+        examples=[[{"stream": False}]],
     )
-    durg_plan: Optional[List[DrugPlanItem]] = None  # 药方
-    diagnosis: Optional[str] = None  # 诊断
-    food_principle: Optional[str] = None  # 饮食原则
-    sport_principle: Optional[str] = None  # 运动原则
-    mental_principle: Optional[str] = None  # 心理原则
-    chinese_therapy: Optional[str] = None  # 中医疗法
-    plan_ai: Optional[str] = None  # AI方案
-    plan_human: Optional[str] = None  # 人工方案
+    durg_plan: List[DrugPlanItem] = Field(
+        None,
+        description="药方列表",
+        examples=[
+            [
+                {
+                    "drug_name": "阿莫西林",
+                    "dosage": "1g",
+                    "frequency": "每日一次",
+                    "usage": "口服",
+                    "precautions": "无",
+                    "contraindication": "无",
+                },
+                {
+                    "drug_name": "蒙脱石散",
+                    "dosage": "0.5g",
+                    "frequency": "每日一次",
+                    "usage": "口服",
+                    "precautions": "无",
+                    "contraindication": "无",
+                },
+            ]
+        ],
+    )  # 药方
+    diagnosis: str = Field(
+        None,
+        description="诊断",
+        examples=["感冒"],
+    )
+    food_principle: str = Field(
+        None,
+        description="饮食原则",
+        examples=["少盐多水"],
+    )
+    sport_principle: str = Field(
+        None,
+        description="运动原则",
+        examples=["慢跑"],
+    )
+    mental_principle: str = Field(
+        None,
+        description="情志原则",
+        examples=["少熬夜多去公园散散心"],
+    )
+    chinese_therapy: str = Field(
+        None,
+        description="中医疗法",
+        examples=["针灸"],
+    )
+    plan_ai: str = Field(
+        None,
+        description="AI给出的方案",
+        examples=["AI方案示例"],
+    )
+    plan_human: str = Field(
+        None,
+        description="专家修改后的方案",
+        examples=["专家方案示例"],
+    )
 
 
 class AigcFunctionsResponse(BaseModel):
-    code: int = 200
-    message: str = ""
-    end: bool = False
+    code: int = Field(200, description="API status code")
+    message: str = Field(None, description="返回内容")
+    end: bool = Field(False, description="流式结束标志")
 
 
 class AigcFunctionsCompletionResponse(BaseModel):
-    head: int = 200
-    items: Union[str, object] = ""
-    msg: str = ""
+    head: int = Field(200, description="API status code")
+    items: Union[str, object] = Field(None, description="返回内容")
+    msg: str = Field("", description="报错信息")
