@@ -28,3 +28,4 @@ pdf2image
 pdfminer.six
 Pillow
 sse_starlette
+shortuuid
