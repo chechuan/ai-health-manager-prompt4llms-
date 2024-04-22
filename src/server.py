@@ -299,7 +299,7 @@ def create_app():
     app: FastAPI = FastAPI(
         title="智能健康管家-算法",
         description="",
-        version=f"{datetime.now().strftime("%Y.%m.%d %H:%M:%S")}",
+        version=f"{datetime.now().strftime('%Y.%m.%d %H:%M:%S')}",
     )
     prepare_for_all()
 
