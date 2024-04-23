@@ -157,6 +157,19 @@ class AigcFunctionsRequest(BaseModel):
     )
     url: str = Field(None, description="请求地址")
     prompt: Optional[str] = None
+    chunk_size: Optional[int] = Field(
+        None, description="报告总结分块", examples=[1000], ge=0, le=2048
+    )
+    report_summary: Optional[str] = Field(
+        None,
+        description="报告总结报告内容",
+        examples=[
+            (
+                "首页部分生命熵值60.85熵值评价中度失衡中度失衡解读熵值中度偏高"
+                "提示近期所患疾病出现不稳定情况，或身体较长期处于慢病状态"
+            )
+        ],
+    )
     options: Optional[List[str]] = None
     user_profile: UserProfile = Field(
         {},
