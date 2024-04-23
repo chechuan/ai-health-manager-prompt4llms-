@@ -11,6 +11,7 @@ import pickle
 import os
 import sys
 import time
+import oss2
 from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -1048,6 +1049,15 @@ def MakeFastAPIOffline(
                 with_google_fonts=False,
                 redoc_favicon_url=favicon,
             )
+
+
+def download_from_oss(filepath: str = "oss path", save_path: str = "local save path"):
+    oss_cfg = load_yaml(Path("config", "aliyun_lk_oss.yaml"))
+    auth = oss2.Auth(oss_cfg["OSS_ACCESS_KEY_ID"], oss_cfg["OSS_ACCESS_KEY_SECRET"])
+    bucket = oss2.Bucket(auth, oss_cfg["OSS_REGION"], oss_cfg["OSS_BUCKET_NAME"])
+    logger.info(f"download {filepath} starting")
+    bucket.get_object_to_file(filepath, save_path)
+    logger.info(f"download {filepath} finished")
 
 
 if __name__ == "__main__":

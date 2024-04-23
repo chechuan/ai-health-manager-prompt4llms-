@@ -8,7 +8,6 @@
 import json
 import re
 import sys
-from urllib import response
 from fastapi.exceptions import ValidationException
 import json5
 import asyncio
@@ -16,7 +15,6 @@ from os.path import basename
 from pathlib import Path
 
 import openai
-from pydantic import Field, ValidationError
 from requests import Session
 
 from src.utils.api_protocal import (
@@ -47,6 +45,7 @@ from src.utils.module import (
     param_check,
     compute_blood_pressure_level,
     dumpJS,
+    download_from_oss,
 )
 
 
@@ -2112,6 +2111,16 @@ class Agents:
         return response
 
     async def aigc_functions_doctor_recommend(self, **kwargs) -> Union[str, Generator]:
+        async def download_and_load_doctor_messages() -> List[Dict]:
+            doctor_example_path = Path(".cache/doctor_examples.json")
+            if not doctor_example_path.exists():
+                download_from_oss(
+                    "ai-algorithm-nlp/intelligent-health-manager/data/docter_examples.json",
+                    doctor_example_path,
+                )
+            doctor_examples = json.load(open(".cache/doctor_examples.json", "r"))
+            return doctor_examples
+
         if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
             raise ValidationException("医生推荐 model_args.stream can't be True")
 
@@ -2123,17 +2132,21 @@ class Agents:
             "{diagnosis_result}\n"
             "{user_demands}\n"
             "# 医生信息\n"
-            "{doctor_message}\n"
+            "{doctor_message}\n\n"
             "# 输出要求\n"
             "1.根据已知信息、我的诉求、医生信息列表，帮我推荐最符合我情况的5个医生名称\n"
             "2.你综合考虑以下信息来帮我推荐医生：医生的专业匹配度、医生职称、医生工作年限、地理位置\n"
-            "3.只输出医生姓名,以`,`分隔"
+            "3.只输出医生姓名,以`,`分隔\n"
+            "Begins~"
         )
         # TODO 从外部加载医生数据
-        doctor_example = json.load(open(".cache/docter_example.json", "r"))
-        docter_message = "\n\n".join([DoctorInfo(**i).format() for i in doctor_example])
+        if not hasattr(self, "docter_message"):
+            doctor_examples = await download_and_load_doctor_messages()
+            self.docter_message = "\n\n".join(
+                [DoctorInfo(**i).__str__() for i in doctor_examples]
+            )
         prompt_vars = {
-            "doctor_message": docter_message,
+            "doctor_message": self.docter_message,
             "diagnosis_result": "用户诊断结果：病毒性感冒",
             "user_demands": "我想找一个擅长中医调理的医生",
         }

@@ -294,9 +294,13 @@ class AigcFunctionsCompletionResponse(BaseModel):
 
 
 class DoctorInfo(BaseModel):
-    name: str = Field(..., description="医生姓名")
-    info: str = Field(None, description="医生信息")
-    adept: str = Field(None, description="医生擅长")
+    doctor_name: str = Field(..., description="医生姓名")
+    doctor_introduction: str = Field(None, description="医生信息")
+    doctor_specialty: str = Field(None, description="医生擅长")
 
-    def format(self) -> str:
-        return f"姓名: {self.name}\n医生信息:{self.info}\n医生擅长:{self.adept}"
+    def __str__(self) -> str:
+        return (
+            f"姓名: {self.doctor_name}\n"
+            f"医生信息:{self.doctor_introduction}\n"
+            f"医生擅长:{self.doctor_specialty}"
+        )
