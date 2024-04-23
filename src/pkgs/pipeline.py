@@ -1035,7 +1035,10 @@ class Chat_v2:
             )
             intentCode = self.get_pageName_code(output_text)
             logger.debug("页面Code: " + intentCode)
-        elif intentCode == "auxiliary_diagnosis":
+        elif intentCode in [
+            "auxiliary_diagnosis",
+            "auxiliary_diagnosis_with_doctor_recommend",
+        ]:
             mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
                 mid_vars=mid_vars, **kwargs
             )
