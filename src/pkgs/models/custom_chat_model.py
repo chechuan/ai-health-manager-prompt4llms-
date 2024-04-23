@@ -60,7 +60,7 @@ class CustomChatModel:
 
     def chat(self, **kwargs):
         """自定义对话"""
-        self.__parameter_check__(**kwargs)
+        # self.__parameter_check__(**kwargs)
         out = self.code_func_map[kwargs["intentCode"]](**kwargs)
         return out
 
@@ -69,6 +69,9 @@ class CustomChatAuxiliary(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
         self.code_func_map["auxiliary_diagnosis"] = self.__chat_auxiliary_diagnosis__
+        self.code_func_map["auxiliary_diagnosis_with_doctor_recommend"] = (
+            self.__chat_auxiliary_diagnosis__
+        )
 
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
@@ -260,6 +263,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
         self.code_func_map["report_interpretation_chat"] = (
+            self.__chat_report_interpretation__
+        )
+        self.code_func_map["report_interpretation_chat_with_doctor_recommend"] = (
             self.__chat_report_interpretation__
         )
 
