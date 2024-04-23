@@ -60,7 +60,7 @@ class CustomChatModel:
 
     def chat(self, **kwargs):
         """自定义对话"""
-        self.__parameter_check__(**kwargs)
+        # self.__parameter_check__(**kwargs)
         out = self.code_func_map[kwargs["intentCode"]](**kwargs)
         return out
 
@@ -69,28 +69,9 @@ class CustomChatAuxiliary(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
         self.code_func_map["auxiliary_diagnosis"] = self.__chat_auxiliary_diagnosis__
-
-    # def __init__(self, gsr: InitAllResource):
-    #     self.gsr = gsr
-    #     self.code_func_map = {"auxiliary_diagnosis": self.__chat_auxiliary_diagnosis__}
-
-    # def __parameter_check__(self, **kwargs):
-    #     """参数检查"""
-    #     if "intentCode" not in kwargs:
-    #         raise ValueError("intentCode is not in kwargs")
-    #     if kwargs["intentCode"] not in self.code_func_map:
-    #         raise ValueError("intentCode is not in CustomChatModel.code_func_map")
-    #     if not kwargs.get("history", []):
-    #         raise ValueError("history is empty")
-
-    # def __extract_event_from_gsr__(self, gsr: InitAllResource, code: str) -> Dict[str, Any]:
-    #     """从global_share_resource中提取事件数据"""
-    #     event = {}
-    #     if gsr.prompt_meta_data["event"].get(code):
-    #         event = gsr.prompt_meta_data["event"][code]
-    #         return event
-    #     else:
-    #         raise ValueError(f"event code {code} not found in gsr.prompt_meta_data['event']")
+        self.code_func_map["auxiliary_diagnosis_with_doctor_recommend"] = (
+            self.__chat_auxiliary_diagnosis__
+        )
 
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
@@ -184,7 +165,7 @@ class CustomChatAuxiliary(CustomChatModel):
         logger.info(f"Custom Chat 辅助诊断总结、饮食建议 LLM Output: \n{content}")
         return content
 
-    def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
+    async def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
@@ -271,10 +252,10 @@ class CustomChatAuxiliary(CustomChatModel):
             return True
         return False
 
-    def chat(self, **kwargs):
+    async def chat(self, **kwargs):
         """自定义对话"""
         self.__parameter_check__(**kwargs)
-        out = self.code_func_map[kwargs["intentCode"]](**kwargs)
+        out = await self.code_func_map[kwargs["intentCode"]](**kwargs)
         return out
 
 
@@ -282,6 +263,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
         self.code_func_map["report_interpretation_chat"] = (
+            self.__chat_report_interpretation__
+        )
+        self.code_func_map["report_interpretation_chat_with_doctor_recommend"] = (
             self.__chat_report_interpretation__
         )
 
@@ -357,7 +341,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         # model = "Qwen-72B-Chat"
         messages = self.__compose_message__(**kwargs)
         logger.info(f"Custom Chat 报告解读 LLM Input: {dumpJS(messages)}")
-        chat_response = callLLM(
+        content = callLLM(
             model=model,
             history=messages,
             temperature=0.7,
@@ -369,9 +353,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             # frequency_penalty=2,
             # repetition_penalty=1,
             # length_penalty=1.2,
-            stream=True,
+            stream=False,
         )
-        content = accept_stream_response(chat_response, verbose=True)
+        # content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 报告解读 LLM Output: \n{content}")
         thought, content = self.__parse_response__(content)
         mid_vars = update_mid_vars(
@@ -386,18 +370,20 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         if "?" not in content and "？" not in content:
             tool = "convComplete"
             sch = 1
-            if kwargs["promptParam"]["report_type"] == "口腔报告":
-                _contents = [
-                    "健康报告显示你的健康处于平衡状态。别担心，我已经帮你智能匹配到奉华林社区卫生服务中心口腔科的滑波医生，他可是廊坊最好的齿科医生了，并告诉了你妈妈，让她尽快带你去看医生。我还为你智能匹配了一个非常适合你的口腔保健服务包，里面有全套的牙齿问诊和保健服务。你近期一定要认真刷牙，我每天早晚会给你按时播放一个专业的刷牙视频，超级专业有趣的，我陪你一起保护牙齿！"
-                ]
-            elif kwargs["promptParam"]["report_type"] == "胸部报告":
-                _contents = [
-                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你的家人，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
-                ]
-            elif kwargs["promptParam"]["report_type"] == "腹部报告":
-                _contents = [
-                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据您的情况，我为您智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
-                ]
+            # 2024年4月23日16:19:12 20240430需求 调整医生推荐需求
+            _contents.append("请问是否需要帮您推荐医生，您可以告诉我您的诉求？")
+            # if kwargs["promptParam"]["report_type"] == "口腔报告":
+            #     _contents = [
+            #         "健康报告显示你的健康处于平衡状态。别担心，我已经帮你智能匹配到奉华林社区卫生服务中心口腔科的滑波医生，他可是廊坊最好的齿科医生了，并告诉了你妈妈，让她尽快带你去看医生。我还为你智能匹配了一个非常适合你的口腔保健服务包，里面有全套的牙齿问诊和保健服务。你近期一定要认真刷牙，我每天早晚会给你按时播放一个专业的刷牙视频，超级专业有趣的，我陪你一起保护牙齿！"
+            #     ]
+            # elif kwargs["promptParam"]["report_type"] == "胸部报告":
+            #     _contents = [
+            #         "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到廊坊市人民医院呼吸内科汪医生，并告诉了你的家人，让她尽快带你去看医生。根据你的情况，我为你智能匹配了一个适合你的健康保险计划，里面包含门诊和住院绿通服务、陪诊服务。可针对常见病如肺炎、中耳炎和20种传染病可以报销。帮助守护你的健康。"
+            #     ]
+            # elif kwargs["promptParam"]["report_type"] == "腹部报告":
+            #     _contents = [
+            #         "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据您的情况，我为您智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
+            #     ]
         return mid_vars, messages, _contents, sch, (thought, content, tool)
 
 

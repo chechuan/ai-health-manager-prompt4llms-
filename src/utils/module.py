@@ -11,6 +11,7 @@ import pickle
 import os
 import sys
 import time
+import oss2
 from base64 import encode
 from collections import defaultdict
 from datetime import date, datetime, timedelta
@@ -160,9 +161,10 @@ class InitAllResource:
         os.environ["OPENAI_API_KEY"] = self.api_config["model_supply"][
             default_supplier
         ]["api_key"]
-        # openai.api_base = self.api_config["llm"] + "/v1"
-        # openai.api_key = self.api_config["llm_token"]
-        logger.info(f"Set default supplier [{default_supplier}]")
+        self.default_model = "Qwen1.5-32B-Chat"
+        logger.info(
+            f"Set default supplier [{default_supplier}], default model: {self.default_model}"
+        )
 
     def __knowledge_connect_check__(self) -> None:
         """检查知识库服务连接"""
@@ -381,10 +383,13 @@ class InitAllResource:
 
     def get_model(self, event: str) -> str:
         """根据事件获取模型"""
-        assert (
-            isinstance(event, str) and event in self.model_config
-        ), f"event {event} not in model_config"
-        return self.model_config.get(event)
+        try:
+            assert (
+                isinstance(event, str) and event in self.model_config
+            ), f"event {event} not in model_config"
+        except Exception as err:
+            logger.critical(err)
+        return self.model_config.get(event, self.default_model)
 
     def get_event_item(self, event: str) -> Dict:
         """根据事件获取对应item"""
@@ -868,16 +873,17 @@ def accept_stream_response(response, verbose=True) -> str:
         if chunk.object == "text_completion":
             if hasattr(chunk.choices[0], "text"):
                 chunk_text = chunk.choices[0].text
-                content += chunk_text
-                if verbose:
-                    print(chunk_text, end="", flush=True)
+                if chunk_text:
+                    content += chunk_text
+                    if verbose:
+                        print(chunk_text, end="", flush=True)
         else:
             if hasattr(chunk.choices[0].delta, "content"):
                 chunk_text = chunk.choices[0].delta.content
                 if chunk_text:
                     content += chunk_text
-                if verbose:
-                    print(chunk_text, end="", flush=True)
+                    if verbose:
+                        print(chunk_text, end="", flush=True)
     if verbose:
         print()
     t_cost = round(time.time() - tst, 2)
@@ -923,17 +929,6 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
             "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
         )
     return prompt
-
-
-async def check_aigc_request(param: Union[Dict, AigcFunctionsRequest]) -> Optional[str]:
-    ret = None
-    if "intentCode" not in param:
-        ret = "intentCode not found in request"
-    # if "messages" not in param:
-    #     ret = "messages not found in request"
-    # elif not param.get("messages"):
-    #     ret = "messages cannot be empty or None in request"
-    return ret
 
 
 async def response_generator(response, error: bool = False) -> AsyncGenerator:
@@ -1055,6 +1050,15 @@ def MakeFastAPIOffline(
                 with_google_fonts=False,
                 redoc_favicon_url=favicon,
             )
+
+
+def download_from_oss(filepath: str = "oss path", save_path: str = "local save path"):
+    oss_cfg = load_yaml(Path("config", "aliyun_lk_oss.yaml"))
+    auth = oss2.Auth(oss_cfg["OSS_ACCESS_KEY_ID"], oss_cfg["OSS_ACCESS_KEY_SECRET"])
+    bucket = oss2.Bucket(auth, oss_cfg["OSS_REGION"], oss_cfg["OSS_BUCKET_NAME"])
+    logger.info(f"download {filepath} starting")
+    bucket.get_object_to_file(filepath, save_path)
+    logger.info(f"download {filepath} finished")
 
 
 if __name__ == "__main__":

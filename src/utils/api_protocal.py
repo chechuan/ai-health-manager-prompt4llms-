@@ -89,7 +89,6 @@ USER_PROFILE_KEY_MAP = {
     "past_history_of_present_illness": "既往史",
     "specialist_check": "专科检查",
     "disposal_plan": "处置方案",
-    "nation": "民族",
 }
 
 
@@ -103,15 +102,19 @@ class DrugPlanItem(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: int = Field(description="年龄", ge=1, le=100)  # 年龄
+    age: int = Field(description="年龄", ge=0, le=200)
     gender: Literal["男", "女"] = Field(description="性别", examples=["男", "女"])
-    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])  # 身高
-    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])  # 体重
+    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
+    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
     disease_history: Union[None, List[str]] = []  # 疾病史
     allergic_history: Union[None, List[str]] = []  # 过敏史
     surgery_history: Union[None, List[str]] = []  # 手术史
-    main_diagnosis_of_western_medicine: Optional[str] = None  # 西医主要诊断
-    secondary_diagnosis_of_western_medicine: Optional[str] = None  # 西医次要诊断
+    main_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医主要诊断", examples=["高血压"]
+    )
+    secondary_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医次要诊断"
+    )
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
     traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
     body_temperature: Optional[str] = None  # 体温(摄氏度)
@@ -125,10 +128,16 @@ class UserProfile(BaseModel):
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
     nation: str = Field(None, description="民族", example=["汉族"])
+    daily_physical_labor_intensity: Optional[str] = Field(
+        None, description="日常体力劳动水平", examples=["中"]
+    )
 
 
 class AigcFunctionsRequest(BaseModel):
     intentCode: Literal[
+        "switch_exercise",
+        "report_summary",
+        "report_interpretation",
         "aigc_functions_single_choice",
         "aigc_functions_consultation_summary",
         "aigc_functions_diagnosis",
@@ -139,6 +148,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_mental_principle",
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
+        "aigc_functions_doctor_recommend",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -274,6 +284,48 @@ class AigcFunctionsRequest(BaseModel):
     )
 
 
+class AigcFunctionsDoctorRecommendRequest(BaseModel):
+    intentCode: Literal["aigc_functions_doctor_recommend",] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_doctor_recommend",
+        ],
+    )
+    prompt: Optional[str] = Field(
+        None,
+        description="辅助诊断 & 报告解读chat 事件结束时的输出",
+        examples=[
+            (
+                "李明，你的口腔检查结果显示有两颗蛀牙和一颗继发龋齿，可能与饮食习惯和口腔清洁有关。"
+                "虽然你少吃糖，但主食吃得多可能也会增加蛀牙风险。牙刷软毛是好的，但未使用巴氏刷牙法可能清洁效果不足。"
+                "建议每日至少刷牙两次，使用牙线清理牙缝，学习并实践巴氏刷牙法。纠正咬手指的习惯对预防牙齿不正也至关重要。"
+                "此外，定期全口涂氟和口腔检查能有效预防蛀牙。记住，良好的口腔卫生是长期维护牙齿健康的关键。"
+            )
+        ],
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        ...,
+        description="对话历史",
+        examples=[
+            [
+                {
+                    "role": "assistant",
+                    "content": "请问是否需要帮您推荐医生，您可以告诉我您的诉求？",
+                },
+                {
+                    "role": "user",
+                    "content": "我想找个西医比较厉害的医生",
+                },
+            ]
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[{"stream": False}],
+    )
+
+
 class AigcFunctionsResponse(BaseModel):
     code: int = Field(200, description="API status code")
     message: str = Field(None, description="返回内容")
@@ -284,3 +336,16 @@ class AigcFunctionsCompletionResponse(BaseModel):
     head: int = Field(200, description="API status code")
     items: Union[str, object] = Field(None, description="返回内容")
     msg: str = Field("", description="报错信息")
+
+
+class DoctorInfo(BaseModel):
+    doctor_name: str = Field(..., description="医生姓名")
+    doctor_introduction: str = Field(None, description="医生信息")
+    doctor_specialty: str = Field(None, description="医生擅长")
+
+    def __str__(self) -> str:
+        return (
+            f"姓名: {self.doctor_name}\n"
+            f"医生信息:{self.doctor_introduction}\n"
+            f"医生擅长:{self.doctor_specialty}"
+        )
