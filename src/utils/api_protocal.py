@@ -146,6 +146,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
+        "report_interpretation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -278,6 +279,48 @@ class AigcFunctionsRequest(BaseModel):
         None,
         description="专家修改后的方案",
         examples=["专家方案示例"],
+    )
+
+
+class AigcFunctionsDoctorRecommendRequest(BaseModel):
+    intentCode: Literal["aigc_functions_doctor_recommend",] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_doctor_recommend",
+        ],
+    )
+    prompt: Optional[str] = Field(
+        None,
+        description="辅助诊断 & 报告解读chat 事件结束时的输出",
+        examples=[
+            (
+                "李明，你的口腔检查结果显示有两颗蛀牙和一颗继发龋齿，可能与饮食习惯和口腔清洁有关。"
+                "虽然你少吃糖，但主食吃得多可能也会增加蛀牙风险。牙刷软毛是好的，但未使用巴氏刷牙法可能清洁效果不足。"
+                "建议每日至少刷牙两次，使用牙线清理牙缝，学习并实践巴氏刷牙法。纠正咬手指的习惯对预防牙齿不正也至关重要。"
+                "此外，定期全口涂氟和口腔检查能有效预防蛀牙。记住，良好的口腔卫生是长期维护牙齿健康的关键。"
+            )
+        ],
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        ...,
+        description="对话历史",
+        examples=[
+            [
+                {
+                    "role": "assistant",
+                    "content": "请问是否需要帮您推荐医生，您可以告诉我您的诉求？",
+                },
+                {
+                    "role": "user",
+                    "content": "我想找个西医比较厉害的医生",
+                },
+            ]
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[{"stream": False}],
     )
 
 

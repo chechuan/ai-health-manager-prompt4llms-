@@ -1638,6 +1638,7 @@ class Agents:
         user_profile: UserProfile = None,
         messages: List[ChatMessage] = [],
         drug_plan: "List[DrugPlanItem]" = "[]",
+        role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
@@ -1647,7 +1648,9 @@ class Agents:
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
-            role_map = {"assistant": "医生", "user": "患者"}
+            role_map = (
+                {"assistant": "医生", "user": "患者"} if not role_map else role_map
+            )
             for message in messages:
                 if role_map.get(message["role"]):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
@@ -2126,13 +2129,14 @@ class Agents:
 
         _event = "医生推荐"
         prompt_template = (
-            "# 任务描述\n"
-            "你是一位经验丰富的智能健康助手，请你根据输出要求、我的诉求、已知信息，为我推荐符合我病情的医生。\n"
-            "# 已知信息\n"
-            "{diagnosis_result}\n"
-            "{user_demands}\n"
             "# 医生信息\n"
             "{doctor_message}\n\n"
+            "# 任务描述\n"
+            "你是一位经验丰富的智能健康助手，请你根据输出要求、我的诉求、已知信息，为我推荐符合我病情的医生。\n"
+            "# 问诊结果\n"
+            "{diagnosis_result}\n"
+            "# 用户对医生的需求"
+            "{user_demands}\n"
             "# 输出要求\n"
             "1.根据已知信息、我的诉求、医生信息列表，帮我推荐最符合我情况的5个医生名称\n"
             "2.你综合考虑以下信息来帮我推荐医生：医生的专业匹配度、医生职称、医生工作年限、地理位置\n"
@@ -2145,10 +2149,12 @@ class Agents:
             self.docter_message = "\n\n".join(
                 [DoctorInfo(**i).__str__() for i in doctor_examples]
             )
+
+        user_demands = self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "助手", "user": "用户"})
         prompt_vars = {
             "doctor_message": self.docter_message,
-            "diagnosis_result": "用户诊断结果：病毒性感冒",
-            "user_demands": "我想找一个擅长中医调理的医生",
+            "diagnosis_result": kwargs.get("prompt", ""),
+            "user_demands": user_demands,
         }
         model_args = await self.__update_model_args__(kwargs, temperature=1, top_p=0.8)
         response: Union[str, Generator] = await self.aaigc_functions_general(

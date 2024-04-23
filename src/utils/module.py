@@ -873,16 +873,17 @@ def accept_stream_response(response, verbose=True) -> str:
         if chunk.object == "text_completion":
             if hasattr(chunk.choices[0], "text"):
                 chunk_text = chunk.choices[0].text
-                content += chunk_text
-                if verbose:
-                    print(chunk_text, end="", flush=True)
+                if chunk_text:
+                    content += chunk_text
+                    if verbose:
+                        print(chunk_text, end="", flush=True)
         else:
             if hasattr(chunk.choices[0].delta, "content"):
                 chunk_text = chunk.choices[0].delta.content
                 if chunk_text:
                     content += chunk_text
-                if verbose:
-                    print(chunk_text, end="", flush=True)
+                    if verbose:
+                        print(chunk_text, end="", flush=True)
     if verbose:
         print()
     t_cost = round(time.time() - tst, 2)

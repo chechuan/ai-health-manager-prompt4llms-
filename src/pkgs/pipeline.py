@@ -9,7 +9,7 @@ import sys
 
 sys.path.append(".")
 import json
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 from langchain.prompts import PromptTemplate
 from requests import Session
@@ -707,7 +707,7 @@ class Chat_v2:
             kwargs["schedule"] = self.funcall.call_get_schedule(*args, **kwargs)
         return args, kwargs
 
-    def general_yield_result(self, *args, **kwargs):
+    async def general_yield_result(self, *args, **kwargs) -> AsyncGenerator:
         """预处理,调用pipeline，返回结果
         1. 通过role_map转换role定义
         2. history 由backend_history拼接用户输入
@@ -727,10 +727,11 @@ class Chat_v2:
             kwargs["prompt"] = None
             kwargs["sys_prompt"] = None
 
-        _iterable = self.pipeline(*args, **kwargs)
-        while True:
+        _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
+        # while True:
+        async for yield_item in _iterable:
             try:
-                yield_item = next(_iterable)
+                # yield_item = next(_iterable)
                 if not yield_item["data"].get("type"):
                     yield_item["data"]["type"] = "Result"
                 if yield_item["data"]["type"] == "Result" and not yield_item[
@@ -993,7 +994,9 @@ class Chat_v2:
         """
         ...
 
-    def complete(self, mid_vars: List[object], tool: str = "convComplete", **kwargs):
+    async def complete(
+        self, mid_vars: List[object], tool: str = "convComplete", **kwargs
+    ):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         weight_res = {}
@@ -1033,7 +1036,7 @@ class Chat_v2:
             intentCode = self.get_pageName_code(output_text)
             logger.debug("页面Code: " + intentCode)
         elif intentCode == "auxiliary_diagnosis":
-            mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(
+            mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
                 mid_vars=mid_vars, **kwargs
             )
         elif intentCode == "pressure_meas":
@@ -1227,7 +1230,7 @@ class Chat_v2:
         )
         return history
 
-    def interact_first(self, mid_vars, **kwargs):
+    async def interact_first(self, mid_vars, **kwargs):
         """首次交互"""
         intentCode = kwargs.get("intentCode")
         out_history = None
@@ -1269,7 +1272,7 @@ class Chat_v2:
                 "only_prompt",
                 "custom_chat",
             ]:
-                appendData, out_history, intentCode = self.complete(
+                appendData, out_history, intentCode = await self.complete(
                     mid_vars=mid_vars, **kwargs
                 )
                 kwargs["intentCode"] = intentCode
@@ -1306,7 +1309,7 @@ class Chat_v2:
         else:
             return False
 
-    def pipeline(self, mid_vars=[], **kwargs):
+    async def pipeline(self, mid_vars=[], **kwargs) -> AsyncGenerator:
         """
         ## 多轮交互流程
         1. 定义先验信息变量,拼装对应prompt
@@ -1330,7 +1333,7 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode")
         mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
-        appendData, out_history, intentCode = self.interact_first(
+        appendData, out_history, intentCode = await self.interact_first(
             mid_vars=mid_vars, **kwargs
         )
         while True:

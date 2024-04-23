@@ -30,6 +30,7 @@ from src.utils.api_protocal import (
     RolePlayRequest,
     AigcFunctionsRequest,
     TestRequest,
+    AigcFunctionsDoctorRecommendRequest,
 )
 from src.utils.Logger import logger
 from src.utils.module import (
@@ -280,15 +281,35 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+    async def _async_aigc_functions_doctor_recommend(
+        request_model: AigcFunctionsDoctorRecommendRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+        """aigc函数"""
+        try:
+            param = await async_accept_param_purge(request_model)
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(response)
+            else:
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
+        except Exception as err:
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
+            _return: str = ret.model_dump_json(exclude_unset=True)
+        finally:
+            return build_aigc_functions_response(_return)
+
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
-    # @app.route("/aigc/functions/consultation_summary", methods=["post"])
-    # @app.route("/aigc/functions/diagnosis", methods=["post"])
-    # @app.route("/aigc/functions/reason_for_care_plan", methods=["post"])
-    # @app.route("/aigc/functions/drug_recommendation", methods=["post"])
-    # @app.route("/aigc/functions/food_principle", methods=["post"])
-    # @app.route("/aigc/functions/sport_principle", methods=["post"])
-    # @app.route("/aigc/functions/chinese_therapy", methods=["post"])
-    # @app.route("/aigc/functions/mental_principle", methods=["post"])
+
+    app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
 
 
 def create_app():
@@ -299,12 +320,13 @@ def create_app():
     )
     prepare_for_all()
 
-    def decorate_chat_complete(
+    async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
-    ):
+    ) -> AsyncGenerator:
         try:
-            while True:
-                yield_item = next(generator)
+            # while True:
+            async for yield_item in generator:
+                # yield_item = await next(generator)
                 yield_item["data"]["appendData"] = yield_item["appendData"]
                 item = {**yield_item["data"]}
                 logger.info(
@@ -355,7 +377,7 @@ def create_app():
 
         try:
             param = await accept_param(request)
-            generator = chat_v2.general_yield_result(
+            generator: AsyncGenerator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=False,
@@ -375,7 +397,7 @@ def create_app():
         """demo,主要用于展示返回的中间变量"""
         try:
             param = await accept_param(request)
-            generator = chat_v2.general_yield_result(
+            generator = await chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
@@ -395,7 +417,7 @@ def create_app():
         """角色扮演对话"""
         try:
             param = await accept_param(request)
-            generator = chat_v2.general_yield_result(
+            generator = await chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
