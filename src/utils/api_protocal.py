@@ -160,7 +160,7 @@ class AigcFunctionsRequest(BaseModel):
     chunk_size: Optional[int] = Field(
         None, description="报告总结分块", examples=[1000], ge=0, le=2048
     )
-    report_summary: Optional[str] = Field(
+    report_content: Optional[str] = Field(
         None,
         description="报告总结报告内容",
         examples=[
