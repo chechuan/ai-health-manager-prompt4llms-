@@ -1873,7 +1873,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=0.8
         )
         content: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -1892,8 +1892,8 @@ class Agents:
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         # 诊断1阶段必须直接返回字符串用于判断下一步逻辑
         content: str = await self.aaigc_functions_general(
-            _event,
-            prompt_vars,
+            _event=_event,
+            prompt_vars=prompt_vars,
             model_args={
                 "temperature": 0.7,
                 "top_p": 0.8,
@@ -1905,7 +1905,7 @@ class Agents:
         if content == "无":
             kwargs["intentCode"] = "aigc_functions_diagnosis_result"
             content: str = await self.aaigc_functions_general(
-                _event, prompt_vars, model_args, **kwargs
+                _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
             )
         else:
             if model_args.get("stream") is True:
@@ -1929,7 +1929,7 @@ class Agents:
             kwargs, temperature=0, top_p=1, repetition_penalty=1.0
         )
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         if isinstance(response, openai.AsyncStream):
             return response
@@ -1961,7 +1961,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -1982,7 +1982,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -2004,7 +2004,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -2023,7 +2023,7 @@ class Agents:
         }
         model_args = await self.__update_model_args__(kwargs)
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -2051,7 +2051,7 @@ class Agents:
         }
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1)
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
 
@@ -2071,7 +2071,11 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
 
@@ -2090,7 +2094,11 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
 
@@ -2109,7 +2117,11 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
 
@@ -2150,7 +2162,11 @@ class Agents:
                 [DoctorInfo(**i).__str__() for i in doctor_examples]
             )
 
-        user_demands = self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "助手", "user": "用户"})
+        user_demands = self.__compose_user_msg__(
+            "messages",
+            messages=kwargs["messages"],
+            role_map={"assistant": "助手", "user": "用户"},
+        )
         prompt_vars = {
             "doctor_message": self.docter_message,
             "diagnosis_result": kwargs.get("prompt", ""),
@@ -2158,7 +2174,11 @@ class Agents:
         }
         model_args = await self.__update_model_args__(kwargs, temperature=1, top_p=0.8)
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, prompt_template, model_args, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            prompt_template=prompt_template,
+            model_args=model_args,
+            **kwargs,
         )
         try:
             # raise AssertionError("未定义err")
@@ -2197,8 +2217,8 @@ class Agents:
         self,
         _event: str = "",
         prompt_vars: dict = {},
-        prompt_template: str = "",
         model_args: Dict = {},
+        prompt_template: str = "",
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
