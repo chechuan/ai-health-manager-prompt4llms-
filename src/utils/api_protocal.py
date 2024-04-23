@@ -135,6 +135,9 @@ class UserProfile(BaseModel):
 
 class AigcFunctionsRequest(BaseModel):
     intentCode: Literal[
+        "switch_exercise",
+        "report_summary",
+        "report_interpretation",
         "aigc_functions_single_choice",
         "aigc_functions_consultation_summary",
         "aigc_functions_diagnosis",
@@ -146,7 +149,6 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
-        "report_interpretation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
