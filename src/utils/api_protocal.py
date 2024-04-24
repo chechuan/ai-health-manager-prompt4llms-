@@ -43,8 +43,8 @@ class RolePlayRequest(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: Literal["user", "assistant", "system", "function"]
-    content: str
+    role: Optional[Union[None, Literal["user", "assistant", "system", "function"]]]
+    content: str = Field(...)
 
 
 class BaseResponse(BaseModel):
@@ -220,7 +220,7 @@ class AigcFunctionsRequest(BaseModel):
         description="模型参数",
         examples=[[{"stream": False}]],
     )
-    durg_plan: List[DrugPlanItem] = Field(
+    drug_plan: Union[str, List[DrugPlanItem]] = Field(
         None,
         description="aigc_functions_drug_recommendation输出的药方列表",
         examples=[

@@ -1040,7 +1040,7 @@ class Chat_v2:
             "auxiliary_diagnosis_with_doctor_recommend",
         ]:
             # TODO 判断调用医生推荐的时机
-
+            ...
             mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
                 mid_vars=mid_vars, **kwargs
             )
