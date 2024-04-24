@@ -1,5 +1,7 @@
 # ChangeLog
 
+\[ [需求文档](https://alidocs.dingtalk.com/i/nodes/KGZLxjv9VGBk7RlwH5adK7vmW6EDybno?utm_scene=team_space) | [Local Swagger Doc](http:127.0.0.1:6500/docs) | [提示工程实验平台](http://10.39.91.251:40017/) \]
+
 -   2024 年 1 月 16 日 18:15:05 调整`model_config` && 开发 SearchQAChain
 -   2024 年 1 月 15 日 10:25:45 add llm_token && 取消日程优化阶段性 && 年夜饭共策针对实际问题优化
 -   2023 年 11 月 13 日 14:32:47 流程中使用到的 prompt,切到从 mysql 读取,添加`/reload_prompt`方法
@@ -19,12 +21,13 @@
 
 ## 注意事项
 
-1. 新增事件的 mysql 同步,对应环境的配置文件更新
-2. 新增依赖维护 requirements.txt
-3. dev -> test -> prod
-4. fat(目前为展厅环境, 古早版本,可以考虑展厅版本单独开几个分支开发)
-5. 新增模型集成在http://10.228.67.99:26928/
-6. 部署前信息同步
+1. 开发接口尽量使用`pydantic.Field`定义,类型,是否必填,描述,示例,定义输入的 model，输出的 model，集成`BaseModel`
+2. 新增事件的 mysql 同步, 对应环境的配置文件更新
+3. 新增依赖维护 requirements.txt
+4. dev -> test -> prod
+5. fat(目前为展厅环境, 古早版本,可以考虑展厅版本单独开几个分支开发)
+6. 新增模型集成在 `http://10.228.67.99:26928/`
+7. 部署前信息同步
 
 # Plan
 
