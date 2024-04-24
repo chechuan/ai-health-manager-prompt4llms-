@@ -7,6 +7,9 @@
 """
 import sys
 
+from src.pkgs.models.small_expert_model import Agents
+from src.utils.api_protocal import AigcFunctionsDoctorRecommendRequest
+
 sys.path.append(".")
 import json
 from typing import Any, AsyncGenerator, Dict, List
@@ -977,47 +980,52 @@ class Chat_v2:
         else:
             return "other"
 
-    def __custom_chat_react_auxiliary_diagnosis__(self, mid_vars, **kwargs):
-        """自定义对话-辅助诊断
-
-        - Args:
-            mid_vars (List[Dict])
-                中间变量
-            history (List[Dict[str, str]]) required
-                对话历史信息
-            intentCode (str)
-                意图编码,直接根据传入的intentCode进入对应的处理子流程
-
-        - Return:
-            message (str)
-                自定义对话返回的消息
-        """
-        ...
+    def __raw_event_process_for_doctor_recommend_at_end__(
+        self, intentCode, appendData, chat_history
+    ):
+        """附加医生推荐 原流程追加信息"""
+        if intentCode.startswith("auxiliary_diagnosis"):
+            if self.__assert_diet_suggest_in_content__(chat_history[-1]["content"]):
+                # 2024年4月24日11:06:51 增加新事件
+                # 判断auxiliary_diagnosis_with_doctor_recommend结束
+                append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                appendData["contents"] = [append_content]
+                # appendData["scheme_gen"] = 1
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
+                )
+        elif intentCode.startswith("report_interpretation_chat"):
+            _content = chat_history[-1]["content"]
+            if "?" not in _content and "？" not in _content:
+                _append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                # appendData["scheme_gen"] = 1
+                appendData["contents"].append(_append_content)
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": _append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
+                )
 
     async def complete(
         self, mid_vars: List[object], tool: str = "convComplete", **kwargs
     ):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
-        weight_res = {}
-        blood_res = {}
-        content = ""
-        sch = False
-        conts = []
-        level = ""
+        _appendData = {"doctor_rec": []}
+        weight_res, blood_res, conts, notify_blood_pressure_contnets = {}, {}, [], []
+        content, level, modi_scheme, thought = "", "", "", "I know the answer."
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
-        thought = "I know the answer."
-        blood_trend_gen = False
-        notifi_daughter_doctor = False
-        call_120 = False
-        is_visit = False
-        modi_scheme = ""
-        exercise_video = False
-        # idx = 0
-        notify_blood_pressure_contnets = []
-        weight_trend_gen = False
+        sch = blood_trend_gen = call_120 = is_visit = exercise_video = (
+            notifi_daughter_doctor
+        ) = weight_trend_gen = False
         if self.intent_map["userinfo"].get(intentCode):
             content, intentCode = self.get_userInfo_msg(
                 prompt, chat_history, intentCode, mid_vars
@@ -1039,12 +1047,39 @@ class Chat_v2:
             "auxiliary_diagnosis",
             "auxiliary_diagnosis_with_doctor_recommend",
         ]:
-            # TODO 判断调用医生推荐的时机
-            ...
-            mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
-                mid_vars=mid_vars, **kwargs
-            )
-            tool = "askHuman"
+            doctor_rec_code = "aigc_functions_doctor_recommend"
+            # 调用医生推荐
+            if (
+                len(chat_history) >= 2
+                and chat_history[-2]["intentCode"] == doctor_rec_code
+            ):
+                # chat_history[-1] 为用户对医生的需求
+                # chat_history[-2] 为询问是否需要推荐医生
+                # chat_history[-3] 为当前事件的总结
+                param = AigcFunctionsDoctorRecommendRequest(
+                    intentCode=doctor_rec_code,
+                    prompt=chat_history[-3]["content"],
+                    messages=[
+                        {"role": "assistant", "content": chat_history[-2]["content"]},
+                        {"role": "user", "content": chat_history[-1]["content"]},
+                    ],
+                ).model_dump()
+                doctor_rec = await self.gsr.agents.call_function(**param)
+                _appendData["doctor_rec"] = doctor_rec
+                thought = "判断是否需要医生推荐"
+                if doctor_rec:
+                    content = "已为您推荐医生"
+                else:
+                    content = (
+                        "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
+                    )
+                tool = "convComplete"
+
+            else:
+                mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
+                    mid_vars=mid_vars, **kwargs
+                )
+                tool = "askHuman"
         elif intentCode == "pressure_meas":
             pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = pressure_res["content"]
@@ -1081,17 +1116,45 @@ class Chat_v2:
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
-        elif intentCode == "report_interpretation_chat":
-            kwargs["history"] = [
-                i
-                for i in kwargs["history"]
-                if i.get("intentCode") == "report_interpretation_chat"
-            ]
-            mid_vars, chat_history, conts, sch, (thought, content, tool) = (
-                self.custom_chat_report_interpretation_ask.chat(
-                    mid_vars=mid_vars, **kwargs
+        elif intentCode in [
+            "report_interpretation_chat",
+            "report_interpretation_chat_with_doctor_recommend",
+        ]:
+            doctor_rec_code = "aigc_functions_doctor_recommend"
+            # 调用医生推荐
+            if (
+                len(chat_history) >= 2
+                and chat_history[-2]["intentCode"] == doctor_rec_code
+            ):
+                param = AigcFunctionsDoctorRecommendRequest(
+                    intentCode=doctor_rec_code,
+                    prompt=chat_history[-3]["content"],
+                    messages=[
+                        {"role": "assistant", "content": chat_history[-2]["content"]},
+                        {"role": "user", "content": chat_history[-1]["content"]},
+                    ],
+                ).model_dump()
+                doctor_rec = await self.gsr.agents.call_function(**param)
+                _appendData["doctor_rec"] = doctor_rec
+                thought = "判断是否需要医生推荐"
+                if doctor_rec:
+                    content = "已为您推荐医生"
+                else:
+                    content = (
+                        "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
+                    )
+                tool = "convComplete"
+            else:
+                kwargs["history"] = [
+                    i
+                    for i in kwargs["history"]
+                    if i.get("intentCode") == "report_interpretation_chat"
+                ]
+                mid_vars, chat_history, conts, sch, (thought, content, tool) = (
+                    self.custom_chat_report_interpretation_ask.chat(
+                        mid_vars=mid_vars, **kwargs
+                    )
                 )
-            )
         elif intentCode == "report_interpretation_answer":
             kwargs["history"] = [
                 i
@@ -1120,48 +1183,14 @@ class Chat_v2:
             "weight_trend_gen": weight_trend_gen,
             "events": notify_blood_pressure_contnets,
             "exercise_video": exercise_video,
+            **_appendData,
         }
-        # if intentCode == "blood_meas":
-        #     ct = ''
-        #     th = f'Thought: {thought}\n' if thought else ''
-        #     if not conts:
-        #         ct = th + 'Assistant: ' + content + '\n'
-        #     else:
-        #         if idx == 0:
-        #             ct = th + 'Assistant: ' + content + '\n'
-        #             for i in conts:
-        #                 ct += 'Assistant: ' + i + '\n'
-        #         elif idx == -1:
-        #             ct = 'Assistant: ' + content + '\n'
-        #             for i in range(conts):
-        #                 ct += 'Assistant: ' + content + '\n'
-        #         else:
-        #             ct = 'Assistant: ' + content + '\n'
-        #             for i in range(conts):
-        #                 if idx == i + 1:
-        #                     ct = th + 'Assistant: ' + content + '\n'
-        #                 else:
-        #                     ct += 'Assistant: ' + content + '\n'
-        #     chat_history.append(
-        #         {
-        #             "role": "assistant",
-        #             "content": thought,
-        #             "function_call": {"name": tool, "arguments": content},
-        #             "intentCode": intentCode,
-        #             "match_cont":ct
-        #             #"weight_res": weight_res,
-        #             #"blood_res": blood_res,
-        #         }
-        #     )
-        # else:
         chat_history.append(
             {
                 "role": "assistant",
                 "content": thought,
                 "function_call": {"name": tool, "arguments": content},
                 "intentCode": intentCode,
-                # "weight_res": weight_res,
-                # "blood_res": blood_res,
             }
         )
         return appendData, chat_history, intentCode
@@ -1411,33 +1440,29 @@ class Chat_v2:
             init_intent=self.if_init(tool),
             dataSource=dataSource,
         )
+        if intentCode.endswith("_with_doctor_recommend"):
+            self.__raw_event_process_for_doctor_recommend_at_end__(
+                intentCode, appendData, out_history
+            )
 
-        if intentCode == "auxiliary_diagnosis_with_doctor_recommend":
+        """
+        # 演示临时增加逻辑 2024年01月31日11:28:00
+        # 2024年4月23日18:37:06 注释掉食材采购清单的逻辑
+        if (
+            intentCode.endswith("_with_doctor_recommend")
+            and not ret_result["init_intent"]
+        ):
             # if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
-
-            # if self.__assert_diet_suggest_in_content__(content):
-            if True:
-                # 2024年4月23日18:37:06 注释掉食材采购清单的逻辑
-                append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
-                appendData["contents"] = [append_content]
-                appendData["scheme_gen"] = 1
-                ret_result["init_intent"] = True
-                out_history.append(
-                    {
-                        "role": "assistant",
-                        "content": append_content,
-                        "intentCode": "aigc_functions_doctor_recommend",
-                    }
+            if self.__assert_diet_suggest_in_content__(content):
+                purchasing_list = (
+                    self.gsr.expert_model.food_purchasing_list_generate_by_content(
+                        content
+                    )
                 )
-            # XXX 演示临时增加逻辑 2024年01月31日11:28:00
-        #     purchasing_list = (
-        #         self.gsr.expert_model.food_purchasing_list_generate_by_content(
-        #             content
-        #         )
-        #     )
-        #     ret_result["intentCode"] = "create_food_purchasing_list"
-        #     ret_result["appendData"] = purchasing_list
-        #     ret_result["message"] += "\n为您生成了一份采购清单，请确认"
+                ret_result["intentCode"] = "create_food_purchasing_list"
+                ret_result["appendData"] = purchasing_list
+                ret_result["message"] += "\n为您生成了一份采购清单，请确认"
+        """
 
         yield {
             "data": ret_result,

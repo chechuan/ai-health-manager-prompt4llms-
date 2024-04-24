@@ -2139,6 +2139,20 @@ class Agents:
         if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
             raise ValidationException("医生推荐 model_args.stream can't be True")
 
+        user_demands = self.__compose_user_msg__(
+            "messages",
+            messages=kwargs["messages"],
+            role_map={"assistant": "助手", "user": "用户"},
+        )
+
+        # 先判断用户是否需要医生推荐
+        prompt_template_assert = f"请你帮我判断用户是否需要推荐医生,需要:`Yes`, 不需要:`No`\n用户:{user_demands}"
+        if_need = self.aigc_functions_single_choice(
+            prompt_template_assert, options=["Yes", "No"]
+        )
+        if if_need.lower() != "yes":
+            return []
+
         _event = "医生推荐"
         prompt_template = (
             "# 医生信息\n"
@@ -2162,17 +2176,18 @@ class Agents:
                 [DoctorInfo(**i).__str__() for i in doctor_examples]
             )
 
-        user_demands = self.__compose_user_msg__(
-            "messages",
-            messages=kwargs["messages"],
-            role_map={"assistant": "助手", "user": "用户"},
-        )
         prompt_vars = {
             "doctor_message": self.docter_message,
             "diagnosis_result": kwargs.get("prompt", ""),
             "user_demands": user_demands,
         }
         model_args = await self.__update_model_args__(kwargs, temperature=1, top_p=0.8)
+        # kwargs["messages"] = [
+        #     {
+        #         "role": "user",
+        #         "content": "请你综合考虑医生的专业匹配度、医生职称、医生工作年限等信息来帮我推荐医生,,
+        #     }
+        # ]
         response: Union[str, Generator] = await self.aaigc_functions_general(
             _event=_event,
             prompt_vars=prompt_vars,
@@ -2239,6 +2254,17 @@ class Agents:
             else self.gsr.get_event_item(event)["description"]
         )
         prompt = prompt_template.format(**prompt_vars)
+        # if kwargs.get("messages"):
+        #     messages = [{"role": "system", "content": prompt}] + kwargs["messages"]
+        #     logger.debug(
+        #         f"AIGC Functions {_event} LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
+        #     )
+        #     content: Union[str, Generator] = await acallLLM(
+        #         model=model,
+        #         history=messages,
+        #         **model_args,
+        #     )
+        # else:
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: Union[str, Generator] = await acallLLM(
             model=model,
