@@ -9,7 +9,7 @@ import sys
 
 sys.path.append(".")
 import json
-from typing import Any, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 from langchain.prompts import PromptTemplate
 from requests import Session
@@ -707,7 +707,7 @@ class Chat_v2:
             kwargs["schedule"] = self.funcall.call_get_schedule(*args, **kwargs)
         return args, kwargs
 
-    def general_yield_result(self, *args, **kwargs):
+    async def general_yield_result(self, *args, **kwargs) -> AsyncGenerator:
         """预处理,调用pipeline，返回结果
         1. 通过role_map转换role定义
         2. history 由backend_history拼接用户输入
@@ -727,10 +727,11 @@ class Chat_v2:
             kwargs["prompt"] = None
             kwargs["sys_prompt"] = None
 
-        _iterable = self.pipeline(*args, **kwargs)
-        while True:
+        _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
+        # while True:
+        async for yield_item in _iterable:
             try:
-                yield_item = next(_iterable)
+                # yield_item = next(_iterable)
                 if not yield_item["data"].get("type"):
                     yield_item["data"]["type"] = "Result"
                 if yield_item["data"]["type"] == "Result" and not yield_item[
@@ -993,7 +994,9 @@ class Chat_v2:
         """
         ...
 
-    def complete(self, mid_vars: List[object], tool: str = "convComplete", **kwargs):
+    async def complete(
+        self, mid_vars: List[object], tool: str = "convComplete", **kwargs
+    ):
         """only prompt模式的生成及相关逻辑"""
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         weight_res = {}
@@ -1032,10 +1035,16 @@ class Chat_v2:
             )
             intentCode = self.get_pageName_code(output_text)
             logger.debug("页面Code: " + intentCode)
-        elif intentCode == "auxiliary_diagnosis":
-            mid_vars, (thought, content) = self.custom_chat_auxiliary.chat(
+        elif intentCode in [
+            "auxiliary_diagnosis",
+            "auxiliary_diagnosis_with_doctor_recommend",
+        ]:
+            # TODO 判断调用医生推荐的时机
+            ...
+            mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
                 mid_vars=mid_vars, **kwargs
             )
+            tool = "askHuman"
         elif intentCode == "pressure_meas":
             pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = pressure_res["content"]
@@ -1227,7 +1236,7 @@ class Chat_v2:
         )
         return history
 
-    def interact_first(self, mid_vars, **kwargs):
+    async def interact_first(self, mid_vars, **kwargs):
         """首次交互"""
         intentCode = kwargs.get("intentCode")
         out_history = None
@@ -1243,6 +1252,7 @@ class Chat_v2:
             elif (
                 kwargs["history"]
                 and len(kwargs["history"]) >= 2
+                and kwargs["history"][-2].get("function_call")
                 and isinstance(kwargs["history"][-2].get("function_call", ""), str)
                 and kwargs["history"][-2]["function_call"]["arguments"].startswith(
                     "请您时刻关注自己的病情变化，"
@@ -1269,7 +1279,7 @@ class Chat_v2:
                 "only_prompt",
                 "custom_chat",
             ]:
-                appendData, out_history, intentCode = self.complete(
+                appendData, out_history, intentCode = await self.complete(
                     mid_vars=mid_vars, **kwargs
                 )
                 kwargs["intentCode"] = intentCode
@@ -1306,7 +1316,7 @@ class Chat_v2:
         else:
             return False
 
-    def pipeline(self, mid_vars=[], **kwargs):
+    async def pipeline(self, mid_vars=[], **kwargs) -> AsyncGenerator:
         """
         ## 多轮交互流程
         1. 定义先验信息变量,拼装对应prompt
@@ -1330,7 +1340,7 @@ class Chat_v2:
         intentCode = kwargs.get("intentCode")
         mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
-        appendData, out_history, intentCode = self.interact_first(
+        appendData, out_history, intentCode = await self.interact_first(
             mid_vars=mid_vars, **kwargs
         )
         while True:
@@ -1402,18 +1412,32 @@ class Chat_v2:
             dataSource=dataSource,
         )
 
-        # XXX 演示临时增加逻辑 2024年01月31日11:28:00
-        if intentCode == "auxiliary_diagnosis":
+        if intentCode == "auxiliary_diagnosis_with_doctor_recommend":
             # if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
-            if self.__assert_diet_suggest_in_content__(content):
-                purchasing_list = (
-                    self.gsr.expert_model.food_purchasing_list_generate_by_content(
-                        content
-                    )
+
+            # if self.__assert_diet_suggest_in_content__(content):
+            if True:
+                # 2024年4月23日18:37:06 注释掉食材采购清单的逻辑
+                append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                appendData["contents"] = [append_content]
+                appendData["scheme_gen"] = 1
+                ret_result["init_intent"] = True
+                out_history.append(
+                    {
+                        "role": "assistant",
+                        "content": append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
                 )
-                ret_result["intentCode"] = "create_food_purchasing_list"
-                ret_result["appendData"] = purchasing_list
-                ret_result["message"] += "\n为您生成了一份采购清单，请确认"
+            # XXX 演示临时增加逻辑 2024年01月31日11:28:00
+        #     purchasing_list = (
+        #         self.gsr.expert_model.food_purchasing_list_generate_by_content(
+        #             content
+        #         )
+        #     )
+        #     ret_result["intentCode"] = "create_food_purchasing_list"
+        #     ret_result["appendData"] = purchasing_list
+        #     ret_result["message"] += "\n为您生成了一份采购清单，请确认"
 
         yield {
             "data": ret_result,

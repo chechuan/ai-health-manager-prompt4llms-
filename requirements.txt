@@ -29,3 +29,4 @@ pdfminer.six
 Pillow
 sse_starlette
 shortuuid
+oss2

@@ -8,7 +8,7 @@
 import json
 import re
 import sys
-from urllib import response
+from fastapi.exceptions import ValidationException
 import json5
 import asyncio
 from os.path import basename
@@ -17,7 +17,12 @@ from pathlib import Path
 import openai
 from requests import Session
 
-from src.utils.api_protocal import DrugPlanItem, UserProfile, USER_PROFILE_KEY_MAP
+from src.utils.api_protocal import (
+    DoctorInfo,
+    DrugPlanItem,
+    UserProfile,
+    USER_PROFILE_KEY_MAP,
+)
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
@@ -40,6 +45,7 @@ from src.utils.module import (
     param_check,
     compute_blood_pressure_level,
     dumpJS,
+    download_from_oss,
 )
 
 
@@ -1632,16 +1638,19 @@ class Agents:
         user_profile: UserProfile = None,
         messages: List[ChatMessage] = [],
         drug_plan: "List[DrugPlanItem]" = "[]",
+        role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
             for key, value in user_profile.items():
-                if value:
+                if value and USER_PROFILE_KEY_MAP.get(key):
                     content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
-            role_map = {"assistant": "医生", "user": "患者"}
+            role_map = (
+                {"assistant": "医生", "user": "患者"} if not role_map else role_map
+            )
             for message in messages:
                 if role_map.get(message["role"]):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
@@ -1864,7 +1873,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=0.8
         )
         content: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -1883,8 +1892,8 @@ class Agents:
         prompt_vars = {"user_profile": user_profile, "messages": messages}
         # 诊断1阶段必须直接返回字符串用于判断下一步逻辑
         content: str = await self.aaigc_functions_general(
-            _event,
-            prompt_vars,
+            _event=_event,
+            prompt_vars=prompt_vars,
             model_args={
                 "temperature": 0.7,
                 "top_p": 0.8,
@@ -1896,7 +1905,7 @@ class Agents:
         if content == "无":
             kwargs["intentCode"] = "aigc_functions_diagnosis_result"
             content: str = await self.aaigc_functions_general(
-                _event, prompt_vars, model_args, **kwargs
+                _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
             )
         else:
             if model_args.get("stream") is True:
@@ -1920,7 +1929,7 @@ class Agents:
             kwargs, temperature=0, top_p=1, repetition_penalty=1.0
         )
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         if isinstance(response, openai.AsyncStream):
             return response
@@ -1952,7 +1961,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -1973,7 +1982,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -1995,7 +2004,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -2014,7 +2023,7 @@ class Agents:
         }
         model_args = await self.__update_model_args__(kwargs)
         content: str = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
 
@@ -2042,7 +2051,7 @@ class Agents:
         }
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1)
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
 
@@ -2062,7 +2071,11 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
 
@@ -2081,7 +2094,11 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
 
@@ -2100,9 +2117,76 @@ class Agents:
         prompt_vars = {"plan_ai": kwargs["plan_ai"], "plan_human": kwargs["plan_human"]}
         model_args = {"temperature": 1, "top_p": 0.8}
         response: Union[str, Generator] = await self.aaigc_functions_general(
-            _event, prompt_vars, model_args, prompt_template, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt_template,
+            **kwargs,
         )
         return response
+
+    async def aigc_functions_doctor_recommend(self, **kwargs) -> Union[str, Generator]:
+        async def download_and_load_doctor_messages() -> List[Dict]:
+            doctor_example_path = Path(".cache/doctor_examples.json")
+            if not doctor_example_path.exists():
+                download_from_oss(
+                    "ai-algorithm-nlp/intelligent-health-manager/data/docter_examples.json",
+                    doctor_example_path,
+                )
+            doctor_examples = json.load(open(".cache/doctor_examples.json", "r"))
+            return doctor_examples
+
+        if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
+            raise ValidationException("医生推荐 model_args.stream can't be True")
+
+        _event = "医生推荐"
+        prompt_template = (
+            "# 医生信息\n"
+            "{doctor_message}\n\n"
+            "# 任务描述\n"
+            "你是一位经验丰富的智能健康助手，请你根据输出要求、我的诉求、已知信息，为我推荐符合我病情的医生。\n"
+            "# 问诊结果\n"
+            "{diagnosis_result}\n"
+            "# 用户对医生的需求"
+            "{user_demands}\n"
+            "# 输出要求\n"
+            "1.根据已知信息、我的诉求、医生信息列表，帮我推荐最符合我情况的5个医生名称\n"
+            "2.你综合考虑以下信息来帮我推荐医生：医生的专业匹配度、医生职称、医生工作年限、地理位置\n"
+            "3.只输出医生姓名,以`,`分隔\n"
+            "Begins~"
+        )
+        # TODO 从外部加载医生数据
+        if not hasattr(self, "docter_message"):
+            doctor_examples = await download_and_load_doctor_messages()
+            self.docter_message = "\n\n".join(
+                [DoctorInfo(**i).__str__() for i in doctor_examples]
+            )
+
+        user_demands = self.__compose_user_msg__(
+            "messages",
+            messages=kwargs["messages"],
+            role_map={"assistant": "助手", "user": "用户"},
+        )
+        prompt_vars = {
+            "doctor_message": self.docter_message,
+            "diagnosis_result": kwargs.get("prompt", ""),
+            "user_demands": user_demands,
+        }
+        model_args = await self.__update_model_args__(kwargs, temperature=1, top_p=0.8)
+        response: Union[str, Generator] = await self.aaigc_functions_general(
+            _event=_event,
+            prompt_vars=prompt_vars,
+            prompt_template=prompt_template,
+            model_args=model_args,
+            **kwargs,
+        )
+        try:
+            # raise AssertionError("未定义err")
+            result = [i.strip() for i in response.split(",")]
+        except Exception as err:
+            logger.error(repr(err))
+            result = err
+        return result
 
     def aigc_functions_general(
         self,
@@ -2133,7 +2217,7 @@ class Agents:
         self,
         _event: str = "",
         prompt_vars: dict = {},
-        model_args: dict = {},
+        model_args: Dict = {},
         prompt_template: str = "",
         **kwargs,
     ) -> Union[str, Generator]:
