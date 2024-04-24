@@ -2037,7 +2037,7 @@ class Agents:
         )
         messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
         drug_plan = self.__compose_user_msg__(
-            "drug_plan", drug_plan=kwargs["drug_plan"]
+            "drug_plan", drug_plan=kwargs.get("drug_plan", "")
         )
         prompt_vars = {
             "user_profile": user_profile,

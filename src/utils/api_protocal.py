@@ -220,7 +220,7 @@ class AigcFunctionsRequest(BaseModel):
         description="模型参数",
         examples=[[{"stream": False}]],
     )
-    drug_plan: Union[str, List[DrugPlanItem]] = Field(
+    drug_plan: Union[None, str, List[DrugPlanItem]] = Field(
         None,
         description="aigc_functions_drug_recommendation输出的药方列表",
         examples=[
