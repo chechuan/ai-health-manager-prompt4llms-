@@ -14,7 +14,8 @@ local:
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.1
+        report_interpretation_chat: 0.0.2
+        report_interpretation_chat_with_doctor_recommend: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
@@ -25,7 +26,6 @@ local:
         aigc_functions_mental_principle: 0.0.1
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
-        auxiliary_diagnosis_with_doctor_recommend: 1.1.0
     character:
     tool:
         创建日程: 0.2.0
@@ -47,7 +47,8 @@ dev:
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.1
+        report_interpretation_chat: 0.0.2
+        report_interpretation_chat_with_doctor_recommend: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
@@ -74,11 +75,13 @@ test:
         nutri_knowledge_rec: 0.1.0
         auxiliary_diagnosis: 1.1.0
         auxiliary_diagnosis_summary_diet_rec: 1.0.0
+        auxiliary_diagnosis_with_doctor_recommend: 1.1.0
         call_schedule_create_reply: 0.1.1
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.1
+        report_interpretation_chat: 0.0.2
+        report_interpretation_chat_with_doctor_recommend: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
@@ -136,11 +139,13 @@ prod:
         nutri_knowledge_rec: 0.1.0
         auxiliary_diagnosis: 1.1.0
         auxiliary_diagnosis_summary_diet_rec: 1.0.0
+        auxiliary_diagnosis_with_doctor_recommend: 1.1.0
         call_schedule_create_reply: 0.1.1
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.1
+        report_interpretation_chat: 0.0.2
+        report_interpretation_chat_with_doctor_recommend: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
