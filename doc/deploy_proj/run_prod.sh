@@ -1,4 +1,3 @@
-python src/server.py \
-    --env prod \
+ENV=prod python src/server.py \
     --port 26922 \
     --special_prompt_version

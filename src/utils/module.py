@@ -125,7 +125,10 @@ class InitAllResource:
     ) -> None:
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            "--env", type=str, default="local", help="env: local, dev, test, prod"
+            "--env",
+            type=str,
+            default=os.environ.get("ENV", "local"),
+            help="env: local, dev, test, prod",
         )
         parser.add_argument("--ip", type=str, default="0.0.0.0", help="ip")
         parser.add_argument("--port", type=int, default=6500, help="port")
@@ -141,6 +144,7 @@ class InitAllResource:
             help="是否使用指定的prompt版本, Default为False,都使用lastest",
         )
         self.args = parser.parse_args()
+        # os.environ["env"] = self.args.env
         logger.info(f"Initialize args: {self.args}")
 
     def __init_model_supplier__(self) -> None:
