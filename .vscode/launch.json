@@ -63,8 +63,6 @@
                 "ENV": "local"
             },
             "args": [
-                "--env",
-                "local",
                 "--special_prompt_version",
                 "--use_cache"
             ]
