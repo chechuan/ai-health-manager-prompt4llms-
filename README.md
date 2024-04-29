@@ -17,7 +17,8 @@
 
 # Deploy
 
-见`doc/deploy_proj`
+Requirements: Python 3.10
+Script:`doc/deploy_proj`
 
 ## 注意事项
 
