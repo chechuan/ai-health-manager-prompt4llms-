@@ -20,7 +20,7 @@ local:
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
         aigc_functions_diagnosis_result: 0.0.1
-        aigc_functions_drug_recommendation: 0.0.1
+        aigc_functions_drug_recommendation: 0.0.2
         aigc_functions_food_principle: 0.0.1
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
@@ -53,7 +53,7 @@ dev:
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
         aigc_functions_diagnosis_result: 0.0.1
-        aigc_functions_drug_recommendation: 0.0.1
+        aigc_functions_drug_recommendation: 0.0.2
         aigc_functions_food_principle: 0.0.1
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
@@ -86,7 +86,7 @@ test:
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_diagnosis: 0.0.1
         aigc_functions_diagnosis_result: 0.0.1
-        aigc_functions_drug_recommendation: 0.0.1
+        aigc_functions_drug_recommendation: 0.0.2
         aigc_functions_food_principle: 0.0.1
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
