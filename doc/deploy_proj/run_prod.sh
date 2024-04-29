@@ -1,4 +1,6 @@
+export ENV=prod
+export LOG_CONSOLE_LEVEL=DEBUG 
+export LOG_FILE_LEVEL=DEBUG
 python src/server.py \
-    --env prod \
     --port 26922 \
     --special_prompt_version

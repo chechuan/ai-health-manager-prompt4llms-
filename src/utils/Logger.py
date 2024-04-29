@@ -16,7 +16,9 @@ logger.remove()
 
 def filter_function(appid, record):
     record["file"].path = (
-        record["file"].path.split(f"{appid}/")[1] if f"{appid}/" in record["file"].path else record["file"].path
+        record["file"].path.split(f"{appid}/")[1]
+        if f"{appid}/" in record["file"].path
+        else record["file"].path
     )
     return True  # 返回True，表示所有的日志都应被记录
 
@@ -43,8 +45,9 @@ class Logging:
             filter=partial(filter_function, appid),
         )
 
+        ENV = os.environ.get("ENV", "")
         logger.add(
-            sink=LOG_PATH / f"{appid}.log",
+            sink=LOG_PATH / f"{appid}.{ENV}.log",
             level=file_level,
             format=LOG_FORMAT,
             rotation="50 MB",
