@@ -370,7 +370,11 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         )
         _contents = []
         sch = -1
-        if "?" not in content and "？" not in content:
+        if (
+            kwargs["intentCode"] == "report_interpretation_chat"
+            and "?" not in content
+            and "？" not in content
+        ):
             tool = "convComplete"
             sch = 1
             if kwargs["promptParam"]["report_type"] == "口腔报告":
