@@ -46,7 +46,7 @@ from src.utils.module import (
 )
 
 
-async def accept_param(request: Request):
+async def accept_param(request: Request, endpoint: str = None):
     p = await request.json()
     backend_history = p.get("backend_history", [])
     p["backend_history"] = (
@@ -54,8 +54,9 @@ async def accept_param(request: Request):
         if isinstance(backend_history, str)
         else backend_history
     )
-    pstr = json.dumps(p, ensure_ascii=False)
-    logger.info(f"Input Param: {pstr}")
+    p_jsonfiy = json.dumps(p, ensure_ascii=False)
+    endpoint = endpoint if endpoint else "Undefined"
+    logger.info(f"Endpoint: {endpoint}, Input Param: {p_jsonfiy}")
     return p
 
 
@@ -64,18 +65,19 @@ def accept_param_purge(request: Request):
         p = request.model_dump()
     elif isinstance(request, Request):
         p = request.json()
-    pstr = json.dumps(p, ensure_ascii=False)
-    logger.info(f"Input Param: {pstr}")
+    p_jsonfiy = json.dumps(p, ensure_ascii=False)
+    logger.info(f"Input Param: {p_jsonfiy}")
     return p
 
 
-async def async_accept_param_purge(request: Request):
+async def async_accept_param_purge(request: Request, endpoint: str = None):
     if isinstance(request, BaseModel):
         p = request.model_dump()
     else:
         p = await request.json()
-    pstr = json.dumps(p, ensure_ascii=False)
-    logger.info(f"Input Param: {pstr}")
+    p_jsonfiy = json.dumps(p, ensure_ascii=False)
+    endpoint = endpoint if endpoint else "Undefined"
+    logger.info(f"Endpoint: {endpoint}, Input Param: {p_jsonfiy}")
     return p
 
 
@@ -109,7 +111,9 @@ def mount_rule_endpoints(app: FastAPI):
     async def _rules_blood_pressure_level(request: Request):
         """计算血压等级及处理规则"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rules/blood_pressure_level"
+            )
             ret = expert_model.tool_rules_blood_pressure_level(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -122,7 +126,7 @@ def mount_rule_endpoints(app: FastAPI):
     async def _rules_enotions_level(request: Request):
         """情志分级"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(request, endpoint="/rules/emotions")
             ret = expert_model.emotions(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -135,7 +139,9 @@ def mount_rule_endpoints(app: FastAPI):
     async def _rules_weight_trend(request: Request):
         """体重趋势"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rules/weight_trend"
+            )
             ret = expert_model.weight_trend(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -148,7 +154,9 @@ def mount_rule_endpoints(app: FastAPI):
     async def _rules_fat_reduction(request: Request):
         """体重减脂"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rules/fat_reduction"
+            )
             ret = expert_model.fat_reduction(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -161,7 +169,9 @@ def mount_rule_endpoints(app: FastAPI):
     async def _health_blood_pressure_trend_analysis(request: Request):
         """血压趋势分析"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_pressure_trend_analysis"
+            )
             ret = expert_model.health_blood_pressure_trend_analysis(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -174,7 +184,9 @@ def mount_rule_endpoints(app: FastAPI):
     async def _health_warning_solutions_early(request: Request):
         """预警解决方案"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/health/warning_solutions_early"
+            )
             ret = expert_model.health_warning_solutions_early(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -190,7 +202,9 @@ def mount_rec_endpoints(app: FastAPI):
     async def _rec_diet_create_food_purchasing_list_manage(request: Request):
         """食材采购清单管理"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rec/diet/food_purchasing_list/manage"
+            )
             ret = expert_model.food_purchasing_list_manage(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -205,7 +219,9 @@ def mount_rec_endpoints(app: FastAPI):
     ):
         """食材采购清单管理"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rec/diet/food_purchasing_list/generate_by_content"
+            )
             ret = expert_model.food_purchasing_list_generate_by_content(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -228,7 +244,9 @@ def mount_rec_endpoints(app: FastAPI):
                     break
 
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rec/diet/reunion_meals/restaurant_selection"
+            )
             resp = expert_model.rec_diet_reunion_meals_restaurant_selection(**param)
             generator = decorate_text_stream(resp)
         except Exception as err:
@@ -241,7 +259,9 @@ def mount_rec_endpoints(app: FastAPI):
     async def _rec_diet_evaluation(request: Request):
         """膳食摄入评估"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/rec/diet/evaluation"
+            )
             ret = expert_model.rec_diet_eval(param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -259,7 +279,9 @@ def mount_aigc_functions(app: FastAPI):
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
-            param = await async_accept_param_purge(request_model)
+            param = await async_accept_param_purge(
+                request_model, endpoint="/aigc/functions"
+            )
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
@@ -286,7 +308,9 @@ def mount_aigc_functions(app: FastAPI):
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
-            param = await async_accept_param_purge(request_model)
+            param = await async_accept_param_purge(
+                request_model, endpoint="/aigc/functions/doctor_recommend"
+            )
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 _return: AsyncGenerator = response_generator(response)
@@ -376,7 +400,7 @@ def create_app():
         global chat
 
         try:
-            param = await accept_param(request)
+            param = await accept_param(request, endpoint="/chat_gen")
             generator: AsyncGenerator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -393,10 +417,10 @@ def create_app():
             return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/chat/complete", methods=["post"])
-    async def _chat_complete_stream_midvars(request: Request):
+    async def _chat_complete(request: Request):
         """demo,主要用于展示返回的中间变量"""
         try:
-            param = await accept_param(request)
+            param = await accept_param(request, endpoint="/chat/complete")
             generator = await chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -416,7 +440,7 @@ def create_app():
     async def _chat_role_play(request: RolePlayRequest):
         """角色扮演对话"""
         try:
-            param = await accept_param(request)
+            param = await accept_param(request, endpoint="/chat/role_play")
             generator = await chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -436,7 +460,7 @@ def create_app():
     async def intent_query(request: Request):
         global chat
         try:
-            param = await accept_param(request)
+            param = await accept_param(request, endpoint="/intent/query")
             item = chat.intent_query(
                 param.get("history", []),
                 task=param.get("task", ""),
@@ -487,7 +511,9 @@ def create_app():
     async def _search_duckduckgo(request: Request):
         """DuckDuckGo搜索"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/search/duckduckgo"
+            )
             ret = chat_v2.funcall.search_qa_chain.ddg_search_chain.call(**param)
             ret = make_result(items=ret)
         except Exception as err:
@@ -500,7 +526,9 @@ def create_app():
     async def _search_crawler_sougou(request: Request):
         """爬虫 - 搜狗搜索"""
         try:
-            param = await async_accept_param_purge(request)
+            param = await async_accept_param_purge(
+                request, endpoint="/search/crawler/sougou"
+            )
             ret = chat_v2.funcall.call_search_engine(**param)
             ret = make_result(items=ret)
         except Exception as err:
