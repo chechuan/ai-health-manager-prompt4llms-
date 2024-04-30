@@ -170,7 +170,7 @@ class expertModel:
         level = kwargs.get("level", "")
         if not level:
             level = kwargs.get("promptParam", "").get("level", "")
-        emos = ['中度','中度','中度','中度','中度','中度','中度']
+        emos = ['中度','中度','中度','中度','中度','中度', level]
         sleeps = ['77（良好）','56（较差）','78（良好）','78（良好）','85（最佳）','65（一般）','71（良好）']
         curDate = datetime.now().date()
         emotion = ''
@@ -178,7 +178,7 @@ class expertModel:
         x = 0
         for i in range(6,-1,-1):
             delta = timedelta(days=i)
-            previous_datetime = (curDate - delta).date()
+            previous_datetime = curDate - delta
             emotion += (str(previous_datetime) + ':' + emos[x] + '\n')
             sleep += (str(previous_datetime) + ':' + sleeps[x] + '\n')
             x += 1
