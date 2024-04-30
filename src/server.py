@@ -72,7 +72,7 @@ def accept_param_purge(request: Request):
 
 async def async_accept_param_purge(request: Request, endpoint: str = None):
     if isinstance(request, BaseModel):
-        p = request.model_dump()
+        p = request.model_dump(exclude_unset=True, exclude_none=True)
     else:
         p = await request.json()
     p_jsonfiy = json.dumps(p, ensure_ascii=False)
@@ -327,7 +327,7 @@ def mount_aigc_functions(app: FastAPI):
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=""
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
+            _return: str = ret.model_dump_json(exclude_unset=False)
         finally:
             return build_aigc_functions_response(_return)
 

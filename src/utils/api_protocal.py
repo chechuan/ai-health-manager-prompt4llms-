@@ -99,6 +99,7 @@ class DrugPlanItem(BaseModel):
     usage: str  # 用法
     precautions: str  # 注意事项
     contraindication: str  # 禁忌
+    dosage_time: str  # 用药时间
 
 
 class UserProfile(BaseModel):
@@ -140,6 +141,7 @@ class AigcFunctionsRequest(BaseModel):
         "report_interpretation",
         "aigc_functions_single_choice",
         "aigc_functions_consultation_summary",
+        "aigc_functions_consultation_summary_chief_disease",
         "aigc_functions_diagnosis",
         "aigc_functions_diagnosis_result",
         "aigc_functions_drug_recommendation",
