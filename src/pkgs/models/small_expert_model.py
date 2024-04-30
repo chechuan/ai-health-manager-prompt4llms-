@@ -188,7 +188,7 @@ class expertModel:
         x = 0
         for i in range(6,-1,-1):
             delta = timedelta(days=i)
-            previous_datetime = current_datetime - delta
+            previous_datetime = (current_datetime - delta).date()
             emotion += (str(previous_datetime) + ':' + emos[x] + '\n')
             sleep += (str(previous_datetime) + ':' + sleeps[x] + '\n')
             x += 1
