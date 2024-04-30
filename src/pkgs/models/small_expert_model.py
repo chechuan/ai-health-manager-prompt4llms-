@@ -14,16 +14,6 @@ import asyncio
 from os.path import basename
 from pathlib import Path
 
-from datetime import datetime, timedelta
-
-current_datetime = datetime.now()
-delta = timedelta(days=7)
-previous_datetime = current_datetime - delta
-previous_date = previous_datetime.date()
-
-print("当前日期时间：", current_datetime)
-print("七天前的日期：", previous_date)
-
 import openai
 from requests import Session
 
@@ -188,7 +178,7 @@ class expertModel:
         x = 0
         for i in range(6,-1,-1):
             delta = timedelta(days=i)
-            previous_datetime = (current_datetime - delta).date()
+            previous_datetime = (curDate - delta).date()
             emotion += (str(previous_datetime) + ':' + emos[x] + '\n')
             sleep += (str(previous_datetime) + ':' + sleeps[x] + '\n')
             x += 1
