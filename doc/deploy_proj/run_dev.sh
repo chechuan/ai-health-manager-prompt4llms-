@@ -1,5 +1,7 @@
+export ENV=dev 
+export LOG_CONSOLE_LEVEL=TRACE 
+export LOG_FILE_LEVEL=TRACE
 python src/server.py \
-    --env dev \
     --port 26928 \
     --special_prompt_version
     # --use_proxy

@@ -59,11 +59,10 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
-                "GEVENT_SUPPORT": "True"
+                "GEVENT_SUPPORT": "True",
+                "ENV": "local"
             },
             "args": [
-                "--env",
-                "local",
                 "--special_prompt_version",
                 "--use_cache"
             ]

@@ -69,6 +69,7 @@ dev:
         - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
+        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
 test:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -104,6 +105,7 @@ test:
         - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
+        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
 fat:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -139,6 +141,7 @@ fat:
         - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
+        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
 prod:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -174,3 +177,4 @@ prod:
         - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
+        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐

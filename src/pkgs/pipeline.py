@@ -999,10 +999,19 @@ class Chat_v2:
                     }
                 )
         elif intentCode.startswith("report_interpretation_chat"):
-            _content = chat_history[-1]["content"]
-            if "?" not in _content and "？" not in _content:
+            _content = (
+                chat_history[-1]["function_call"]["arguments"]
+                if chat_history[-1].get("function_call")
+                else None
+            )
+            if (
+                _content
+                and "?" not in _content
+                and "？" not in _content
+                and not appendData.get("doctor_rec")
+            ):
                 _append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
-                # appendData["scheme_gen"] = 1
+                # appendData["scheme_gen"] =
                 appendData["contents"].append(_append_content)
                 chat_history.append(
                     {
@@ -1148,7 +1157,7 @@ class Chat_v2:
                 kwargs["history"] = [
                     i
                     for i in kwargs["history"]
-                    if i.get("intentCode") == "report_interpretation_chat"
+                    if i.get("intentCode").startswith("report_interpretation_chat")
                 ]
                 mid_vars, chat_history, conts, sch, (thought, content, tool) = (
                     self.custom_chat_report_interpretation_ask.chat(
