@@ -99,6 +99,7 @@ class DrugPlanItem(BaseModel):
     usage: str  # 用法
     precautions: str  # 注意事项
     contraindication: str  # 禁忌
+    dosage_time: str  # 用药时间
 
 
 class UserProfile(BaseModel):
