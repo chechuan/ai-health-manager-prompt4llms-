@@ -170,17 +170,25 @@ class expertModel:
         level = kwargs.get("level", "")
         if not level:
             level = kwargs.get("promptParam", "").get("level", "")
-        emos = ['中度','中度','中度','中度','中度','中度', level]
-        sleeps = ['77（良好）','56（较差）','78（良好）','78（良好）','85（最佳）','65（一般）','71（良好）']
+        emos = ["中度", "中度", "中度", "中度", "中度", "中度", level]
+        sleeps = [
+            "77（良好）",
+            "56（较差）",
+            "78（良好）",
+            "78（良好）",
+            "85（最佳）",
+            "65（一般）",
+            "71（良好）",
+        ]
         curDate = datetime.now().date()
-        emotion = ''
-        sleep = ''
+        emotion = ""
+        sleep = ""
         x = 0
-        for i in range(6,-1,-1):
+        for i in range(6, -1, -1):
             delta = timedelta(days=i)
             previous_datetime = curDate - delta
-            emotion += (str(previous_datetime) + ':' + emos[x] + '\n')
-            sleep += (str(previous_datetime) + ':' + sleeps[x] + '\n')
+            emotion += str(previous_datetime) + ":" + emos[x] + "\n"
+            sleep += str(previous_datetime) + ":" + sleeps[x] + "\n"
             x += 1
         prompt = emotions_prompt.format(emotion, sleep)
         messages = [{"role": "user", "content": prompt}]
@@ -1874,6 +1882,24 @@ class Agents:
         """问诊摘要"""
 
         _event = "问诊摘要"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        prompt_vars = {"user_profile": user_profile, "messages": messages}
+
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.8
+        )
+        content: Union[str, Generator] = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    @param_check(check_params=["messages"])
+    async def aigc_functions_consultation_summary_chief_disease(self, **kwargs) -> str:
+        """问诊摘要"""
+        _event = "问诊摘要-主诉/现病史"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
