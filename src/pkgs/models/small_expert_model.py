@@ -14,6 +14,16 @@ import asyncio
 from os.path import basename
 from pathlib import Path
 
+from datetime import datetime, timedelta
+
+current_datetime = datetime.now()
+delta = timedelta(days=7)
+previous_datetime = current_datetime - delta
+previous_date = previous_datetime.date()
+
+print("当前日期时间：", current_datetime)
+print("七天前的日期：", previous_date)
+
 import openai
 from requests import Session
 
@@ -170,7 +180,19 @@ class expertModel:
         level = kwargs.get("level", "")
         if not level:
             level = kwargs.get("promptParam", "").get("level", "")
-        prompt = emotions_prompt.format(cur_date, level)
+        emos = ['中度','中度','中度','中度','中度','中度','中度']
+        sleeps = ['77（良好）','56（较差）','78（良好）','78（良好）','85（最佳）','65（一般）','71（良好）']
+        curDate = datetime.now().date()
+        emotion = ''
+        sleep = ''
+        x = 0
+        for i in range(6,-1,-1):
+            delta = timedelta(days=i)
+            previous_datetime = current_datetime - delta
+            emotion += (str(previous_datetime) + ':' + emos[x] + '\n')
+            sleep += (str(previous_datetime) + ':' + sleeps[x] + '\n')
+            x += 1
+        prompt = emotions_prompt.format(emotion, sleep)
         messages = [{"role": "user", "content": prompt}]
         logger.debug("压力模型输入:" + json.dumps(messages, ensure_ascii=False))
         generate_text = callLLM(
@@ -192,8 +214,7 @@ class expertModel:
         return {
             "thought": thought,
             "scheme_gen": 0,
-            "content": "健康报告显示您的健康处于轻度失衡状态。"
-            + content
+            "content": content
             + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
             "scene_ending": True,
         }
