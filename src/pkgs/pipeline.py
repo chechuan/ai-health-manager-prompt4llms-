@@ -1085,8 +1085,8 @@ class Chat_v2:
                 tool = "convComplete"
 
             else:
-                mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
-                    mid_vars=mid_vars, **kwargs
+                mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
                 )
                 tool = "askHuman"
         elif intentCode == "pressure_meas":

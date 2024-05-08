@@ -199,11 +199,12 @@ class CustomChatAuxiliary(CustomChatModel):
             else:
                 valid = True
                 break
-
+        conts = []
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         elif not doctor or not valid:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            conts = ["请问是否需要帮您联系家庭医生?"]
         else:
             ...
         mid_vars = update_mid_vars(
@@ -213,7 +214,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             key="自定义辅助诊断对话",
         )
-        return mid_vars, (thought, doctor)
+        return mid_vars, conts, (thought, doctor)
 
     def judge_repeat(self, history, content, model):
         his = [f"{i['role']}:{i['content']}" for i in history]
