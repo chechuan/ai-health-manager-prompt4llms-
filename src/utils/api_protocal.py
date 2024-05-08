@@ -151,6 +151,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
+        "aigc_functions_consultation_summary_to_group",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
