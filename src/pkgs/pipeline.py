@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from random import choice
 import sys
 
 from src.pkgs.models.small_expert_model import Agents
@@ -1175,6 +1176,22 @@ class Chat_v2:
                     mid_vars=mid_vars, **kwargs
                 )
             )
+        elif intentCode == "assert_whether_contact_family_doctor":
+            # 判断是否需要联系家庭医生
+            user_input = chat_history[-1]["content"]
+            prompt_template = self.gsr.get_event_item(
+                "assert_whether_contact_family_doctor"
+            )["description"]
+            prompt = prompt_template.format(user_input=user_input)
+            contactFamilyDoctor = self.gsr.agents.aigc_functions_single_choice(
+                prompt=prompt,
+                options=["YES", "NO"],
+            )
+            if contactFamilyDoctor == "YES":
+                contactFamilyDoctor = 1
+            else:
+                contactFamilyDoctor = 0
+            _appendData["contactFamilyDoctor"] = contactFamilyDoctor
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
