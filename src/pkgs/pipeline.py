@@ -1091,9 +1091,9 @@ class Chat_v2:
                 )
                 tool = "askHuman"
             if conts:
-                intentCode == "assert_whether_contact_family_doctor"
+                intentCode = "assert_whether_contact_family_doctor"
                 tool = "convComplete"
-                content = content+conts[0]
+                # content = content+conts[0]
         elif intentCode == "pressure_meas":
             pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = pressure_res["content"]
