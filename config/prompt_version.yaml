@@ -16,6 +16,7 @@ local:
         reunion_meals_restaurant_selection: 1.0.0
         report_interpretation_chat: 0.0.2
         report_interpretation_chat_with_doctor_recommend: 0.0.1
+        assert_whether_contact_family_doctor: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_consultation_summary_to_group: 0.0.2
@@ -51,6 +52,7 @@ dev:
         reunion_meals_restaurant_selection: 1.0.0
         report_interpretation_chat: 0.0.2
         report_interpretation_chat_with_doctor_recommend: 0.0.1
+        assert_whether_contact_family_doctor: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
         aigc_functions_consultation_summary_to_group: 0.0.2
@@ -80,6 +82,7 @@ test:
         auxiliary_diagnosis: 1.1.0
         auxiliary_diagnosis_summary_diet_rec: 1.0.0
         auxiliary_diagnosis_with_doctor_recommend: 1.1.0
+        assert_whether_contact_family_doctor: 0.0.1
         call_schedule_create_reply: 0.1.1
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
