@@ -185,7 +185,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!\n\n"],
+                stop=["\nObservation:", "问诊Finished!\n\n","问诊Finished!\n"],
                 stream=False,
             )
 
@@ -328,6 +328,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
         try:
+            if text.count("Thought:") > 1:
+                second_thought_index = text.find('Thought', text.find('Thought') + 1)
+                text = text[second_thought_index:]
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
             if thought_index == -1 or doctor_index == -1:
