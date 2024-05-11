@@ -185,7 +185,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!\n\n"],
+                stop=["\nObservation:", "问诊Finished!\n\n","问诊Finished!\n"],
                 stream=False,
             )
 
