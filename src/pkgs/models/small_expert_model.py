@@ -1671,7 +1671,9 @@ class Agents:
                 {"assistant": "医生", "user": "患者"} if not role_map else role_map
             )
             for message in messages:
-                if role_map.get(message["role"]):
+                if message.get("role", "other") == 'other':
+                    content += f"other: {message['content']}\n"
+                elif role_map.get(message.get("role", "other")):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
                 else:
                     content += f"{message['content']}\n"

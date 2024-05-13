@@ -43,7 +43,7 @@ class RolePlayRequest(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: Optional[Union[None, Literal["user", "assistant", "system", "function"]]]
+    role: Literal["user", "assistant", "system", "function", "other"] = "other"
     content: str = Field(...)
 
 
