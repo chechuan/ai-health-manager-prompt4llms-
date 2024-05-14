@@ -1029,7 +1029,7 @@ class Chat_v2:
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         _appendData = {"doctor_rec": []}
         weight_res, blood_res, conts, notify_blood_pressure_contnets = {}, {}, [], []
-        content, level, modi_scheme, thought = "", "", "", "I know the answer."
+        content, level, modi_scheme, thought = "", "", "", "我知道如何回答"
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -1193,8 +1193,11 @@ class Chat_v2:
             )
             if contactFamilyDoctor == "YES":
                 contactFamilyDoctor = 1
+                content = '好的，正为您联系你的家庭医生'
             else:
                 contactFamilyDoctor = 0
+                content = '好的，我还能为您提供什么帮助？'
+            intentCode = ''
             _appendData["contactFamilyDoctor"] = contactFamilyDoctor
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)

@@ -505,7 +505,7 @@ class FuncCall:
                 re.findall("\[.*?\]", msg["docs"][1][7:])[0][1:-1] for i in msg["docs"]
             ]
             doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
-            dataSource = "知识库: " + "、".join(doc_name_list)
+            dataSource = "、".join(doc_name_list)
             content = msg["answer"].strip()
             try:
                 self.update_mid_vars(

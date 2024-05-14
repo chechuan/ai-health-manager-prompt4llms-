@@ -202,7 +202,7 @@ class CustomChatAuxiliary(CustomChatModel):
         conts = []
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor or not valid:
+        elif not doctor:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             conts = ["请问是否需要帮您联系家庭医生?"]
         else:
@@ -238,9 +238,9 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
         output = self.__parse_jr_response__(content)
-        if "YES" in output:
+        if "yes" in output.lower:
             return True
-        elif "No" in output:
+        elif "no" in output.lower:
             return False
         elif (
             "没有回答" in content
