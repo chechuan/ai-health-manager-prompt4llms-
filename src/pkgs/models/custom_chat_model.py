@@ -238,9 +238,9 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
         output = self.__parse_jr_response__(content)
-        if "yes" in output.lower:
+        if "yes" in output.lower():
             return True
-        elif "no" in output.lower:
+        elif "no" in output.lower():
             return False
         elif (
             "没有回答" in content
