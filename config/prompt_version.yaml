@@ -160,6 +160,7 @@ prod:
         report_interpretation_chat_with_doctor_recommend: 0.0.1
         aigc_functions_single_choice: 0.0.2
         aigc_functions_consultation_summary: 0.0.1
+        aigc_functions_consultation_summary_to_group: 0.0.2
         aigc_functions_consultation_summary_chief_disease: 0.0.1
         aigc_functions_diagnosis: 0.0.1
         aigc_functions_diagnosis_result: 0.0.1
