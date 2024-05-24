@@ -467,7 +467,7 @@ class Chat:
         #    else:
         #        out_text = {'message':'', 'intentCode':intent,
         #                'processCode':'trans_back', 'intentDesc':desc}
-        elif intent in ['shared_decision', 'create_food_purchasing_list']:
+        elif intent in ['shared_decision', 'create_food_purchasing_list', 'digital_image_back', 'digital_image_switch']:
             out_text = {'message':'', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
         elif intent == 'remind_take_blood_pressure':

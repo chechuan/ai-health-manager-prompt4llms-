@@ -482,6 +482,12 @@ def get_intent(text):
     elif "运动切换" in text or "切换运动" in text:
         code = "switch_exercise"
         desc = "运动切换"
+    elif "数字人" in text or "换回" in text:
+        code = "digital_image_back"
+        desc = "换回数字人皮肤"
+    elif "数字人" in text or "切换" in text:
+        code = "digital_image_switch"
+        desc = "切换数字人皮肤"
     elif "运动评价" in text:
         code = "sport_eval"
         desc = "运动评价"
