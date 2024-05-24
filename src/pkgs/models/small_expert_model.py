@@ -5,23 +5,23 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+import asyncio
 import json
 import re
 import sys
-from fastapi.exceptions import ValidationException
-import json5
-import asyncio
 from os.path import basename
 from pathlib import Path
 
+import json5
 import openai
+from fastapi.exceptions import ValidationException
 from requests import Session
 
 from src.utils.api_protocal import (
+    USER_PROFILE_KEY_MAP,
     DoctorInfo,
     DrugPlanItem,
     UserProfile,
-    USER_PROFILE_KEY_MAP,
 )
 
 sys.path.append(Path(__file__).parents[4].as_posix())
@@ -35,17 +35,17 @@ from rapidocr_onnxruntime import RapidOCR
 from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
-from src.prompt.model_init import ChatMessage, callLLM, acallLLM
+from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
     accept_stream_response,
     clock,
-    construct_naive_response_generator,
-    param_check,
     compute_blood_pressure_level,
-    dumpJS,
+    construct_naive_response_generator,
     download_from_oss,
+    dumpJS,
+    param_check,
 )
 
 
@@ -1671,7 +1671,7 @@ class Agents:
                 {"assistant": "医生", "user": "患者"} if not role_map else role_map
             )
             for message in messages:
-                if message.get("role", "other") == 'other':
+                if message.get("role", "other") == "other":
                     content += f"other: {message['content']}\n"
                 elif role_map.get(message.get("role", "other")):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
