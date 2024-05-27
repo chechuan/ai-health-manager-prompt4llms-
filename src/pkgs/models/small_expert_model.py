@@ -5,23 +5,23 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+import asyncio
 import json
 import re
 import sys
-from fastapi.exceptions import ValidationException
-import json5
-import asyncio
 from os.path import basename
 from pathlib import Path
 
+import json5
 import openai
+from fastapi.exceptions import ValidationException
 from requests import Session
 
 from src.utils.api_protocal import (
+    USER_PROFILE_KEY_MAP,
     DoctorInfo,
     DrugPlanItem,
     UserProfile,
-    USER_PROFILE_KEY_MAP,
 )
 
 sys.path.append(Path(__file__).parents[4].as_posix())
@@ -35,17 +35,17 @@ from rapidocr_onnxruntime import RapidOCR
 from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
-from src.prompt.model_init import ChatMessage, callLLM, acallLLM
+from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
     accept_stream_response,
     clock,
-    construct_naive_response_generator,
-    param_check,
     compute_blood_pressure_level,
-    dumpJS,
+    construct_naive_response_generator,
     download_from_oss,
+    dumpJS,
+    param_check,
 )
 
 
@@ -1671,7 +1671,7 @@ class Agents:
                 {"assistant": "医生", "user": "患者"} if not role_map else role_map
             )
             for message in messages:
-                if message.get("role", "other") == 'other':
+                if message.get("role", "other") == "other":
                     content += f"other: {message['content']}\n"
                 elif role_map.get(message.get("role", "other")):
                     content += f"{role_map[message['role']]}: {message['content']}\n"
@@ -2211,21 +2211,23 @@ class Agents:
             return []
 
         _event = "医生推荐"
+        
         prompt_template = (
+            "# 已知信息\n"
+            "1.问诊结果：{diagnosis_result}\n"
+            "2.我的诉求：{user_demands}\n"
             "# 医生信息\n"
             "{doctor_message}\n\n"
             "# 任务描述\n"
             "你是一位经验丰富的智能健康助手，请你根据输出要求、我的诉求、已知信息，为我推荐符合我病情的医生。\n"
-            "# 问诊结果\n"
-            "{diagnosis_result}\n"
-            "# 用户对医生的需求"
-            "{user_demands}\n"
             "# 输出要求\n"
-            "1.根据已知信息、我的诉求、医生信息列表，帮我推荐最符合我情况的5个医生名称\n"
-            "2.你综合考虑以下信息来帮我推荐医生：医生的专业匹配度、医生职称、医生工作年限、地理位置\n"
-            "3.只输出医生姓名,以`,`分隔\n"
+            "1.根据已知信息、我对医生的诉求、医生信息列表，帮我推荐最符合我情况的备选5个医生信息\n"
+            "2.你推荐我的医生，第一需求应该符合我的疾病诊断或者检查检验报告结论\n"
+            "3.其他需求你要考虑我对医生擅长领域的需求，我对医生性别的需求等\n"
+            "4.推荐医生的顺序按照符合我条件的优先级前后展示，输出格式参考：机构名称1-医生名称1，机构名称2-医生名称2，以`,`隔开\n"
             "Begins~"
         )
+
         # TODO 从外部加载医生数据
         if not hasattr(self, "docter_message"):
             doctor_examples = await download_and_load_doctor_messages()
