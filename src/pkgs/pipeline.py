@@ -989,7 +989,7 @@ class Chat_v2:
             if self.__assert_diet_suggest_in_content__(chat_history[-1]["content"]):
                 # 2024年4月24日11:06:51 增加新事件
                 # 判断auxiliary_diagnosis_with_doctor_recommend结束
-                append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                append_content = "请问是否需要我帮您找一位医生？"
                 appendData["contents"] = [append_content]
                 # appendData["scheme_gen"] = 1
                 chat_history.append(
@@ -1011,7 +1011,7 @@ class Chat_v2:
                 and "？" not in _content
                 and not appendData.get("doctor_rec")
             ):
-                _append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                _append_content = "请问是否需要我帮您找一位医生？"
                 # appendData["scheme_gen"] =
                 appendData["contents"].append(_append_content)
                 chat_history.append(
@@ -1078,7 +1078,7 @@ class Chat_v2:
                 _appendData["doctor_rec"] = doctor_rec
                 thought = "判断是否需要医生推荐"
                 if doctor_rec:
-                    content = "已为您推荐医生"
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
                 else:
                     content = (
                         "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
@@ -1152,7 +1152,7 @@ class Chat_v2:
                 _appendData["doctor_rec"] = doctor_rec
                 thought = "判断是否需要医生推荐"
                 if doctor_rec:
-                    content = "已为您推荐医生"
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
                 else:
                     content = (
                         "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"

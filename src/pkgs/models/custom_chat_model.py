@@ -163,6 +163,9 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 辅助诊断总结、饮食建议 LLM Output: \n{content}")
+        if "患者" in content:
+            logger.warning("Prohibited vocab: 患者 generated.")
+            content = content.replace("患者", "用户")
         return content
 
     async def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
@@ -185,7 +188,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!\n\n","问诊Finished!\n"],
+                stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
@@ -329,7 +332,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
         try:
             if text.count("Thought:") > 1:
-                second_thought_index = text.find('Thought', text.find('Thought') + 1)
+                second_thought_index = text.find("Thought", text.find("Thought") + 1)
                 text = text[second_thought_index:]
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
