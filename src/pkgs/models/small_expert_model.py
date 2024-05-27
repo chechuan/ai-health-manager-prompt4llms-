@@ -332,6 +332,10 @@ class expertModel:
                 "modi_scheme": modi_type,
                 "weight_trend_gen": False,
             }
+        
+    @staticmethod
+    def tool_rules_blood_pressure_level_with_doctor_recommend(**kwargs) -> Dict:
+        pass
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
