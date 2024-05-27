@@ -326,7 +326,7 @@ class AigcFunctionsDoctorRecommendRequest(BaseModel):
             [
                 {
                     "role": "assistant",
-                    "content": "请问是否需要帮您推荐医生，您可以告诉我您的诉求？",
+                    "content": "请问是否需要我帮您找一位医生？",
                 },
                 {
                     "role": "user",
