@@ -155,6 +155,7 @@ prod:
         warning_solutions_early_continuous: 0.1.0
         warning_solutions_early_not_continuous: 0.1.0
         reunion_meals_restaurant_selection: 1.0.0
+        assert_whether_contact_family_doctor: 0.0.1
         report_interpretation_chat: 0.0.2
         assert_whether_contact_family_doctor: 0.0.1
         report_interpretation_chat_with_doctor_recommend: 0.0.1

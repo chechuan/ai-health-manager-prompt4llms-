@@ -358,10 +358,18 @@ class DoctorInfo(BaseModel):
     doctor_name: str = Field(..., description="医生姓名")
     doctor_introduction: str = Field(None, description="医生信息")
     doctor_specialty: str = Field(None, description="医生擅长")
+    organization_name: str = Field(None, description="机构名称")
+    consultation_department: str = Field(None, description="出诊科室")
+    gender: str = Field(None, description="性别")
+    doctor_title: str = Field(None, description="医生职称")
 
     def __str__(self) -> str:
         return (
             f"姓名: {self.doctor_name}\n"
             f"医生信息:{self.doctor_introduction}\n"
-            f"医生擅长:{self.doctor_specialty}"
-        )
+            f"医生擅长:{self.doctor_specialty}\n"
+            f"机构名称: {self.organization_name}\n"
+            f"出诊科室: {self.consultation_department}\n"
+            f"性别: {self.gender}\n"
+            f"医生职称: {self.doctor_title}\n"
+      )
