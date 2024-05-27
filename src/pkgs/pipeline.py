@@ -18,11 +18,8 @@ from typing import Any, AsyncGenerator, Dict, List
 from langchain.prompts import PromptTemplate
 from requests import Session
 
-from chat.constant import (
-    EXT_USRINFO_TRANSFER_INTENTCODE,
-    default_prompt,
-    intentCode_desc_map,
-)
+from chat.constant import (EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt,
+                           intentCode_desc_map)
 from chat.util import norm_userInfo_msg
 from data.constrant import DEFAULT_DATA_SOURCE
 from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
@@ -30,25 +27,16 @@ from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
 from src.pkgs.models.custom_chat_model import (
-    CustomChatAuxiliary,
-    CustomChatModel,
-    CustomChatReportInterpretationAnswer,
-    CustomChatReportInterpretationAsk,
-)
+    CustomChatAuxiliary, CustomChatModel, CustomChatReportInterpretationAnswer,
+    CustomChatReportInterpretationAsk)
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    curr_time,
-    date_after,
-    get_doc_role,
-    get_intent,
-    make_meta_ret,
-    parse_latest_plugin_call,
-)
+from src.utils.module import (InitAllResource, curr_time, date_after,
+                              get_doc_role, get_intent, make_meta_ret,
+                              parse_latest_plugin_call)
 
 
 class Chat_v2:
@@ -700,6 +688,7 @@ class Chat_v2:
         if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
             "weight_meas",
             "blood_meas",
+            "blood_meas_with_doctor_recommend"
         ]:
             logger.debug(
                 f"not support current event {intentCode}, change intentCode to other."
@@ -1147,8 +1136,6 @@ class Chat_v2:
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
         elif intentCode == "blood_meas_with_doctor_recommend":
-            # TODO 血压问诊 - 医生推荐
-            # 调用医生推荐
             if (
                 len(chat_history) >= 2
                 and chat_history[-2]["intentCode"] == doctor_rec_code
