@@ -1136,11 +1136,11 @@ class Chat_v2:
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
         elif intentCode == "blood_meas_with_doctor_recommend":
+            doctor_rec_code = "aigc_functions_doctor_recommend"
             if (
                 len(chat_history) >= 2
                 and chat_history[-2]["intentCode"] == doctor_rec_code
             ):
-                doctor_rec_code = "aigc_functions_doctor_recommend"
                 param = AigcFunctionsDoctorRecommendRequest(
                     intentCode=doctor_rec_code,
                     prompt=chat_history[-3]["content"],
