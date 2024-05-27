@@ -1136,46 +1136,25 @@ class Chat_v2:
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
         elif intentCode == "blood_meas_with_doctor_recommend":
-            doctor_rec_code = "aigc_functions_doctor_recommend"
-            if (
-                len(chat_history) >= 2
-                and chat_history[-2]["intentCode"] == doctor_rec_code
-            ):
-                param = AigcFunctionsDoctorRecommendRequest(
-                    intentCode=doctor_rec_code,
-                    prompt=chat_history[-3]["content"],
-                    messages=[
-                        {"role": "assistant", "content": chat_history[-2]["content"]},
-                        {"role": "user", "content": chat_history[-1]["content"]},
-                    ],
-                ).model_dump()
-                doctor_rec = await self.gsr.agents.call_function(**param)
-                _appendData["doctor_rec"] = doctor_rec
-                thought = "判断是否需要医生推荐"
-                if doctor_rec:
-                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
-                else:
-                    content = (
-                        "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
-                    )
-                tool = "convComplete"
-            else:
-                blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
-                content = blood_res["contents"][0]
-                conts = blood_res["contents"][1:]
-                sch = blood_res["scheme_gen"]
-                thought = blood_res["thought"]
-                level = blood_res["level"]
-                blood_trend_gen = blood_res["blood_trend_gen"]
-                notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
-                call_120 = blood_res["call_120"]
-                is_visit = blood_res["is_visit"]
-                # idx = blood_res.get('idx', 0)
-                tool = (
-                    "askHuman" if blood_res["scene_ending"] == False else "convComplete"
-                )
-                notify_blood_pressure_contnets = blood_res.get("events", [])
-                exercise_video = blood_res.get("exercise_video", False)
+            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = blood_res["contents"][0]
+            # conts = blood_res["contents"][1:]
+            sch = blood_res["scheme_gen"]
+            thought = blood_res["thought"]
+            level = blood_res["level"]
+            blood_trend_gen = blood_res["blood_trend_gen"]
+            notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
+            call_120 = blood_res["call_120"]
+            is_visit = blood_res["is_visit"]
+            # idx = blood_res.get('idx', 0)
+            tool = (
+                "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+            )
+            if blood_res["scene_ending"]:
+                conts = ["请问是否需要帮您联系家庭医生?"]
+                intentCode = "assert_whether_contact_family_doctor"
+            notify_blood_pressure_contnets = blood_res.get("events", [])
+            exercise_video = blood_res.get("exercise_video", False)
         elif intentCode in [
             "report_interpretation_chat",
             "report_interpretation_chat_with_doctor_recommend",
