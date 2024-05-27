@@ -222,6 +222,8 @@ class Chat:
             return '打开功能页面'
         if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
             return '打开功能页面'
+        if '换回' in history[-1]['content'] and ('数字人' in history[-1]['content'] or '形象' in history[-1]['content'] or '皮肤' in history[-1]['content']):
+            return '换回数字人皮肤'
         if len(history) > 1:
             h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
                 + f": {i['content']}" for i in history[-5:-1]])
