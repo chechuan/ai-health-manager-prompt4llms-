@@ -1560,7 +1560,7 @@ class expertModel:
             b = "大"
         else:
             b = "小"
-        if ihm_health_sbp > 180 or ihm_health_dbp > 110:  # 三级高血压
+        if ihm_health_sbp >= 180 or ihm_health_dbp >= 110:  # 三级高血压
             level = 3
             return {
                 "level": level,
