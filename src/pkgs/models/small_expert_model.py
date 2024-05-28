@@ -988,7 +988,7 @@ class expertModel:
                 return {
                     "level": level,
                     "contents": [
-                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
+                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围",
                         content,
                     ],
                     "idx": -1,
