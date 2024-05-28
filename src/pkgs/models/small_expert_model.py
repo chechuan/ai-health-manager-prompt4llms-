@@ -472,6 +472,567 @@ class expertModel:
             }
 
     @staticmethod
+    def tool_rules_blood_pressure_level_2(**kwargs) -> dict:
+        """计算血压等级
+
+        - Args
+
+            ihm_health_sbp(int, float) 收缩压
+
+            ihm_health_dbp(int, float) 舒张压
+
+        - Rules
+
+            有既往史: 用户既往史有高血压则进入此流程管理
+
+            1.如血压达到高血压3级(血压>180/110) 则呼叫救护车。
+
+            2.如血压达到高血压2级(收缩压160-179，舒张压100-109)
+                1.预问诊(大模型) (步骤1结果不影响步骤2/3)
+                2.是否通知家人 (步骤2)
+                3.确认是否通知家庭医师 (步骤3)
+
+            3.如血压达到高血压1级(收缩压140-159，90-99)
+                1.预问诊
+                2.看血压是否波动，超出日常值30%，则使用“智能呼叫工具”通知家庭医师。日常值30%以内，则嘱患者密切监测，按时服药，注意休息。(调预警模型接口，准备历史血压数据)
+
+            4.如血压达到正常高值《收缩压120-139,舒张压80-89)，
+                1.预问诊
+                2.则嘱患者密切监测，按时服药，注意休息。
+
+            预问诊事件: 询问其他症状，其他症状的性质，持续时间等。 (2-3轮会话)
+        """
+
+        bps = kwargs.get("promptParam", {}).get("blood_pressure", [])
+        bp_msg = ""
+        ihm_health_sbp_list = []
+        ihm_health_dbp_list = []
+        for b in bps:
+            date = b.get("date", "")
+            sbp = b.get("ihm_health_sbp", "")
+            dbp = b.get("ihm_health_dbp", "")
+            ihm_health_dbp_list.append(dbp)
+            ihm_health_sbp_list.append(sbp)
+            bp_msg += f"{date}|{str(sbp)}|{str(dbp)}|mmHg|\n"
+
+        history = kwargs.get("his", [])
+        b_history = kwargs.get("backend_history", [])
+        query = history[-1]["content"] if history else ""
+        ihm_health_sbp = ihm_health_sbp_list[-1]
+        ihm_health_dbp = ihm_health_dbp_list[-1]
+
+        def inquire_gen(hitory, bp_message, iq_n=7):
+            his = []
+            # for i in bk_hitory:
+            #     if 'match_cont' not in i:
+            #         his.append({'role':'user','content':i['content']})
+            #     else:
+            #         his.append({'role':'assistant','content':i['match_cont']})
+            # if i['role'] == 'User' or i['role'] == 'user':
+            #     his.append({'role':'User', 'content':i['content']})
+            # elif i['role'] == 'Assistant' or i['role'] == 'assistant':
+            #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
+            history = [
+                {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+                for i in hitory
+            ]
+            hist_s = "\n".join([f"{i['role']}: {i['content']}" for i in history])
+            current_date = datetime.now().date()
+            drug_msg = ""
+            drug_situ = [
+                "漏服药物",
+                "正常服药",
+                "正常服药",
+                "正常服药",
+                "漏服药物",
+                "正常服药",
+                "正常服药",
+                "正常服药",
+            ]
+            days = []
+            for i in range(len(drug_situ)):
+                d = current_date - timedelta(days=len(drug_situ) - i - 1)
+                drug_msg += f"|{d}| {drug_situ[i]}"
+                days.append(d)
+            if len(history) >= iq_n:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": blood_pressure_scheme_prompt.format(
+                            bp_message, drug_msg, current_date, hist_s
+                        ),
+                    }
+                ]
+            else:
+                messages = [
+                    {
+                        "role": "user",
+                        "content": blood_pressure_inquiry_prompt.format(
+                            bp_message, drug_msg, current_date, hist_s
+                        ),
+                    }
+                ]  # + history
+            logger.debug(
+                "血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen-72B-Chat",
+            )
+            logger.debug("血压问诊模型输出： " + generate_text)
+            return generate_text
+
+        def blood_pressure_inquiry(history, query, iq_n=7):
+            generate_text = inquire_gen(history, bp_msg, iq_n=iq_n)
+            # while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
+            # thought = generate_text
+            # generate_text = inquire_gen(bk_history, ihm_health_sbp, ihm_health_dbp)
+            # thoughtIdx = generate_text.find("Thought") + 8
+            # thoughtIdx = 0
+            # thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            # outIdx = generate_text.find("\nassistant") + 11
+            # content = generate_text[outIdx:].split("\n")[0].strip()
+            if generate_text.find("Thought") == -1:
+                lis = [
+                    "结合用户个人血压信息，为用户提供帮助。",
+                    "结合用户情况，帮助用户降低血压。",
+                ]
+                import random
+
+                thought = random.choice(lis)
+            else:
+                thoughtIdx = generate_text.find("Thought") + 8
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            if generate_text.find("Assistant") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("Assistant") + 10
+                content = generate_text[outIdx:].strip()
+                if content.find("Assistant") != -1:
+                    content = content[: content.find("Assistant")]
+                if content.find("Thought") != -1:
+                    content = content[: content.find("Thought")]
+
+            return thought, content
+
+        def blood_pressure_pacify(history, query):
+            history = [
+                {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+                for i in history
+            ]
+            his_prompt = "\n".join(
+                [
+                    ("Doctor" if not i["role"] == "user" else "user")
+                    + f": {i['content']}"
+                    for i in history
+                ]
+            )
+            prompt = blood_pressure_pacify_prompt.format(his_prompt)
+            messages = [{"role": "user", "content": prompt}]
+            logger.debug(
+                "血压安抚模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
+            )
+            logger.debug("血压安抚模型输出： " + generate_text)
+            if generate_text.find("\nThought") == -1:
+                thought = "在等待医生上门的过程中，我应该安抚患者的情绪，让他保持平静，同时提供一些有助于降低血压的建议。"
+            else:
+                thoughtIdx = generate_text.find("Thought") + 8
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            if generate_text.find("Doctor") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("Doctor") + 7
+                content = generate_text[outIdx:].split("\n")[0].strip()
+            if content.find("？") == -1:
+                content = content
+            else:
+                while content.find("？") != -1:
+                    content = content[content.find("？") + 1:]
+                content = (
+                    content
+                    if content
+                    else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒。"
+                )
+            return thought, content
+
+        def is_visit(history, query):
+            if len(history) < 2:
+                return False
+            if "您需要家庭医生上门帮您服务吗" in history[-2]["content"]:
+                prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
+                messages = [{"role": "user", "content": prompt}]
+                if (
+                        "是的" in history[-1]["content"]
+                        or "好的" in history[-1]["content"]
+                        or (
+                        "需要" in history[-1]["content"]
+                        and "不需要" not in history[-1]["content"]
+                )
+                        or "嗯" in history[-1]["content"]
+                        or "可以" in history[-1]["content"]
+                ):
+                    return True
+                text = callLLM(
+                    history=messages,
+                    max_tokens=1024,
+                    top_p=0.8,
+                    temperature=0.0,
+                    do_sample=False,
+                    model="Qwen-72B-Chat",
+                )
+                if "YES" in text:
+                    return True
+                else:
+                    return False
+            else:
+                return False
+
+        def is_pacify(history, query):
+            r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
+            return True if sum(r) > 0 else False
+
+        def noti_blood_pressure_content(history):
+            niti_doctor_role_map = {"0": "张辉", "1": "张辉叔叔", "2": "你", "3": "你"}
+            history = [
+                {
+                    "role": niti_doctor_role_map.get(str(i["role"]), "张辉"),
+                    "content": i["content"],
+                }
+                for i in history
+            ]
+            his_prompt = "\n".join(
+                [
+                    ("张辉" if not i["role"] == "你" else "你") + f": {i['content']}"
+                    for i in history
+                ]
+            )
+            prompt = remid_doctor_blood_pressre_prompt.format(his_prompt)
+            messages = [{"role": "user", "content": prompt}]
+            noti_doc_cont = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
+            ).strip()
+
+            niti_daughter_role_map = {
+                "0": "张叔叔",
+                "1": "张叔叔",
+                "2": "你",
+                "3": "你",
+            }
+            history = [
+                {
+                    "role": niti_daughter_role_map.get(str(i["role"]), "张叔叔"),
+                    "content": i["content"],
+                }
+                for i in history
+            ]
+            his_prompt = "\n".join(
+                [
+                    ("张叔叔" if not i["role"] == "你" else "你") + f": {i['content']}"
+                    for i in history
+                ]
+            )
+            prompt = remid_daughter_blood_pressre_prompt.format(his_prompt)
+            messages = [{"role": "user", "content": prompt}]
+            noti_daughter_cont = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.8,
+                temperature=0.0,
+                do_sample=False,
+                model="Qwen-72B-Chat",
+            ).strip()
+
+            return noti_doc_cont, noti_daughter_cont
+
+        def get_second_hypertension(b_history, history, query, level):
+            def get_level(le):
+                if le == 1:
+                    return "一"
+                elif le == 2:
+                    return "二"
+                elif le == 3:
+                    return "三"
+                return "二"
+
+            if not history:
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
+                return {
+                    "level": level,
+                    "contents": [
+                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
+                        "我已经通知了您的女儿和您的家庭医生。",
+                        # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                        content,
+                    ],
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": False,
+                    "blood_trend_gen": True,
+                    "notifi_daughter_doctor": True,
+                    "call_120": False,
+                    "is_visit": False,
+                    "exercise_video": False,
+                    "events": [],
+                }
+            if is_visit(history, query=query):  # 上门
+                thought, content = blood_pressure_pacify(history, query)
+                noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "idx": 1,
+                    "scheme_gen": -1,
+                    "scene_ending": False,
+                    "blood_trend_gen": False,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": True,
+                    "exercise_video": True,
+                    "events": [
+                        {
+                            "eventType": "notice",
+                            "eventCode": "app_shangmen_req",
+                            "eventContent": noti_doc_cont,
+                        },
+                        {
+                            "eventType": "notice",
+                            "eventCode": "app_notify_daughter_ai_result_req",
+                            "eventContent": noti_daughter_cont,
+                        },
+                    ],
+                }
+            elif is_pacify(history, query=query):  # 安抚
+                thought, content = blood_pressure_pacify(history, query)
+                # noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "idx": 0,
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": True,
+                    "blood_trend_gen": False,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                    "exercise_video": False,
+                    "events": [],
+                }
+            else:  # 问诊
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
+                if "？" in content or "?" in content:
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "idx": 0,
+                        "thought": thought,
+                        "scheme_gen": -1,
+                        "scene_ending": False,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                        "exercise_video": False,
+                        "events": [],
+                    }
+                else:  # 出结论
+                    return {
+                        "level": level,
+                        "contents": [content, "您需要家庭医生上门帮您服务吗？"],
+                        "idx": 0,
+                        "thought": thought,
+                        "scheme_gen": 0,
+                        "scene_ending": False,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                        "exercise_video": False,
+                        "events": [],
+                    }
+
+        ihm_health_sbp_list = [
+            116,
+            118,
+            132,
+            121,
+            128,
+            123,
+            128,
+            117,
+            132,
+            134,
+            124,
+            120,
+            80,
+        ]
+        ihm_health_dbp_list = [82, 86, 86, 78, 86, 80, 92, 88, 85, 86, 86, 82, 60]
+
+        # 计算血压波动率,和血压列表的均值对比
+        def compute_blood_pressure_trend(x: int, data_list: List) -> float:
+            mean_value = sum(data_list) / len(data_list)
+            if x > 1.2 * mean_value:
+                return 1
+            else:
+                return 0
+
+        if ihm_health_sbp >= 130 or ihm_health_dbp >= 90:
+            a = "偏高"
+        else:
+            a = "正常"
+        trend_sbp = compute_blood_pressure_trend(ihm_health_sbp, ihm_health_sbp_list)
+        trend_dbp = compute_blood_pressure_trend(ihm_health_dbp, ihm_health_dbp_list)
+        if trend_sbp or trend_dbp:
+            b = "大"
+        else:
+            b = "小"
+        if ihm_health_sbp > 180 or ihm_health_dbp > 110:  # 三级高血压
+            level = 3
+            return {
+                "level": level,
+                "contents": [
+                    f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
+                    # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
+                    "我已为您呼叫120。",
+                ],
+                "idx": -1,
+                "thought": "",
+                "scheme_gen": -1,
+                "scene_ending": True,
+                "blood_trend_gen": False,
+                "notifi_daughter_doctor": False,
+                "call_120": True,
+                "is_visit": False,
+                "events": [],
+            }
+        elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
+            level = 2
+            return get_second_hypertension(b_history, history, query, level)
+        elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
+            level = 1
+
+            if not history:
+                thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+                return {
+                    "level": level,
+                    "contents": [
+                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
+                        f"我已经通知了您的女儿和您的家庭医生。",
+                        content,
+                    ],
+                    "idx": 1,
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": False,
+                    "blood_trend_gen": True,
+                    "notifi_daughter_doctor": True,
+                    "call_120": False,
+                    "is_visit": False,
+                    "events": [],
+                }
+            else:  # 问诊
+                thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+                if "？" in content or "?" in content:
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "idx": 0,
+                        "thought": thought,
+                        "scheme_gen": -1,
+                        "scene_ending": False,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                        "events": [],
+                    }
+                else:  # 出结论
+                    # thought, cont = blood_pressure_pacify(history, query)  #安抚
+                    return {
+                        "level": level,
+                        "contents": [content],
+                        "idx": 0,
+                        "thought": thought,
+                        "scheme_gen": 0,
+                        "scene_ending": True,
+                        "blood_trend_gen": False,
+                        "notifi_daughter_doctor": False,
+                        "call_120": False,
+                        "is_visit": False,
+                        "events": [],
+                    }
+
+        else:  # 正常
+            level = 0
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+            if not history:
+                return {
+                    "level": level,
+                    "contents": [
+                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常高值血压范围",
+                        content,
+                    ],
+                    "idx": -1,
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": False,
+                    "blood_trend_gen": True,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                    "events": [],
+                }
+
+            elif "？" in content or "?" in content:
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": -1,
+                    "scene_ending": False,
+                    "blood_trend_gen": False,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                    "idx": -0,
+                    "events": [],
+                }
+
+            else:
+                return {
+                    "level": level,
+                    "contents": [content],
+                    "thought": thought,
+                    "scheme_gen": 0,
+                    "scene_ending": True,
+                    "blood_trend_gen": False,
+                    "notifi_daughter_doctor": False,
+                    "call_120": False,
+                    "is_visit": False,
+                    "idx": 0,
+                    "events": [],
+                }
+
+
+    @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
         """计算血压等级
 
