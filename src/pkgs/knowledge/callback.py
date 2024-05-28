@@ -73,7 +73,7 @@ class FuncCall:
         self.register_for_all()
         self.scheduleManager.__init_vars__(self.funcmap, self.session)
         self.ext_api_factory = extApiFactory(self)
-        self._prepare_for_search_qa_chain()
+        # self._prepare_for_search_qa_chain()
 
     def _prepare_for_search_qa_chain(self) -> None:
         """Initlization 搜索qachain"""

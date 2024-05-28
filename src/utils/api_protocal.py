@@ -377,7 +377,7 @@ class DoctorInfo(BaseModel):
 
 
 class bloodPressureLevelResponse(BaseModel):
-    level: str = Field(..., description="血压等级")
+    level: int = Field(..., description="血压等级")
     contents: List[str] = Field([], description="要返回的话术")
     idx: int = Field(0, description="未知")
     thought: str = Field("", description="生成思考的内容")
@@ -387,8 +387,6 @@ class bloodPressureLevelResponse(BaseModel):
     scene_ending: bool = Field(True, description="场景结束标志")
     blood_trend_gen: bool = Field(False, description="前端是否显示血压趋势图")
     notifi_daughter_doctor: bool = Field(False, description="通知女儿和医生")
-    notifi_daughter: bool = Field(False, description="通知女儿")
-    notifi_doctor: bool = Field(False, description="通知医生")
     call_120: bool = Field(False, description="是否呼叫120")
     is_visit: bool = Field(False, description="是否上门")
     exercise_video: bool = Field(False, description="是否显示锻炼视频")
