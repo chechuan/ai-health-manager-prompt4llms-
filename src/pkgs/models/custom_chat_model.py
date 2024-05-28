@@ -34,6 +34,7 @@ class CustomChatModel:
             "blood_meas": expertModel.tool_rules_blood_pressure_level,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
+            "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
     def __parameter_check__(self, **kwargs):

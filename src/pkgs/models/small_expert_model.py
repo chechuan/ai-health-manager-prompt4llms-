@@ -439,8 +439,7 @@ class expertModel:
 
             return thought, content
 
-
-        thought, content = blood_pressure_inquiry(history, query, iq_n=5)
+        thought, content = blood_pressure_inquiry(history, iq_n=5)
 
         if "？" in content or "?" in content:  # 问诊
             return {
@@ -660,7 +659,7 @@ class expertModel:
                 content = content
             else:
                 while content.find("？") != -1:
-                    content = content[content.find("？") + 1:]
+                    content = content[content.find("？") + 1 :]
                 content = (
                     content
                     if content
@@ -675,14 +674,14 @@ class expertModel:
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
                 if (
-                        "是的" in history[-1]["content"]
-                        or "好的" in history[-1]["content"]
-                        or (
+                    "是的" in history[-1]["content"]
+                    or "好的" in history[-1]["content"]
+                    or (
                         "需要" in history[-1]["content"]
                         and "不需要" not in history[-1]["content"]
-                )
-                        or "嗯" in history[-1]["content"]
-                        or "可以" in history[-1]["content"]
+                    )
+                    or "嗯" in history[-1]["content"]
+                    or "可以" in history[-1]["content"]
                 ):
                     return True
                 text = callLLM(
@@ -1106,7 +1105,6 @@ class expertModel:
                         "is_visit": False,
                         "events": [],
                     }
-
 
     @clock
     def rec_diet_eval(self, param):
@@ -2351,7 +2349,7 @@ class Agents:
             return []
 
         _event = "医生推荐"
-        
+
         prompt_template = (
             "# 已知信息\n"
             "1.问诊结果：{diagnosis_result}\n"
