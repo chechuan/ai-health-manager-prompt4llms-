@@ -948,7 +948,7 @@ class expertModel:
         #     b = "大"
         # else:
         #     b = "小"
-        if ihm_health_sbp > 180 or ihm_health_dbp > 110:  # 三级高血压
+        if ihm_health_sbp >= 180 or ihm_health_dbp >= 110:  # 三级高血压
             level = 3
             contents = [
                 f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
