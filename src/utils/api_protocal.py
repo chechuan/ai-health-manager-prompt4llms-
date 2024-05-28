@@ -6,9 +6,10 @@
 @Contact :   1627635056@qq.com
 """
 
-from typing import Any, Dict, List, Literal, Tuple, Union, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
 from fastapi import Body
+from pydantic import BaseModel, Field
 
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
@@ -372,4 +373,23 @@ class DoctorInfo(BaseModel):
             f"出诊科室: {self.consultation_department}\n"
             f"性别: {self.gender}\n"
             f"医生职称: {self.doctor_title}\n"
-      )
+        )
+
+
+class bloodPressureLevelResponse(BaseModel):
+    level: str = Field(..., description="血压等级")
+    contents: List[str] = Field([], description="要返回的话术")
+    idx: int = Field(0, description="未知")
+    thought: str = Field("", description="生成思考的内容")
+    scheme_gen: int = Field(
+        0, description="跳转子页面的图标显示在contents中的第几条会话 作为contents的索引"
+    )
+    scene_ending: bool = Field(True, description="场景结束标志")
+    blood_trend_gen: bool = Field(False, description="前端是否显示血压趋势图")
+    notifi_daughter_doctor: bool = Field(False, description="通知女儿和医生")
+    notifi_daughter: bool = Field(False, description="通知女儿")
+    notifi_doctor: bool = Field(False, description="通知医生")
+    call_120: bool = Field(False, description="是否呼叫120")
+    is_visit: bool = Field(False, description="是否上门")
+    exercise_video: bool = Field(False, description="是否显示锻炼视频")
+    events: List[Dict] = Field([], description="后续跟随事件")

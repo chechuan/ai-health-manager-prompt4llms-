@@ -22,6 +22,7 @@ from src.utils.api_protocal import (
     DoctorInfo,
     DrugPlanItem,
     UserProfile,
+    bloodPressureLevelResponse,
 )
 
 sys.path.append(Path(__file__).parents[4].as_posix())
