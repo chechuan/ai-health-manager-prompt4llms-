@@ -342,6 +342,8 @@ class expertModel:
         ihm_health_sbp_list = []
         ihm_health_dbp_list = []
         for b in bps:
+            if not b:
+                continue
             date = b.get("date", "")
             sbp = b.get("ihm_health_sbp", "")
             dbp = b.get("ihm_health_dbp", "")
