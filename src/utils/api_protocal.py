@@ -384,7 +384,7 @@ class bloodPressureLevelResponse(BaseModel):
     scheme_gen: int = Field(
         0, description="跳转子页面的图标显示在contents中的第几条会话 作为contents的索引"
     )
-    scene_ending: bool = Field(True, description="场景结束标志")
+    scene_ending: bool = Field(False, description="场景结束标志")
     blood_trend_gen: bool = Field(False, description="前端是否显示血压趋势图")
     notifi_daughter_doctor: bool = Field(False, description="通知女儿和医生")
     call_120: bool = Field(False, description="是否呼叫120")
