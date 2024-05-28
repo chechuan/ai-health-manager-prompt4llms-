@@ -1133,12 +1133,15 @@ class Chat_v2:
             is_visit = blood_res["is_visit"]
             # idx = blood_res.get('idx', 0)
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+            if blood_res["scene_ending"] and (level == 0 or level == 1):
+                conts.append("请问是否需要帮您联系家庭医生?")
+                intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
         elif intentCode == "blood_meas_with_doctor_recommend":
             blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = blood_res["contents"][0]
-            # conts = blood_res["contents"][1:]
+            conts = blood_res["contents"][1:]
             sch = blood_res["scheme_gen"]
             thought = blood_res["thought"]
             level = blood_res["level"]
@@ -1151,7 +1154,7 @@ class Chat_v2:
                 "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             )
             if blood_res["scene_ending"]:
-                conts = ["请问是否需要帮您联系家庭医生?"]
+                conts.append("请问是否需要帮您联系家庭医生?")
                 intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
