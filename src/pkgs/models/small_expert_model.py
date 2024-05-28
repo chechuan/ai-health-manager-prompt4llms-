@@ -1094,7 +1094,6 @@ class expertModel:
                     contents=[content],
                     scheme_gen=-1,
                     thought=thought,
-                    scene_ending=True,
                 ).model_dump()
                 # return {
                 #     "level": level,
