@@ -48,7 +48,7 @@ from src.utils.module import (
     dumpJS,
     param_check,
 )
-
+from string import Template
 
 class expertModel:
     indicatorCodeMap = {
@@ -522,6 +522,82 @@ class expertModel:
         ihm_health_sbp = ihm_health_sbp_list[-1]
         ihm_health_dbp = ihm_health_dbp_list[-1]
 
+
+        def broadcast_gen(bps_msg):
+            """
+            1. 总结用户信息
+            2. 出具血压风险播报以及出具生活改善建议
+            """
+            current_date = datetime.now().date()
+            date_num= 4
+            days = [date_num]
+            for i in range(date_num):
+                d = current_date - timedelta(days=date_num - i - 1)
+                days.append(d)
+            t = Template(summery_userInfo_prompt)
+            prompt = t.substitute(date1=days[-2], date2=days[-3], date3=days[-4])
+            msg1 = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+            logger.debug(
+                "用户信息摘要模型输入： " + json.dumps(msg1, ensure_ascii=False)
+            )
+            summery_text = callLLM(
+                history=msg1,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen-72B-Chat",
+            )
+            logger.debug("用户信息摘要模型输出： " + summery_text)
+
+            msg2 = [
+                {
+                    "role": "user",
+                    "content": blood_pressure_risk_advise_prompt.format(summery_text, bps_msg),
+                }
+            ]
+            logger.debug(
+                "血压风险建议模型输入： " + json.dumps(msg2, ensure_ascii=False)
+            )
+            generate_text = callLLM(
+                history=msg2,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen-72B-Chat",
+            )
+            logger.debug("血压风险建议模型输出： " + generate_text)
+
+            if generate_text.find("Thought") == -1:
+                lis = [
+                    "结合用户信息，为用户提供血压风险提醒以及生活改善建议。",
+                ]
+                import random
+
+                thought = random.choice(lis)
+            else:
+                thoughtIdx = generate_text.find("Thought") + 8
+                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+            if generate_text.find("assistant") == -1:
+                content = generate_text
+            else:
+                outIdx = generate_text.find("assistant") + 10
+                content = generate_text[outIdx:].strip()
+                if content.find("assistant") != -1:
+                    content = content[: content.find("assistant")]
+                if content.find("Thought") != -1:
+                    content = content[: content.find("Thought")]
+
+            return thought, content
+
+
+
         def inquire_gen(hitory, bp_message, iq_n=7):
             his = []
             # for i in bk_hitory:
@@ -765,15 +841,16 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
+                thought1, content1 = broadcast_gen(bps_msg=bp_msg)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=7)
                 return bloodPressureLevelResponse(
                     level=level,
                     contents=[
-                        f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
+                        content1,
                         "我已经通知了您的女儿和您的家庭医生。",
-                        content,
+                        content2,
                     ],
-                    thought=thought,
+                    thought=thought2,
                     scheme_gen=-1,
                     blood_trend_gen=True,
                     notifi_daughter_doctor=True,
@@ -950,11 +1027,13 @@ class expertModel:
         #     b = "小"
         if ihm_health_sbp >= 180 or ihm_health_dbp >= 110:  # 三级高血压
             level = 3
+            thought, content = broadcast_gen(bps_msg=bp_msg)
             contents = [
-                f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为三级高血压范围",
+                content,
                 "我已为您呼叫120。",
             ]
             return bloodPressureLevelResponse(
+                thought=thought,
                 level=level,
                 contents=contents,
                 idx=-1,
@@ -984,17 +1063,18 @@ class expertModel:
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
             level = 1
             if not history:
-                thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+                thought1, content1 = broadcast_gen(bps_msg=bp_msg)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
-                    f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
+                    content1,
                     f"我已经通知了您的女儿和您的家庭医生。",
-                    content,
+                    content2,
                 ]
                 return bloodPressureLevelResponse(
                     level=level,
                     contents=contents,
                     idx=1,
-                    thought=thought,
+                    thought=thought2,
                     scheme_gen=-1,
                     blood_trend_gen=True,
                     notifi_daughter_doctor=True,
@@ -1058,10 +1138,11 @@ class expertModel:
                     # }
         else:  # 正常
             level = 0
+            thought1, content1 = broadcast_gen(bps_msg=bp_msg)
             thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 contents = [
-                    f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为正常血压范围",
+                    content1,
                     content,
                 ]
                 return bloodPressureLevelResponse(
