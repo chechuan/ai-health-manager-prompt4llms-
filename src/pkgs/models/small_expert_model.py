@@ -440,7 +440,7 @@ class expertModel:
 
             return thought, content
 
-        thought, content = blood_pressure_inquiry(history, level=, iq_n=5)
+        thought, content = blood_pressure_inquiry(history, iq_n=5)
 
         if "？" in content or "?" in content:  # 问诊
             return {
@@ -1076,7 +1076,7 @@ class expertModel:
             level = 1
             if not history:
                 thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-                thought2, content2 = blood_pressure_inquiry(history, query, level, iq_n=6)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
                     content1,
                     f"我已经通知了您的女儿和您的家庭医生。",
@@ -1109,7 +1109,7 @@ class expertModel:
                 #     "events": [],
                 # }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query, level, iq_n=6)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                 if "？" in content or "?" in content:
                     return bloodPressureLevelResponse(
                         level=level, contents=[content], thought=thought, scheme_gen=-1
@@ -1151,7 +1151,7 @@ class expertModel:
         else:  # 正常
             level = 0
             thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-            thought, content = blood_pressure_inquiry(history, query, level, iq_n=6)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 contents = [
                     content1,
@@ -1335,7 +1335,7 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(history, query, level, iq_n=7):
+        def blood_pressure_inquiry(history, query, iq_n=7):
             generate_text = inquire_gen(history, bp_msg ,level, iq_n=iq_n)
             # while generate_text.count("\nAssistant") != 1 or generate_text.count("Thought") != 1:
             # thought = generate_text
@@ -1521,7 +1521,7 @@ class expertModel:
                 return "二"
 
             if not history:
-                thought, content = blood_pressure_inquiry(history, query, level, iq_n=7)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
                 return {
                     "level": level,
                     "contents": [
@@ -1586,7 +1586,7 @@ class expertModel:
                     "events": [],
                 }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query, level, iq_n=7)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
                 if "？" in content or "?" in content:
                     return {
                         "level": level,
@@ -1674,15 +1674,15 @@ class expertModel:
             }
         elif 179 >= ihm_health_sbp >= 160 or 109 >= ihm_health_dbp >= 100:  # 二级高血压
             level = 2
-            return get_second_hypertension(b_history, history, query, level)
+            return get_second_hypertension(b_history, history, query)
         elif 159 >= ihm_health_sbp >= 140 or 99 >= ihm_health_dbp >= 90:  # 一级高血压
             level = 1
 
             if trend_sbp or trend_dbp:  # 血压波动超过30%
-                return get_second_hypertension(b_history, history, query, level=1)
+                return get_second_hypertension(b_history, history, query)
             else:
                 if not history:
-                    thought, content = blood_pressure_inquiry(history, query, level, iq_n=6)
+                    thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                     return {
                         "level": level,
                         "contents": [
@@ -1701,7 +1701,7 @@ class expertModel:
                         "events": [],
                     }
                 else:  # 问诊
-                    thought, content = blood_pressure_inquiry(history, query, level, iq_n=6)
+                    thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                     if "？" in content or "?" in content:
                         return {
                             "level": level,
@@ -1734,7 +1734,7 @@ class expertModel:
 
         elif 139 >= ihm_health_sbp >= 120 or 89 >= ihm_health_dbp >= 80:  # 正常高值
             level = 0
-            thought, content = blood_pressure_inquiry(history, query, level, iq_n=6)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 return {
                     "level": level,
@@ -1804,7 +1804,7 @@ class expertModel:
         else:  # 低血压
             level = -1
             rules = []
-            thought, content = blood_pressure_inquiry(history, query, level, iq_n=5)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=5)
             if not history:
                 return {
                     "level": -1,
