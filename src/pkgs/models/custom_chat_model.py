@@ -31,9 +31,10 @@ class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
         self.code_func_map = {
-            "blood_meas": expertModel.tool_rules_blood_pressure_level,
+            "blood_meas": expertModel.tool_rules_blood_pressure_level_2,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
+            "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
     def __parameter_check__(self, **kwargs):
