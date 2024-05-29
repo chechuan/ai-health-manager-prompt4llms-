@@ -609,7 +609,7 @@ class expertModel:
 
 
 
-        def inquire_gen(hitory, bp_message, iq_n=7, **kwargs):
+        def inquire_gen(hit, bp_message, iq_n=7, **kwargs):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
@@ -622,7 +622,7 @@ class expertModel:
             #     his.append({'role':'Assistant', 'content':f"Thought: {i['content']}\nAssistant: {i['function_call']['arguments']}"})
             history = [
                 {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-                for i in hitory
+                for i in hit
             ]
             hist_s = "\n".join([f"{i['role']}: {i['content']}" for i in history])
             current_date = datetime.now().date()
@@ -675,8 +675,8 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(history, query, iq_n=7, **kwargs):
-            generate_text = inquire_gen(history, bp_msg, iq_n=iq_n, **kwargs)
+        def blood_pressure_inquiry(hist, query, iq_n=7, **kwargs):
+            generate_text = inquire_gen(hist, bp_msg, iq_n=iq_n, **kwargs)
             if generate_text.find("Thought") == -1:
                 lis = [
                     "结合用户个人血压信息，为用户提供帮助。",
