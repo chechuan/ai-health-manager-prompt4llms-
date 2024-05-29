@@ -628,7 +628,7 @@ class expertModel:
 
 
 
-        def inquire_gen(hit, bp_message, iq_n=7, **kwargs):
+        def inquire_gen(hit, bp_message, iq_n=7):
             his = []
             # for i in bk_hitory:
             #     if 'match_cont' not in i:
@@ -694,8 +694,8 @@ class expertModel:
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
 
-        def blood_pressure_inquiry(hist, query, iq_n=7, **kwargs):
-            generate_text = inquire_gen(hist, bp_msg, iq_n=iq_n, **kwargs)
+        def blood_pressure_inquiry(hist, query, iq_n=7):
+            generate_text = inquire_gen(hist, bp_msg, iq_n=iq_n)
             if generate_text.find("Thought") == -1:
                 lis = [
                     "结合用户个人血压信息，为用户提供帮助。",
@@ -874,7 +874,7 @@ class expertModel:
 
             if not history:
                 thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=7, **kwargs)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=7)
                 return bloodPressureLevelResponse(
                     level=level,
                     contents=[
@@ -979,7 +979,7 @@ class expertModel:
                     "events": [],
                 }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query, iq_n=7, **kwargs)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
                 if "？" in content or "?" in content:
                     return bloodPressureLevelResponse(
                         level=level,
@@ -1096,7 +1096,7 @@ class expertModel:
             level = 1
             if not history:
                 thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6, **kwargs)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
                     content1,
                     f"我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
@@ -1129,7 +1129,7 @@ class expertModel:
                 #     "events": [],
                 # }
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query, iq_n=6, **kwargs)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=6)
                 if "？" in content or "?" in content:
                     return bloodPressureLevelResponse(
                         level=level, contents=[content], thought=thought, scheme_gen=-1
@@ -1171,7 +1171,7 @@ class expertModel:
         else:  # 正常
             level = 0
             thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-            thought, content = blood_pressure_inquiry(history, query, iq_n=6, **kwargs)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
             if not history:
                 contents = [
                     content1,
