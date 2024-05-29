@@ -595,13 +595,13 @@ class expertModel:
             else:
                 thoughtIdx = generate_text.find("Thought") + 8
                 thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("assistant") == -1:
+            if generate_text.find("Assistant") == -1:
                 content = generate_text
             else:
-                outIdx = generate_text.find("assistant") + 10
+                outIdx = generate_text.find("Assistant") + 10
                 content = generate_text[outIdx:].strip()
-                if content.find("assistant") != -1:
-                    content = content[: content.find("assistant")]
+                if content.find("Assistant") != -1:
+                    content = content[: content.find("Assistant")]
                 if content.find("Thought") != -1:
                     content = content[: content.find("Thought")]
 
@@ -859,7 +859,7 @@ class expertModel:
                     level=level,
                     contents=[
                         content1,
-                        "我已经通知了您的女儿和您的家庭医生。",
+                        "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
                         content2,
                     ],
                     thought=thought2,
@@ -872,7 +872,7 @@ class expertModel:
                 #     "level": level,
                 #     "contents": [
                 #         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
-                #         "我已经通知了您的女儿和您的家庭医生。",
+                #         "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
                 #         content,
                 #     ],
                 #     "thought": thought,
@@ -984,12 +984,12 @@ class expertModel:
                 else:  # 出结论
                     return bloodPressureLevelResponse(
                         level=level,
-                        contents=[content, "您需要家庭医生上门帮您服务吗？"],
+                        contents=[content, "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？"],
                         thought=thought,
                     ).model_dump()
                     return {
                         "level": level,
-                        "contents": [content, "您需要家庭医生上门帮您服务吗？"],
+                        "contents": [content, "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？"],
                         "idx": 0,
                         "thought": thought,
                         "scheme_gen": 0,
@@ -1079,7 +1079,7 @@ class expertModel:
                 thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
                     content1,
-                    f"我已经通知了您的女儿和您的家庭医生。",
+                    f"我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
                     content2,
                 ]
                 return bloodPressureLevelResponse(
@@ -1095,7 +1095,7 @@ class expertModel:
                 #     "level": level,
                 #     "contents": [
                 #         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                #         f"我已经通知了您的女儿和您的家庭医生。",
+                #         f"我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
                 #         content,
                 #     ],
                 #     "idx": 1,
@@ -1526,7 +1526,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
-                        "我已经通知了您的女儿和您的家庭医生。",
+                        "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
                         # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
@@ -1605,7 +1605,7 @@ class expertModel:
                 else:  # 出结论
                     return {
                         "level": level,
-                        "contents": [content, "您需要家庭医生上门帮您服务吗？"],
+                        "contents": [content, "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？"],
                         "idx": 0,
                         "thought": thought,
                         "scheme_gen": 0,
