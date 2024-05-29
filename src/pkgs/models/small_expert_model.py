@@ -603,8 +603,8 @@ class expertModel:
             ]
             import random
             e = random.choice(ques_examples)
-            tht = e.split('\n')[0]
-            cont = e.split('\n')[1]
+            tht = e.split('\n')[0].replace('Thought:', '').strip()
+            cont = e.split('\n')[1].replace('Assistant:', '').strip()
 
             if generate_text.find("Thought") == -1:
                 thought = tht
