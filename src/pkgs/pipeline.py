@@ -1134,7 +1134,7 @@ class Chat_v2:
             # idx = blood_res.get('idx', 0)
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             if blood_res["scene_ending"] and (level == 0 or level == 1):
-                conts.append("请问是否需要帮您联系家庭医生?")
+                conts.append("我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？")
                 intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
@@ -1154,7 +1154,7 @@ class Chat_v2:
                 "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             )
             if blood_res["scene_ending"]:
-                conts.append("请问是否需要帮您联系家庭医生?")
+                conts.append("我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？")
                 intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
