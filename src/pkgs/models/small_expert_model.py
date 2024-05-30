@@ -844,6 +844,7 @@ class expertModel:
                         content2,
                     ],
                     visit_verbal_idx=1,
+                    contact_doctor=1,
                     thought=thought2,
                     scheme_gen=-1,
                     blood_trend_gen=True,
