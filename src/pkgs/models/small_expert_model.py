@@ -871,7 +871,7 @@ class expertModel:
                     scene_ending=True,
                 ).model_dump()
             else:  # 问诊
-                thought, content = blood_pressure_inquiry(history, query, iq_n=7)
+                thought, content = blood_pressure_inquiry(history, query, iq_n=5)
                 if "？" in content or "?" in content:
                     return bloodPressureLevelResponse(
                         level=level,
