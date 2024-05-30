@@ -879,7 +879,7 @@ class expertModel:
                     level=level,
                     contents=[
                         content1,
-                        "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
+                        "我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                         content2,
                     ],
                     thought=thought2,
@@ -892,7 +892,7 @@ class expertModel:
                 #     "level": level,
                 #     "contents": [
                 #         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
-                #         "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
+                #         "我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                 #         content,
                 #     ],
                 #     "thought": thought,
@@ -1099,7 +1099,7 @@ class expertModel:
                 thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
                     content1,
-                    f"我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
+                    f"我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                     content2,
                 ]
                 return bloodPressureLevelResponse(
@@ -1115,7 +1115,7 @@ class expertModel:
                 #     "level": level,
                 #     "contents": [
                 #         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为一级高血压范围",
-                #         f"我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
+                #         f"我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                 #         content,
                 #     ],
                 #     "idx": 1,
@@ -1546,7 +1546,7 @@ class expertModel:
                     "level": level,
                     "contents": [
                         f"您本次血压{ihm_health_sbp}/{ihm_health_dbp}，为{get_level(level)}级高血压范围。",
-                        "我已经将您目前的健康状况发送给您的女儿和家庭医生，并提醒他们随时关注您的血压。",
+                        "我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                         # f"健康报告显示您的健康处于为中度失衡状态，本次血压{a}，较日常血压波动较{b}。",
                         content,
                     ],
