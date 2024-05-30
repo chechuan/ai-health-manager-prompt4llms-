@@ -43,7 +43,7 @@ class RolePlayRequest(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: Optional[Union[None, Literal["user", "assistant", "system", "function"]]]
+    role: Literal["user", "assistant", "system", "function", "other"] = "other"
     content: str = Field(...)
 
 
@@ -99,6 +99,7 @@ class DrugPlanItem(BaseModel):
     usage: str  # 用法
     precautions: str  # 注意事项
     contraindication: str  # 禁忌
+    dosage_time: str  # 用药时间
 
 
 class UserProfile(BaseModel):
@@ -140,6 +141,7 @@ class AigcFunctionsRequest(BaseModel):
         "report_interpretation",
         "aigc_functions_single_choice",
         "aigc_functions_consultation_summary",
+        "aigc_functions_consultation_summary_chief_disease",
         "aigc_functions_diagnosis",
         "aigc_functions_diagnosis_result",
         "aigc_functions_drug_recommendation",
@@ -149,6 +151,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_chinese_therapy",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
+        "aigc_functions_consultation_summary_to_group",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -323,7 +326,7 @@ class AigcFunctionsDoctorRecommendRequest(BaseModel):
             [
                 {
                     "role": "assistant",
-                    "content": "请问是否需要帮您推荐医生，您可以告诉我您的诉求？",
+                    "content": "请问是否需要我帮您找一位医生？",
                 },
                 {
                     "role": "user",
@@ -355,10 +358,18 @@ class DoctorInfo(BaseModel):
     doctor_name: str = Field(..., description="医生姓名")
     doctor_introduction: str = Field(None, description="医生信息")
     doctor_specialty: str = Field(None, description="医生擅长")
+    organization_name: str = Field(None, description="机构名称")
+    consultation_department: str = Field(None, description="出诊科室")
+    gender: str = Field(None, description="性别")
+    doctor_title: str = Field(None, description="医生职称")
 
     def __str__(self) -> str:
         return (
             f"姓名: {self.doctor_name}\n"
             f"医生信息:{self.doctor_introduction}\n"
-            f"医生擅长:{self.doctor_specialty}"
-        )
+            f"医生擅长:{self.doctor_specialty}\n"
+            f"机构名称: {self.organization_name}\n"
+            f"出诊科室: {self.consultation_department}\n"
+            f"性别: {self.gender}\n"
+            f"医生职称: {self.doctor_title}\n"
+      )

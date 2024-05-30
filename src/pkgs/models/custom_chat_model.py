@@ -34,6 +34,7 @@ class CustomChatModel:
             "blood_meas": expertModel.tool_rules_blood_pressure_level,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
+            "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
     def __parameter_check__(self, **kwargs):
@@ -163,6 +164,9 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         content = accept_stream_response(chat_response, verbose=True)
         logger.info(f"Custom Chat 辅助诊断总结、饮食建议 LLM Output: \n{content}")
+        if "患者" in content:
+            logger.warning("Prohibited vocab: 患者 generated.")
+            content = content.replace("患者", "用户")
         return content
 
     async def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
@@ -185,7 +189,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!"],
+                stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
@@ -199,11 +203,12 @@ class CustomChatAuxiliary(CustomChatModel):
             else:
                 valid = True
                 break
-
+        conts = []
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor or not valid:
+        elif not doctor:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            conts = ["请问是否需要帮您联系家庭医生?"]
         else:
             ...
         mid_vars = update_mid_vars(
@@ -213,7 +218,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             key="自定义辅助诊断对话",
         )
-        return mid_vars, (thought, doctor)
+        return mid_vars, conts, (thought, doctor)
 
     def judge_repeat(self, history, content, model):
         his = [f"{i['role']}:{i['content']}" for i in history]
@@ -237,9 +242,9 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         logger.debug(f"辅助问诊 重复判断 Output: \n{content}")
         output = self.__parse_jr_response__(content)
-        if "YES" in output:
+        if "yes" in output.lower():
             return True
-        elif "No" in output:
+        elif "no" in output.lower():
             return False
         elif (
             "没有回答" in content
@@ -327,6 +332,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
         try:
+            if text.count("Thought:") > 1:
+                second_thought_index = text.find("Thought", text.find("Thought") + 1)
+                text = text[second_thought_index:]
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
             if thought_index == -1 or doctor_index == -1:

@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 import sys
+from random import choice
 
 from src.pkgs.models.small_expert_model import Agents
 from src.utils.api_protocal import AigcFunctionsDoctorRecommendRequest
@@ -17,11 +18,8 @@ from typing import Any, AsyncGenerator, Dict, List
 from langchain.prompts import PromptTemplate
 from requests import Session
 
-from chat.constant import (
-    EXT_USRINFO_TRANSFER_INTENTCODE,
-    default_prompt,
-    intentCode_desc_map,
-)
+from chat.constant import (EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt,
+                           intentCode_desc_map)
 from chat.util import norm_userInfo_msg
 from data.constrant import DEFAULT_DATA_SOURCE
 from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
@@ -29,25 +27,16 @@ from data.constrant import role_map
 from data.test_param.test import testParam
 from src.pkgs.knowledge.callback import FuncCall
 from src.pkgs.models.custom_chat_model import (
-    CustomChatAuxiliary,
-    CustomChatModel,
-    CustomChatReportInterpretationAnswer,
-    CustomChatReportInterpretationAsk,
-)
+    CustomChatAuxiliary, CustomChatModel, CustomChatReportInterpretationAnswer,
+    CustomChatReportInterpretationAsk)
 from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    curr_time,
-    date_after,
-    get_doc_role,
-    get_intent,
-    make_meta_ret,
-    parse_latest_plugin_call,
-)
+from src.utils.module import (InitAllResource, curr_time, date_after,
+                              get_doc_role, get_intent, make_meta_ret,
+                              parse_latest_plugin_call)
 
 
 class Chat_v2:
@@ -699,6 +688,7 @@ class Chat_v2:
         if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
             "weight_meas",
             "blood_meas",
+            "blood_meas_with_doctor_recommend"
         ]:
             logger.debug(
                 f"not support current event {intentCode}, change intentCode to other."
@@ -981,14 +971,14 @@ class Chat_v2:
             return "other"
 
     def __raw_event_process_for_doctor_recommend_at_end__(
-        self, intentCode, appendData, chat_history
+        self, intentCode, appendData, chat_history, ret_result
     ):
         """附加医生推荐 原流程追加信息"""
         if intentCode.startswith("auxiliary_diagnosis"):
             if self.__assert_diet_suggest_in_content__(chat_history[-1]["content"]):
                 # 2024年4月24日11:06:51 增加新事件
                 # 判断auxiliary_diagnosis_with_doctor_recommend结束
-                append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                append_content = "请问是否需要我帮您找一位医生？"
                 appendData["contents"] = [append_content]
                 # appendData["scheme_gen"] = 1
                 chat_history.append(
@@ -1010,8 +1000,24 @@ class Chat_v2:
                 and "？" not in _content
                 and not appendData.get("doctor_rec")
             ):
-                _append_content = "请问是否需要帮您推荐医生，您可以告诉我您的诉求？"
+                _append_content = "请问是否需要我帮您找一位医生？"
                 # appendData["scheme_gen"] =
+                appendData["contents"].append(_append_content)
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": _append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
+                )
+        elif intentCode.startswith("blood_meas"):
+            _content = (
+                chat_history[-1]["function_call"]["arguments"]
+                if chat_history[-1].get("function_call")
+                else None
+            )
+            if ret_result.get("init_intent"):
+                _append_content = "请问是否需要我帮您找一位医生？"
                 appendData["contents"].append(_append_content)
                 chat_history.append(
                     {
@@ -1028,7 +1034,7 @@ class Chat_v2:
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         _appendData = {"doctor_rec": []}
         weight_res, blood_res, conts, notify_blood_pressure_contnets = {}, {}, [], []
-        content, level, modi_scheme, thought = "", "", "", "I know the answer."
+        content, level, modi_scheme, thought = "", "", "", "我知道如何回答"
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -1077,7 +1083,7 @@ class Chat_v2:
                 _appendData["doctor_rec"] = doctor_rec
                 thought = "判断是否需要医生推荐"
                 if doctor_rec:
-                    content = "已为您推荐医生"
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
                 else:
                     content = (
                         "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
@@ -1085,10 +1091,14 @@ class Chat_v2:
                 tool = "convComplete"
 
             else:
-                mid_vars, (thought, content) = await self.custom_chat_auxiliary.chat(
-                    mid_vars=mid_vars, **kwargs
+                mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
                 )
                 tool = "askHuman"
+            if conts:
+                intentCode = "assert_whether_contact_family_doctor"
+                tool = "convComplete"
+                # content = content+conts[0]
         elif intentCode == "pressure_meas":
             pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = pressure_res["content"]
@@ -1125,6 +1135,26 @@ class Chat_v2:
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
+        elif intentCode == "blood_meas_with_doctor_recommend":
+            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = blood_res["contents"][0]
+            # conts = blood_res["contents"][1:]
+            sch = blood_res["scheme_gen"]
+            thought = blood_res["thought"]
+            level = blood_res["level"]
+            blood_trend_gen = blood_res["blood_trend_gen"]
+            notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
+            call_120 = blood_res["call_120"]
+            is_visit = blood_res["is_visit"]
+            # idx = blood_res.get('idx', 0)
+            tool = (
+                "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+            )
+            if blood_res["scene_ending"]:
+                conts = ["请问是否需要帮您联系家庭医生?"]
+                intentCode = "assert_whether_contact_family_doctor"
+            notify_blood_pressure_contnets = blood_res.get("events", [])
+            exercise_video = blood_res.get("exercise_video", False)
         elif intentCode in [
             "report_interpretation_chat",
             "report_interpretation_chat_with_doctor_recommend",
@@ -1147,7 +1177,7 @@ class Chat_v2:
                 _appendData["doctor_rec"] = doctor_rec
                 thought = "判断是否需要医生推荐"
                 if doctor_rec:
-                    content = "已为您推荐医生"
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
                 else:
                     content = (
                         "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
@@ -1175,6 +1205,25 @@ class Chat_v2:
                     mid_vars=mid_vars, **kwargs
                 )
             )
+        elif intentCode == "assert_whether_contact_family_doctor":
+            # 判断是否需要联系家庭医生
+            user_input = chat_history[-1]["content"]
+            prompt_template = self.gsr.get_event_item(
+                "assert_whether_contact_family_doctor"
+            )["description"]
+            prompt = prompt_template.format(user_input=user_input)
+            contactFamilyDoctor = self.gsr.agents.aigc_functions_single_choice(
+                prompt=prompt,
+                options=["YES", "NO"],
+            )
+            if contactFamilyDoctor == "YES":
+                contactFamilyDoctor = 1
+                content = "好的，正为您联系你的家庭医生"
+            else:
+                contactFamilyDoctor = 0
+                content = "好的，我还能为您提供什么帮助？"
+            intentCode = ""
+            _appendData["contactFamilyDoctor"] = contactFamilyDoctor
         else:
             content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
@@ -1451,7 +1500,7 @@ class Chat_v2:
         )
         if intentCode.endswith("_with_doctor_recommend"):
             self.__raw_event_process_for_doctor_recommend_at_end__(
-                intentCode, appendData, out_history
+                intentCode, appendData, out_history, ret_result
             )
 
         """

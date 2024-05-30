@@ -5,44 +5,45 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-from datetime import datetime
-import sys
-import json
 import asyncio
+import json
+import sys
 import traceback
+from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator, Union
+
+import uvicorn
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
-import uvicorn
-from pathlib import Path
-from fastapi import FastAPI, Response, Request
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 
 from chat.qwen_chat import Chat
-from src.pkgs.models.small_expert_model import expertModel, Agents
+from src.pkgs.models.small_expert_model import Agents, expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
+    AigcFunctionsDoctorRecommendRequest,
+    AigcFunctionsRequest,
     AigcFunctionsResponse,
     BaseResponse,
     RolePlayRequest,
-    AigcFunctionsRequest,
     TestRequest,
-    AigcFunctionsDoctorRecommendRequest,
 )
 from src.utils.Logger import logger
 from src.utils.module import (
-    MakeFastAPIOffline,
     InitAllResource,
+    MakeFastAPIOffline,
     NpEncoder,
+    build_aigc_functions_response,
+    construct_naive_response_generator,
     curr_time,
     dumpJS,
     format_sse_chat_complete,
     response_generator,
-    build_aigc_functions_response,
-    construct_naive_response_generator,
 )
 
 
@@ -72,7 +73,7 @@ def accept_param_purge(request: Request):
 
 async def async_accept_param_purge(request: Request, endpoint: str = None):
     if isinstance(request, BaseModel):
-        p = request.model_dump()
+        p = request.model_dump(exclude_unset=True, exclude_none=True)
     else:
         p = await request.json()
     p_jsonfiy = json.dumps(p, ensure_ascii=False)
@@ -107,20 +108,20 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
 
 
 def mount_rule_endpoints(app: FastAPI):
-    @app.route("/rules/blood_pressure_level", methods=["post"])
-    async def _rules_blood_pressure_level(request: Request):
-        """计算血压等级及处理规则"""
-        try:
-            param = await async_accept_param_purge(
-                request, endpoint="/rules/blood_pressure_level"
-            )
-            ret = expert_model.tool_rules_blood_pressure_level(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
+    # @app.route("/rules/blood_pressure_level", methods=["post"])
+    # async def _rules_blood_pressure_level(request: Request):
+    #     """计算血压等级及处理规则"""
+    #     try:
+    #         param = await async_accept_param_purge(
+    #             request, endpoint="/rules/blood_pressure_level"
+    #         )
+    #         ret = expert_model.tool_rules_blood_pressure_level(**param)
+    #         ret = make_result(items=ret)
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         ret = make_result(head=500, msg=repr(err))
+    #     finally:
+    #         return ret
 
     @app.route("/rules/emotions", methods=["post"])
     async def _rules_enotions_level(request: Request):
@@ -327,7 +328,7 @@ def mount_aigc_functions(app: FastAPI):
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=""
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
+            _return: str = ret.model_dump_json(exclude_unset=False)
         finally:
             return build_aigc_functions_response(_return)
 

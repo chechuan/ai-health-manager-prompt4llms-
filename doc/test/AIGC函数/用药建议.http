@@ -1,0 +1,43 @@
+POST /aigc/functions HTTP/1.1
+# Host: 10.4.170.185:6500
+Host: 10.39.91.251:50014
+# Host: 10.39.91.251:50008
+Content-Type: application/json
+# Content-Length: 770
+
+{
+    "intentCode": "aigc_functions_drug_recommendation",
+    "user_profile": {
+        "age": 40,
+        "gender": "女",
+        "height": "165.0cm",
+        "weight": "73.7kg"
+    },
+    "messages": [
+        {
+            "role": "user",
+            "content": "我有点儿发烧"
+        },
+        {
+            "role": "user",
+            "content": "张"
+        },
+        {
+            "role": "assistant",
+            "content": "我建议您可以使用间接喉镜检查"
+        },
+        {
+            "role": "assistant",
+            "content": "根据您描述的症状，我初步诊断您患有急性咽炎"
+        },
+        {
+            "role": "user",
+            "content": "没有疱疹  平时也感觉困难"
+        },
+        {
+            "role": "assistant",
+            "content": "你有咽喉部位的疱疹或者溃疡吗？,感觉吞咽疼痛是进食时更明显还是平时也有？"
+        }
+    ],
+    "diagnosis": "急性咽炎"
+}
