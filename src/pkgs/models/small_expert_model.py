@@ -821,7 +821,7 @@ class expertModel:
 
             if not history:
                 thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=7)
+                thought2, content2 = blood_pressure_inquiry(history, query, iq_n=5)
                 return bloodPressureLevelResponse(
                     level=level,
                     contents=[
