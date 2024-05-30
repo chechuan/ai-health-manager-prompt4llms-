@@ -843,6 +843,8 @@ class expertModel:
                         "我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
                         content2,
                     ],
+                    visit_verbal_idx=1,
+                    contact_doctor=1,
                     thought=thought2,
                     scheme_gen=-1,
                     blood_trend_gen=True,
@@ -894,7 +896,7 @@ class expertModel:
                 else:  # 出结论
                     return bloodPressureLevelResponse(
                         level=level,
-                        visit_verbal_idx=1,
+                        #visit_verbal_idx=-1,
                         contents=[
                             content,
                             "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？",
