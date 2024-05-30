@@ -1004,6 +1004,7 @@ class expertModel:
                 else:  # 出结论
                     return bloodPressureLevelResponse(
                         level=level,
+                        visit_verbal_idx=1,
                         contents=[content, "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？"],
                         thought=thought,
                     ).model_dump()
