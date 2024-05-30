@@ -31,7 +31,7 @@ class CustomChatModel:
     def __init__(self, gsr: InitAllResource):
         self.gsr = gsr
         self.code_func_map = {
-            "blood_meas": expertModel.tool_rules_blood_pressure_level,
+            "blood_meas": expertModel.tool_rules_blood_pressure_level_2,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
             "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
@@ -208,7 +208,7 @@ class CustomChatAuxiliary(CustomChatModel):
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         elif not doctor:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
-            conts = ["请问是否需要帮您联系家庭医生?"]
+            conts = ["我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？"]
         else:
             ...
         mid_vars = update_mid_vars(
