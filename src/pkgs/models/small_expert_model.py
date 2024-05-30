@@ -263,8 +263,17 @@ class expertModel:
             logger.debug("进入体重方案修改流程。。。")
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
+            current_date = datetime.now().date()
+            weights = ['74.6kg', '75kg', '75.3kg', '75.5kg', '75.8kg', '75.9kg', '75.4kg', '75.7kg', '75.4kg',
+                       '75.6kg', '75.3kg', '75.6kg', '75.3kg']
+            weight_msg = ''
+            for i in range(len(weights)-1):
+                d = current_date - timedelta(days=len(weights) - i)
+                weight_msg += f"{d}: {weights[i]}"
+
+
             prompt = fat_reduction_prompt.format(
-                cur_date, weight, "减脂效果不好，怎么改善？"
+                weight_msg, cur_date, weight, "减脂效果不好，怎么改善？"
             )
             logger.debug("进入体重出方案流程。。。")
         messages = [{"role": "user", "content": prompt}]
