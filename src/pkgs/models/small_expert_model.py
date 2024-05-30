@@ -896,6 +896,8 @@ class expertModel:
                 else:  # 出结论
                     return bloodPressureLevelResponse(
                         level=level,
+                        contact_doctor=0,
+                        visit_verbal_idx=0,
                         #visit_verbal_idx=-1,
                         contents=[
                             content,
