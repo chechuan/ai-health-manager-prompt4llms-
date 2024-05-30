@@ -471,7 +471,23 @@ class expertModel:
                 "is_visit": False,
                 "events": [],
             }
-
+    @classmethod
+    def _fetch_fake_ques_blood_pressure_v2(cls):
+        ques_examples = [
+            "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上休息前？还有，你感觉头痛、眩晕或者心悸这些症状有出现过吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚醒时还是晚上准备睡觉前？另外，你有没有体验过头痛、头晕或者心跳不规律这些症状？",
+            "Thought: 我想了解你的血压在何时达到峰值，是否有头痛、眩晕等不适症状。\nAssistant: 你有没有注意到血压升高的时候，是否有头痛、眩晕或者心慌的感觉？这些通常会在什么时候发生，比如早上起床后，还是晚上休息时？",
+            "Thought: 想了解血压波动与日常生活可能的关系\nAssistant: 你最近有没有感觉到头痛、眩晕或者心悸的症状？这些可能与血压波动有关。还有，你的日常生活节奏有无显著变化？比如工作压力、饮食习惯或睡眠模式。",
+            "Thought: 我想知道你的血压变化是否有特定模式，以及你的身体对药物的反应如何。\nAssistant: 你注意到血压升高通常发生在什么时间吗？服药后多久会感到最舒缓？",
+            "Thought: 我想了解你的血压在何时达到峰值，有什么特定触发因素吗？另外，你有没有出现头痛、眩晕或胸闷等不适症状？\nAssistant: 你注意到血压升高的时候有什么特别的情况吗？比如情绪紧张或者剧烈运动后？还有，你有没有头痛、头晕或者胸闷的感觉？",
+            "Thought: 想了解血压波动时的主观感受和症状\nAssistant: 你最近有没有头痛、眩晕、心悸或者胸闷的症状？这些可能与血压波动有关。",
+            "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上睡前？还有，你感觉头晕或心跳加速的情况有规律吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚起床的时候还是晚上准备睡觉的时候？另外，你有没有发现头晕或者心跳加速的情况，它们是否有特定的时间规律？",
+            "Thought: 我需要了解你的血压控制情况和身体感受。\nAssistant: 你注意到血压在不同日期有明显变化吗？有没有出现头痛、眩晕或胸闷等不适感？",
+        ]
+        e = random.choice(ques_examples)
+        thought = e.split("\n")[0].replace("Thought:", "").strip()
+        content = e.split("\n")[1].replace("Assistant:", "").strip()
+        return thought, content
+    
     @staticmethod
     def tool_rules_blood_pressure_level_2(**kwargs) -> dict:
         """计算血压等级
@@ -533,8 +549,7 @@ class expertModel:
                 max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
-                do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("血压风险建议模型输出： " + generate_text)
 
@@ -580,7 +595,7 @@ class expertModel:
                 d = current_date - timedelta(days=len(drug_situ) - i - 1)
                 drug_msg += f"|{d}| {drug_situ[i]}\n"
                 days.append(d)
-            if len(history) >= iq_n:
+            if len(history) >= iq_n:    # 通过总轮数控制结束
                 t = Template(blood_pressure_scheme_prompt)
                 prompt = t.substitute(
                     bp_msg=bp_message,
@@ -598,7 +613,7 @@ class expertModel:
                         "content": prompt,
                     }
                 ]
-            else:  # 正常流程 问两次
+            else:  # 正常流程 血压波动问诊询问两次, 询问的内容给了固定话术
                 messages = [
                     {
                         "role": "user",
@@ -606,7 +621,7 @@ class expertModel:
                             bp_message, hist_s
                         ),
                     }
-                ]  # + history
+                ]
             logger.debug(
                 "血压问诊模型输入： " + json.dumps(messages, ensure_ascii=False)
             )
@@ -616,7 +631,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
@@ -624,19 +639,7 @@ class expertModel:
         def blood_pressure_inquiry(hist, query, iq_n=7):
             generate_text = inquire_gen(hist, bp_msg, iq_n=iq_n)
             if len(hist) < iq_n:
-                ques_examples = [
-                    "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上休息前？还有，你感觉头痛、眩晕或者心悸这些症状有出现过吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚醒时还是晚上准备睡觉前？另外，你有没有体验过头痛、头晕或者心跳不规律这些症状？",
-                    "Thought: 我想了解你的血压在何时达到峰值，是否有头痛、眩晕等不适症状。\nAssistant: 你有没有注意到血压升高的时候，是否有头痛、眩晕或者心慌的感觉？这些通常会在什么时候发生，比如早上起床后，还是晚上休息时？",
-                    "Thought: 想了解血压波动与日常生活可能的关系\nAssistant: 你最近有没有感觉到头痛、眩晕或者心悸的症状？这些可能与血压波动有关。还有，你的日常生活节奏有无显著变化？比如工作压力、饮食习惯或睡眠模式。",
-                    "Thought: 我想知道你的血压变化是否有特定模式，以及你的身体对药物的反应如何。\nAssistant: 你注意到血压升高通常发生在什么时间吗？服药后多久会感到最舒缓？",
-                    "Thought: 我想了解你的血压在何时达到峰值，有什么特定触发因素吗？另外，你有没有出现头痛、眩晕或胸闷等不适症状？\nAssistant: 你注意到血压升高的时候有什么特别的情况吗？比如情绪紧张或者剧烈运动后？还有，你有没有头痛、头晕或者胸闷的感觉？",
-                    "Thought: 想了解血压波动时的主观感受和症状\nAssistant: 你最近有没有头痛、眩晕、心悸或者胸闷的症状？这些可能与血压波动有关。",
-                    "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上睡前？还有，你感觉头晕或心跳加速的情况有规律吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚起床的时候还是晚上准备睡觉的时候？另外，你有没有发现头晕或者心跳加速的情况，它们是否有特定的时间规律？",
-                    "Thought: 我需要了解你的血压控制情况和身体感受。\nAssistant: 你注意到血压在不同日期有明显变化吗？有没有出现头痛、眩晕或胸闷等不适感？",
-                ]
-                e = random.choice(ques_examples)
-                tht = e.split("\n")[0].replace("Thought:", "").strip()
-                cont = e.split("\n")[1].replace("Assistant:", "").strip()
+                tht, cont = expertModel._fetch_fake_ques_blood_pressure_v2()
 
                 if generate_text.find("Thought") == -1:
                     thought = tht
