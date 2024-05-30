@@ -973,6 +973,8 @@ class expertModel:
                 else:  # 出结论
                     # thought, cont = blood_pressure_pacify(history, query)  #安抚
                     return bloodPressureLevelResponse(
+                        contact_doctor=0,
+                        visit_verbal_idx=0,
                         level=level,
                         contents=[content],
                         thought=thought,
