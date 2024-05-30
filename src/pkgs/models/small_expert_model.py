@@ -928,6 +928,7 @@ class expertModel:
                 "我已为您呼叫120。",
             ]
             return bloodPressureLevelResponse(
+                blood_trend_gen=True,
                 thought=thought,
                 level=level,
                 contents=contents,
