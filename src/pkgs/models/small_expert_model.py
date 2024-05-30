@@ -267,7 +267,7 @@ class expertModel:
             weights = ['74.6kg', '75kg', '75.3kg', '75.5kg', '75.8kg', '75.9kg', '75.4kg', '75.7kg', '75.4kg',
                        '75.6kg', '75.3kg', '75.6kg', '75.3kg']
             weight_msg = ''
-            for i in range(len(weights)-1):
+            for i in range(len(weights)):
                 d = current_date - timedelta(days=len(weights) - i)
                 weight_msg += f"{d}: {weights[i]}"
 
