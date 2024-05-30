@@ -250,7 +250,7 @@ class expertModel:
             else:
                 return "scheme_no_change"
 
-        cur_date = kwargs["promptParam"].get("cur_date", "")
+        cur_date = kwargs["promptParam"].get("cur_date", "").split(' ')[0]
         weight = kwargs["promptParam"].get("weight", "")
         query = ""
         if len(kwargs["history"]) > 0:
@@ -269,7 +269,7 @@ class expertModel:
             weight_msg = ''
             for i in range(len(weights)):
                 d = current_date - timedelta(days=len(weights) - i)
-                weight_msg += f"{d}: {weights[i]}"
+                weight_msg += f"{d}: {weights[i]}\n"
 
 
             prompt = fat_reduction_prompt.format(
