@@ -976,7 +976,7 @@ class expertModel:
         else:  # 正常
             level = 0
             thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=5)
             if not history:
                 contents = [
                     content1,
