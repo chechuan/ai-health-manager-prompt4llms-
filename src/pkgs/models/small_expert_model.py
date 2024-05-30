@@ -771,7 +771,7 @@ class expertModel:
         def is_visit(history, query):
             if len(history) < 2:
                 return False
-            if "您需要家庭医生上门帮您服务吗" in history[-2]["content"]:
+            if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门" in history[-2]["content"]:
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
                 if (
@@ -801,7 +801,7 @@ class expertModel:
                 return False
 
         def is_pacify(history, query):
-            r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
+            r = [1 for i in history if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门" in i["content"]]
             return True if sum(r) > 0 else False
 
         def noti_blood_pressure_content(history):
@@ -929,31 +929,31 @@ class expertModel:
                         },
                     ],
                 ).model_dump()
-                return {
-                    "level": level,
-                    "contents": [content],
-                    "thought": thought,
-                    "idx": 1,
-                    "scheme_gen": -1,
-                    "scene_ending": False,
-                    "blood_trend_gen": False,
-                    "notifi_daughter_doctor": False,
-                    "call_120": False,
-                    "is_visit": True,
-                    "exercise_video": True,
-                    "events": [
-                        {
-                            "eventType": "notice",
-                            "eventCode": "app_shangmen_req",
-                            "eventContent": noti_doc_cont,
-                        },
-                        {
-                            "eventType": "notice",
-                            "eventCode": "app_notify_daughter_ai_result_req",
-                            "eventContent": noti_daughter_cont,
-                        },
-                    ],
-                }
+                # return {
+                #     "level": level,
+                #     "contents": [content],
+                #     "thought": thought,
+                #     "idx": 1,
+                #     "scheme_gen": -1,
+                #     "scene_ending": False,
+                #     "blood_trend_gen": False,
+                #     "notifi_daughter_doctor": False,
+                #     "call_120": False,
+                #     "is_visit": True,
+                #     "exercise_video": True,
+                #     "events": [
+                #         {
+                #             "eventType": "notice",
+                #             "eventCode": "app_shangmen_req",
+                #             "eventContent": noti_doc_cont,
+                #         },
+                #         {
+                #             "eventType": "notice",
+                #             "eventCode": "app_notify_daughter_ai_result_req",
+                #             "eventContent": noti_daughter_cont,
+                #         },
+                #     ],
+                # }
             elif is_pacify(history, query=query):  # 安抚
                 thought, content = blood_pressure_pacify(history, query)
                 # noti_doc_cont, noti_daughter_cont = noti_blood_pressure_content(history)
@@ -1439,7 +1439,7 @@ class expertModel:
         def is_visit(history, query):
             if len(history) < 2:
                 return False
-            if "您需要家庭医生上门帮您服务吗" in history[-2]["content"]:
+            if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门" in history[-2]["content"]:
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
                 if (
@@ -1469,7 +1469,7 @@ class expertModel:
                 return False
 
         def is_pacify(history, query):
-            r = [1 for i in history if "您需要家庭医生上门帮您服务吗" in i["content"]]
+            r = [1 for i in history if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门" in i["content"]]
             return True if sum(r) > 0 else False
 
         def noti_blood_pressure_content(history):
