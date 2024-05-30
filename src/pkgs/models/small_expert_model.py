@@ -1100,6 +1100,7 @@ class expertModel:
                 ]
                 return bloodPressureLevelResponse(
                     level=level,
+                    contact_doctor=1,
                     contents=contents,
                     idx=1,
                     thought=thought2,
