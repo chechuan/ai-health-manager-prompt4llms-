@@ -560,10 +560,12 @@ class expertModel:
                 {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
                 for i in hit
             ]
-            hist_s = "\n".join([f"{i['role']}: {i['content']}" for i in history])
+            _role_map = {"user": "用户", "assistant": "医生助手"}
+            hist_s = "\n".join(
+                [f"{_role_map.get(i['role'])}: {i['content']}" for i in history]
+            )
             current_date = datetime.now().date()
-            drug_msg = ""
-            drug_situ = [
+            drug_situ, drug_msg = "", [
                 "漏服药物",
                 "正常服药",
                 "正常服药",
@@ -576,7 +578,7 @@ class expertModel:
             days = []
             for i in range(len(drug_situ)):
                 d = current_date - timedelta(days=len(drug_situ) - i - 1)
-                drug_msg += f"|{d}| {drug_situ[i]}"
+                drug_msg += f"|{d}| {drug_situ[i]}\n"
                 days.append(d)
             if len(history) >= iq_n:
                 t = Template(blood_pressure_scheme_prompt)
@@ -596,7 +598,7 @@ class expertModel:
                         "content": prompt,
                     }
                 ]
-            else:
+            else:  # 正常流程 问两次
                 messages = [
                     {
                         "role": "user",
@@ -898,7 +900,7 @@ class expertModel:
             dbp = b.get("ihm_health_dbp", "")
             ihm_health_dbp_list.append(dbp)
             ihm_health_sbp_list.append(sbp)
-            bp_msg += f"{date}|{str(sbp)}|{str(dbp)}|mmHg|{get_level(sbp, dbp)}|\n"
+            bp_msg += f"|{date}|{str(sbp)}|{str(dbp)}|mmHg|{get_level(sbp, dbp)}|\n"
 
         history = kwargs.get("his", [])
         b_history = kwargs.get("backend_history", [])
