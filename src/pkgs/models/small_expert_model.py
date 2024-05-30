@@ -679,38 +679,41 @@ class expertModel:
 
         def blood_pressure_inquiry(hist, query, iq_n=7):
             generate_text = inquire_gen(hist, bp_msg, iq_n=iq_n)
+            if len(hist) < iq_n:
+                ques_examples = [
+                    "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上休息前？还有，你感觉头痛、眩晕或者心悸这些症状有出现过吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚醒时还是晚上准备睡觉前？另外，你有没有体验过头痛、头晕或者心跳不规律这些症状？",
+                    "Thought: 我想了解你的血压在何时达到峰值，是否有头痛、眩晕等不适症状。\nAssistant: 你有没有注意到血压升高的时候，是否有头痛、眩晕或者心慌的感觉？这些通常会在什么时候发生，比如早上起床后，还是晚上休息时？",
+                    "Thought: 想了解血压波动与日常生活可能的关系\nAssistant: 你最近有没有感觉到头痛、眩晕或者心悸的症状？这些可能与血压波动有关。还有，你的日常生活节奏有无显著变化？比如工作压力、饮食习惯或睡眠模式。",
+                    "Thought: 我想知道你的血压变化是否有特定模式，以及你的身体对药物的反应如何。\nAssistant: 你注意到血压升高通常发生在什么时间吗？服药后多久会感到最舒缓？",
+                    "Thought: 我想了解你的血压在何时达到峰值，有什么特定触发因素吗？另外，你有没有出现头痛、眩晕或胸闷等不适症状？\nAssistant: 你注意到血压升高的时候有什么特别的情况吗？比如情绪紧张或者剧烈运动后？还有，你有没有头痛、头晕或者胸闷的感觉？",
+                    "Thought: 想了解血压波动时的主观感受和症状\nAssistant: 你最近有没有头痛、眩晕、心悸或者胸闷的症状？这些可能与血压波动有关。",
+                    "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上睡前？还有，你感觉头晕或心跳加速的情况有规律吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚起床的时候还是晚上准备睡觉的时候？另外，你有没有发现头晕或者心跳加速的情况，它们是否有特定的时间规律？",
+                    "Thought: 我需要了解你的血压控制情况和身体感受。\nAssistant: 你注意到血压在不同日期有明显变化吗？有没有出现头痛、眩晕或胸闷等不适感？"
+                ]
+                import random
+                e = random.choice(ques_examples)
+                tht = e.split('\n')[0].replace('Thought:', '').strip()
+                cont = e.split('\n')[1].replace('Assistant:', '').strip()
 
-            ques_examples = [
-                "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上休息前？还有，你感觉头痛、眩晕或者心悸这些症状有出现过吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚醒时还是晚上准备睡觉前？另外，你有没有体验过头痛、头晕或者心跳不规律这些症状？",
-                "Thought: 我想了解你的血压在何时达到峰值，是否有头痛、眩晕等不适症状。\nAssistant: 你有没有注意到血压升高的时候，是否有头痛、眩晕或者心慌的感觉？这些通常会在什么时候发生，比如早上起床后，还是晚上休息时？",
-                "Thought: 想了解血压波动与日常生活可能的关系\nAssistant: 你最近有没有感觉到头痛、眩晕或者心悸的症状？这些可能与血压波动有关。还有，你的日常生活节奏有无显著变化？比如工作压力、饮食习惯或睡眠模式。",
-                "Thought: 我想知道你的血压变化是否有特定模式，以及你的身体对药物的反应如何。\nAssistant: 你注意到血压升高通常发生在什么时间吗？服药后多久会感到最舒缓？",
-                "Thought: 我想了解你的血压在何时达到峰值，有什么特定触发因素吗？另外，你有没有出现头痛、眩晕或胸闷等不适症状？\nAssistant: 你注意到血压升高的时候有什么特别的情况吗？比如情绪紧张或者剧烈运动后？还有，你有没有头痛、头晕或者胸闷的感觉？",
-                "Thought: 想了解血压波动时的主观感受和症状\nAssistant: 你最近有没有头痛、眩晕、心悸或者胸闷的症状？这些可能与血压波动有关。",
-                "Thought: 我想知道你的血压在什么时候变化最明显，是早上起床后还是晚上睡前？还有，你感觉头晕或心跳加速的情况有规律吗？\nAssistant: 你注意到你的血压是在一天中的哪个时段变化最明显吗？是早上刚起床的时候还是晚上准备睡觉的时候？另外，你有没有发现头晕或者心跳加速的情况，它们是否有特定的时间规律？",
-                "Thought: 我需要了解你的血压控制情况和身体感受。\nAssistant: 你注意到血压在不同日期有明显变化吗？有没有出现头痛、眩晕或胸闷等不适感？"
-            ]
-            import random
-            e = random.choice(ques_examples)
-            tht = e.split('\n')[0].replace('Thought:', '').strip()
-            cont = e.split('\n')[1].replace('Assistant:', '').strip()
-
-            if generate_text.find("Thought") == -1:
-                thought = tht
-                content = cont
+                if generate_text.find("Thought") == -1:
+                    thought = tht
+                    content = cont
+                else:
+                    thoughtIdx = generate_text.find("Thought") + 8
+                    thought = generate_text[thoughtIdx:].split("\n")[0].strip()
+                if generate_text.find("Assistant") == -1:
+                    thought = tht
+                    content = cont
+                else:
+                    outIdx = generate_text.find("Assistant") + 10
+                    content = generate_text[outIdx:].strip()
+                    if content.find("Assistant") != -1:
+                        content = content[: content.find("Assistant")]
+                    if content.find("Thought") != -1:
+                        content = content[: content.find("Thought")]
             else:
-                thoughtIdx = generate_text.find("Thought") + 8
-                thought = generate_text[thoughtIdx:].split("\n")[0].strip()
-            if generate_text.find("Assistant") == -1:
-                thought = tht
-                content = cont
-            else:
-                outIdx = generate_text.find("Assistant") + 10
-                content = generate_text[outIdx:].strip()
-                if content.find("Assistant") != -1:
-                    content = content[: content.find("Assistant")]
-                if content.find("Thought") != -1:
-                    content = content[: content.find("Thought")]
+                thought = ''
+                content = generate_text
 
             return thought, content
 
