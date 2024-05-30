@@ -1046,7 +1046,7 @@ class Chat_v2:
         # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
         _appendData = {"doctor_rec": []}
         weight_res, blood_res, conts, notify_blood_pressure_contnets = {}, {}, [], []
-        content, level, modi_scheme, thought = "", "", "", "我知道如何回答"
+        content, level, modi_scheme, thought, contact_doctor, visit_verbal_idx = "", "", "", "我知道如何回答", "", ""
         prompt = kwargs.get("prompt")
         chat_history = kwargs["history"]
         intentCode = kwargs["intentCode"]
@@ -1143,6 +1143,8 @@ class Chat_v2:
             notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
             call_120 = blood_res["call_120"]
             is_visit = blood_res["is_visit"]
+            contact_doctor = blood_res['contact_doctor']
+            visit_verbal_idx = blood_res["visit_verbal_idx"]
             # idx = blood_res.get('idx', 0)
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             if blood_res["scene_ending"] and (level == 0 or level == 1):
@@ -1263,6 +1265,8 @@ class Chat_v2:
             "weight_trend_gen": weight_trend_gen,
             "events": notify_blood_pressure_contnets,
             "exercise_video": exercise_video,
+            "contact_doctor":contact_doctor,
+            "visit_verbal_idx": visit_verbal_idx,
             **_appendData,
         }
         chat_history.append(
