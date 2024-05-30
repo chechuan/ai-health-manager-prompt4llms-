@@ -250,7 +250,7 @@ class expertModel:
             else:
                 return "scheme_no_change"
 
-        cur_date = kwargs["promptParam"].get("cur_date", "")
+        cur_date = kwargs["promptParam"].get("cur_date", "").split(' ')[0]
         weight = kwargs["promptParam"].get("weight", "")
         query = ""
         if len(kwargs["history"]) > 0:
@@ -263,8 +263,17 @@ class expertModel:
             logger.debug("进入体重方案修改流程。。。")
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
+            current_date = datetime.now().date()
+            weights = ['74.6kg', '75kg', '75.3kg', '75.5kg', '75.8kg', '75.9kg', '75.4kg', '75.7kg', '75.4kg',
+                       '75.6kg', '75.3kg', '75.6kg', '75.3kg']
+            weight_msg = ''
+            for i in range(len(weights)):
+                d = current_date - timedelta(days=len(weights) - i)
+                weight_msg += f"{d}: {weights[i]}\n"
+
+
             prompt = fat_reduction_prompt.format(
-                cur_date, weight, "减脂效果不好，怎么改善？"
+                weight_msg, cur_date, weight, "减脂效果不好，怎么改善？"
             )
             logger.debug("进入体重出方案流程。。。")
         messages = [{"role": "user", "content": prompt}]
@@ -967,7 +976,7 @@ class expertModel:
         else:  # 正常
             level = 0
             thought1, content1 = broadcast_gen(bps_msg=bp_msg)
-            thought, content = blood_pressure_inquiry(history, query, iq_n=6)
+            thought, content = blood_pressure_inquiry(history, query, iq_n=5)
             if not history:
                 contents = [
                     content1,
