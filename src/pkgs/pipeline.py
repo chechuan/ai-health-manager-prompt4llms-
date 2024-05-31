@@ -700,7 +700,7 @@ class Chat_v2:
         if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
             "weight_meas",
             "blood_meas",
-            "blood_meas_with_doctor_recommend",
+            # "blood_meas_with_doctor_recommend",
         ]:
             logger.debug(
                 f"not support current event {intentCode}, change intentCode to other."
@@ -1022,22 +1022,22 @@ class Chat_v2:
                         "intentCode": "aigc_functions_doctor_recommend",
                     }
                 )
-        elif intentCode.startswith("blood_meas"):
-            _content = (
-                chat_history[-1]["function_call"]["arguments"]
-                if chat_history[-1].get("function_call")
-                else None
-            )
-            if ret_result.get("init_intent"):
-                _append_content = "请问是否需要我帮您找一位医生？"
-                appendData["contents"].append(_append_content)
-                chat_history.append(
-                    {
-                        "role": "assistant",
-                        "content": _append_content,
-                        "intentCode": "aigc_functions_doctor_recommend",
-                    }
-                )
+        # elif intentCode.startswith("blood_meas"):
+        #     _content = (
+        #         chat_history[-1]["function_call"]["arguments"]
+        #         if chat_history[-1].get("function_call")
+        #         else None
+        #     )
+        #     if ret_result.get("init_intent"):
+        #         _append_content = "请问是否需要我帮您找一位医生？"
+        #         appendData["contents"].append(_append_content)
+        #         chat_history.append(
+        #             {
+        #                 "role": "assistant",
+        #                 "content": _append_content,
+        #                 "intentCode": "aigc_functions_doctor_recommend",
+        #             }
+        #         )
 
     async def complete(
         self, mid_vars: List[object], tool: str = "convComplete", **kwargs
@@ -1154,26 +1154,26 @@ class Chat_v2:
                 intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
-        elif intentCode == "blood_meas_with_doctor_recommend":
-            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
-            content = blood_res["contents"][0]
-            conts = blood_res["contents"][1:]
-            sch = blood_res["scheme_gen"]
-            thought = blood_res["thought"]
-            level = blood_res["level"]
-            blood_trend_gen = blood_res["blood_trend_gen"]
-            notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
-            call_120 = blood_res["call_120"]
-            is_visit = blood_res["is_visit"]
-            # idx = blood_res.get('idx', 0)
-            tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
-            if blood_res["scene_ending"]:
-                conts.append(
-                    "我建议您联系家庭医生对你进行后续健康服务，我现在帮您邀请家庭医生吧？"
-                )
-                intentCode = "assert_whether_contact_family_doctor"
-            notify_blood_pressure_contnets = blood_res.get("events", [])
-            exercise_video = blood_res.get("exercise_video", False)
+        # elif intentCode == "blood_meas_with_doctor_recommend":
+        #     blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+        #     content = blood_res["contents"][0]
+        #     conts = blood_res["contents"][1:]
+        #     sch = blood_res["scheme_gen"]
+        #     thought = blood_res["thought"]
+        #     level = blood_res["level"]
+        #     blood_trend_gen = blood_res["blood_trend_gen"]
+        #     notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
+        #     call_120 = blood_res["call_120"]
+        #     is_visit = blood_res["is_visit"]
+        #     # idx = blood_res.get('idx', 0)
+        #     tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+        #     if blood_res["scene_ending"]:
+        #         conts.append(
+        #             "我建议您联系家庭医生对你进行后续健康服务，我现在帮您邀请家庭医生吧？"
+        #         )
+        #         intentCode = "assert_whether_contact_family_doctor"
+        #     notify_blood_pressure_contnets = blood_res.get("events", [])
+        #     exercise_video = blood_res.get("exercise_video", False)
         elif intentCode in [
             "report_interpretation_chat",
             "report_interpretation_chat_with_doctor_recommend",
