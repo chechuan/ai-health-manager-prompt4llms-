@@ -449,7 +449,7 @@ class expertModel:
 
             return thought, content
 
-        thought, content = blood_pressure_inquiry(history, iq_n=5)
+        thought, content = blood_pressure_inquiry(history, iq_n=4)
 
         if "？" in content or "?" in content:  # 问诊
             return {
