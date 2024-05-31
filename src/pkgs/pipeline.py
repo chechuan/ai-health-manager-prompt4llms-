@@ -466,6 +466,11 @@ class Chat_v2:
             messages = [{"role": "system", "content": ext_info}] + messages
 
         logger.debug(f"闲聊 LLM Input:\n{messages}")
+        if not messages:
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."}, 
+                {"role": "user", "content": "你好"}
+            ]
         content = callLLM("", messages, temperature=0.7, top_p=0.45)
         logger.debug(f"闲聊 LLM Output: {content}")
         self.update_mid_vars(
