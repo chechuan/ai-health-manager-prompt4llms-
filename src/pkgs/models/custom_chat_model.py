@@ -132,6 +132,7 @@ class CustomChatAuxiliary(CustomChatModel):
         self, **kwargs
     ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
+        slot_dict={'空腹': 'fasting', '早餐后2h': 'breakfast2h', '午餐后2h': 'lunch2h', '晚餐后2h': 'dinner2h'}
         history = [
             i for i in kwargs["history"] if i.get("intentCode") == "glucose_consultation"
         ]
@@ -163,17 +164,18 @@ class CustomChatAuxiliary(CustomChatModel):
         for time in ['空腹', '早餐后2h', '午餐后2h', '晚餐后2h']:
             result += '|' + time + '|'
             for date in data.keys():
-                result += data[date][time] + '|'
+                t_e = slot_dict[time]
+                result += data[date][t_e] + '|'
             result += '\n'
         
         prompt_vars = {
-            "age": pro.get("age", ''),
-            "gender": pro.get("gender", ''),
+            "age": pro.get("askAge", ''),
+            "gender": pro.get("askSix", ''),
             "disease": pro.get("disease", []),
             "glucose_t": pro.get("glucose_t", ''),
             "glucose_message": result,
             "recent_day": pro.get("currentDate", ''),
-            "recent_time": pro.get("currentTime", ''),
+            "recent_time": pro.get("current_gl_solt", ''),
             "gl": pro.get("gl", '')
         }
         
