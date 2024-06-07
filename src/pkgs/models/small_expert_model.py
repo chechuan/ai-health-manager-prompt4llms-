@@ -1811,7 +1811,8 @@ class expertModel:
         data = pro.get("glucose", {})
         gl = pro.get("gl", '')
         gl_code = pro.get("gl_code",'')
-        recent_time = pro.get("currentTime", '')
+        user_info = pro.get("user_info",{})
+        recent_time = pro.get("current_gl_solt", '')
         # 组装步骤2
         result = '|血糖测量时段|'
         for date in data.keys():
@@ -1906,14 +1907,14 @@ class expertModel:
             "{glucose_message}\n"
             )
             prompt_vars_pc = {
-                "age": pro.get("age", ''),
-                "gender": pro.get("gender", ''),
-                "disease": pro.get("disease", []),
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease": user_info.get("disease", []),
                 "glucose_t": pro.get("glucose_t", ''),
                 "glucose_message": result,
-                "height": pro.get("height", ''),
-                "weight": pro.get("weight", ''),
-                "habits": pro.get("habits", '')
+                "height": user_info.get("height", ''),
+                "weight": user_info.get("weight", ''),
+                "habits": user_info.get("habits", '')
             }
                 
             sys_prompt_pc = prompt_template_pc.format(**prompt_vars_pc)
@@ -1949,14 +1950,14 @@ class expertModel:
             "{glucose_message}\n"
         )
         prompt_vars_suggest = {
-            "age": pro.get("age", ''),
-            "gender": pro.get("gender", ''),
-            "disease": pro.get("disease", []),
+            "age": user_info.get("age", ''),
+            "gender": user_info.get("gender", ''),
+            "disease": user_info.get("disease", []),
             "glucose_t": pro.get("glucose_t", ''),
             "glucose_message": result,
-            "height": pro.get("height", ''),
-            "weight": pro.get("weight", ''),
-            "habits": pro.get("habits", '')
+            "height": user_info.get("height", ''),
+            "weight": user_info.get("weight", ''),
+            "habits": user_info.get("habits", '')
         }
               
         sys_prompt_suggest = prompt_template_suggest.format(**prompt_vars_suggest)
