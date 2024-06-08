@@ -1160,14 +1160,16 @@ class Chat_v2:
             notify_blood_pressure_contnets = blood_res.get("events", [])
             exercise_video = blood_res.get("exercise_video", False)
         # todo
+        elif intentCode == "blood_interact":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if conts:
+                tool = "convComplete"
         elif intentCode == "glucose_consultation":
             mid_vars, conts, (thought, content) = (
                     await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
                 )
-            # idx = blood_res.get('idx', 0)
-          
-
-
         # elif intentCode == "blood_meas_with_doctor_recommend":
         #     blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         #     content = blood_res["contents"][0]

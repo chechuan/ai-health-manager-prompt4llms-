@@ -30,6 +30,7 @@ local:
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
         glucose_consultation: 0.0.1
+        blood_interact: 0.0.1
         
     character:
     tool:
@@ -105,6 +106,7 @@ test:
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
         glucose_consultation: 0.0.1
+        blood_interact: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
