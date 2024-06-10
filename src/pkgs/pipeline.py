@@ -1164,8 +1164,8 @@ class Chat_v2:
             mid_vars, conts, (thought, content) = (
                     await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
                 )
-            if conts:
-                tool = "convComplete"
+            if len(conts)==0:
+                tool = "askHuman"
         elif intentCode == "glucose_consultation":
             mid_vars, conts, (thought, content) = (
                     await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)

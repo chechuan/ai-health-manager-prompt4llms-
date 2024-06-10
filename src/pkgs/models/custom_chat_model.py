@@ -389,7 +389,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 frequency_penalty=0.5,
                 stream=False,
             )
-            thought, add_content = self.__parse_response__(content) 
+            add_thought, add_content = self.__parse_response__(content) 
             add_str = '我给您匹配一个降压小妙招，您可以试一下。'
             conts = [add_content,add_str]
 
