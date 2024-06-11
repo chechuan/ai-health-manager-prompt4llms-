@@ -17,6 +17,7 @@ import json5
 import openai
 from fastapi.exceptions import ValidationException
 from requests import Session
+import time
 
 from src.utils.api_protocal import (
     USER_PROFILE_KEY_MAP,
@@ -1144,16 +1145,32 @@ class expertModel:
         logger.debug(
             "健康吃知识问答模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
+        start_time = time.time()
         generate_text = callLLM(
             history=messages,
             max_tokens=1024,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
+            stream=True,
             model="Qwen-72B-Chat",
         )
-        logger.debug("健康吃知识问答模型输出： " + generate_text)
-        yield generate_text
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {'message': text_stream, 'end': False}
+        logger.debug("健康吃知识问答模型输出： " + content)
+        yield {'message': content, 'end': True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
