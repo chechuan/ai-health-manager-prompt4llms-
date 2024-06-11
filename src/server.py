@@ -387,7 +387,7 @@ def create_app():
             # while True:
             async for yield_item in generator:
                 # yield_item = await next(generator)
-                item = {**yield_item["data"]}
+                item = {**yield_item}
                 logger.info(
                     "Output (except mid_vars & backend_history):\n"
                     + json.dumps(item, ensure_ascii=False)
@@ -395,7 +395,7 @@ def create_app():
                 yield format_sse_chat_complete(
                     json.dumps(item, ensure_ascii=False), "delta"
                 )
-                if yield_item["data"]["end"] == True:
+                if yield_item["end"] == True:
                     break
         except Exception as err:
             logger.exception(err)
