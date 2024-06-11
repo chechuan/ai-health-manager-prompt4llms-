@@ -1155,22 +1155,30 @@ class expertModel:
             stream=True,
             model="Qwen-72B-Chat",
         )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {'message': text_stream, 'end': False}
-        logger.debug("健康吃知识问答模型输出： " + content)
-        yield {'message': content, 'end': True}
+
+        async for yield_item in generate_text:
+            try:
+                # yield_item = next(_iterable)
+                yield yield_item
+            except StopIteration as err:
+                break
+
+        # response_time = time.time()
+        # print(f"latency {response_time - start_time:.2f} s -> response")
+        # content = ""
+        # printed = False
+        # for i in generate_text:
+        #     t = time.time()
+        #     msg = i.choices[0].delta.to_dict()
+        #     text_stream = msg.get("content")
+        #     if text_stream:
+        #         if not printed:
+        #             print(f"latency first token {t - start_time:.2f} s")
+        #             printed = True
+        #         content += text_stream
+        #         yield {'message': text_stream, 'end': False}
+        # logger.debug("健康吃知识问答模型输出： " + content)
+        # yield {'message': content, 'end': True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
