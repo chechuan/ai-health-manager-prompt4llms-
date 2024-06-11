@@ -1062,7 +1062,7 @@ class expertModel:
     def is_gather_userInfo(**kwargs):
         """判断是否需要收集用户信息"""
         userInfo = JiaheUserProfile()
-        for i in kwargs:
+        for i in kwargs['serInfo']:
             if kwargs[i]:
                 userInfo[i] = kwargs[i]
         info = ''
