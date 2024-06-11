@@ -1131,7 +1131,7 @@ class expertModel:
 
 
     @staticmethod
-    def eat_health_qa(question):
+    async def eat_health_qa(question):
         messages = [
             {
                 "role": "system",
