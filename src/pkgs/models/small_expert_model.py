@@ -53,6 +53,7 @@ from src.utils.module import (
     dumpJS,
     param_check,
 )
+from src.utils.api_protocal import *
 
 
 class expertModel:
@@ -1058,12 +1059,33 @@ class expertModel:
         return generate_text
 
     @staticmethod
-    def if_gather_userInfo():
+    def is_gather_userInfo(**kwargs):
         """判断是否需要收集用户信息"""
+        userInfo = JiaheUserProfile()
+        for i in kwargs:
+            if kwargs[i]:
+                userInfo[i] = kwargs[i]
+        info = ''
+        his = kwargs['history']
+        history = [
+            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+            for i in his
+        ]
+        his_prompt = "\n".join(
+            [
+                ("assistant" if not i["role"] == "user" else "user")
+                + f": {i['content']}"
+                + f": {i['content']}"
+                for i in history
+            ]
+        )
+
+        for i in userInfo.keys():
+            info += f'{i}：{userInfo[i]}\n'
         messages = [
             {
                 "role": "user",
-                "content": "",
+                "content": jiahe_confirm_collect_userInfo.format(info, his_prompt),
             }
         ]  # + history
         logger.debug(
@@ -1078,6 +1100,10 @@ class expertModel:
             model="Qwen-72B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
+        if '是' in generate_text:
+            yield {'message': True, 'end': True}
+        else:
+            yield {'message': False, 'end': True}
 
     @staticmethod
     def gather_userInfo():
@@ -1135,7 +1161,7 @@ class expertModel:
         messages = [
             {
                 "role": "system",
-                "content": jiahe_eat_health_prompt,
+                "content": jiahe_health_qa_prompt,
             },
             {
                 "role": "user",
@@ -1155,15 +1181,6 @@ class expertModel:
             stream=True,
             model="Qwen-72B-Chat",
         )
-
-
-        # async for yield_item in generate_text:
-        #     try:
-        #         # yield_item = next(_iterable)
-        #         yield yield_item
-        #     except StopIteration as err:
-        #         break
-
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
         content = ""

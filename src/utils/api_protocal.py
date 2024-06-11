@@ -102,6 +102,18 @@ class DrugPlanItem(BaseModel):
     contraindication: str  # 禁忌
     dosage_time: str  # 用药时间
 
+class JiaheUserProfile(BaseModel):
+    age: str = Field("未知", description="年龄")
+    gender: str = Field("未知", description="性别")
+    height: str = Field("未知", description="身高")
+    weight: str = Field("未知", description="体重")
+    manage_object: str = Field("未知", description="管理目标")
+    disease_history: str = Field("未知", description="疾病史")
+    special_diet: str = Field("未知", description="特殊饮食习惯")
+    allergy_food: str = Field("未知", description="过敏食物")
+    taste_preference: str = Field("未知", description="口味偏好")
+    is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
+
 
 class UserProfile(BaseModel):
     age: int = Field(description="年龄", ge=0, le=200)
