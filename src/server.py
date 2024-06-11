@@ -443,7 +443,7 @@ def create_app():
         """收集信息确认接口"""
         try:
             param = await accept_param(request, endpoint="/confirm_collect_userInfo")
-            generator: AsyncGenerator = expertModel.is_gather_userInfo(param)
+            generator: AsyncGenerator = expertModel.is_gather_userInfo(param.get('userInfo', {}), param.get('history', []))
             result = decorate_jiahe_complete(
                 generator
             )

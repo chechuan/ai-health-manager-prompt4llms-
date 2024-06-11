@@ -1059,17 +1059,15 @@ class expertModel:
         return generate_text
 
     @staticmethod
-    def is_gather_userInfo(**kwargs):
+    def is_gather_userInfo(userInfo={}, history=[]):
         """判断是否需要收集用户信息"""
-        userInfo = JiaheUserProfile()
-        for i in kwargs['serInfo']:
-            if kwargs[i]:
-                userInfo[i] = kwargs[i]
-        info = ''
-        his = kwargs['history']
+        user_info = JiaheUserProfile()
+        for i in userInfo:
+            if userInfo[i]:
+                user_info[i] = userInfo[i]
         history = [
             {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-            for i in his
+            for i in history
         ]
         his_prompt = "\n".join(
             [
@@ -1079,9 +1077,9 @@ class expertModel:
                 for i in history
             ]
         )
-
-        for i in userInfo.keys():
-            info += f'{i}：{userInfo[i]}\n'
+        info = ''
+        for i in user_info.keys():
+            info += f'{i}：{user_info[i]}\n'
         messages = [
             {
                 "role": "user",
