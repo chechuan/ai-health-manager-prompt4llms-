@@ -241,14 +241,9 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = [system_message] + messages
         for idx, n in enumerate(messages):
             messages[idx] = n.dict()
-        add_mess = ''
-                
-        if history[-1]['role']=='assistant' and "？" not in history[-1]['content'] and "?" not in history[-1]['content']:
-            prompt_template = self.gsr.get_event_item(intentCode)["process"]       
-            sys_prompt = prompt_template.format(**prompt_vars)
-            add_mess = [{"role": "system", "content": prompt_template}]
+        
 
-        return messages,add_mess
+        return messages
 
     def __chat_auxiliary_diagnosis_summary_diet_rec__(
         self, history: List[Dict]
@@ -348,8 +343,9 @@ class CustomChatAuxiliary(CustomChatModel):
     
     async def __chat_blood_interact__(self, **kwargs) -> ChatMessage:
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-      
-        messages,add_mess = self.__compose_blood_interact_message__(**kwargs)
+        intentCode = kwargs.get("intentCode")
+        pro = kwargs.get("promptParam", {})   
+        messages = self.__compose_blood_interact_message__(**kwargs)
         logger.info(f"Custom Chat 血压初问诊 LLM Input: {dumpJS(messages)}")
         
         valid = True
@@ -367,17 +363,23 @@ class CustomChatAuxiliary(CustomChatModel):
             )
 
         logger.info(f"Custom Chat 血压初问诊 LLM Output: \n{content}")
-        thought, doctor = self.__parse_response__(content)         
-        conts = []
+        thought, doctor = self.__parse_response__(content)
 
-        mid_vars = update_mid_vars(
-            kwargs["mid_vars"],
-            input_text=messages,
-            output_text=content,
-            model=model,
-            key="自定义辅助诊断对话",
-        )
-        if add_mess!='':
+        add_mess = ''
+
+        prompt_vars = {
+            "age": pro.get("askAge", ''),
+            "gender": pro.get("askSix", ''),
+            "disease": pro.get("disease", []),
+            "goal": pro.get("goal", ''),
+            'sbp':  pro.get("sbp", ''),
+            'dbp': pro.get("dbp", ''),      
+        }
+        conts = []     
+        if "？" not in content and "?" not in content:
+            prompt_template = self.gsr.get_event_item(intentCode)["process"]       
+            sys_prompt = prompt_template.format(**prompt_vars)
+            add_mess = [{"role": "system", "content": sys_prompt}]
             content = callLLM(
                 model=model,
                 history=add_mess,
@@ -391,7 +393,16 @@ class CustomChatAuxiliary(CustomChatModel):
             )
             add_thought, add_content = self.__parse_response__(content) 
             add_str = '我给您匹配一个降压小妙招，您可以试一下。'
-            conts = [add_content,add_str]
+            conts = [add_content,add_str]         
+       
+
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"],
+            input_text=messages,
+            output_text=content,
+            model=model,
+            key="自定义辅助诊断对话",
+        )          
 
         return mid_vars, conts, (thought, doctor)
     
