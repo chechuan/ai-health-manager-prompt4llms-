@@ -380,6 +380,30 @@ def create_app():
                 json.dumps(item, ensure_ascii=False), "delta"
             )
 
+    async def decorate_jiahe_complete(
+        generator
+    ) -> AsyncGenerator:
+        try:
+            # while True:
+            async for yield_item in generator:
+                # yield_item = await next(generator)
+                item = {**yield_item["data"]}
+                logger.info(
+                    "Output (except mid_vars & backend_history):\n"
+                    + json.dumps(item, ensure_ascii=False)
+                )
+                yield format_sse_chat_complete(
+                    json.dumps(item, ensure_ascii=False), "delta"
+                )
+                if yield_item["data"]["end"] == True:
+                    break
+        except Exception as err:
+            logger.exception(err)
+            item = make_result(head=600, message=repr(err), end=True)
+            yield format_sse_chat_complete(
+                json.dumps(item, ensure_ascii=False), "delta"
+            )
+
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
@@ -405,8 +429,8 @@ def create_app():
             # _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
             # while True:
 
-            result = decorate_chat_complete(
-                generator, return_mid_vars=False, return_backend_history=True
+            result = decorate_jiahe_complete(
+                generator
             )
         except Exception as err:
             logger.exception(err)
