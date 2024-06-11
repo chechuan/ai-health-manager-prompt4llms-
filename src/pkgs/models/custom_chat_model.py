@@ -243,7 +243,7 @@ class CustomChatAuxiliary(CustomChatModel):
             messages[idx] = n.dict()
         add_mess = ''
                 
-        if len(history)>1:
+        if history[-1]['role']=='assistant' and "？" not in history[-1]['content'] and "?" not in history[-1]['content']:
             prompt_template = self.gsr.get_event_item(intentCode)["process"]       
             sys_prompt = prompt_template.format(**prompt_vars)
             add_mess = [{"role": "system", "content": prompt_template}]
@@ -359,7 +359,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 history=messages,
                 temperature=0,
                 max_tokens=1024,
-                top_p=0.8,
+                top_p=0.5,
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
