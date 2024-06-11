@@ -36,9 +36,11 @@ from PIL import Image, ImageDraw, ImageFont
 from rapidocr_onnxruntime import RapidOCR
 
 from data.constrant import *
+from data.jiahe_prompt import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
+from chat.qwen_chat import Chat
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -1007,6 +1009,151 @@ class expertModel:
                 return bloodPressureLevelResponse(
                     level=level, contents=[content], thought=thought, scene_ending=True
                 ).model_dump()
+
+    @staticmethod
+    def recipe_gen(**kwargs):
+        """食谱内容生成"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]
+        logger.debug(
+            "食谱内容生成模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("食谱内容生成模型输出： " + generate_text)
+        return generate_text
+
+    @staticmethod
+    def recipe_rec_principle(**kwargs):
+        """食谱推荐原则"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "食谱推荐原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("食谱推荐原则模型输出： " + generate_text)
+        return generate_text
+
+    @staticmethod
+    def if_gather_userInfo():
+        """判断是否需要收集用户信息"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "判断是否收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("判断是否收集信息模型输出： " + generate_text)
+
+    @staticmethod
+    def gather_userInfo():
+        """收集用户信息"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("收集信息模型输出： " + generate_text)
+
+    @staticmethod
+    def guess_asking(userInfo, scene, consulation='', question='', foods=''):
+        """猜你想问"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "生成想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("生成想问问题模型输出： " + generate_text)
+        qs = generate_text.strip().split("\n")
+        res = []
+        for q in qs:
+            intent_out = Chat.intent_query()
+            if intent_out['intent_code'] in ["个人饮食方案咨询", "饮食管理方案", "营养问题咨询", "家庭饮食方案咨询"]:  # 饮食子意图
+                res.append(q)
+
+
+    @staticmethod
+    def eat_health_qa(question):
+        messages = [
+            {
+                "role": "system",
+                "content": jiahe_eat_health_prompt,
+            },
+            {
+                "role": "user",
+                "content": question,
+            }
+        ]  # + history
+        logger.debug(
+            "健康吃知识问答模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("健康吃知识问答模型输出： " + generate_text)
+        yield generate_text
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:

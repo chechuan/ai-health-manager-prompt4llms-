@@ -396,6 +396,21 @@ def create_app():
 
     app.post("/test/sync")(_test_sync)
 
+    @app.route("/health_qa", methods=["post"])
+    async def _rules_fat_reduction(request: Request):
+        """健康知识问答"""
+        try:
+            param = await accept_param(request, endpoint="/chat_gen")
+            generator: AsyncGenerator = expertModel.eat_health_qa(param.get("question", ""))
+            result = decorate_chat_complete(
+                generator, return_mid_vars=False, return_backend_history=True
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
         global chat
