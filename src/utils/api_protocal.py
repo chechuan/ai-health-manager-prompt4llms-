@@ -102,6 +102,18 @@ class DrugPlanItem(BaseModel):
     contraindication: str  # 禁忌
     dosage_time: str  # 用药时间
 
+class JiaheUserProfile(BaseModel):
+    age: str = Field("未知", description="年龄")
+    gender: str = Field("未知", description="性别")
+    height: str = Field("未知", description="身高")
+    weight: str = Field("未知", description="体重")
+    manage_object: str = Field("未知", description="管理目标")
+    disease_history: str = Field("未知", description="疾病史")
+    special_diet: str = Field("未知", description="特殊饮食习惯")
+    allergy_food: str = Field("未知", description="过敏食物")
+    taste_preference: str = Field("未知", description="口味偏好")
+    is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
+
 
 class UserProfile(BaseModel):
     age: int = Field(description="年龄", ge=0, le=200)
@@ -384,6 +396,8 @@ class bloodPressureLevelResponse(BaseModel):
     scheme_gen: int = Field(
         0, description="跳转子页面的图标显示在contents中的第几条会话 作为contents的索引"
     )
+    visit_verbal_idx: int = Field(-1, description="上门话术索引")
+    contact_doctor: int = Field(-1, description="联系医生索引")
     scene_ending: bool = Field(False, description="场景结束标志")
     blood_trend_gen: bool = Field(False, description="前端是否显示血压趋势图")
     notifi_daughter_doctor: bool = Field(False, description="通知女儿和医生")
