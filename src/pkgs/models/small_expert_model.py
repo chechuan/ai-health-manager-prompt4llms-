@@ -38,6 +38,7 @@ from rapidocr_onnxruntime import RapidOCR
 
 from data.constrant import *
 from data.jiahe_prompt import *
+from data.jiahe_util import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
@@ -1061,7 +1062,7 @@ class expertModel:
     @staticmethod
     def is_gather_userInfo(userInfo={}, history=[]):
         """判断是否需要收集用户信息"""
-        user_info = JiaheUserProfile()
+        user_info = JiaheUserProfile().model_dump()
         for i in userInfo:
             if userInfo[i]:
                 user_info[i] = userInfo[i]
@@ -1079,13 +1080,13 @@ class expertModel:
         )
         info = ''
         for i in user_info.keys():
-            info += f'{i}：{user_info[i]}\n'
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
         messages = [
             {
                 "role": "user",
                 "content": jiahe_confirm_collect_userInfo.format(info, his_prompt),
             }
-        ]  # + history
+        ]
         logger.debug(
             "判断是否收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
@@ -1099,31 +1100,67 @@ class expertModel:
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if '是' in generate_text:
-            yield {'message': True, 'end': True}
+            return {"response": True}
         else:
-            yield {'message': False, 'end': True}
+            return {"response": False}
 
     @staticmethod
-    def gather_userInfo():
-        """收集用户信息"""
+    def gather_userInfo(userInfo={}, history=[]):
+        """生成收集用户信息问题"""
+        user_info = JiaheUserProfile().model_dump()
+        for i in userInfo:
+            if userInfo[i]:
+                user_info[i] = userInfo[i]
+        history = [
+            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+            for i in history
+        ]
+        his_prompt = "\n".join(
+            [
+                ("assistant" if not i["role"] == "user" else "user")
+                + f": {i['content']}"
+                + f": {i['content']}"
+                for i in history
+            ]
+        )
+        info = ''
+        for i in user_info.keys():
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
         messages = [
             {
                 "role": "user",
-                "content": "",
+                "content": jiahe_collect_userInfo.format(info, his_prompt),
             }
-        ]  # + history
+        ]
         logger.debug(
             "收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
+        start_time = time.time()
         generate_text = callLLM(
             history=messages,
             max_tokens=1024,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
+            stream=True,
             model="Qwen-72B-Chat",
         )
-        logger.debug("收集信息模型输出： " + generate_text)
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {'message': text_stream, 'end': False}
+        logger.debug("收集信息模型输出： " + content)
+        yield {'message': "", 'end': True}
 
     @staticmethod
     def guess_asking(userInfo, scene, consulation='', question='', foods=''):

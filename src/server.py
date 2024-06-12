@@ -438,12 +438,13 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
-    @app.route("/confirm_collect_userInfo", methods=["post"])
-    async def _confirm_collect_userInfo(request: Request):
-        """收集信息确认接口"""
+    @app.route("/gen_userInfo_question", methods=["post"])
+    async def _gen_userInfo_question(request: Request):
+        """生成收集用户信息问题"""
         try:
-            param = await accept_param(request, endpoint="/confirm_collect_userInfo")
-            generator: AsyncGenerator = expertModel.is_gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+            param = await accept_param(request, endpoint="/gen_userInfo_question")
+            generator: AsyncGenerator = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+
             result = decorate_jiahe_complete(
                 generator
             )
@@ -452,6 +453,26 @@ def create_app():
             result = yield_result(head=600, msg=repr(err), items=param)
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/confirm_collect_userInfo", methods=["post"])
+    async def _confirm_collect_userInfo(request: Request):
+        """收集信息确认接口"""
+        try:
+            param = await accept_param(request, endpoint="/confirm_collect_userInfo")
+            item = expertModel.is_gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+
+            result = make_result(items=item)
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+
+        finally:
+            return result
 
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
