@@ -1192,7 +1192,7 @@ class expertModel:
 
 
     @staticmethod
-    async def eat_health_qa(question):
+    async def eat_health_qa(query):
         messages = [
             {
                 "role": "system",
@@ -1200,7 +1200,7 @@ class expertModel:
             },
             {
                 "role": "user",
-                "content": question,
+                "content": query,
             }
         ]  # + history
         logger.debug(

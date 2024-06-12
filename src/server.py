@@ -425,10 +425,7 @@ def create_app():
         """健康知识问答"""
         try:
             param = await accept_param(request, endpoint="/health_qa")
-            generator: AsyncGenerator = expertModel.eat_health_qa(param.get("question", ""))
-            # _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
-            # while True:
-
+            generator: AsyncGenerator = expertModel.eat_health_qa(param.get("query", ""))
             result = decorate_jiahe_complete(
                 generator
             )
@@ -444,7 +441,6 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_userInfo_question")
             generator: AsyncGenerator = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
-            # res = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
             result = decorate_jiahe_complete(
                 generator
             )
