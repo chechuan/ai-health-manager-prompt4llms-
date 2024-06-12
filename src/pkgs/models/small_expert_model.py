@@ -1105,7 +1105,7 @@ class expertModel:
             return {"response": False}
 
     @staticmethod
-    def gather_userInfo(userInfo={}, history=[]):
+    async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         user_info = JiaheUserProfile().model_dump()
         for i in userInfo:

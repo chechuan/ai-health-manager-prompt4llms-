@@ -444,7 +444,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_userInfo_question")
             generator: AsyncGenerator = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
-
+            # res = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
             result = decorate_jiahe_complete(
                 generator
             )
