@@ -102,6 +102,7 @@ class DrugPlanItem(BaseModel):
     contraindication: str  # 禁忌
     dosage_time: str  # 用药时间
 
+
 class JiaheUserProfile(BaseModel):
     age: str = Field("未知", description="年龄")
     gender: str = Field("未知", description="性别")
@@ -120,6 +121,10 @@ class UserProfile(BaseModel):
     gender: Literal["男", "女"] = Field(description="性别", examples=["男", "女"])
     height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
+    weight_evaluation: Optional[str] = Field(
+        None, description="体重评价", examples=["正常"]
+    )
+    bmi: Union[None, float] = None
     disease_history: Union[None, List[str]] = []  # 疾病史
     allergic_history: Union[None, List[str]] = []  # 过敏史
     surgery_history: Union[None, List[str]] = []  # 手术史
@@ -131,6 +136,10 @@ class UserProfile(BaseModel):
     )
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
     traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
+    traditional_chinese_medicine_constitution: Optional[str] = None  # 中医体质
+    dietary_habits: Optional[str] = Field(
+        None, description="饮食习惯", examples=["少食"]
+    )  # 饮食习惯
     body_temperature: Optional[str] = None  # 体温(摄氏度)
     respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
     pulse_rate: Optional[str] = None  # 脉搏(次/分)
@@ -138,12 +147,23 @@ class UserProfile(BaseModel):
     systolic_blood_pressure: Optional[Union[float, int]] = None  # 收缩压(mmHg)
     chief_complaint: Optional[str] = None  # 主诉
     history_of_present_illness: Optional[str] = None  # 现病史
+    family_history_of_disease: Optional[str] = None  # 家族疾病史
     past_history_of_present_illness: Optional[str] = None  # 既往史
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
     nation: str = Field(None, description="民族", example=["汉族"])
     daily_physical_labor_intensity: Optional[str] = Field(
         None, description="日常体力劳动水平", examples=["中"]
+    )
+    mood_swings: Optional[str] = Field(
+        None, description="情绪波动", examples=["正常波动"]
+    )
+    # 运动风险等级
+    motion_risk_level: Optional[str] = Field(
+        None, description="运动风险等级", examples=["正常"]
+    )
+    exercise_intensity: Optional[str] = Field(
+        None, description="运动强度", examples=["正常强度"]
     )
 
 
