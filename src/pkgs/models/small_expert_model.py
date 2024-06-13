@@ -1770,23 +1770,36 @@ class expertModel:
         return content
     
     @clock
-    def health_literature_generation(self, param: Dict) -> str:
+    def health_literature_interact(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
-        history = []
-        sys_prompt = self.gsr.prompt_meta_data["event"][
-            "blood_pressure_trend_analysis"
-        ]["description"]
-        history.append({"role": "system", "content": sys_prompt})
-
-        # pro = param
-        # data = pro.get("glucose", {})
-        # gl = pro.get("gl", '')
-        # gl_code = pro.get("gl_code",'')
-        # user_info = pro.get("user_info",{})
-        # recent_time = pro.get("current_gl_solt", '')
-        # content = f"从{tst}至{ted}期间\n"
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["process"]
+        pro = param
+        user_info = pro.get("user_info",{})
         
-        # return content
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease_history": user_info.get("disease_history", ''),
+                "family_history": user_info.get("family_history", ''),
+                "messages":result,
+                "emotion": user_info.get("emotion", ''),
+                "food": user_info.get("food", ''),
+                "bmi": user_info.get("bmi", ''),
+                "sport_level": user_info.get("sport_level", '')
+
+            }      
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        response = callLLM(
+            history=history, temperature=0.8, top_p=1, model=model, stream=True
+        )
+        pc_message = accept_stream_response(response, verbose=False) 
+        return pc_message
     
     @clock
     def health_key_extraction(self, param: Dict) -> str:
