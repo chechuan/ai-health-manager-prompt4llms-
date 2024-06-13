@@ -5,44 +5,45 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-from datetime import datetime
-import sys
-import json
 import asyncio
+import json
+import sys
 import traceback
+from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator, Union
+
+import uvicorn
+from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
-import uvicorn
-from pathlib import Path
-from fastapi import FastAPI, Response, Request
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 
 from chat.qwen_chat import Chat
-from src.pkgs.models.small_expert_model import expertModel, Agents
+from src.pkgs.models.small_expert_model import Agents, expertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
+    AigcFunctionsDoctorRecommendRequest,
+    AigcFunctionsRequest,
     AigcFunctionsResponse,
     BaseResponse,
     RolePlayRequest,
-    AigcFunctionsRequest,
     TestRequest,
-    AigcFunctionsDoctorRecommendRequest,
 )
 from src.utils.Logger import logger
 from src.utils.module import (
-    MakeFastAPIOffline,
     InitAllResource,
+    MakeFastAPIOffline,
     NpEncoder,
+    build_aigc_functions_response,
+    construct_naive_response_generator,
     curr_time,
     dumpJS,
     format_sse_chat_complete,
     response_generator,
-    build_aigc_functions_response,
-    construct_naive_response_generator,
 )
 
 
@@ -107,20 +108,20 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
 
 
 def mount_rule_endpoints(app: FastAPI):
-    @app.route("/rules/blood_pressure_level", methods=["post"])
-    async def _rules_blood_pressure_level(request: Request):
-        """计算血压等级及处理规则"""
-        try:
-            param = await async_accept_param_purge(
-                request, endpoint="/rules/blood_pressure_level"
-            )
-            ret = expert_model.tool_rules_blood_pressure_level(**param)
-            ret = make_result(items=ret)
-        except Exception as err:
-            logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
+    # @app.route("/rules/blood_pressure_level", methods=["post"])
+    # async def _rules_blood_pressure_level(request: Request):
+    #     """计算血压等级及处理规则"""
+    #     try:
+    #         param = await async_accept_param_purge(
+    #             request, endpoint="/rules/blood_pressure_level"
+    #         )
+    #         ret = expert_model.tool_rules_blood_pressure_level(**param)
+    #         ret = make_result(items=ret)
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         ret = make_result(head=500, msg=repr(err))
+    #     finally:
+    #         return ret
 
     @app.route("/rules/emotions", methods=["post"])
     async def _rules_enotions_level(request: Request):
@@ -173,6 +174,51 @@ def mount_rule_endpoints(app: FastAPI):
                 request, endpoint="/health/blood_pressure_trend_analysis"
             )
             ret = expert_model.health_blood_pressure_trend_analysis(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
+    async def _health_blood_glucose_trend_analysis(request: Request):
+        """血糖趋势分析"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_glucose_trend_analysis"
+            )
+            ret = expert_model.health_blood_glucose_trend_analysis(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/key_extraction", methods=["post"])
+    async def _key_extraction(request: Request):
+        """关键词抽取"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/key_extraction"
+            )
+            ret = expert_model.health_key_extraction(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/literature_interact", methods=["post"])
+    async def _key_extraction(request: Request):
+        """关键词抽取"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/literature_interact"
+            )
+            ret = expert_model.health_literature_interact(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -379,6 +425,30 @@ def create_app():
                 json.dumps(item, ensure_ascii=False), "delta"
             )
 
+    async def decorate_jiahe_complete(
+        generator
+    ) -> AsyncGenerator:
+        try:
+            # while True:
+            async for yield_item in generator:
+                # yield_item = await next(generator)
+                item = {**yield_item}
+                logger.info(
+                    "Output (except mid_vars & backend_history):\n"
+                    + json.dumps(item, ensure_ascii=False)
+                )
+                yield format_sse_chat_complete(
+                    json.dumps(item, ensure_ascii=False), "delta"
+                )
+                if yield_item["end"] == True:
+                    break
+        except Exception as err:
+            logger.exception(err)
+            item = make_result(head=600, message=repr(err), end=True)
+            yield format_sse_chat_complete(
+                json.dumps(item, ensure_ascii=False), "delta"
+            )
+
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
@@ -394,6 +464,71 @@ def create_app():
     app.get("/", response_model=BaseResponse, summary="swagger 文档")(document)
 
     app.post("/test/sync")(_test_sync)
+
+    @app.route("/health_qa", methods=["post"])
+    async def _health_qa(request: Request):
+        """健康知识问答"""
+        try:
+            param = await accept_param(request, endpoint="/health_qa")
+            generator: AsyncGenerator = expertModel.eat_health_qa(param.get("query", ""))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/gen_userInfo_question", methods=["post"])
+    async def _gen_userInfo_question(request: Request):
+        """生成收集用户信息问题"""
+        try:
+            param = await accept_param(request, endpoint="/gen_userInfo_question")
+            generator: AsyncGenerator = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/gen_diet_principle", methods=["post"])
+    async def _gen_diet_principle(request: Request):
+        """饮食调理原则接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_diet_principle")
+            generator: AsyncGenerator = expertModel.gen_diet_principle(param.get('cur_date', ''), param.get('location', ''), param.get('history', []), param.get('userInfo', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/confirm_collect_userInfo", methods=["post"])
+    async def _confirm_collect_userInfo(request: Request):
+        """收集信息确认接口"""
+        try:
+            param = await accept_param(request, endpoint="/confirm_collect_userInfo")
+            item = expertModel.is_gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+
+            result = make_result(items=item)
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+
+        finally:
+            return result
 
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):

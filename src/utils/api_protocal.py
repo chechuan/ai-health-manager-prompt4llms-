@@ -6,9 +6,10 @@
 @Contact :   1627635056@qq.com
 """
 
-from typing import Any, Dict, List, Literal, Tuple, Union, Optional
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+
 from fastapi import Body
+from pydantic import BaseModel, Field
 
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
@@ -100,6 +101,18 @@ class DrugPlanItem(BaseModel):
     precautions: str  # 注意事项
     contraindication: str  # 禁忌
     dosage_time: str  # 用药时间
+
+class JiaheUserProfile(BaseModel):
+    age: str = Field("未知", description="年龄")
+    gender: str = Field("未知", description="性别")
+    height: str = Field("未知", description="身高")
+    weight: str = Field("未知", description="体重")
+    manage_object: str = Field("未知", description="管理目标")
+    disease: str = Field("未知", description="现患疾病")
+    special_diet: str = Field("未知", description="特殊饮食习惯")
+    allergy_food: str = Field("未知", description="过敏食物")
+    taste_preference: str = Field("未知", description="口味偏好")
+    is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
 
 
 class UserProfile(BaseModel):
@@ -358,10 +371,37 @@ class DoctorInfo(BaseModel):
     doctor_name: str = Field(..., description="医生姓名")
     doctor_introduction: str = Field(None, description="医生信息")
     doctor_specialty: str = Field(None, description="医生擅长")
+    organization_name: str = Field(None, description="机构名称")
+    consultation_department: str = Field(None, description="出诊科室")
+    gender: str = Field(None, description="性别")
+    doctor_title: str = Field(None, description="医生职称")
 
     def __str__(self) -> str:
         return (
             f"姓名: {self.doctor_name}\n"
             f"医生信息:{self.doctor_introduction}\n"
-            f"医生擅长:{self.doctor_specialty}"
+            f"医生擅长:{self.doctor_specialty}\n"
+            f"机构名称: {self.organization_name}\n"
+            f"出诊科室: {self.consultation_department}\n"
+            f"性别: {self.gender}\n"
+            f"医生职称: {self.doctor_title}\n"
         )
+
+
+class bloodPressureLevelResponse(BaseModel):
+    level: int = Field(..., description="血压等级")
+    contents: List[str] = Field([], description="要返回的话术")
+    idx: int = Field(0, description="未知")
+    thought: str = Field("", description="生成思考的内容")
+    scheme_gen: int = Field(
+        0, description="跳转子页面的图标显示在contents中的第几条会话 作为contents的索引"
+    )
+    visit_verbal_idx: int = Field(-1, description="上门话术索引")
+    contact_doctor: int = Field(-1, description="联系医生索引")
+    scene_ending: bool = Field(False, description="场景结束标志")
+    blood_trend_gen: bool = Field(False, description="前端是否显示血压趋势图")
+    notifi_daughter_doctor: bool = Field(False, description="通知女儿和医生")
+    call_120: bool = Field(False, description="是否呼叫120")
+    is_visit: bool = Field(False, description="是否上门")
+    exercise_video: bool = Field(False, description="是否显示锻炼视频")
+    events: List[Dict] = Field([], description="后续跟随事件")
