@@ -1802,6 +1802,43 @@ class expertModel:
         return pc_message
     
     @clock
+    def health_literature_generation(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["constraint"]
+        pro = param
+        user_info = pro.get("user_info",{})
+        programme = pro.get("programme",{})
+        
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease_history": user_info.get("disease_history", ''),
+                "family_history": user_info.get("family_history", ''),
+                "messages":result,
+                "emotion": user_info.get("emotion", ''),
+                "food": user_info.get("food", ''),
+                "bmi": user_info.get("bmi", ''),
+                "sport_level": user_info.get("sport_level", ''),
+                "eat": programme.get("eat",''),
+                "move": programme.get("move",''),
+                "fun": programme.get("fun",''),
+                "change": programme.get("change",''),
+                "diagnostic_results": pro.get("diagnostic_results",'')
+            }      
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        response = callLLM(
+            history=history, temperature=0.8, top_p=1, model=model, stream=True
+        )
+        pc_message = accept_stream_response(response, verbose=False) 
+        return pc_message
+    
+    @clock
     def health_key_extraction(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param['history']
