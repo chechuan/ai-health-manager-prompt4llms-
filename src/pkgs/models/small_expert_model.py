@@ -2043,7 +2043,7 @@ class expertModel:
         history = []
         history.append({"role": "system", "content": sys_prompt})
         response = callLLM(
-            history=history, temperature=0.8, top_p=1, model=model, stream=True
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=True
         )
         pc_message = accept_stream_response(response, verbose=False) 
         pc_message =pc_message.replace("\n", "")
@@ -2082,7 +2082,7 @@ class expertModel:
         history = []
         history.append({"role": "system", "content": sys_prompt})
         response = callLLM(
-            history=history, temperature=0.8, top_p=1, model=model, stream=True
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=True
         )
         pc_message = accept_stream_response(response, verbose=False) 
         pc_message =pc_message.replace("\n", "")
