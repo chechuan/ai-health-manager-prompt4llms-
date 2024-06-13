@@ -450,6 +450,21 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/gen_diet_principle", methods=["post"])
+    async def _gen_diet_principle(request: Request):
+        """饮食调理原则接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_diet_principle")
+            generator: AsyncGenerator = expertModel.gen_diet_principle(param.get('cur_date', ''), param.get('location', ''), param.get('history', []), param.get('userInfo', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/confirm_collect_userInfo", methods=["post"])
     async def _confirm_collect_userInfo(request: Request):
         """收集信息确认接口"""
