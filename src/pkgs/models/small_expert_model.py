@@ -10,6 +10,7 @@ import json
 import random
 import re
 import sys
+import time
 from os.path import basename
 from pathlib import Path
 
@@ -35,10 +36,14 @@ from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
 from rapidocr_onnxruntime import RapidOCR
 
+from chat.qwen_chat import Chat
 from data.constrant import *
 from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
+from data.jiahe_prompt import *
+from data.jiahe_util import *
 from data.test_param.test import testParam
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
+from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -250,7 +255,7 @@ class expertModel:
             else:
                 return "scheme_no_change"
 
-        cur_date = kwargs["promptParam"].get("cur_date", "").split(' ')[0]
+        cur_date = kwargs["promptParam"].get("cur_date", "").split(" ")[0]
         weight = kwargs["promptParam"].get("weight", "")
         query = ""
         if len(kwargs["history"]) > 0:
@@ -264,13 +269,25 @@ class expertModel:
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
             current_date = datetime.now().date()
-            weights = ['74.6kg', '75kg', '75.3kg', '75.5kg', '75.8kg', '75.9kg', '75.4kg', '75.7kg', '75.4kg',
-                       '75.6kg', '75.3kg', '75.6kg', '75.3kg']
-            weight_msg = ''
+            weights = [
+                "74.6kg",
+                "75kg",
+                "75.3kg",
+                "75.5kg",
+                "75.8kg",
+                "75.9kg",
+                "75.4kg",
+                "75.7kg",
+                "75.4kg",
+                "75.6kg",
+                "75.3kg",
+                "75.6kg",
+                "75.3kg",
+            ]
+            weight_msg = ""
             for i in range(len(weights)):
                 d = current_date - timedelta(days=len(weights) - i)
                 weight_msg += f"{d}: {weights[i]}\n"
-
 
             prompt = fat_reduction_prompt.format(
                 weight_msg, cur_date, weight, "减脂效果不好，怎么改善？"
@@ -480,6 +497,7 @@ class expertModel:
                 "is_visit": False,
                 "events": [],
             }
+
     @classmethod
     def _fetch_fake_ques_blood_pressure_v2(cls):
         ques_examples = [
@@ -496,7 +514,7 @@ class expertModel:
         thought = e.split("\n")[0].replace("Thought:", "").strip()
         content = e.split("\n")[1].replace("Assistant:", "").strip()
         return thought, content
-    
+
     @staticmethod
     def tool_rules_blood_pressure_level_2(**kwargs) -> dict:
         """计算血压等级
@@ -604,7 +622,7 @@ class expertModel:
                 d = current_date - timedelta(days=len(drug_situ) - i - 1)
                 drug_msg += f"|{d}| {drug_situ[i]}\n"
                 days.append(d)
-            if len(history) >= iq_n:    # 通过总轮数控制结束
+            if len(history) >= iq_n:  # 通过总轮数控制结束
                 t = Template(blood_pressure_scheme_prompt)
                 prompt = t.substitute(
                     bp_msg=bp_message,
@@ -898,7 +916,7 @@ class expertModel:
                         level=level,
                         contact_doctor=0,
                         visit_verbal_idx=0,
-                        #visit_verbal_idx=-1,
+                        # visit_verbal_idx=-1,
                         contents=[
                             content,
                             "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？",
@@ -1007,6 +1025,235 @@ class expertModel:
                 return bloodPressureLevelResponse(
                     level=level, contents=[content], thought=thought, scene_ending=True
                 ).model_dump()
+
+    @staticmethod
+    def recipe_gen(**kwargs):
+        """食谱内容生成"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]
+        logger.debug(
+            "食谱内容生成模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("食谱内容生成模型输出： " + generate_text)
+        return generate_text
+
+    @staticmethod
+    def recipe_rec_principle(**kwargs):
+        """食谱推荐原则"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "食谱推荐原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("食谱推荐原则模型输出： " + generate_text)
+        return generate_text
+
+    @staticmethod
+    def is_gather_userInfo(userInfo={}, history=[]):
+        """判断是否需要收集用户信息"""
+        info, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_confirm_collect_userInfo.format(info, his_prompt),
+            }
+        ]
+        logger.debug(
+            "判断是否收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("判断是否收集信息模型输出： " + generate_text)
+        if "是" in generate_text:
+            return {"result": True}
+        else:
+            return {"result": False}
+
+    @staticmethod
+    async def gather_userInfo(userInfo={}, history=[]):
+        """生成收集用户信息问题"""
+        info, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_collect_userInfo.format(info, his_prompt),
+            }
+        ]
+        logger.debug("收集信息模型输入： " + json.dumps(messages, ensure_ascii=False))
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("收集信息模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    def guess_asking(userInfo, scene, consulation="", question="", foods=""):
+        """猜你想问"""
+        messages = [
+            {
+                "role": "user",
+                "content": "",
+            }
+        ]  # + history
+        logger.debug(
+            "生成猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("生成猜你想问问题模型输出： " + generate_text)
+        qs = generate_text.strip().split("\n")
+        res = []
+        for q in qs:
+            intent_out = Chat.intent_query()
+            if intent_out["intent_code"] in [
+                "个人饮食方案咨询",
+                "饮食管理方案",
+                "营养问题咨询",
+                "家庭饮食方案咨询",
+            ]:  # 饮食子意图
+                res.append(q)
+
+    @staticmethod
+    async def eat_health_qa(query):
+        messages = [
+            {
+                "role": "system",
+                "content": jiahe_health_qa_prompt,
+            },
+            {
+                "role": "user",
+                "content": query,
+            },
+        ]  # + history
+        logger.debug(
+            "健康吃知识问答模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("健康吃知识问答模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    async def gen_diet_principle(cur_date, location, history=[], userInfo={}):
+        """出具饮食调理原则"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_daily_diet_principle_prompt.format(
+                    userInfo, cur_date, location, his_prompt
+                ),
+            }
+        ]  # + history
+        logger.debug(
+            "出具饮食调理原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具饮食调理原则模型输出： " + content)
+        yield {"message": "", "end": True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -2890,14 +3137,19 @@ class Agents:
                 content = dumpJS([])
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
         _event = "饮食原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2911,14 +3163,18 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
         _event = "运动原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2932,7 +3188,7 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
 
@@ -2940,7 +3196,11 @@ class Agents:
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2954,14 +3214,18 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
