@@ -2046,7 +2046,9 @@ class expertModel:
             history=history, temperature=0.8, top_p=1, model=model, stream=True
         )
         pc_message = accept_stream_response(response, verbose=False) 
-        return pc_message
+        pc_message =pc_message.replace("\n", "")
+        pc = pc_message.split(",")
+        return pc
     
     @clock
     def health_literature_generation(self, param: Dict) -> str:
@@ -2083,7 +2085,9 @@ class expertModel:
             history=history, temperature=0.8, top_p=1, model=model, stream=True
         )
         pc_message = accept_stream_response(response, verbose=False) 
-        return pc_message
+        pc_message =pc_message.replace("\n", "")
+        pc = pc_message.split(",")
+        return pc
     
     @clock
     def health_key_extraction(self, param: Dict) -> str:
@@ -2102,8 +2106,13 @@ class expertModel:
         response = callLLM(
             history=history, temperature=0.8, top_p=1, model=model, stream=True
         )
-        pc_message = accept_stream_response(response, verbose=False) 
-        return pc_message
+        pc_message = accept_stream_response(response, verbose=False)
+        pc_message =pc_message.replace("关键字", "")
+        pc_message =pc_message.replace(":", "")
+        pc_message =pc_message.replace("：", "")       
+        pc_message =pc_message.replace("\n", "")
+        pc = pc_message.split("，")
+        return pc
 
     
     @clock
