@@ -1082,9 +1082,9 @@ class expertModel:
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if '是' in generate_text:
-            return {"response": True}
+            return {"result": True}
         else:
-            return {"response": False}
+            return {"result": False}
 
     @staticmethod
     async def gather_userInfo(userInfo={}, history=[]):
