@@ -1770,6 +1770,46 @@ class expertModel:
         return content
     
     @clock
+    def health_literature_generation(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        history = []
+        sys_prompt = self.gsr.prompt_meta_data["event"][
+            "blood_pressure_trend_analysis"
+        ]["description"]
+        history.append({"role": "system", "content": sys_prompt})
+
+        # pro = param
+        # data = pro.get("glucose", {})
+        # gl = pro.get("gl", '')
+        # gl_code = pro.get("gl_code",'')
+        # user_info = pro.get("user_info",{})
+        # recent_time = pro.get("current_gl_solt", '')
+        # content = f"从{tst}至{ted}期间\n"
+        
+        # return content
+    
+    @clock
+    def health_key_extraction(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["description"]
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+            "messages":result
+        }       
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        response = callLLM(
+            history=history, temperature=0.8, top_p=1, model=model, stream=True
+        )
+        pc_message = accept_stream_response(response, verbose=False) 
+        return pc_message
+
+    
+    @clock
     def health_blood_glucose_trend_analysis(self, param: Dict) -> str:
         """血糖趋势分析"""
         slot_dict={'空腹': 'fasting', '早餐后2h': 'breakfast2h', '午餐后2h': 'lunch2h', '晚餐后2h': 'dinner2h'}
