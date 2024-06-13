@@ -108,7 +108,7 @@ class JiaheUserProfile(BaseModel):
     height: str = Field("未知", description="身高")
     weight: str = Field("未知", description="体重")
     manage_object: str = Field("未知", description="管理目标")
-    disease_history: str = Field("未知", description="疾病史")
+    disease: str = Field("未知", description="现患疾病")
     special_diet: str = Field("未知", description="特殊饮食习惯")
     allergy_food: str = Field("未知", description="过敏食物")
     taste_preference: str = Field("未知", description="口味偏好")

@@ -1062,25 +1062,7 @@ class expertModel:
     @staticmethod
     def is_gather_userInfo(userInfo={}, history=[]):
         """判断是否需要收集用户信息"""
-        user_info = JiaheUserProfile().model_dump()
-        for i in userInfo:
-            if userInfo[i]:
-                user_info[i] = userInfo[i]
-        history = [
-            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-            for i in history
-        ]
-        his_prompt = "\n".join(
-            [
-                ("assistant" if not i["role"] == "user" else "user")
-                + f": {i['content']}"
-                + f": {i['content']}"
-                for i in history
-            ]
-        )
-        info = ''
-        for i in user_info.keys():
-            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+        info, his_prompt = get_userInfo_history(userInfo, history)
         messages = [
             {
                 "role": "user",
@@ -1107,25 +1089,7 @@ class expertModel:
     @staticmethod
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
-        user_info = JiaheUserProfile().model_dump()
-        for i in userInfo:
-            if userInfo[i]:
-                user_info[i] = userInfo[i]
-        history = [
-            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-            for i in history
-        ]
-        his_prompt = "\n".join(
-            [
-                ("assistant" if not i["role"] == "user" else "user")
-                + f": {i['content']}"
-                + f": {i['content']}"
-                for i in history
-            ]
-        )
-        info = ''
-        for i in user_info.keys():
-            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+        info, his_prompt = get_userInfo_history(userInfo, history)
         messages = [
             {
                 "role": "user",
@@ -1172,7 +1136,7 @@ class expertModel:
             }
         ]  # + history
         logger.debug(
-            "生成想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
+            "生成猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         generate_text = callLLM(
             history=messages,
@@ -1180,9 +1144,10 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
+            stream=True,
             model="Qwen-72B-Chat",
         )
-        logger.debug("生成想问问题模型输出： " + generate_text)
+        logger.debug("生成猜你想问问题模型输出： " + generate_text)
         qs = generate_text.strip().split("\n")
         res = []
         for q in qs:
@@ -1231,6 +1196,46 @@ class expertModel:
                 content += text_stream
                 yield {'message': text_stream, 'end': False}
         logger.debug("健康吃知识问答模型输出： " + content)
+        yield {'message': "", 'end': True}
+
+    @staticmethod
+    async def gen_diet_principle(cur_date, location, history=[], userInfo={}):
+        """出具饮食调理原则"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt),
+            }
+        ]  # + history
+        logger.debug(
+            "出具饮食调理原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {'message': text_stream, 'end': False}
+        logger.debug("出具饮食调理原则模型输出： " + content)
         yield {'message': "", 'end': True}
 
     @staticmethod
