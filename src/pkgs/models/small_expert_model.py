@@ -10,6 +10,7 @@ import json
 import random
 import re
 import sys
+import time
 from os.path import basename
 from pathlib import Path
 
@@ -17,7 +18,6 @@ import json5
 import openai
 from fastapi.exceptions import ValidationException
 from requests import Session
-import time
 
 from src.utils.api_protocal import (
     USER_PROFILE_KEY_MAP,
@@ -36,13 +36,14 @@ from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
 from rapidocr_onnxruntime import RapidOCR
 
+from chat.qwen_chat import Chat
 from data.constrant import *
+from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.jiahe_prompt import *
 from data.jiahe_util import *
-from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
 from data.test_param.test import testParam
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
-from chat.qwen_chat import Chat
+from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -54,7 +55,6 @@ from src.utils.module import (
     dumpJS,
     param_check,
 )
-from src.utils.api_protocal import *
 
 
 class expertModel:
@@ -255,7 +255,7 @@ class expertModel:
             else:
                 return "scheme_no_change"
 
-        cur_date = kwargs["promptParam"].get("cur_date", "").split(' ')[0]
+        cur_date = kwargs["promptParam"].get("cur_date", "").split(" ")[0]
         weight = kwargs["promptParam"].get("weight", "")
         query = ""
         if len(kwargs["history"]) > 0:
@@ -269,13 +269,25 @@ class expertModel:
         else:
             # query = query if query else "减脂效果不好，怎么改善？"
             current_date = datetime.now().date()
-            weights = ['74.6kg', '75kg', '75.3kg', '75.5kg', '75.8kg', '75.9kg', '75.4kg', '75.7kg', '75.4kg',
-                       '75.6kg', '75.3kg', '75.6kg', '75.3kg']
-            weight_msg = ''
+            weights = [
+                "74.6kg",
+                "75kg",
+                "75.3kg",
+                "75.5kg",
+                "75.8kg",
+                "75.9kg",
+                "75.4kg",
+                "75.7kg",
+                "75.4kg",
+                "75.6kg",
+                "75.3kg",
+                "75.6kg",
+                "75.3kg",
+            ]
+            weight_msg = ""
             for i in range(len(weights)):
                 d = current_date - timedelta(days=len(weights) - i)
                 weight_msg += f"{d}: {weights[i]}\n"
-
 
             prompt = fat_reduction_prompt.format(
                 weight_msg, cur_date, weight, "减脂效果不好，怎么改善？"
@@ -485,6 +497,7 @@ class expertModel:
                 "is_visit": False,
                 "events": [],
             }
+
     @classmethod
     def _fetch_fake_ques_blood_pressure_v2(cls):
         ques_examples = [
@@ -501,7 +514,7 @@ class expertModel:
         thought = e.split("\n")[0].replace("Thought:", "").strip()
         content = e.split("\n")[1].replace("Assistant:", "").strip()
         return thought, content
-    
+
     @staticmethod
     def tool_rules_blood_pressure_level_2(**kwargs) -> dict:
         """计算血压等级
@@ -609,7 +622,7 @@ class expertModel:
                 d = current_date - timedelta(days=len(drug_situ) - i - 1)
                 drug_msg += f"|{d}| {drug_situ[i]}\n"
                 days.append(d)
-            if len(history) >= iq_n:    # 通过总轮数控制结束
+            if len(history) >= iq_n:  # 通过总轮数控制结束
                 t = Template(blood_pressure_scheme_prompt)
                 prompt = t.substitute(
                     bp_msg=bp_message,
@@ -903,7 +916,7 @@ class expertModel:
                         level=level,
                         contact_doctor=0,
                         visit_verbal_idx=0,
-                        #visit_verbal_idx=-1,
+                        # visit_verbal_idx=-1,
                         contents=[
                             content,
                             "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？",
@@ -1081,7 +1094,7 @@ class expertModel:
             model="Qwen-72B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
-        if '是' in generate_text:
+        if "是" in generate_text:
             return {"result": True}
         else:
             return {"result": False}
@@ -1096,9 +1109,7 @@ class expertModel:
                 "content": jiahe_collect_userInfo.format(info, his_prompt),
             }
         ]
-        logger.debug(
-            "收集信息模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
+        logger.debug("收集信息模型输入： " + json.dumps(messages, ensure_ascii=False))
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
@@ -1122,12 +1133,12 @@ class expertModel:
                     print(f"latency first token {t - start_time:.2f} s")
                     printed = True
                 content += text_stream
-                yield {'message': text_stream, 'end': False}
+                yield {"message": text_stream, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {'message': "", 'end': True}
+        yield {"message": "", "end": True}
 
     @staticmethod
-    def guess_asking(userInfo, scene, consulation='', question='', foods=''):
+    def guess_asking(userInfo, scene, consulation="", question="", foods=""):
         """猜你想问"""
         messages = [
             {
@@ -1152,9 +1163,13 @@ class expertModel:
         res = []
         for q in qs:
             intent_out = Chat.intent_query()
-            if intent_out['intent_code'] in ["个人饮食方案咨询", "饮食管理方案", "营养问题咨询", "家庭饮食方案咨询"]:  # 饮食子意图
+            if intent_out["intent_code"] in [
+                "个人饮食方案咨询",
+                "饮食管理方案",
+                "营养问题咨询",
+                "家庭饮食方案咨询",
+            ]:  # 饮食子意图
                 res.append(q)
-
 
     @staticmethod
     async def eat_health_qa(query):
@@ -1166,7 +1181,7 @@ class expertModel:
             {
                 "role": "user",
                 "content": query,
-            }
+            },
         ]  # + history
         logger.debug(
             "健康吃知识问答模型输入： " + json.dumps(messages, ensure_ascii=False)
@@ -1194,9 +1209,9 @@ class expertModel:
                     print(f"latency first token {t - start_time:.2f} s")
                     printed = True
                 content += text_stream
-                yield {'message': text_stream, 'end': False}
+                yield {"message": text_stream, "end": False}
         logger.debug("健康吃知识问答模型输出： " + content)
-        yield {'message': "", 'end': True}
+        yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_diet_principle(cur_date, location, history=[], userInfo={}):
@@ -1205,7 +1220,9 @@ class expertModel:
         messages = [
             {
                 "role": "user",
-                "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt),
+                "content": jiahe_daily_diet_principle_prompt.format(
+                    userInfo, cur_date, location, his_prompt
+                ),
             }
         ]  # + history
         logger.debug(
@@ -1234,9 +1251,9 @@ class expertModel:
                     print(f"latency first token {t - start_time:.2f} s")
                     printed = True
                 content += text_stream
-                yield {'message': text_stream, 'end': False}
+                yield {"message": text_stream, "end": False}
         logger.debug("出具饮食调理原则模型输出： " + content)
-        yield {'message': "", 'end': True}
+        yield {"message": "", "end": True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -2916,14 +2933,19 @@ class Agents:
                 content = dumpJS([])
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_food_principle(self, **kwargs) -> str:
         """饮食原则"""
         _event = "饮食原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2937,14 +2959,18 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_sport_principle(self, **kwargs) -> str:
         """运动原则"""
         _event = "运动原则"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2958,7 +2984,7 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle(self, **kwargs) -> str:
         """情志原则"""
 
@@ -2966,7 +2992,11 @@ class Agents:
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
@@ -2980,14 +3010,18 @@ class Agents:
         )
         return content
 
-    @param_check(check_params=["messages"])
+    # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-        messages = self.__compose_user_msg__("messages", messages=kwargs["messages"])
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
