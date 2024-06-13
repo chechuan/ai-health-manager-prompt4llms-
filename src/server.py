@@ -211,6 +211,20 @@ def mount_rule_endpoints(app: FastAPI):
         finally:
             return ret
         
+    @app.route("/health/literature_interact", methods=["post"])
+    async def _key_extraction(request: Request):
+        """关键词抽取"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/literature_interact"
+            )
+            ret = expert_model.health_literature_interact(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
     @app.route("/health/warning_solutions_early", methods=["post"])
     async def _health_warning_solutions_early(request: Request):
