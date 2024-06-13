@@ -12,6 +12,7 @@ import re
 import sys
 from os.path import basename
 from pathlib import Path
+from unittest import result
 
 import json5
 import openai
