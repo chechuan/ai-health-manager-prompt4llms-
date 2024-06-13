@@ -23,11 +23,11 @@ urllib3==1.26.18
 pysocks
 pretty_errors
 openpyxl
-rapidocr_onnxruntime
-opencv-python-headless
+# rapidocr_onnxruntime
 pdf2image
 pdfminer.six
 Pillow
+opencv-python-headless
 sse_starlette
 shortuuid
 oss2
