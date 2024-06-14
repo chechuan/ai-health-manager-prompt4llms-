@@ -2051,7 +2051,7 @@ class expertModel:
         return pc
     
     @clock
-    async def health_literature_generation(self, param: Dict) -> str:
+    def health_literature_generation(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param['history']
         prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["constraint"]
@@ -2090,7 +2090,7 @@ class expertModel:
         return pc
     
     @clock
-    async def health_key_extraction(self, param: Dict) -> str:
+    def health_key_extraction(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param['history']
         prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["description"]
