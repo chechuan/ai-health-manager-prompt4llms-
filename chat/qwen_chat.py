@@ -246,7 +246,7 @@ class Chat:
             #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-                temperature=0, do_sample=False, stop=['\nThought'])
+                temperature=0, do_sample=False, stop=['\nThought'], model='Qwen-14B-Chat')
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = 0
         if 'Intent:' in  generate_text:
@@ -271,7 +271,7 @@ class Chat:
                 # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-                    temperature=0, do_sample=False, stop=['\nThought'])
+                    temperature=0, do_sample=False, stop=['\nThought'], model='Qwen-14B-Chat')
             logger.debug('子意图模型输出：' + generate_text)
             intentIdx = 0
             if 'Intent:' in  generate_text:
