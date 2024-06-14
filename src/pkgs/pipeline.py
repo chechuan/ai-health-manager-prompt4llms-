@@ -1154,7 +1154,7 @@ class Chat_v2:
             tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
             if blood_res["scene_ending"] and (level == 0 or level == 1):
                 conts.append(
-                    "我建议您联系家庭医生对你进行后续健康服务，我现在帮您邀请家庭医生吧？"
+                    "基于您的生命熵变化，我给您匹配一个降压小妙招，您可以试一下。然后建议联系家庭医生对您进行后续健康服务，我现在帮您邀请在线家庭医生吧。"
                 )
                 intentCode = "assert_whether_contact_family_doctor"
             notify_blood_pressure_contnets = blood_res.get("events", [])
