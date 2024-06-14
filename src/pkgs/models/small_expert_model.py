@@ -2120,7 +2120,7 @@ class expertModel:
         return pc
     
     @clock
-    def health_literature_generation(self, param: Dict) -> str:
+    async def health_literature_generation(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param['history']
         prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["constraint"]
@@ -2150,11 +2150,11 @@ class expertModel:
         sys_prompt = prompt_template.format(**prompt_vars)
         history = []
         history.append({"role": "system", "content": sys_prompt})
-        response = callLLM(
-            history=history, temperature=0.8, top_p=0.5, model=model, stream=True
+        content = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
-        pc_message = accept_stream_response(response, verbose=False) 
-        pc_message =pc_message.replace("\n", "")
+        # pc_message = accept_stream_response(response, verbose=False) 
+        pc_message =content.replace("\n", "")
         pc = pc_message.split(",")
         return pc
     

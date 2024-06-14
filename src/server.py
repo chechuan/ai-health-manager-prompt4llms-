@@ -233,7 +233,7 @@ def mount_rule_endpoints(app: FastAPI):
             param = await async_accept_param_purge(
                 request, endpoint="/health/literature_generation"
             )
-            ret = expert_model.health_literature_generation(param)
+            ret = await expert_model.health_literature_generation(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
