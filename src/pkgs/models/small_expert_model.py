@@ -2130,7 +2130,8 @@ class expertModel:
         
         result = ""
         for item in messages:
-            result += item['role']+":"+item['content']
+            if item.get("role") and item.get("content"):
+                result += item['role']+":"+item["content"]
         prompt_vars = {
                 "age": user_info.get("age", ''),
                 "gender": user_info.get("gender", ''),
