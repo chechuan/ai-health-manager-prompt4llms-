@@ -36,7 +36,7 @@ def callLLM(
     temperature=0.5,
     top_p=0.5,
     max_tokens=512,
-    model: str = "",
+    model: str = "Qwen1.5-32B-Chat",
     stop=[],
     stream=False,
     **kwargs,
