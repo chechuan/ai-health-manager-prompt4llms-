@@ -2112,8 +2112,10 @@ class expertModel:
         pc_message =pc_message.replace(":", "")
         pc_message =pc_message.replace("：", "")       
         pc_message =pc_message.replace("\n", "")
-        pc = pc_message.split("，")
-        return pc
+        import re
+        pc = re.split("[,，]",pc_message)
+        filtered_list = [x for x in pc if x != ""]
+        return filtered_list
 
     
     @clock
