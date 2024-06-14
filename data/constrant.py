@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 
+DEFAULT_MODEL = "Qwen1.5-32B-Chat"
 CACHE_DIR = ".cache"
 DEFAULT_DATA_SOURCE = "语言模型"
 PLAN_MAP = {
