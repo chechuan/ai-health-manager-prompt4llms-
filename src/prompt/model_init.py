@@ -15,6 +15,7 @@ from src.utils.Logger import logger
 from src.utils.module import apply_chat_template, dumpJS
 
 from src.utils.Logger import logger
+from data.constrant import DEFAULT_MODEL
 
 default_model = "Qwen1.5-32B-Chat"
 
@@ -36,7 +37,7 @@ def callLLM(
     temperature=0.5,
     top_p=0.5,
     max_tokens=512,
-    model: str = "",
+    model: str = DEFAULT_MODEL,
     stop=[],
     stream=False,
     **kwargs,
@@ -129,7 +130,7 @@ async def acallLLM(
     temperature=0.5,
     top_p=0.5,
     max_tokens=512,
-    model: str = "",
+    model: str = DEFAULT_MODEL,
     stop=[],
     stream=False,
     **kwargs,
