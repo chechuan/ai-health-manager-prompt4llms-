@@ -492,7 +492,7 @@ def create_app():
         """饮食功效接口"""
         try:
             param = await accept_param(request, endpoint="/gen_daily_diet")
-            generator: AsyncGenerator = expertModel.gen_daily_diet(param.get('diet', ''))
+            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
             result = decorate_jiahe_complete(
                 generator
             )

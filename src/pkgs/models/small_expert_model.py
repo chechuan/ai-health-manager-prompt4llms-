@@ -1294,73 +1294,75 @@ class expertModel:
         logger.debug("一日食物功效模型输出： " + content)
         yield {'message': "", 'end': True}
 
-    @staticmethod
-    async def gen_daily_diet(cur_date, location, diet_principle, reference_daily_diets, history=[], userInfo={}):
-        """个人一日饮食计划"""
-        userInfo, his_prompt = get_userInfo_history(userInfo, history)
-
-        # 1. 生成一日食谱
-        messages = [
-            {
-                "role": "user",
-                "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt, his_prompt),
-            }
-        ]
-        logger.debug(
-            "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            model="Qwen-72B-Chat",
-        )
-
-        # 2. 生成食谱的实物功效
-        messages = [
-            {
-                "role": "user",
-                "content": jiahe_physical_efficacy_prompt.format(generate_text),
-            }
-        ]
-        logger.debug(
-            "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        start_time = time.time()
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            stream=True,
-            model="Qwen-72B-Chat",
-        )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {'message': text_stream, 'end': False}
-        logger.debug("一日食物功效模型输出： " + content)
-        yield {'message': "", 'end': True}
+    # @staticmethod
+    # async def gen_daily_diet(cur_date, location, diet_principle, reference_daily_diets, history=[], userInfo={}):
+    #     """个人一日饮食计划"""
+    #     userInfo, his_prompt = get_userInfo_history(userInfo, history)
+    #
+    #     # 1. 生成一日食谱
+    #     messages = [
+    #         {
+    #             "role": "user",
+    #             "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt, his_prompt),
+    #         }
+    #     ]
+    #     logger.debug(
+    #         "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+    #     )
+    #     generate_text = callLLM(
+    #         history=messages,
+    #         max_tokens=1024,
+    #         top_p=0.9,
+    #         temperature=0.8,
+    #         do_sample=True,
+    #         model="Qwen-72B-Chat",
+    #     )
+    #
+    #     # 2. 生成食谱的实物功效
+    #     messages = [
+    #         {
+    #             "role": "user",
+    #             "content": jiahe_physical_efficacy_prompt.format(generate_text),
+    #         }
+    #     ]
+    #     logger.debug(
+    #         "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+    #     )
+    #     start_time = time.time()
+    #     generate_text = callLLM(
+    #         history=messages,
+    #         max_tokens=1024,
+    #         top_p=0.9,
+    #         temperature=0.8,
+    #         do_sample=True,
+    #         stream=True,
+    #         model="Qwen-72B-Chat",
+    #     )
+    #     response_time = time.time()
+    #     print(f"latency {response_time - start_time:.2f} s -> response")
+    #     content = ""
+    #     printed = False
+    #     for i in generate_text:
+    #         t = time.time()
+    #         msg = i.choices[0].delta.to_dict()
+    #         text_stream = msg.get("content")
+    #         if text_stream:
+    #             if not printed:
+    #                 print(f"latency first token {t - start_time:.2f} s")
+    #                 printed = True
+    #             content += text_stream
+    #             yield {'message': text_stream, 'end': False}
+    #     logger.debug("一日食物功效模型输出： " + content)
+    #     yield {'message': "", 'end': True}
 
     @staticmethod
     async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
         """个人N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
         diet_cont = ''
+        import datetime
         for i in range(days):
+            cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             # 生成一日食谱
             messages = [
                 {
