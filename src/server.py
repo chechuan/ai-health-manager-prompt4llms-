@@ -639,6 +639,36 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/gen_diet_effect", methods=["post"])
+    async def _gen_diet_effect(request: Request):
+        """饮食功效接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_daily_diet")
+            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/guess_asking_intent", methods=["post"])
+    async def _gen_diet_effect(request: Request):
+        """猜你想问饮食咨询接口"""
+        try:
+            param = await accept_param(request, endpoint="/guess_asking_intent")
+            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/confirm_collect_userInfo", methods=["post"])
     async def _confirm_collect_userInfo(request: Request):
         """收集信息确认接口"""
