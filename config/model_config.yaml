@@ -10,6 +10,7 @@ local:
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
         - blood_pressure_trend_analysis # 血压心率趋势分析
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
         - assert_diet_suggest_in_content # 内容中提供饮食建议
@@ -46,6 +47,7 @@ dev:
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
         - blood_pressure_trend_analysis # 血压心率趋势分析
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
         - assert_diet_suggest_in_content # 内容中提供饮食建议
@@ -80,6 +82,7 @@ test:
         - call_schedule_query # 查询日程最终的组装输出
         - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
         - call_schedule_create_reply # 创建日程的回复
+        - blood_glucose_trend_analysis # 血糖趋势分析 
         - call_llm_with_search_engine # 与搜索引擎对话
         - blood_pressure_trend_analysis # 血压心率趋势分析
         - health_warning_solutions_early # 预警解决方案

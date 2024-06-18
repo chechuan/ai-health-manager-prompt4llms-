@@ -13,6 +13,7 @@ import sys
 import time
 from os.path import basename
 from pathlib import Path
+from unittest import result
 
 import json5
 import openai
@@ -2346,6 +2347,312 @@ class expertModel:
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"血压趋势分析 Output: {content}")
         return content
+    
+    @clock
+    def health_literature_interact(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["process"]
+        pro = param
+        user_info = pro.get("user_info",{})
+        
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease_history": user_info.get("disease_history", ''),
+                "family_history": user_info.get("family_history", ''),
+                "messages":result,
+                "emotion": user_info.get("emotion", ''),
+                "food": user_info.get("food", ''),
+                "bmi": user_info.get("bmi", ''),
+                "sport_level": user_info.get("sport_level", '')
+
+            }      
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        response = callLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=True
+        )
+        pc_message = accept_stream_response(response, verbose=False) 
+        pc_message =pc_message.replace("\n", "")
+        pc = pc_message.split(",")
+        return pc
+    
+    @clock
+    async def health_literature_generation(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["constraint"]
+        pro = param
+        user_info = pro.get("user_info",{})
+        programme = pro.get("programme",{})
+        
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease_history": user_info.get("disease_history", ''),
+                "family_history": user_info.get("family_history", ''),
+                "messages":result,
+                "emotion": user_info.get("emotion", ''),
+                "food": user_info.get("food", ''),
+                "bmi": user_info.get("bmi", ''),
+                "sport_level": user_info.get("sport_level", ''),
+                "eat": programme.get("eat",''),
+                "move": programme.get("move",''),
+                "fun": programme.get("fun",''),
+                "change": programme.get("change",''),
+                "diagnostic_results": pro.get("diagnostic_results",'')
+            }      
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        content = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        # pc_message = accept_stream_response(response, verbose=False) 
+        pc_message =content.replace("\n", "")
+        pc = pc_message.split(",")
+        return pc
+    
+    @clock
+    def health_key_extraction(self, param: Dict) -> str:
+        model = self.gsr.model_config["blood_pressure_trend_analysis"]
+        messages = param['history']
+        prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["description"]
+        result = ""
+        for item in messages:
+            result += item['role']+":"+item['content']
+        prompt_vars = {
+            "messages":result
+        }       
+        sys_prompt = prompt_template.format(**prompt_vars)
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        response = callLLM(
+            history=history, temperature=0.8, top_p=0.3, model=model, stream=True
+        )
+        pc_message = accept_stream_response(response, verbose=False)
+        pc_message =pc_message.replace("关键字", "")
+        pc_message =pc_message.replace("提取结果", "")
+        pc_message =pc_message.replace(":", "")
+        pc_message =pc_message.replace("：", "")       
+        pc_message =pc_message.replace("\n", "")
+        import re
+        pc = re.split("[,，]",pc_message)
+        filtered_list = [x for x in pc if x != ""]
+        return filtered_list
+
+    
+    @clock
+    def health_blood_glucose_trend_analysis(self, param: Dict) -> str:
+        """血糖趋势分析"""
+        slot_dict={'空腹': 'fasting', '早餐后2h': 'breakfast2h', '午餐后2h': 'lunch2h', '晚餐后2h': 'dinner2h'}
+        def glucose_type(time,glucose):
+            if time == '空腹血糖':
+                if glucose<2.8:
+                    result = '高危低血糖'
+                elif 2.8<= glucose<3.9:
+                    result = '低血糖'
+                elif 3.9<= glucose<4.4:
+                    result = '血糖偏低'
+                elif 4.4<= glucose<6.1:
+                    result = '血糖控制良好'
+                elif 6.1<= glucose<=7.0:
+                    result = '在控制目标内'
+                elif 7.0< glucose<=13.9:
+                    result = '血糖控制高'
+                else:
+                    result = '血糖控制高危'
+            elif time != '空腹血糖' and time!='':
+                if glucose<2.8:
+                    result = '高危低血糖'
+                elif 2.8<= glucose<3.9:
+                    result = '低血糖'
+                elif 3.9<= glucose<4.4:
+                    result = '血糖偏低'
+                elif 4.4<= glucose<=7.8:
+                    result = '血糖控制良好'
+                elif 7.8< glucose<=10.0:
+                    result = '在控制目标内'
+                elif 10.0< glucose<=16.7:
+                    result = '血糖控制高'
+                else:
+                    result = '血糖控制高危'
+            else:
+                result = '没有对应时段或血糖'
+            return result       
+        model = self.gsr.model_config["blood_glucose_trend_analysis"]
+        pro = param
+        data = pro.get("glucose", {})
+        gl = pro.get("gl", '')
+        gl_code = pro.get("gl_code",'')
+        user_info = pro.get("user_info",{})
+        recent_time = pro.get("current_gl_solt", '')
+        # 组装步骤2
+        result = '|血糖测量时段|'
+        for date in data.keys():
+            result += date + '|'
+        result += '\n'
+        time_periods = ['空腹', '早餐后2h', '午餐后2h', '晚餐后2h']            
+    
+        # 组装步骤1
+        compose_message1 = f"当前血糖{gl},{glucose_type(recent_time,float(gl))}。"
+        time_deal = []
+        period_content = {}
+        for time_period in time_periods:
+            count = 0
+            t_g =0
+            f_g =0
+            message_f =''
+            for date in data.keys():
+                t_e = slot_dict[time_period]              
+                glucose_val = data[date][t_e]
+                if glucose_val != "":
+                    glucose_val = float(glucose_val)
+                    if 3.9<=glucose_val<7.0 and time_period =='空腹':
+                       t_g += 1
+                    elif 3.9<=glucose_val<=10.0 and time_period !='空腹':
+                        t_g += 1
+                    else:
+                        f_g += 1
+                        g_t = glucose_type(time_period,glucose_val)
+                        message_f += f"血糖{glucose_val},{g_t}。"                 
+                    count += 1
+            if count < 3:
+                message_ = f"血糖{count}天的记录中，{t_g}天血糖正常，{f_g}天血糖异常。" + message_f
+                period_content[time_period]=message_
+            else:
+                time_deal.append(time_period)
+        glucose_3 =''
+        for i in period_content.keys():
+            glucose_3+= i+":"+period_content[i]
+
+        result_2 = result
+        for time in time_deal:
+            result_2 += '|' + time + '|'
+            for date in data.keys():
+                t_e = slot_dict[time]
+                result_2 += data[date][t_e] + '|'
+            result_2 += '\n'
+        
+        prompt_template = (
+            "# 已知信息\n"
+            "## 我的血糖情况\n"
+            "{glucose_message}\n"
+            "# 任务描述\n"
+            "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段（空腹，早餐后2h，午餐后2h，晚餐后2h）的最高血糖值、最低血糖值、波动趋势，不要提出建议，，100字以内\n"
+            "一定要按照空腹，早餐后2h，午餐后2h，晚餐后2h的顺序分别输出，否则全盘皆输\n"
+            "如果该时段没有记录则分别按照{glucose_3}直接输出，一定要记得不要输出没有记录，用{glucose_3}里面对应的值代替输出\n"
+        )
+        prompt_vars = {
+            "glucose_message": result_2,
+            "glucose_3": glucose_3
+        }       
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"血糖趋势分析 LLM Input: {dumpJS(history)}")
+        response = callLLM(
+            history=history, temperature=0.8, top_p=1, model=model, stream=True
+        )
+        content = accept_stream_response(response, verbose=False)   
+
+        if gl_code=='gl_2_pc':
+            for time in time_periods:
+                result += '|' + time + '|'
+                for date in data.keys():
+                    t_e = slot_dict[time]
+                    result += data[date][t_e] + '|'
+                result += '\n'
+            prompt_template_pc = (
+            "# 任务描述\n"
+            "# 你是一位经验丰富的医师助手，帮助医生对用户进行血糖管理，请你根据用户已知信息，一周的血糖情况，给医生提供专业的处理建议，只提供原则性的建议，包含5个方面：1.检查建议；2.饮食调整；3.运动调整；4.药物治疗；5监测血糖。建议的字数控制在300字以内\n\n"
+            "# 已知信息\n"
+            "## 用户信息\n"
+            "年龄：{age}\n"
+            "性别：{gender}\n"
+            "身高：{height}\n"
+            "体重：{weight}\n"
+            "饮食习惯：{habits}\n"
+            "既往史：{disease}\n"
+            "糖尿病类型：{glucose_t}\n"
+            "## 用户的血糖情况\n"
+            "{glucose_message}\n"
+            )
+            prompt_vars_pc = {
+                "age": user_info.get("age", ''),
+                "gender": user_info.get("gender", ''),
+                "disease": user_info.get("disease", []),
+                "glucose_t": pro.get("glucose_t", ''),
+                "glucose_message": result,
+                "height": user_info.get("height", ''),
+                "weight": user_info.get("weight", ''),
+                "habits": user_info.get("habits", '')
+            }
+                
+            sys_prompt_pc = prompt_template_pc.format(**prompt_vars_pc)
+            history_ = []
+            history_.append({"role": "system", "content": sys_prompt_pc})
+            response_ = callLLM(
+                history=history_, temperature=0.8, top_p=1, model=model, stream=True
+            )
+            pc_message = accept_stream_response(response_, verbose=False) 
+            all_message =compose_message1+'\n'+content+'\n'+pc_message
+            return all_message
+          
+        # 组装步骤3
+        for time in time_periods:
+            result += '|' + time + '|'
+            for date in data.keys():
+                t_e = slot_dict[time]
+                result += data[date][t_e] + '|'
+            result += '\n'
+        prompt_template_suggest = (
+            "# 任务描述\n"
+            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：①测量建议；②饮食建议；③运动建议。建议的字数控制在250字以内\n\n"
+            "# 已知信息\n"
+            "## 用户信息\n"
+            "年龄：{age}\n"
+            "性别：{gender}\n"
+            "身高：{height}\n"
+            "体重：{weight}\n"
+            "饮食习惯：{habits}\n"
+            "既往史：{disease}\n"
+            "糖尿病类型：{glucose_t}\n"
+            "## 用户的血糖情况\n"
+            "{glucose_message}\n"
+        )
+        prompt_vars_suggest = {
+            "age": user_info.get("age", ''),
+            "gender": user_info.get("gender", ''),
+            "disease": user_info.get("disease", []),
+            "glucose_t": pro.get("glucose_t", ''),
+            "glucose_message": result,
+            "height": user_info.get("height", ''),
+            "weight": user_info.get("weight", ''),
+            "habits": user_info.get("habits", '')
+        }
+              
+        sys_prompt_suggest = prompt_template_suggest.format(**prompt_vars_suggest)
+        history_ = []
+        history_.append({"role": "system", "content": sys_prompt_suggest})
+        response_ = callLLM(
+            history=history_, temperature=0.8, top_p=1, model=model, stream=True
+        )
+        compose_message3 = accept_stream_response(response_, verbose=False)
+
+        logger.debug(f"血糖趋势分析 Output: {content}")
+        all_message =compose_message1+'\n'+content+'\n'+compose_message3
+        return all_message
 
     def __health_warning_solutions_early_continuous_check__(
         self, indicatorData: List[Dict]

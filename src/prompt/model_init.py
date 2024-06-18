@@ -76,7 +76,7 @@ def callLLM(
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
         )
-    # model = default_model
+    model = default_model
     t_st = time.time()
     kwds = {
         "model": model,
@@ -169,7 +169,7 @@ async def acallLLM(
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
         )
-    # model = default_model
+    model = default_model
     t_st = time.time()
     kwds = {
         "model": model,

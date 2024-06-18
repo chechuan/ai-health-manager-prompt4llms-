@@ -180,6 +180,66 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
+    async def _health_blood_glucose_trend_analysis(request: Request):
+        """血糖趋势分析"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_glucose_trend_analysis"
+            )
+            ret = expert_model.health_blood_glucose_trend_analysis(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/key_extraction", methods=["post"])
+    async def _key_extraction(request: Request):
+        """关键词抽取"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/key_extraction"
+            )
+            ret = expert_model.health_key_extraction(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/literature_interact", methods=["post"])
+    async def _key_extraction(request: Request):
+        """关键词抽取"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/literature_interact"
+            )
+            ret = expert_model.health_literature_interact(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/literature_generation", methods=["post"])
+    async def _literature_generation(request: Request):
+        """文献2"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/literature_generation"
+            )
+            ret = await expert_model.health_literature_generation(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
     @app.route("/health/warning_solutions_early", methods=["post"])
     async def _health_warning_solutions_early(request: Request):
