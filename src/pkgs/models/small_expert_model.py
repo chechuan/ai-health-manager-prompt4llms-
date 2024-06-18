@@ -1256,6 +1256,108 @@ class expertModel:
         yield {"message": "", "end": True}
 
     @staticmethod
+    async def gen_family_principle(users, cur_date, location, history=[], requirements=[]):
+        """出具家庭饮食原则"""
+        roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
+        t = Template(jiahe_family_diet_principle_prompt)
+        prompt = t.substitute(
+            num=len(users),
+            roles=roles,
+            requirements='，'.join(requirements),
+            family_info=familyInfo,
+            cur_date=cur_date,
+            location=location
+
+        )
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+        logger.debug(
+            "出具家庭饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具家庭饮食原则模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    async def gen_family_diet(users, cur_date, location, family_principle, history=[], requirements=[], reference_diet='', days=1):
+        """出具家庭一日饮食原则"""
+        roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
+        t = Template(jiahe_family_diet_prompt)
+        prompt = t.substitute(
+            num=len(users),
+            roles=roles,
+            requirements='，'.join(requirements),
+            family_info=familyInfo,
+            cur_date=cur_date,
+            location=location,
+            family_principle=family_principle,
+            reference_diet=reference_diet,
+            days=f'{str(days)}天'
+        )
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+        logger.debug(
+            "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具家庭一日饮食计划模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
     async def gen_nutrious_principle(cur_date, location, history=[], userInfo={}):
         """出具营养素原则"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
