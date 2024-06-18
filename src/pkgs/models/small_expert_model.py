@@ -1584,7 +1584,7 @@ class expertModel:
                         printed = True
                     content += text_stream
                     yield {'message': text_stream, 'end': False}
-            logger.debug("一日食物功效模型输出： " + content)
+            logger.debug("一日饮食计划模型输出： " + content)
             diet_cont = diet_cont + '\n' + content
         yield {'message': "", 'end': True}
 

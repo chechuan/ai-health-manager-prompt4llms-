@@ -530,10 +530,31 @@ def create_app():
         """家庭饮食推荐原则接口"""
         try:
             param = await accept_param(request, endpoint="/family_diet_principle")
-            generator: AsyncGenerator = expertModel.gen_nutrious_principle(param.get('cur_date', ''),
+            generator: AsyncGenerator = expertModel.gen_family_principle(param.get('users', ''),
+                                                                           param.get('cur_date', ''),
                                                                            param.get('location', ''),
                                                                            param.get('history', []),
-                                                                           param.get('userInfo', []))
+                                                                           param.get('requirements', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/family_daily_diet", methods=["post"])
+    async def _gen_family_daily_diet(request: Request):
+        """家庭一日饮食计划接口"""
+        try:
+            param = await accept_param(request, endpoint="/family_daily_diet")
+            generator: AsyncGenerator = expertModel.gen_family_diet(param.get('users', ''),
+                                                                           param.get('cur_date', ''),
+                                                                           param.get('location', ''),
+                                                                    param.get('family_diet_principle', ''),
+                                                                           param.get('history', []),
+                                                                           param.get('requirements', []))
             result = decorate_jiahe_complete(
                 generator
             )
