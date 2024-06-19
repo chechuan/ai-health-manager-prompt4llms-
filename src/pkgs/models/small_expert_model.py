@@ -1104,6 +1104,28 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
+
+        # 1. 判断是否终止
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+            }
+        ]
+        logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug("判断是否终止模型输出： " + generate_text)
+        if '中止' in generate_text:
+            yield {"message": "", "terminal":True, "end": True}
+
+        # 2. 生成收集信息问题
         messages = [
             {
                 "role": "user",
@@ -1134,9 +1156,9 @@ class expertModel:
                     print(f"latency first token {t - start_time:.2f} s")
                     printed = True
                 content += text_stream
-                yield {"message": text_stream, "end": False}
+                yield {"message": text_stream, "terminal":False, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {"message": "", "end": True}
+        yield {"message": "", "terminal":True, "end": True}
 
     @staticmethod
     async def eat_health_qa(query):
