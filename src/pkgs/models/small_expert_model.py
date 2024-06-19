@@ -1495,7 +1495,7 @@ class expertModel:
                 continue
             finally:
                 continue
-        yield {'message': '\n'.join(res), 'end': True}
+        yield {'message': '\n'.join(res[:3]), 'end': True}
 
 
 
