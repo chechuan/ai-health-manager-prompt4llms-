@@ -1104,26 +1104,26 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
-
-        # 1. 判断是否终止
-        messages = [
-            {
-                "role": "user",
-                "content": jiahe_confirm_terminal_prompt.format(his_prompt),
-            }
-        ]
-        logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            model="Qwen-72B-Chat",
-        )
-        logger.debug("判断是否终止模型输出： " + generate_text)
-        if '中止' in generate_text:
-            yield {"message": "", "terminal":True, "end": True}
+        if history:
+            # 1. 判断是否终止
+            messages = [
+                {
+                    "role": "user",
+                    "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                }
+            ]
+            logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen-72B-Chat",
+            )
+            logger.debug("判断是否终止模型输出： " + generate_text)
+            if '中止' in generate_text:
+                yield {"message": "", "terminal":True, "end": True}
 
         # 2. 生成收集信息问题
         messages = [
