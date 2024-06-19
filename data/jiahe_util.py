@@ -15,7 +15,7 @@ jiahe_userInfo_map = {
 }
 
 
-def get_userInfo_history(userInfo, history):
+def get_userInfo_history(userInfo, history=[]):
     user_info = JiaheUserProfile().model_dump()
     for i in userInfo:
         if userInfo[i]:

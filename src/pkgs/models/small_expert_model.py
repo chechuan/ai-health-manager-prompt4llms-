@@ -1430,16 +1430,16 @@ class expertModel:
         yield {'message': "", 'end': True}
 
     @staticmethod
-    def gen_guess_asking(userInfo, scene_flag, question='', diet=''):
+    async def gen_guess_asking(userInfo, scene_flag, question='', diet=''):
         """猜你想问"""
         userInfo, _ = get_userInfo_history(userInfo)
         # 1. 生成猜你想问问题列表
         if scene_flag == 'intent':
             prompt = jiahe_guess_asking_userInfo_prompt.format(userInfo)
         elif scene_flag == 'user_query':
-            prompt = jiahe_guess_asking_userQuery_prompt.format(userInfo, question)
+            prompt = jiahe_guess_asking_userQuery_prompt.format(question, userInfo)
         else:
-            prompt = jiahe_guess_asking_diet_prompt.format(userInfo, diet)
+            prompt = jiahe_guess_asking_diet_prompt.format(diet, userInfo)
         messages = [
             {
                 "role": "user",
@@ -1483,7 +1483,7 @@ class expertModel:
         logger.debug(
             "营养咨询-猜你想问模型意图识别输出： " + generate_text
         )
-        qs = generate_text.spit('\n')
+        qs = generate_text.split('\n')
         res = []
         for i in qs:
             try:
@@ -1493,7 +1493,9 @@ class expertModel:
                 res.append(x['question'])
             except Exception as err:
                 continue
-        return res
+            finally:
+                continue
+        yield {'message': '\n'.join(res), 'end': True}
 
 
 

@@ -349,7 +349,7 @@ jiahe_guess_asking_intent_query_prompt = """# 待识别意图的用户问题
 其他：不符合前面意图列表项，则输出其它意图。
 
 # 输出要求
-- 请按照{'question': '', 'intent':''} 格式进行输出
+- 请按照{{'question': '', 'intent':''}} 格式进行输出
 
 
 Begins!"""
