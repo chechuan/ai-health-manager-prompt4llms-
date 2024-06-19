@@ -213,7 +213,7 @@ def mount_rule_endpoints(app: FastAPI):
         
     @app.route("/health/literature_interact", methods=["post"])
     async def _key_extraction(request: Request):
-        """关键词抽取"""
+        """文献1"""
         try:
             param = await async_accept_param_purge(
                 request, endpoint="/health/literature_interact"
