@@ -12,6 +12,7 @@ jiahe_userInfo_map = {
     'allergy_food':'过敏食物',
     'taste_preference':'口味偏好',
     'is_specific_menstrual_period':'是否特殊生理期',
+    'constitution': '中医体质',
 }
 
 
