@@ -1597,16 +1597,17 @@ class expertModel:
     async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
         """个人N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
-        diet_cont = ''
+        diet_cont = [reference_daily_diets]
         import datetime
         for i in range(days):
             cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             # 生成一日食谱
+            ref_diet_str = '\n'.join(diet_cont[-5:])
             messages = [
                 {
                     "role": "user",
-                    "content": jiahe_daily_diet_prompt.format(userInfo, cur_date, location, his_prompt,
-                                                                        diet_cont),
+                    "content": jiahe_daily_diet_prompt.format(userInfo, cur_date, location, his_prompt, diet_principle,
+                                                                        ref_diet_str),
                 }
             ]
             logger.debug(
@@ -1621,7 +1622,7 @@ class expertModel:
                 do_sample=True,
                 model="Qwen-72B-Chat",
             )
-            diet_cont = diet_cont + '\n' + generate_text
+            diet_cont.append(generate_text)
             logger.debug(
                 "一日饮食计划模型输出： " + generate_text
             )
