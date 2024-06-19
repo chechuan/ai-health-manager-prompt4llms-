@@ -655,19 +655,24 @@ def create_app():
             return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/guess_asking_intent", methods=["post"])
-    async def _gen_diet_effect(request: Request):
-        """猜你想问饮食咨询接口"""
+    async def _guess_asking_intent(request: Request):
+        """猜你想问-饮食咨询接口"""
         try:
-            param = await accept_param(request, endpoint="/guess_asking_intent")
-            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
-            result = decorate_jiahe_complete(
-                generator
-            )
+            param = await accept_param(request, endpoint="/confirm_collect_userInfo")
+            item = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='intent')
+
+            result = make_result(items=item)
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+
         except Exception as err:
             logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+
         finally:
-            return StreamingResponse(result, media_type="text/event-stream")
+            return result
 
     @app.route("/confirm_collect_userInfo", methods=["post"])
     async def _confirm_collect_userInfo(request: Request):

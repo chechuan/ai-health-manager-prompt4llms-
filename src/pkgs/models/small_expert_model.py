@@ -1139,40 +1139,6 @@ class expertModel:
         yield {"message": "", "end": True}
 
     @staticmethod
-    def guess_asking(userInfo, scene, consulation="", question="", foods=""):
-        """猜你想问"""
-        messages = [
-            {
-                "role": "user",
-                "content": "",
-            }
-        ]  # + history
-        logger.debug(
-            "生成猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            stream=True,
-            model="Qwen-72B-Chat",
-        )
-        logger.debug("生成猜你想问问题模型输出： " + generate_text)
-        qs = generate_text.strip().split("\n")
-        res = []
-        for q in qs:
-            intent_out = Chat.intent_query()
-            if intent_out["intent_code"] in [
-                "个人饮食方案咨询",
-                "饮食管理方案",
-                "营养问题咨询",
-                "家庭饮食方案咨询",
-            ]:  # 饮食子意图
-                res.append(q)
-
-    @staticmethod
     async def eat_health_qa(query):
         messages = [
             {
@@ -1442,18 +1408,24 @@ class expertModel:
         yield {'message': "", 'end': True}
 
     @staticmethod
-    async def gen_guess_asking_intent(userInfo):
-        """营养咨询-猜你想问"""
+    def gen_guess_asking(userInfo, scene_flag, question='', diet=''):
+        """猜你想问"""
         userInfo, _ = get_userInfo_history(userInfo)
-        # 1. 生成营养咨询猜你想问问题列表
+        # 1. 生成猜你想问问题列表
+        if scene_flag == 'intent':
+            prompt = jiahe_guess_asking_userInfo_prompt.format(userInfo)
+        elif scene_flag == 'user_query':
+            prompt = jiahe_guess_asking_userQuery_prompt.format(userInfo, question)
+        else:
+            prompt = jiahe_guess_asking_diet_prompt.format(userInfo, diet)
         messages = [
             {
                 "role": "user",
-                "content": jiahe_guess_asking_userInfo_prompt.format(userInfo),
+                "content": prompt,
             }
         ]
         logger.debug(
-            "营养咨询-猜你想问模型输入： " + json.dumps(messages, ensure_ascii=False)
+            "猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         start_time = time.time()
         generate_text = callLLM(
@@ -1465,19 +1437,44 @@ class expertModel:
             model="Qwen-72B-Chat",
         )
         logger.debug(
-            "营养咨询-猜你想问模型输出： " + generate_text
+            "猜你想问问题模型输出： " + generate_text
         )
-        # 2. 对问题列表做饮食子意图识别
 
+        # 2. 对问题列表做饮食子意图识别
         messages = [
             {
                 "role": "user",
-                "content": jiahe_guess_asking_userInfo_prompt.format(userInfo),
+                "content": jiahe_guess_asking_intent_query_prompt.format(generate_text),
             }
         ]
         logger.debug(
             "营养咨询-猜你想问意图识别模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen-72B-Chat",
+        )
+        logger.debug(
+            "营养咨询-猜你想问模型意图识别输出： " + generate_text
+        )
+        qs = generate_text.spit('\n')
+        res = []
+        for i in qs:
+            try:
+                x = json.loads(i)
+                if '其他' in x['intent']:
+                    continue
+                res.append(x['question'])
+            except Exception as err:
+                continue
+        return res
+
+
+
 
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1624,6 +1621,7 @@ class expertModel:
                 do_sample=True,
                 model="Qwen-72B-Chat",
             )
+            diet_cont = diet_cont + '\n' + generate_text
             logger.debug(
                 "一日饮食计划模型输出： " + generate_text
             )
@@ -1662,7 +1660,7 @@ class expertModel:
                     content += text_stream
                     yield {'message': text_stream, 'end': False}
             logger.debug("一日食物功效模型输出： " + content)
-            diet_cont = diet_cont + '\n' + content
+            # diet_cont = diet_cont + '\n' + content
         yield {'message': "", 'end': True}
 
     @staticmethod
