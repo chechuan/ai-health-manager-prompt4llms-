@@ -654,11 +654,11 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
-    @app.route("/guess_asking_intent", methods=["post"])
+    @app.route("/guess_asking_nutrition_counseling", methods=["post"])
     async def _guess_asking_intent(request: Request):
         """猜你想问-饮食咨询接口"""
         try:
-            param = await accept_param(request, endpoint="/guess_asking_intent")
+            param = await accept_param(request, endpoint="/guess_asking_nutrition_counseling")
             generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='intent')
             result = decorate_jiahe_complete(
                 generator
@@ -684,7 +684,7 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
-    @app.route("/guess_asking_query", methods=["post"])
+    @app.route("/guess_asking_diet", methods=["post"])
     async def _guess_asking_query(request: Request):
         """猜你想问-食谱接口"""
         try:
