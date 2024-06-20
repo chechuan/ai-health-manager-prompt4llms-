@@ -1045,7 +1045,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("食谱内容生成模型输出： " + generate_text)
         return generate_text
@@ -1068,7 +1068,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("食谱推荐原则模型输出： " + generate_text)
         return generate_text
@@ -1092,7 +1092,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
@@ -1104,6 +1104,28 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
+        if history:
+            # 1. 判断是否终止
+            messages = [
+                {
+                    "role": "user",
+                    "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                }
+            ]
+            logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen1.5-72B-Chat",
+            )
+            logger.debug("判断是否终止模型输出： " + generate_text)
+            if '中止' in generate_text:
+                yield {"message": "", "terminal":True, "end": True}
+
+        # 2. 生成收集信息问题
         messages = [
             {
                 "role": "user",
@@ -1119,7 +1141,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1134,43 +1156,9 @@ class expertModel:
                     print(f"latency first token {t - start_time:.2f} s")
                     printed = True
                 content += text_stream
-                yield {"message": text_stream, "end": False}
+                yield {"message": text_stream, "terminal":False, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {"message": "", "end": True}
-
-    @staticmethod
-    def guess_asking(userInfo, scene, consulation="", question="", foods=""):
-        """猜你想问"""
-        messages = [
-            {
-                "role": "user",
-                "content": "",
-            }
-        ]  # + history
-        logger.debug(
-            "生成猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            stream=True,
-            model="Qwen-72B-Chat",
-        )
-        logger.debug("生成猜你想问问题模型输出： " + generate_text)
-        qs = generate_text.strip().split("\n")
-        res = []
-        for q in qs:
-            intent_out = Chat.intent_query()
-            if intent_out["intent_code"] in [
-                "个人饮食方案咨询",
-                "饮食管理方案",
-                "营养问题咨询",
-                "家庭饮食方案咨询",
-            ]:  # 饮食子意图
-                res.append(q)
+        yield {"message": "", "terminal":True, "end": True}
 
     @staticmethod
     async def eat_health_qa(query):
@@ -1195,7 +1183,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1225,7 +1213,7 @@ class expertModel:
                     userInfo, cur_date, location, his_prompt
                 ),
             }
-        ]  # + history
+        ]
         logger.debug(
             "出具饮食调理原则模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
@@ -1237,7 +1225,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1257,19 +1245,232 @@ class expertModel:
         yield {"message": "", "end": True}
 
     @staticmethod
-    async def gen_daily_diet(cur_date, location, diet_principle, reference_daily_diets, history=[], userInfo={}):
-        """个人一日饮食计划"""
-        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+    async def gen_family_principle(users, cur_date, location, history=[], requirements=[]):
+        """出具家庭饮食原则"""
+        roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
+        t = Template(jiahe_family_diet_principle_prompt)
+        prompt = t.substitute(
+            num=len(users),
+            roles=roles,
+            requirements='，'.join(requirements),
+            family_info=familyInfo,
+            cur_date=cur_date,
+            location=location
 
-        # 1. 生成一日食谱
+        )
         messages = [
             {
                 "role": "user",
-                "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt, ),
+                "content": prompt,
             }
         ]
         logger.debug(
-            "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+            "出具家庭饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen1.5-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具家庭饮食原则模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    async def gen_family_diet(users, cur_date, location, family_principle, history=[], requirements=[], reference_diet='', days=1):
+        """出具家庭一日饮食原则"""
+        roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
+        t = Template(jiahe_family_diet_prompt)
+        prompt = t.substitute(
+            num=len(users),
+            roles=roles,
+            requirements='，'.join(requirements),
+            family_info=familyInfo,
+            cur_date=cur_date,
+            location=location,
+            family_principle=family_principle,
+            reference_diet=reference_diet,
+            days=f'{str(days)}天'
+        )
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+        logger.debug(
+            "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen1.5-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具家庭一日饮食计划模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    async def gen_nutrious_principle(cur_date, location, history=[], userInfo={}):
+        """出具营养素原则"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_nutrious_principle_prompt.format(
+                    userInfo, cur_date, location, his_prompt
+                ),
+            }
+        ]
+        logger.debug(
+            "出具营养素原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen1.5-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {"message": text_stream, "end": False}
+        logger.debug("出具营养素原则模型输出： " + content)
+        yield {"message": "", "end": True}
+
+    @staticmethod
+    async def gen_nutrious(cur_date, location, nutrious_principle, history=[],
+                               userInfo={}):
+        """营养素计划"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_nutrious_prompt.format(userInfo, cur_date, location, his_prompt, nutrious_principle),
+            }
+        ]
+        logger.debug(
+            "营养素计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=True,
+            model="Qwen1.5-72B-Chat",
+        )
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {'message': text_stream, 'end': False}
+        logger.debug("营养素计划模型输出： " + content)
+        yield {'message': "", 'end': True}
+
+    @staticmethod
+    async def gen_guess_asking(userInfo, scene_flag, question='', diet=''):
+        """猜你想问"""
+        userInfo, _ = get_userInfo_history(userInfo)
+        # 1. 生成猜你想问问题列表
+        if scene_flag == 'intent':
+            prompt = jiahe_guess_asking_userInfo_prompt.format(userInfo)
+        elif scene_flag == 'user_query':
+            prompt = jiahe_guess_asking_userQuery_prompt.format(question, userInfo)
+        else:
+            prompt = jiahe_guess_asking_diet_prompt.format(diet, userInfo)
+        messages = [
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ]
+        logger.debug(
+            "猜你想问问题模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            model="Qwen1.5-72B-Chat",
+        )
+        logger.debug(
+            "猜你想问问题模型输出： " + generate_text
+        )
+
+        # 2. 对问题列表做饮食子意图识别
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_guess_asking_intent_query_prompt.format(generate_text),
+            }
+        ]
+        logger.debug(
+            "营养咨询-猜你想问意图识别模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         generate_text = callLLM(
             history=messages,
@@ -1277,22 +1478,52 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
+        logger.debug(
+            "营养咨询-猜你想问模型意图识别输出： " + generate_text
+        )
+        qs = generate_text.split('\n')
+        res = []
+        for i in qs:
+            try:
+                x = json.loads(i)
+                if '其他' in x['intent']:
+                    continue
+                res.append(x['question'])
+            except Exception as err:
+                continue
+            finally:
+                continue
+        yield {'message': '\n'.join(res[:3]), 'end': True}
 
-        # 2. 生成食谱的实物功效
-        t = Template(jiahe_physical_efficacy_prompt)
-        prompt = t.substitute(
-            userInfo=userInfo,
-            cur_date=cur_date,
-            location=location,
-            history=his_prompt,
-            diets=generate_text
-        )
+
+
+
+        response_time = time.time()
+        print(f"latency {response_time - start_time:.2f} s -> response")
+        content = ""
+        printed = False
+        for i in generate_text:
+            t = time.time()
+            msg = i.choices[0].delta.to_dict()
+            text_stream = msg.get("content")
+            if text_stream:
+                if not printed:
+                    print(f"latency first token {t - start_time:.2f} s")
+                    printed = True
+                content += text_stream
+                yield {'message': text_stream, 'end': False}
+        logger.debug("营养咨询-猜你想问模型输出： " + content)
+        yield {'message': "", 'end': True}
+
+    @staticmethod
+    async def gen_diet_effect(diet):
+        """食谱功效"""
         messages = [
             {
                 "role": "user",
-                "content": prompt,
+                "content": jiahe_physical_efficacy_prompt.format(diet),
             }
         ]
         logger.debug(
@@ -1306,7 +1537,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1323,6 +1554,138 @@ class expertModel:
                 content += text_stream
                 yield {'message': text_stream, 'end': False}
         logger.debug("一日食物功效模型输出： " + content)
+        yield {'message': "", 'end': True}
+
+    # @staticmethod
+    # async def gen_daily_diet(cur_date, location, diet_principle, reference_daily_diets, history=[], userInfo={}):
+    #     """个人一日饮食计划"""
+    #     userInfo, his_prompt = get_userInfo_history(userInfo, history)
+    #
+    #     # 1. 生成一日食谱
+    #     messages = [
+    #         {
+    #             "role": "user",
+    #             "content": jiahe_daily_diet_principle_prompt.format(userInfo, cur_date, location, his_prompt, his_prompt),
+    #         }
+    #     ]
+    #     logger.debug(
+    #         "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+    #     )
+    #     generate_text = callLLM(
+    #         history=messages,
+    #         max_tokens=1024,
+    #         top_p=0.9,
+    #         temperature=0.8,
+    #         do_sample=True,
+    #         model="Qwen-72B-Chat",
+    #     )
+    #
+    #     # 2. 生成食谱的实物功效
+    #     messages = [
+    #         {
+    #             "role": "user",
+    #             "content": jiahe_physical_efficacy_prompt.format(generate_text),
+    #         }
+    #     ]
+    #     logger.debug(
+    #         "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+    #     )
+    #     start_time = time.time()
+    #     generate_text = callLLM(
+    #         history=messages,
+    #         max_tokens=1024,
+    #         top_p=0.9,
+    #         temperature=0.8,
+    #         do_sample=True,
+    #         stream=True,
+    #         model="Qwen-72B-Chat",
+    #     )
+    #     response_time = time.time()
+    #     print(f"latency {response_time - start_time:.2f} s -> response")
+    #     content = ""
+    #     printed = False
+    #     for i in generate_text:
+    #         t = time.time()
+    #         msg = i.choices[0].delta.to_dict()
+    #         text_stream = msg.get("content")
+    #         if text_stream:
+    #             if not printed:
+    #                 print(f"latency first token {t - start_time:.2f} s")
+    #                 printed = True
+    #             content += text_stream
+    #             yield {'message': text_stream, 'end': False}
+    #     logger.debug("一日食物功效模型输出： " + content)
+    #     yield {'message': "", 'end': True}
+
+    @staticmethod
+    async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
+        """个人N日饮食计划"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        diet_cont = [reference_daily_diets]
+        import datetime
+        for i in range(days):
+            cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
+            # 生成一日食谱
+            ref_diet_str = '\n'.join(diet_cont[-5:])
+            messages = [
+                {
+                    "role": "user",
+                    "content": jiahe_daily_diet_prompt.format(userInfo, cur_date, location, his_prompt, diet_principle,
+                                                                        ref_diet_str),
+                }
+            ]
+            logger.debug(
+                "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            start_time = time.time()
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                model="Qwen1.5-72B-Chat",
+            )
+            diet_cont.append(generate_text)
+            logger.debug(
+                "一日饮食计划模型输出： " + generate_text
+            )
+            messages = [
+                {
+                    "role": "user",
+                    "content": jiahe_physical_efficacy_prompt.format(generate_text),
+                }
+            ]
+            logger.debug(
+                "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            start_time = time.time()
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                stream=True,
+                model="Qwen1.5-72B-Chat",
+            )
+
+            response_time = time.time()
+            print(f"latency {response_time - start_time:.2f} s -> response")
+            content = ""
+            printed = False
+            for i in generate_text:
+                t = time.time()
+                msg = i.choices[0].delta.to_dict()
+                text_stream = msg.get("content")
+                if text_stream:
+                    if not printed:
+                        print(f"latency first token {t - start_time:.2f} s")
+                        printed = True
+                    content += text_stream
+                    yield {'message': text_stream, 'end': False}
+            logger.debug("一日食物功效模型输出： " + content)
+            # diet_cont = diet_cont + '\n' + content
         yield {'message': "", 'end': True}
 
     @staticmethod

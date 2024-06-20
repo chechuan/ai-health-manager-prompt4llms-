@@ -525,17 +525,172 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/family_diet_principle", methods=["post"])
+    async def _gen_diet_principle(request: Request):
+        """家庭饮食推荐原则接口"""
+        try:
+            param = await accept_param(request, endpoint="/family_diet_principle")
+            generator: AsyncGenerator = expertModel.gen_family_principle(param.get('users', ''),
+                                                                           param.get('cur_date', ''),
+                                                                           param.get('location', ''),
+                                                                           param.get('history', []),
+                                                                           param.get('requirements', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/family_daily_diet", methods=["post"])
+    async def _gen_family_daily_diet(request: Request):
+        """家庭一日饮食计划接口"""
+        try:
+            param = await accept_param(request, endpoint="/family_daily_diet")
+            generator: AsyncGenerator = expertModel.gen_family_diet(param.get('users', ''),
+                                                                           param.get('cur_date', ''),
+                                                                           param.get('location', ''),
+                                                                    param.get('family_diet_principle', ''),
+                                                                           param.get('history', []),
+                                                                           param.get('requirements', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/nutritious_supplementary_principle", methods=["post"])
+    async def _gen_diet_principle(request: Request):
+        """营养素推荐原则接口"""
+        try:
+            param = await accept_param(request, endpoint="/nutritious_supplementary_principle")
+            generator: AsyncGenerator = expertModel.gen_nutrious_principle(param.get('cur_date', ''),
+                                                                       param.get('location', ''),
+                                                                       param.get('history', []),
+                                                                       param.get('userInfo', []))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/nutritious_supplementary", methods=["post"])
+    async def _gen_nutritious_supplementary(request: Request):
+        """营养素计划接口"""
+        try:
+            param = await accept_param(request, endpoint="/nutritious_supplementary")
+            generator: AsyncGenerator = expertModel.gen_nutrious(param.get('cur_date', ''),
+                                                                       param.get('location', ''),
+                                                                       param.get('nutrious_principle', ''),
+                                                                       param.get('history', []),
+                                                                       param.get('userInfo', []),
+                                                                       )
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/gen_daily_diet", methods=["post"])
     async def _gen_diet_principle(request: Request):
-        """个人一日饮食计划接口"""
+        """个人N日饮食计划接口"""
         try:
             param = await accept_param(request, endpoint="/gen_daily_diet")
-            generator: AsyncGenerator = expertModel.gen_daily_diet(param.get('cur_date', ''),
+
+            generator: AsyncGenerator = expertModel.gen_n_daily_diet(param.get('cur_date', ''),
                                                                        param.get('location', ''),
                                                                         param.get('diet_principle', ''),
                                                                         param.get('reference_daily_diets', ''),
+                                                                     param.get('days', 0),
                                                                        param.get('history', []),
-                                                                       param.get('userInfo', []))
+                                                                       param.get('userInfo', {}))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/gen_diet_effect", methods=["post"])
+    async def _gen_diet_effect(request: Request):
+        """饮食功效接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_daily_diet")
+            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/gen_diet_effect", methods=["post"])
+    async def _gen_diet_effect(request: Request):
+        """饮食功效接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_daily_diet")
+            generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/guess_asking_nutrition_counseling", methods=["post"])
+    async def _guess_asking_intent(request: Request):
+        """猜你想问-饮食咨询接口"""
+        try:
+            param = await accept_param(request, endpoint="/guess_asking_nutrition_counseling")
+            generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='intent')
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/guess_asking_query", methods=["post"])
+    async def _guess_asking_query(request: Request):
+        """猜你想问-用户问题接口"""
+        try:
+            param = await accept_param(request, endpoint="/guess_asking_intent")
+            generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='user_query', question=param.get('query', ''))
+            result = decorate_jiahe_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/guess_asking_diet", methods=["post"])
+    async def _guess_asking_query(request: Request):
+        """猜你想问-食谱接口"""
+        try:
+            param = await accept_param(request, endpoint="/guess_asking_intent")
+            generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='diet',
+                                                                     question=param.get('diet', ''))
             result = decorate_jiahe_complete(
                 generator
             )
