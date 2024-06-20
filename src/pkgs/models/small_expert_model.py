@@ -1045,7 +1045,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("食谱内容生成模型输出： " + generate_text)
         return generate_text
@@ -1068,7 +1068,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("食谱推荐原则模型输出： " + generate_text)
         return generate_text
@@ -1092,7 +1092,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
@@ -1119,7 +1119,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             logger.debug("判断是否终止模型输出： " + generate_text)
             if '中止' in generate_text:
@@ -1141,7 +1141,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1183,7 +1183,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1225,7 +1225,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1275,7 +1275,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1327,7 +1327,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1369,7 +1369,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1410,7 +1410,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1456,7 +1456,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug(
             "猜你想问问题模型输出： " + generate_text
@@ -1478,7 +1478,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug(
             "营养咨询-猜你想问模型意图识别输出： " + generate_text
@@ -1537,7 +1537,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1644,7 +1644,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             diet_cont.append(generate_text)
             logger.debug(
@@ -1667,7 +1667,7 @@ class expertModel:
                 temperature=0.8,
                 do_sample=True,
                 stream=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
 
             response_time = time.time()
