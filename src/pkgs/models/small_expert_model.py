@@ -1301,6 +1301,7 @@ class expertModel:
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
         temp = Template(jiahe_family_diet_prompt)
         diet_cont = [reference_diet]
+        days = 1
         for i in range(days):
             cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             ref_diet_str = '\n'.join(diet_cont[-2:])
