@@ -113,7 +113,7 @@ class CustomChatAuxiliary(CustomChatModel):
         for idx in range(len(history)):
             i = history[idx]
             if i["role"] == "assistant":
-                if i["function_call"]:
+                if i.get("function_call"):
                     content = f"Thought: {i['content']}\nDoctor: {i['function_call']['arguments']}"
                 else:
                     content = f"Doctor: {i['content']}"
@@ -186,7 +186,7 @@ class CustomChatAuxiliary(CustomChatModel):
         for idx in range(len(history)):
             i = history[idx]
             if i["role"] == "assistant":
-                if i["function_call"]:
+                if i.get("function_call"):
                     content = f"Thought: {i['content']}\nDoctor: {i['function_call']['arguments']}"
                 else:
                     content = f"Doctor: {i['content']}"
@@ -431,8 +431,11 @@ class CustomChatAuxiliary(CustomChatModel):
         thought, doctor = self.__parse_response__(content)
           
         conts = []
-        # if thought == "None" or doctor == "None":
-        #     thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        
+        if thought == "None" or doctor == "None":
+            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        if "？" not in content and "?" not in content:
+            conts=['血糖问诊结束']
         # elif not doctor:
         #     doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
         #     conts = [

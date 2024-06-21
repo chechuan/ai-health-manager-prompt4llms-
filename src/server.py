@@ -28,6 +28,7 @@ from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
+    AigcSanjiRequest,
     AigcFunctionsResponse,
     BaseResponse,
     RolePlayRequest,
@@ -213,7 +214,7 @@ def mount_rule_endpoints(app: FastAPI):
         
     @app.route("/health/literature_interact", methods=["post"])
     async def _key_extraction(request: Request):
-        """关键词抽取"""
+        """文献1"""
         try:
             param = await async_accept_param_purge(
                 request, endpoint="/health/literature_interact"
@@ -363,6 +364,35 @@ def mount_aigc_functions(app: FastAPI):
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
             return build_aigc_functions_response(_return)
+        
+    async def _async_aigc_sanji(
+        request_model: AigcSanjiRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+        """aigc函数"""
+        try:
+            param = await async_accept_param_purge(
+                request_model, endpoint="/aigc/sanji"
+            )
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
+        except Exception as err:
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
+            _return: str = ret.model_dump_json(exclude_unset=True)
+        finally:
+            return build_aigc_functions_response(_return)
 
     async def _async_aigc_functions_doctor_recommend(
         request_model: AigcFunctionsDoctorRecommendRequest,
@@ -395,6 +425,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
+
+    app.post("/aigc/sanji")(_async_aigc_sanji)
 
 
 def create_app():

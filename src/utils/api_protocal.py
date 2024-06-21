@@ -333,6 +333,84 @@ class AigcFunctionsRequest(BaseModel):
         examples=["专家方案示例"],
     )
 
+class AigcSanjiRequest(BaseModel):
+    intentCode: Literal[
+        "sanji_assess_3d_classification",
+        "sanji_assess_keyword_classification",
+        "sanji_assess_3health_classification",
+        "sanji_assess_literature_classification",
+        "sanji_intervene_goal_classification",
+        "sanji_intervene_literature_classification",
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "sanji_intervene_goal_classification",
+        ],
+    )
+
+    user_profile: UserProfile = Field(
+        {},
+        description="用户基本信息",
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                }
+            ]
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+
+    diagnosis: Union[str, None] = Field(
+        None,
+        description="诊断结果",
+        examples=["急性肠胃炎"],
+    )
+
+    health_goal: Union[str, None] = Field(
+        None,
+        description="健康管理目标",
+        examples=["恢复肠道健康"],
+    )
+
+    # currentDate: Union[str, None] = Field(
+    #     None,
+    #     description="当前日期",
+    #     examples=["2024年6月20日"],
+    # )
+
+    # currentLoc: Union[str, None] = Field(
+    #     None,
+    #     description="当前地点",
+    #     examples=["廊坊"],
+    # )
+    
 
 class AigcFunctionsDoctorRecommendRequest(BaseModel):
     intentCode: Literal["aigc_functions_doctor_recommend",] = Field(
