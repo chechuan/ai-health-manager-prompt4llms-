@@ -3095,7 +3095,7 @@ class Agents:
             v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
         }
         for obj_str in dir(self):
-            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+            if (obj_str.startswith("aigc_functions_") or obj_str.startswith("sanji_") )and not self.funcmap.get(obj_str):
                 self.funcmap[obj_str] = getattr(self, obj_str)
 
     def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
@@ -3514,6 +3514,59 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
+    
+    async def sanji_assess_3d_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_3d_cl"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+    
+    async def sanji_assess_keyword_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_keyword_cl"
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+            process=0, _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        lines = content.split('\n')
+        data = {}
+        for line in lines:
+            key, values = line.split('：', 1)
+            if values=='无':
+                data[key]=[]
+            else:
+                data[key] = values.split(', ')
+        return data
+    
 
     @param_check(check_params=["plan_ai", "plan_human"])
     async def aigc_functions_plan_difference_finder(
@@ -3716,17 +3769,46 @@ class Agents:
             else self.gsr.get_event_item(event)["description"]
         )
         prompt = prompt_template.format(**prompt_vars)
-        # if kwargs.get("messages"):
-        #     messages = [{"role": "system", "content": prompt}] + kwargs["messages"]
-        #     logger.debug(
-        #         f"AIGC Functions {_event} LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
-        #     )
-        #     content: Union[str, Generator] = await acallLLM(
-        #         model=model,
-        #         history=messages,
-        #         **model_args,
-        #     )
-        # else:
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        content: Union[str, Generator] = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+    
+    async def sanji_general(
+        self,
+        process: int=1,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        des = self.gsr.get_event_item(event)["description"]
+        if process ==0:
+            des+=self.gsr.get_event_item(event)["constraint"]
+        prompt_template: str = (
+            prompt_template
+            if prompt_template
+            else des
+        )
+        prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: Union[str, Generator] = await acallLLM(
             model=model,

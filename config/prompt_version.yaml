@@ -29,10 +29,10 @@ local:
         aigc_functions_mental_principle: 0.0.1
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
+        sanji_assess_keyword_classification: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
-        conversation_deal: 0.0.1
-        
+        conversation_deal: 0.0.1   
     character:
     tool:
         创建日程: 0.2.0
@@ -64,6 +64,7 @@ dev:
         aigc_functions_diagnosis: 0.0.1
         aigc_functions_diagnosis_result: 0.0.1
         aigc_functions_drug_recommendation: 0.0.2
+        sanji_assess_keyword_classification: 0.0.1
         aigc_functions_food_principle: 0.0.1
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
@@ -109,6 +110,7 @@ test:
         aigc_functions_mental_principle: 0.0.1
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
+        sanji_assess_keyword_classification: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
