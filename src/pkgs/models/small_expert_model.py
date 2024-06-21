@@ -32,6 +32,7 @@ sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
 from string import Template
 from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
+import datetime
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -1296,54 +1297,59 @@ class expertModel:
 
     @staticmethod
     async def gen_family_diet(users, cur_date, location, family_principle, history=[], requirements=[], reference_diet='', days=1):
-        """出具家庭一日饮食原则"""
+        """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
-        t = Template(jiahe_family_diet_prompt)
-        prompt = t.substitute(
-            num=len(users),
-            roles=roles,
-            requirements='，'.join(requirements),
-            family_info=familyInfo,
-            cur_date=cur_date,
-            location=location,
-            family_principle=family_principle,
-            reference_diet=reference_diet,
-            days=f'{str(days)}天'
-        )
-        messages = [
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ]
-        logger.debug(
-            "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        start_time = time.time()
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            stream=True,
-            model="Qwen1.5-72B-Chat",
-        )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {"message": text_stream, "end": False}
-        logger.debug("出具家庭一日饮食计划模型输出： " + content)
+        temp = Template(jiahe_family_diet_prompt)
+        diet_cont = [reference_diet]
+        for i in range(days):
+            cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
+            ref_diet_str = '\n'.join(diet_cont[-2:])
+            prompt = temp.substitute(
+                num=len(users),
+                roles=roles,
+                requirements='，'.join(requirements),
+                family_info=familyInfo,
+                cur_date=cur_date,
+                location=location,
+                family_principle=family_principle,
+                reference_diet=ref_diet_str,
+                days='1天'
+            )
+            messages = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+            logger.debug(
+                "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            start_time = time.time()
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                stream=True,
+                model="Qwen1.5-72B-Chat",
+            )
+            response_time = time.time()
+            print(f"latency {response_time - start_time:.2f} s -> response")
+            content = ""
+            printed = False
+            for i in generate_text:
+                t = time.time()
+                msg = i.choices[0].delta.to_dict()
+                text_stream = msg.get("content")
+                if text_stream:
+                    if not printed:
+                        print(f"latency first token {t - start_time:.2f} s")
+                        printed = True
+                    content += text_stream
+                    yield {"message": text_stream, "end": False}
+            logger.debug("出具家庭一日饮食计划模型输出： " + content)
+            diet_cont.append(content)
         yield {"message": "", "end": True}
 
     @staticmethod
