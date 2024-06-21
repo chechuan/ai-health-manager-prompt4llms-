@@ -1042,7 +1042,7 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1065,7 +1065,7 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1089,7 +1089,7 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1116,7 +1116,7 @@ class expertModel:
             logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
             generate_text = callLLM(
                 history=messages,
-                max_tokens=1024,
+                max_tokens=2048,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
@@ -1137,7 +1137,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1179,7 +1179,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1221,7 +1221,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1271,7 +1271,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1327,7 +1327,7 @@ class expertModel:
             start_time = time.time()
             generate_text = callLLM(
                 history=messages,
-                max_tokens=1024,
+                max_tokens=2048,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
@@ -1370,7 +1370,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1411,7 +1411,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1458,7 +1458,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1480,7 +1480,7 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1538,7 +1538,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -1646,7 +1646,7 @@ class expertModel:
             start_time = time.time()
             generate_text = callLLM(
                 history=messages,
-                max_tokens=1024,
+                max_tokens=2048,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
@@ -1668,7 +1668,7 @@ class expertModel:
             start_time = time.time()
             generate_text = callLLM(
                 history=messages,
-                max_tokens=1024,
+                max_tokens=2048,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
