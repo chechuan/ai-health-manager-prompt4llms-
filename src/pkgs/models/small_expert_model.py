@@ -3872,8 +3872,9 @@ class Agents:
         )
         lines = content.split('\n')
         data={}
+        l=['one','two','three','four']
         for i in range(len(lines)):
-            data[i]=lines[i]
+            data[l[i]]=lines[i]
 
         return data
 
