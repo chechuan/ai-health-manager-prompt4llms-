@@ -3871,7 +3871,11 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         lines = content.split('\n')
-        return lines
+        data={}
+        for i in range(len(lines)):
+            data[i]=lines[i]
+
+        return data
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy_new(self, **kwargs) -> str:
