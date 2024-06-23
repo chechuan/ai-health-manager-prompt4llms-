@@ -1046,7 +1046,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("食谱内容生成模型输出： " + generate_text)
         return generate_text
@@ -1069,7 +1069,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("食谱推荐原则模型输出： " + generate_text)
         return generate_text
@@ -1093,7 +1093,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
@@ -1120,7 +1120,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("判断是否终止模型输出： " + generate_text)
             if '中止' in generate_text:
@@ -1142,7 +1142,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1184,7 +1184,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1226,7 +1226,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1276,7 +1276,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1301,6 +1301,7 @@ class expertModel:
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
         temp = Template(jiahe_family_diet_prompt)
         diet_cont = [reference_diet]
+        days = 1
         for i in range(days):
             cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             ref_diet_str = '\n'.join(diet_cont[-2:])
@@ -1332,7 +1333,7 @@ class expertModel:
                 temperature=0.8,
                 do_sample=True,
                 stream=True,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             response_time = time.time()
             print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1375,7 +1376,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1416,7 +1417,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1462,7 +1463,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug(
             "猜你想问问题模型输出： " + generate_text
@@ -1484,7 +1485,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug(
             "营养咨询-猜你想问模型意图识别输出： " + generate_text
@@ -1543,7 +1544,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1632,7 +1633,7 @@ class expertModel:
         for i in range(days):
             cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             # 生成一日食谱
-            ref_diet_str = '\n'.join(diet_cont[-5:])
+            ref_diet_str = '\n'.join(diet_cont[-2:])
             messages = [
                 {
                     "role": "user",
@@ -1650,31 +1651,32 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen1.5-72B-Chat",
-            )
-            diet_cont.append(generate_text)
-            logger.debug(
-                "一日饮食计划模型输出： " + generate_text
-            )
-            messages = [
-                {
-                    "role": "user",
-                    "content": jiahe_physical_efficacy_prompt.format(generate_text),
-                }
-            ]
-            logger.debug(
-                "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
-            )
-            start_time = time.time()
-            generate_text = callLLM(
-                history=messages,
-                max_tokens=2048,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
                 stream=True,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
+            #diet_cont.append(generate_text)
+            # logger.debug(
+            #     "一日饮食计划模型输出： " + generate_text
+            # )
+            # messages = [
+            #     {
+            #         "role": "user",
+            #         "content": jiahe_physical_efficacy_prompt.format(generate_text),
+            #     }
+            # ]
+            # logger.debug(
+            #     "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+            # )
+            # start_time = time.time()
+            # generate_text = callLLM(
+            #     history=messages,
+            #     max_tokens=2048,
+            #     top_p=0.9,
+            #     temperature=0.8,
+            #     do_sample=True,
+            #     stream=True,
+            #     model="Qwen1.5-72B-Chat",
+            # )
 
             response_time = time.time()
             print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1690,8 +1692,8 @@ class expertModel:
                         printed = True
                     content += text_stream
                     yield {'message': text_stream, 'end': False}
-            logger.debug("一日食物功效模型输出： " + content)
-            # diet_cont = diet_cont + '\n' + content
+            logger.debug("一日食谱模型输出： " + content)
+            diet_cont.append(content)
         yield {'message': "", 'end': True}
 
     @staticmethod
