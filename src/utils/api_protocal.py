@@ -183,6 +183,10 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_sport_principle",
         "aigc_functions_mental_principle",
         "aigc_functions_chinese_therapy",
+        "aigc_functions_food_principle_new",
+        "aigc_functions_sport_principle_new",
+        "aigc_functions_mental_principle_new",
+        "aigc_functions_chinese_therapy_new",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
         "aigc_functions_consultation_summary_to_group",
@@ -340,7 +344,7 @@ class AigcSanjiRequest(BaseModel):
         "sanji_assess_3health_classification",
         "sanji_assess_literature_classification",
         "sanji_intervene_goal_classification",
-        "sanji_intervene_literature_classification",
+        # "sanji_intervene_literature_classification",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
