@@ -1657,7 +1657,7 @@ class expertModel:
             )
             logger.info("一日饮食计划模型生成时间：" + str(time.time() - start_time))
             diet_cont.append(generate_text)
-            yield {'message': generate_text, 'end': True}
+            yield {'message': generate_text, 'end': False}
 
             # logger.debug(
             #     "一日饮食计划模型输出： " + generate_text
@@ -1698,7 +1698,7 @@ class expertModel:
         #             yield {'message': text_stream, 'end': False}
         #     logger.debug("一日食谱模型输出： " + content)
         #     diet_cont.append(content)
-        # yield {'message': "", 'end': True}
+        yield {'message': "", 'end': True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
