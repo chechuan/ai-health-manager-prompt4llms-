@@ -4031,7 +4031,7 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         lines = content.split('\n')
         data = {}
