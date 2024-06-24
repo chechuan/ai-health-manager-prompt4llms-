@@ -4114,6 +4114,7 @@ class Agents:
 
         lines = result.split('\n')
         for line in lines:
+            
             key, values = line.split('：', 1)
             if values=='无':
                 data['literature'][key]=[]

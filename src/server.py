@@ -17,6 +17,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
