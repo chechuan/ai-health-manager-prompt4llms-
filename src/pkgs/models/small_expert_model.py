@@ -3903,11 +3903,12 @@ class Agents:
         data = {}
         lines = content.split('\n')
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values
         return data
 
     @param_check(check_params=["messages"])
@@ -4343,7 +4344,7 @@ class Agents:
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
+        model = 'Qwen1.5-72B-Chat'
         model_args: dict = (
             {
                 "temperature": 0,

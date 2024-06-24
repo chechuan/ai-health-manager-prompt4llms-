@@ -62,6 +62,7 @@ async def accept_param(request: Request, endpoint: str = None):
     return p
 
 
+
 def accept_param_purge(request: Request):
     if isinstance(request, BaseModel):
         p = request.model_dump()
@@ -436,6 +437,13 @@ def create_app():
         version=f"{datetime.now().strftime('%Y.%m.%d %H:%M:%S')}",
     )
     prepare_for_all()
+
+    # @app.exception_handler(ValidationError)
+    # async def validation_exception_handler(request: Request, exc: ValidationError):
+    #     error_messages = []
+    #     for error in exc.errors():
+    #         error_messages.append({'loc': error['loc'], 'msg': error['msg']})
+    #     return JSONResponse(content={'success': False, 'errors': error_messages}, status_code=422)
 
     async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
