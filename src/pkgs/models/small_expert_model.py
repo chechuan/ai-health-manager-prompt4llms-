@@ -1652,10 +1652,13 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                stream=True,
+                # stream=True,
                 model="Qwen1.5-32B-Chat",
             )
-            #diet_cont.append(generate_text)
+            logger.info("一日饮食计划模型生成时间：" + str(time.time() - start_time))
+            diet_cont.append(generate_text)
+            yield {'message': generate_text, 'end': True}
+
             # logger.debug(
             #     "一日饮食计划模型输出： " + generate_text
             # )
@@ -1679,23 +1682,23 @@ class expertModel:
             #     model="Qwen1.5-72B-Chat",
             # )
 
-            response_time = time.time()
-            print(f"latency {response_time - start_time:.2f} s -> response")
-            content = ""
-            printed = False
-            for i in generate_text:
-                t = time.time()
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    if not printed:
-                        print(f"latency first token {t - start_time:.2f} s")
-                        printed = True
-                    content += text_stream
-                    yield {'message': text_stream, 'end': False}
-            logger.debug("一日食谱模型输出： " + content)
-            diet_cont.append(content)
-        yield {'message': "", 'end': True}
+        #     response_time = time.time()
+        #     print(f"latency {response_time - start_time:.2f} s -> response")
+        #     content = ""
+        #     printed = False
+        #     for i in generate_text:
+        #         t = time.time()
+        #         msg = i.choices[0].delta.to_dict()
+        #         text_stream = msg.get("content")
+        #         if text_stream:
+        #             if not printed:
+        #                 print(f"latency first token {t - start_time:.2f} s")
+        #                 printed = True
+        #             content += text_stream
+        #             yield {'message': text_stream, 'end': False}
+        #     logger.debug("一日食谱模型输出： " + content)
+        #     diet_cont.append(content)
+        # yield {'message': "", 'end': True}
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
