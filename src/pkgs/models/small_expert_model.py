@@ -4071,6 +4071,7 @@ class Agents:
         content: str = await self.sanji_general(
              process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        lines = lines.replace('：\n','：')
         lines = content.split('\n')
         data = {}
         for line in lines:
