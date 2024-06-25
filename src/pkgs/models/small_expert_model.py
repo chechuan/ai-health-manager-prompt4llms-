@@ -1180,7 +1180,7 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=2048,
+            max_tokens=1024,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
