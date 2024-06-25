@@ -1098,7 +1098,28 @@ class expertModel:
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
-            return {"result": True}
+            if history:
+                # 1. 判断是否终止
+                messages = [
+                    {
+                        "role": "user",
+                        "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                    }
+                ]
+                logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+                generate_text = callLLM(
+                    history=messages,
+                    max_tokens=2048,
+                    top_p=0.9,
+                    temperature=0.8,
+                    do_sample=True,
+                    model="Qwen1.5-72B-Chat",
+                )
+                logger.debug("判断是否终止模型输出： " + generate_text)
+                if '中止' in generate_text:
+                    return {"result": False}
+                else:
+                    return {"result": True}
         else:
             return {"result": False}
 
@@ -1106,28 +1127,7 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
-        if history:
-            # 1. 判断是否终止
-            messages = [
-                {
-                    "role": "user",
-                    "content": jiahe_confirm_terminal_prompt.format(his_prompt),
-                }
-            ]
-            logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
-            generate_text = callLLM(
-                history=messages,
-                max_tokens=2048,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
-                model="Qwen1.5-32B-Chat",
-            )
-            logger.debug("判断是否终止模型输出： " + generate_text)
-            if '中止' in generate_text:
-                yield {"message": "", "terminal":True, "end": True}
-
-        # 2. 生成收集信息问题
+        # 生成收集信息问题
         messages = [
             {
                 "role": "user",
@@ -1160,7 +1160,7 @@ class expertModel:
                 content += text_stream
                 yield {"message": text_stream, "terminal":False, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {"message": "", "terminal":True, "end": True}
+        yield {"message": "", "terminal":False, "end": True}
 
     @staticmethod
     async def eat_health_qa(query):
@@ -1301,7 +1301,9 @@ class expertModel:
         """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
         temp = Template(jiahe_family_diet_prompt)
-        diet_cont = [reference_diet]
+        diet_cont = []
+        if reference_diet:
+            diet_cont.extend(reference_diet)
         days = 1
         for i in range(days):
             cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
@@ -1333,25 +1335,30 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                stream=True,
+                # stream=True,
                 model="Qwen1.5-32B-Chat",
             )
+            diet_cont.append(generate_text)
             response_time = time.time()
-            print(f"latency {response_time - start_time:.2f} s -> response")
-            content = ""
-            printed = False
-            for i in generate_text:
-                t = time.time()
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    if not printed:
-                        print(f"latency first token {t - start_time:.2f} s")
-                        printed = True
-                    content += text_stream
-                    yield {"message": text_stream, "end": False}
-            logger.debug("出具家庭一日饮食计划模型输出： " + content)
-            diet_cont.append(content)
+            print(f"家庭一日饮食计划生成耗时 {response_time - start_time:.2f}")
+            yield {'message': generate_text, 'end': False}
+
+            # response_time = time.time()
+            # print(f"latency {response_time - start_time:.2f} s -> response")
+            # content = ""
+            # printed = False
+            # for i in generate_text:
+            #     t = time.time()
+            #     msg = i.choices[0].delta.to_dict()
+            #     text_stream = msg.get("content")
+            #     if text_stream:
+            #         if not printed:
+            #             print(f"latency first token {t - start_time:.2f} s")
+            #             printed = True
+            #         content += text_stream
+            #         yield {"message": text_stream, "end": False}
+            # logger.debug("出具家庭一日饮食计划模型输出： " + content)
+            # diet_cont.append(content)
         yield {"message": "", "end": True}
 
     @staticmethod
@@ -1629,7 +1636,9 @@ class expertModel:
     async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
         """个人N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
-        diet_cont = [reference_daily_diets]
+        diet_cont = []
+        if reference_daily_diets:
+            diet_cont.extend(reference_daily_diets)
         import datetime
         for i in range(days):
             cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
@@ -1652,10 +1661,13 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                stream=True,
+                # stream=True,
                 model="Qwen1.5-32B-Chat",
             )
-            #diet_cont.append(generate_text)
+            logger.info("一日饮食计划模型生成时间：" + str(time.time() - start_time))
+            diet_cont.append(generate_text)
+            yield {'message': generate_text, 'end': False}
+
             # logger.debug(
             #     "一日饮食计划模型输出： " + generate_text
             # )
@@ -1679,22 +1691,22 @@ class expertModel:
             #     model="Qwen1.5-72B-Chat",
             # )
 
-            response_time = time.time()
-            print(f"latency {response_time - start_time:.2f} s -> response")
-            content = ""
-            printed = False
-            for i in generate_text:
-                t = time.time()
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    if not printed:
-                        print(f"latency first token {t - start_time:.2f} s")
-                        printed = True
-                    content += text_stream
-                    yield {'message': text_stream, 'end': False}
-            logger.debug("一日食谱模型输出： " + content)
-            diet_cont.append(content)
+        #     response_time = time.time()
+        #     print(f"latency {response_time - start_time:.2f} s -> response")
+        #     content = ""
+        #     printed = False
+        #     for i in generate_text:
+        #         t = time.time()
+        #         msg = i.choices[0].delta.to_dict()
+        #         text_stream = msg.get("content")
+        #         if text_stream:
+        #             if not printed:
+        #                 print(f"latency first token {t - start_time:.2f} s")
+        #                 printed = True
+        #             content += text_stream
+        #             yield {'message': text_stream, 'end': False}
+        #     logger.debug("一日食谱模型输出： " + content)
+        #     diet_cont.append(content)
         yield {'message': "", 'end': True}
 
     @staticmethod
@@ -3970,11 +3982,12 @@ class Agents:
         data = {}
         lines = content.split('\n')
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values
         return data
 
     @param_check(check_params=["messages"])
@@ -4058,11 +4071,12 @@ class Agents:
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values.split(', ')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split(', ')
         return data
 
     async def sanji_assess_3health_classification(self, **kwargs) -> str:
@@ -4085,16 +4099,17 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = [values]
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = [values]
         return data
 
     async def sanji_assess_literature_classification(self, **kwargs) -> str:
@@ -4123,11 +4138,12 @@ class Agents:
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values.split(',')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split('|')
         filtered_dict = {k: v for k, v in data.items() if k in ["物质","信息","能量"]}
 
         return filtered_dict
@@ -4177,11 +4193,12 @@ class Agents:
 
         lines = result.split('\n')
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data['literature'][key]=[]
-            else:
-                data['literature'][key] = values.split(',')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data['literature'][key]=[]
+                else:
+                    data['literature'][key] = values.split('|')
         filtered_dict = {k: v for k, v in data['literature'].items() if k in ["物质","信息","能量"]}
         data['literature']=filtered_dict
 
@@ -4410,7 +4427,7 @@ class Agents:
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
+        model = 'Qwen1.5-72B-Chat'
         model_args: dict = (
             {
                 "temperature": 0,

@@ -17,6 +17,7 @@ import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
@@ -59,6 +60,7 @@ async def accept_param(request: Request, endpoint: str = None):
     endpoint = endpoint if endpoint else "Undefined"
     logger.info(f"Endpoint: {endpoint}, Input Param: {p_jsonfiy}")
     return p
+
 
 
 def accept_param_purge(request: Request):
@@ -593,10 +595,17 @@ def create_app():
                                                                     param.get('cur_date', ''),
                                                                     param.get('location', ''),
                                                                     param.get('family_diet_principle', ''),
+<<<<<<< HEAD
                                                                     param.get('history', []),
                                                                     param.get('requirements', []),
                                                                     param.get('reference_diet', ''),
                                                                     param.get('days', 1))
+=======
+                                                                           param.get('history', []),
+                                                                           param.get('requirements', []),
+                                                                            param.get('reference_diet', []),
+                                                                            param.get('days', 1))
+>>>>>>> 756847179dca44eb17da8ac5b6f2e250676e4a1a
             result = decorate_jiahe_complete(
                 generator
             )
@@ -651,9 +660,15 @@ def create_app():
             param = await accept_param(request, endpoint="/gen_daily_diet")
 
             generator: AsyncGenerator = expertModel.gen_n_daily_diet(param.get('cur_date', ''),
+<<<<<<< HEAD
                                                                      param.get('location', ''),
                                                                      param.get('diet_principle', ''),
                                                                      param.get('reference_daily_diets', ''),
+=======
+                                                                       param.get('location', ''),
+                                                                        param.get('diet_principle', ''),
+                                                                        param.get('reference_daily_diets', []),
+>>>>>>> 756847179dca44eb17da8ac5b6f2e250676e4a1a
                                                                      param.get('days', 0),
                                                                      param.get('history', []),
                                                                      param.get('userInfo', {}))
