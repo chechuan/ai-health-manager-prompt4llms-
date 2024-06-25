@@ -3974,8 +3974,10 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        content = content.replace('：\n','：')
+        content = content.replace('：\n\n','\n')
         data = {}
         lines = content.split('\n')
         for line in lines:
@@ -3983,7 +3985,7 @@ class Agents:
             if values=='无':
                 data[key]=[]
             else:
-                data[key] = values.split('；')
+                data[key] = values.split('|')
         return data
     
     async def sanji_assess_keyword_classification(self, **kwargs) -> str:
@@ -4004,6 +4006,7 @@ class Agents:
         content: str = await self.sanji_general(
             process=0, _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        content = content.replace('：\n','：')
         lines = content.split('\n')
         data = {}
         for line in lines:
@@ -4037,6 +4040,7 @@ class Agents:
         content: str = await self.sanji_general(
              process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        content = content.replace('：\n','：')
         lines = content.split('\n')
         data = {}
         for line in lines:
