@@ -1329,9 +1329,9 @@ class expertModel:
                 "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
             )
             start_time = time.time()
-            generate_text = callLLM(
+            generate_text = await acallLLM(
                 history=messages,
-                max_tokens=2048,
+                max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
@@ -1655,9 +1655,9 @@ class expertModel:
                 "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
             )
             start_time = time.time()
-            generate_text = callLLM(
+            generate_text = await acallLLM(
                 history=messages,
-                max_tokens=2048,
+                max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
