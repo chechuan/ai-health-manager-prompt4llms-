@@ -1098,7 +1098,28 @@ class expertModel:
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
-            return {"result": True}
+            if history:
+                # 1. 判断是否终止
+                messages = [
+                    {
+                        "role": "user",
+                        "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                    }
+                ]
+                logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+                generate_text = callLLM(
+                    history=messages,
+                    max_tokens=2048,
+                    top_p=0.9,
+                    temperature=0.8,
+                    do_sample=True,
+                    model="Qwen1.5-72B-Chat",
+                )
+                logger.debug("判断是否终止模型输出： " + generate_text)
+                if '中止' in generate_text:
+                    return {"result": False}
+                else:
+                    return {"result": True}
         else:
             return {"result": False}
 
@@ -1106,28 +1127,7 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
-        if history:
-            # 1. 判断是否终止
-            messages = [
-                {
-                    "role": "user",
-                    "content": jiahe_confirm_terminal_prompt.format(his_prompt),
-                }
-            ]
-            logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
-            generate_text = callLLM(
-                history=messages,
-                max_tokens=2048,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
-                model="Qwen1.5-32B-Chat",
-            )
-            logger.debug("判断是否终止模型输出： " + generate_text)
-            if '中止' in generate_text:
-                yield {"message": "", "terminal":True, "end": True}
-
-        # 2. 生成收集信息问题
+        # 生成收集信息问题
         messages = [
             {
                 "role": "user",
@@ -1160,7 +1160,7 @@ class expertModel:
                 content += text_stream
                 yield {"message": text_stream, "terminal":False, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {"message": "", "terminal":True, "end": True}
+        yield {"message": "", "terminal":False, "end": True}
 
     @staticmethod
     async def eat_health_qa(query):
