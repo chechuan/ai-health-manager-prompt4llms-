@@ -190,6 +190,14 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
         "aigc_functions_consultation_summary_to_group",
+        "aigc_functions_chief_complaint_generation",
+        "aigc_functions_diagnosis_generation",
+        "aigc_functions_generate_present_illness",
+        "aigc_functions_generate_past_medical_history",
+        "aigc_functions_generate_allergic_history",
+        "aigc_functions_auxiliary_diagnosis",
+        "aigc_functions_generate_medication_plan",
+        "aigc_functions_generate_examination_plan",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -414,7 +422,7 @@ class AigcSanjiRequest(BaseModel):
     #     description="当前地点",
     #     examples=["廊坊"],
     # )
-    
+
 
 class AigcFunctionsDoctorRecommendRequest(BaseModel):
     intentCode: Literal["aigc_functions_doctor_recommend",] = Field(
@@ -508,3 +516,6 @@ class bloodPressureLevelResponse(BaseModel):
     is_visit: bool = Field(False, description="是否上门")
     exercise_video: bool = Field(False, description="是否显示锻炼视频")
     events: List[Dict] = Field([], description="后续跟随事件")
+
+from pydantic import BaseModel
+from typing import List, Any
