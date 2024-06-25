@@ -260,7 +260,7 @@ class CustomChatAuxiliary(CustomChatModel):
         event = self.__extract_event_from_gsr__(
             self.gsr, "auxiliary_diagnosis_summary_diet_rec"
         )
-        prompt_template_str = event["process"]
+        prompt_template_str = event['description']+event["process"]
         compose_message = ""
         for i in history:
             role, content = i["role"], i["content"]
