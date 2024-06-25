@@ -9,7 +9,7 @@
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from fastapi import Body
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, root_validator, validator
 
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
@@ -190,6 +190,14 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
         "aigc_functions_consultation_summary_to_group",
+        "aigc_functions_chief_complaint_generation",
+        "aigc_functions_diagnosis_generation",
+        "aigc_functions_generate_present_illness",
+        "aigc_functions_generate_past_medical_history",
+        "aigc_functions_generate_allergic_history",
+        "aigc_functions_auxiliary_diagnosis",
+        "aigc_functions_generate_medication_plan",
+        "aigc_functions_generate_examination_plan",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -414,7 +422,7 @@ class AigcSanjiRequest(BaseModel):
     #     description="当前地点",
     #     examples=["廊坊"],
     # )
-    
+
 
 class AigcFunctionsDoctorRecommendRequest(BaseModel):
     intentCode: Literal["aigc_functions_doctor_recommend",] = Field(
@@ -508,3 +516,310 @@ class bloodPressureLevelResponse(BaseModel):
     is_visit: bool = Field(False, description="是否上门")
     exercise_video: bool = Field(False, description="是否显示锻炼视频")
     events: List[Dict] = Field([], description="后续跟随事件")
+
+
+class OutpatientUserProfile(BaseModel):
+    age: Optional[int] = Field(None, description="年龄", ge=0, le=200)
+    gender: Optional[Literal["男", "女"]] = Field(None, description="性别", examples=["男", "女"])
+    height: Optional[str] = Field(None, description="身高", examples=["175cm", "1.8米"])
+    weight: Optional[str] = Field(None, description="体重", examples=["65kg", "90斤"])
+    weight_evaluation: Optional[str] = Field(None, description="体重评价", examples=["正常"])
+    bmi: Optional[Union[None, float]] = None
+    disease_history: Optional[List[str]] = Field(None, description="疾病史")
+    allergic_history: Optional[List[str]] = Field(None, description="过敏史")
+    surgery_history: Optional[List[str]] = Field(None, description="手术史")
+    main_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医主要诊断", examples=["高血压"])
+    secondary_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医次要诊断")
+    traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
+    traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
+    traditional_chinese_medicine_constitution: Optional[str] = None  # 中医体质
+    dietary_habits: Optional[str] = Field(None, description="饮食习惯", examples=["少食"])
+    body_temperature: Optional[str] = None  # 体温(摄氏度)
+    respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
+    pulse_rate: Optional[str] = None  # 脉搏(次/分)
+    diastolic_blood_pressure: Optional[Union[float, int]] = None  # 舒张压(mmHg)
+    systolic_blood_pressure: Optional[Union[float, int]] = None  # 收缩压(mmHg)
+    chief_complaint: Optional[str] = None  # 主诉
+    history_of_present_illness: Optional[str] = None  # 现病史
+    family_history_of_disease: Optional[str] = None  # 家族疾病史
+    past_history_of_present_illness: Optional[str] = None  # 既往史
+    specialist_check: Optional[str] = None  # 专科检查
+    disposal_plan: Optional[str] = None  # 处置方案
+    nation: Optional[str] = Field(None, description="民族", example=["汉族"])
+    daily_physical_labor_intensity: Optional[str] = Field(None, description="日常体力劳动水平", examples=["中"])
+    mood_swings: Optional[str] = Field(None, description="情绪波动", examples=["正常波动"])
+    motion_risk_level: Optional[str] = Field(None, description="运动风险等级", examples=["正常"])
+    exercise_intensity: Optional[str] = Field(None, description="运动强度", examples=["正常强度"])
+
+
+class MedicalRecords(BaseModel):
+    chief_complaint: Optional[str] = Field("无", description="主诉")
+    present_illness_history: Optional[str] = Field("无", description="现病史")
+    past_history_of_present_illness: Optional[str] = Field("无", description="既往史")
+    allergic_history: Optional[List[str]] = Field(None, description="过敏史")
+
+class OutpatientDiagnosisRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_diagnosis_generation"
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_consultation_summary",
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    user_profile: Optional[OutpatientUserProfile] = None
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
+    medical_records: Optional[MedicalRecords] = Field(default_factory=MedicalRecords)
+    # examination_results: Optional[str] = None
+
+    # @root_validator(pre=True)
+    # def check_at_least_one_field(cls, values):
+    #     if not values.get('user_profile') and not values.get('messages') and not values.get('examination_results') and not values.get('medical_records'):
+    #         raise ValueError('At least one of user_profile, messages, or examination_results must be provided.')
+    #     return values
+
+    @root_validator(pre=True)
+    def check_at_least_one_field(cls, values):
+        if not values.get('user_profile') and not values.get('messages') and not values.get("medical_records"):
+            raise ValueError('At least one of user_profile, messages, or examination_results must be provided.')
+        return values
+
+
+class ConversationRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_chief_complaint_generation",
+        "aigc_functions_generate_present_illness"
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_consultation_summary",
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        ...,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
+
+
+class PastHistoryUserProfile(BaseModel):
+    past_history_of_present_illness: Optional[str] = None  # 既往史
+
+
+class PastHistoryRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_generate_past_medical_history"
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_consultation_summary",
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    user_profile: Optional[PastHistoryUserProfile] = None
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
+
+    @validator('messages', always=True)
+    def check_at_least_one(cls, v, values, **kwargs):
+        user_profile = values.get('user_profile')
+        if not user_profile and not v:
+            raise ValueError('用户画像和会话记录至少有一个是必填项。')
+        return v
+
+
+class AllergicHistoryUserProfile(BaseModel):
+    allergic_history: Union[None, List[str]] = []  # 过敏史
+
+
+class AllergicHistoryRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_generate_allergic_history"
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_consultation_summary",
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    user_profile: Optional[AllergicHistoryUserProfile] = Field(None, description="用户画像")
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
+
+    @root_validator(pre=True)
+    def check_at_least_one(cls, values):
+        user_profile = values.get('user_profile')
+        messages = values.get('messages')
+        if not user_profile and not messages:
+            raise ValueError('用户画像和会话记录至少有一个是必填项。')
+        return values
+
+
+
+
+
+
