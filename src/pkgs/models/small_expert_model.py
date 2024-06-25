@@ -3995,11 +3995,12 @@ class Agents:
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values.split(', ')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split(', ')
         return data
     
     async def sanji_assess_3health_classification(self, **kwargs) -> str:
@@ -4027,11 +4028,12 @@ class Agents:
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = [values]
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = [values]
         return data
     
     async def sanji_assess_literature_classification(self, **kwargs) -> str:
@@ -4060,11 +4062,12 @@ class Agents:
         lines = content.split('\n')
         data = {}
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values.split(',')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split('|')
         filtered_dict = {k: v for k, v in data.items() if k in ["物质","信息","能量"]}
 
         return filtered_dict
@@ -4114,12 +4117,12 @@ class Agents:
 
         lines = result.split('\n')
         for line in lines:
-            
-            key, values = line.split('：', 1)
-            if values=='无':
-                data['literature'][key]=[]
-            else:
-                data['literature'][key] = values.split(',')
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data['literature'][key]=[]
+                else:
+                    data['literature'][key] = values.split('|')
         filtered_dict = {k: v for k, v in data['literature'].items() if k in ["物质","信息","能量"]}
         data['literature']=filtered_dict
     
