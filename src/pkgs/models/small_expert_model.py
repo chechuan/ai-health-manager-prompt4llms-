@@ -1301,7 +1301,9 @@ class expertModel:
         """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
         temp = Template(jiahe_family_diet_prompt)
-        diet_cont = [reference_diet]
+        diet_cont = []
+        if reference_diet:
+            diet_cont.extend(reference_diet)
         days = 1
         for i in range(days):
             cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
@@ -1333,25 +1335,30 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                stream=True,
+                # stream=True,
                 model="Qwen1.5-32B-Chat",
             )
+            diet_cont.append(generate_text)
             response_time = time.time()
-            print(f"latency {response_time - start_time:.2f} s -> response")
-            content = ""
-            printed = False
-            for i in generate_text:
-                t = time.time()
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    if not printed:
-                        print(f"latency first token {t - start_time:.2f} s")
-                        printed = True
-                    content += text_stream
-                    yield {"message": text_stream, "end": False}
-            logger.debug("出具家庭一日饮食计划模型输出： " + content)
-            diet_cont.append(content)
+            print(f"家庭一日饮食计划生成耗时 {response_time - start_time:.2f}")
+            yield {'message': generate_text, 'end': False}
+
+            # response_time = time.time()
+            # print(f"latency {response_time - start_time:.2f} s -> response")
+            # content = ""
+            # printed = False
+            # for i in generate_text:
+            #     t = time.time()
+            #     msg = i.choices[0].delta.to_dict()
+            #     text_stream = msg.get("content")
+            #     if text_stream:
+            #         if not printed:
+            #             print(f"latency first token {t - start_time:.2f} s")
+            #             printed = True
+            #         content += text_stream
+            #         yield {"message": text_stream, "end": False}
+            # logger.debug("出具家庭一日饮食计划模型输出： " + content)
+            # diet_cont.append(content)
         yield {"message": "", "end": True}
 
     @staticmethod
@@ -1629,7 +1636,9 @@ class expertModel:
     async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
         """个人N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
-        diet_cont = [reference_daily_diets]
+        diet_cont = []
+        if reference_daily_diets:
+            diet_cont.extend(reference_daily_diets)
         import datetime
         for i in range(days):
             cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")

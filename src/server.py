@@ -596,7 +596,7 @@ def create_app():
                                                                     param.get('family_diet_principle', ''),
                                                                            param.get('history', []),
                                                                            param.get('requirements', []),
-                                                                            param.get('reference_diet', ''),
+                                                                            param.get('reference_diet', []),
                                                                             param.get('days', 1))
             result = decorate_jiahe_complete(
                 generator
@@ -654,7 +654,7 @@ def create_app():
             generator: AsyncGenerator = expertModel.gen_n_daily_diet(param.get('cur_date', ''),
                                                                        param.get('location', ''),
                                                                         param.get('diet_principle', ''),
-                                                                        param.get('reference_daily_diets', ''),
+                                                                        param.get('reference_daily_diets', []),
                                                                      param.get('days', 0),
                                                                        param.get('history', []),
                                                                        param.get('userInfo', {}))
