@@ -57,6 +57,8 @@ from src.utils.module import (
     dumpJS,
     param_check,
 )
+from collections import defaultdict
+
 
 
 class expertModel:
@@ -3345,17 +3347,19 @@ class Agents:
 
     def __compose_user_msg__(
         self,
-        mode: Literal["user_profile", "messages", "drug_plan"],
+        mode: Literal["user_profile", "messages", "drug_plan", "medical_records"],
         user_profile: UserProfile = None,
+        medical_records: MedicalRecords = None,
         messages: List[ChatMessage] = [],
         drug_plan: "List[DrugPlanItem]" = "[]",
         role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
-            for key, value in user_profile.items():
-                if value and USER_PROFILE_KEY_MAP.get(key):
-                    content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
@@ -3382,6 +3386,11 @@ class Agents:
                         + "\n"
                     )
                 content = content.strip()
+        elif mode == "medical_records":
+            if medical_records:
+                for key, value in medical_records.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -3776,7 +3785,10 @@ class Agents:
 
         _event = "西医决策-诊断生成"
         user_profile: str = self.__compose_user_msg__(
-            "user_profile", user_profile=kwargs["user_profile"]
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        medical_records: str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
         )
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
@@ -3785,7 +3797,8 @@ class Agents:
         )
         prompt_vars = {
             "user_profile": user_profile,
-            "messages": messages
+            "messages": messages,
+            "medical_records": medical_records
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
@@ -3816,26 +3829,75 @@ class Agents:
         )
         return content
 
-    # # @param_check(check_params=["messages"])
-    # async def aigc_functions_generate_present_illness(self, **kwargs) -> str:
-    #     """西医决策-诊断生成"""
-    #
-    #     _event = "西医决策-现病史生成"
-    #     messages = (
-    #         self.__compose_user_msg__("messages", messages=kwargs["messages"])
-    #         if kwargs.get("messages")
-    #         else ""
-    #     )
-    #     prompt_vars = {
-    #         "messages": messages
-    #     }
-    #     model_args = await self.__update_model_args__(
-    #         kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
-    #     )
-    #     content: str = await self.aaigc_functions_general(
-    #         _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-    #     )
-    #     return content
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_present_illness(self, **kwargs) -> str:
+        """西医决策-现病史生成"""
+
+        _event = "西医决策-现病史生成"
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_past_medical_history(self, **kwargs) -> str:
+        """西医决策-既往史生成"""
+
+        _event = "西医决策-既往史生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_generate_allergic_history(self, **kwargs) -> str:
+        """西医决策-过敏史生成"""
+
+        _event = "西医决策-过敏史生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
@@ -4405,8 +4467,11 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
+        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+
         content: Union[str, Generator] = await acallLLM(
             model=model,
             query=prompt,
