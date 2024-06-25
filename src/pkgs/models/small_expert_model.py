@@ -3852,11 +3852,14 @@ class Agents:
         data = {}
         lines = content.split('\n')
         for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
+            if '：' in line:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values
             else:
-                data[key] = values
+                data['运动课程']=line
         return data
 
     # @param_check(check_params=["messages"])
@@ -4081,6 +4084,62 @@ class Agents:
 
         return filtered_dict
     
+    # async def sanji_intervene_goal_classification(self, **kwargs) -> str:
+    #     """"""
+
+    #     _event = "sanji_intervene_cl"
+    #     user_profile: str = self.__compose_user_msg__(
+    #         "user_profile", user_profile=kwargs["user_profile"]
+    #     )
+    #     messages = (
+    #         self.__compose_user_msg__("messages", messages=kwargs["messages"])
+    #         if kwargs.get("messages")
+    #         else ""
+    #     )
+    #     prompt_vars = {
+    #         "user_profile": user_profile,
+    #         "messages": messages,
+    #     }
+    #     model_args = await self.__update_model_args__(
+    #         kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
+    #     )
+    #     content: str = await self.sanji_general(
+    #          _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+    #     )
+    #     prompt_vars_ = {
+    #         "user_profile": user_profile,
+    #         "messages": messages,
+    #         "content":content
+    #     }
+    #     result: str = await self.sanji_general(
+    #         process =2, _event=_event, prompt_vars=prompt_vars_, model_args=model_args, **kwargs
+    #     )
+    #     data = {}
+    #     data['goal']={}
+    #     data['literature']={}
+    #     lines = content.split('\n')
+    #     for line in lines:
+    #         if ':' in line or '：' in line:
+    #             key, values = line.split('：', 1)
+    #             if values=='无':
+    #                 data['goal'][key]=[]
+    #             else:
+    #                 data['goal'][key] = [values]
+        
+
+    #     lines = result.split('\n')
+    #     for line in lines:
+    #         if len(line)>0:
+    #             key, values = line.split('：', 1)
+    #             if values=='无':
+    #                 data['literature'][key]=[]
+    #             else:
+    #                 data['literature'][key] = values.split('|')
+    #     filtered_dict = {k: v for k, v in data['literature'].items() if k in ["物质","信息","能量"]}
+    #     data['literature']=filtered_dict
+    
+        # return data
+
     async def sanji_intervene_goal_classification(self, **kwargs) -> str:
         """"""
 
@@ -4103,14 +4162,7 @@ class Agents:
         content: str = await self.sanji_general(
              _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        prompt_vars_ = {
-            "user_profile": user_profile,
-            "messages": messages,
-            "content":content
-        }
-        result: str = await self.sanji_general(
-            process =2, _event=_event, prompt_vars=prompt_vars_, model_args=model_args, **kwargs
-        )
+       
         data = {}
         data['goal']={}
         data['literature']={}
@@ -4122,18 +4174,6 @@ class Agents:
                     data['goal'][key]=[]
                 else:
                     data['goal'][key] = [values]
-        
-
-        lines = result.split('\n')
-        for line in lines:
-            if len(line)>0:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data['literature'][key]=[]
-                else:
-                    data['literature'][key] = values.split('|')
-        filtered_dict = {k: v for k, v in data['literature'].items() if k in ["物质","信息","能量"]}
-        data['literature']=filtered_dict
     
         return data
     
