@@ -67,16 +67,16 @@ def callLLM(
     kwargs = pre_process_model_args(**kwargs)
     client = openai.OpenAI()
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
-    if model != default_model:
-        logger.warning(
-            f"There will change Model: {model} to {default_model}."
-            + "Please manually check your code use config file to manage which model to use."
-        )
+    # if model != default_model:
+    #     logger.warning(
+    #         f"There will change Model: {model} to {default_model}."
+    #         + "Please manually check your code use config file to manage which model to use."
+    #     )
     if stream and stop:
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
         )
-    model = default_model
+    # model = default_model
     t_st = time.time()
     kwds = {
         "model": model,
@@ -160,16 +160,16 @@ async def acallLLM(
     kwargs = pre_process_model_args(**kwargs)
     aclient = openai.AsyncOpenAI()
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
-    if model != default_model:
-        logger.warning(
-            f"There will change Model: {model} to {default_model}."
-            + "Please manually check your code use config file to manage which model to use."
-        )
+    # if model != default_model:
+    #     logger.warning(
+    #         f"There will change Model: {model} to {default_model}."
+    #         + "Please manually check your code use config file to manage which model to use."
+    #     )
     if stream and stop:
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
         )
-    model = default_model
+    # model = default_model
     t_st = time.time()
     kwds = {
         "model": model,

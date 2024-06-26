@@ -32,6 +32,7 @@ sys.path.append(Path(__file__).parents[4].as_posix())
 from datetime import datetime, timedelta
 from string import Template
 from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
+import datetime
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -56,6 +57,8 @@ from src.utils.module import (
     dumpJS,
     param_check,
 )
+from collections import defaultdict
+
 
 
 class expertModel:
@@ -607,7 +610,8 @@ class expertModel:
             hist_s = "\n".join(
                 [f"{_role_map.get(i['role'])}: {i['content']}" for i in history]
             )
-            current_date = datetime.now().date()
+            # current_date = datetime.now().date()
+            current_date =datetime.datetime.now()
             drug_situ, drug_msg = "", [
                 "漏服药物",
                 "正常服药",
@@ -1041,11 +1045,11 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("食谱内容生成模型输出： " + generate_text)
         return generate_text
@@ -1064,11 +1068,11 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("食谱推荐原则模型输出： " + generate_text)
         return generate_text
@@ -1088,15 +1092,36 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
-            return {"result": True}
+            if history:
+                # 1. 判断是否终止
+                messages = [
+                    {
+                        "role": "user",
+                        "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                    }
+                ]
+                logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
+                generate_text = callLLM(
+                    history=messages,
+                    max_tokens=2048,
+                    top_p=0.9,
+                    temperature=0.8,
+                    do_sample=True,
+                    model="Qwen1.5-72B-Chat",
+                )
+                logger.debug("判断是否终止模型输出： " + generate_text)
+                if '中止' in generate_text:
+                    return {"result": False}
+                else:
+                    return {"result": True}
         else:
             return {"result": False}
 
@@ -1104,28 +1129,7 @@ class expertModel:
     async def gather_userInfo(userInfo={}, history=[]):
         """生成收集用户信息问题"""
         info, his_prompt = get_userInfo_history(userInfo, history)
-        if history:
-            # 1. 判断是否终止
-            messages = [
-                {
-                    "role": "user",
-                    "content": jiahe_confirm_terminal_prompt.format(his_prompt),
-                }
-            ]
-            logger.debug("判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False))
-            generate_text = callLLM(
-                history=messages,
-                max_tokens=1024,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
-                model="Qwen1.5-72B-Chat",
-            )
-            logger.debug("判断是否终止模型输出： " + generate_text)
-            if '中止' in generate_text:
-                yield {"message": "", "terminal":True, "end": True}
-
-        # 2. 生成收集信息问题
+        # 生成收集信息问题
         messages = [
             {
                 "role": "user",
@@ -1136,12 +1140,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1158,7 +1162,7 @@ class expertModel:
                 content += text_stream
                 yield {"message": text_stream, "terminal":False, "end": False}
         logger.debug("收集信息模型输出： " + content)
-        yield {"message": "", "terminal":True, "end": True}
+        yield {"message": "", "terminal":False, "end": True}
 
     @staticmethod
     async def eat_health_qa(query):
@@ -1183,7 +1187,7 @@ class expertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1220,12 +1224,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1270,12 +1274,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1296,54 +1300,67 @@ class expertModel:
 
     @staticmethod
     async def gen_family_diet(users, cur_date, location, family_principle, history=[], requirements=[], reference_diet='', days=1):
-        """出具家庭一日饮食原则"""
+        """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
-        t = Template(jiahe_family_diet_prompt)
-        prompt = t.substitute(
-            num=len(users),
-            roles=roles,
-            requirements='，'.join(requirements),
-            family_info=familyInfo,
-            cur_date=cur_date,
-            location=location,
-            family_principle=family_principle,
-            reference_diet=reference_diet,
-            days=f'{str(days)}天'
-        )
-        messages = [
-            {
-                "role": "user",
-                "content": prompt,
-            }
-        ]
-        logger.debug(
-            "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
-        )
-        start_time = time.time()
-        generate_text = callLLM(
-            history=messages,
-            max_tokens=1024,
-            top_p=0.9,
-            temperature=0.8,
-            do_sample=True,
-            stream=True,
-            model="Qwen1.5-72B-Chat",
-        )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {"message": text_stream, "end": False}
-        logger.debug("出具家庭一日饮食计划模型输出： " + content)
+        temp = Template(jiahe_family_diet_prompt)
+        diet_cont = []
+        if reference_diet:
+            diet_cont.extend(reference_diet)
+        days = 1
+        for i in range(days):
+            cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
+            ref_diet_str = '\n'.join(diet_cont[-2:])
+            prompt = temp.substitute(
+                num=len(users),
+                roles=roles,
+                requirements='，'.join(requirements),
+                family_info=familyInfo,
+                cur_date=cur_date,
+                location=location,
+                family_principle=family_principle,
+                reference_diet=ref_diet_str,
+                days='1天'
+            )
+            messages = [
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ]
+            logger.debug(
+                "出具家庭一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            start_time = time.time()
+            generate_text = await acallLLM(
+                history=messages,
+                max_tokens=1024,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                # stream=True,
+                model="Qwen1.5-32B-Chat",
+            )
+            diet_cont.append(generate_text)
+            response_time = time.time()
+            print(f"家庭一日饮食计划生成耗时 {response_time - start_time:.2f}")
+            yield {'message': generate_text, 'end': False}
+
+            # response_time = time.time()
+            # print(f"latency {response_time - start_time:.2f} s -> response")
+            # content = ""
+            # printed = False
+            # for i in generate_text:
+            #     t = time.time()
+            #     msg = i.choices[0].delta.to_dict()
+            #     text_stream = msg.get("content")
+            #     if text_stream:
+            #         if not printed:
+            #             print(f"latency first token {t - start_time:.2f} s")
+            #             printed = True
+            #         content += text_stream
+            #         yield {"message": text_stream, "end": False}
+            # logger.debug("出具家庭一日饮食计划模型输出： " + content)
+            # diet_cont.append(content)
         yield {"message": "", "end": True}
 
     @staticmethod
@@ -1364,12 +1381,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1405,12 +1422,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1452,11 +1469,11 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug(
             "猜你想问问题模型输出： " + generate_text
@@ -1474,11 +1491,11 @@ class expertModel:
         )
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug(
             "营养咨询-猜你想问模型意图识别输出： " + generate_text
@@ -1532,12 +1549,12 @@ class expertModel:
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
-            max_tokens=1024,
+            max_tokens=2048,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1621,12 +1638,14 @@ class expertModel:
     async def gen_n_daily_diet(cur_date, location, diet_principle, reference_daily_diets, days, history=[], userInfo={}):
         """个人N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
-        diet_cont = [reference_daily_diets]
+        diet_cont = []
+        if reference_daily_diets:
+            diet_cont.extend(reference_daily_diets)
         import datetime
         for i in range(days):
             cur_date = (datetime.datetime.now()+datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             # 生成一日食谱
-            ref_diet_str = '\n'.join(diet_cont[-5:])
+            ref_diet_str = '\n'.join(diet_cont[-2:])
             messages = [
                 {
                     "role": "user",
@@ -1638,54 +1657,58 @@ class expertModel:
                 "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
             )
             start_time = time.time()
-            generate_text = callLLM(
+            generate_text = await acallLLM(
                 history=messages,
                 max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen1.5-72B-Chat",
+                # stream=True,
+                model="Qwen1.5-32B-Chat",
             )
+            logger.info("一日饮食计划模型生成时间：" + str(time.time() - start_time))
             diet_cont.append(generate_text)
-            logger.debug(
-                "一日饮食计划模型输出： " + generate_text
-            )
-            messages = [
-                {
-                    "role": "user",
-                    "content": jiahe_physical_efficacy_prompt.format(generate_text),
-                }
-            ]
-            logger.debug(
-                "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
-            )
-            start_time = time.time()
-            generate_text = callLLM(
-                history=messages,
-                max_tokens=1024,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
-                stream=True,
-                model="Qwen1.5-72B-Chat",
-            )
+            yield {'message': generate_text, 'end': False}
 
-            response_time = time.time()
-            print(f"latency {response_time - start_time:.2f} s -> response")
-            content = ""
-            printed = False
-            for i in generate_text:
-                t = time.time()
-                msg = i.choices[0].delta.to_dict()
-                text_stream = msg.get("content")
-                if text_stream:
-                    if not printed:
-                        print(f"latency first token {t - start_time:.2f} s")
-                        printed = True
-                    content += text_stream
-                    yield {'message': text_stream, 'end': False}
-            logger.debug("一日食物功效模型输出： " + content)
-            # diet_cont = diet_cont + '\n' + content
+            # logger.debug(
+            #     "一日饮食计划模型输出： " + generate_text
+            # )
+            # messages = [
+            #     {
+            #         "role": "user",
+            #         "content": jiahe_physical_efficacy_prompt.format(generate_text),
+            #     }
+            # ]
+            # logger.debug(
+            #     "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+            # )
+            # start_time = time.time()
+            # generate_text = callLLM(
+            #     history=messages,
+            #     max_tokens=2048,
+            #     top_p=0.9,
+            #     temperature=0.8,
+            #     do_sample=True,
+            #     stream=True,
+            #     model="Qwen1.5-72B-Chat",
+            # )
+
+        #     response_time = time.time()
+        #     print(f"latency {response_time - start_time:.2f} s -> response")
+        #     content = ""
+        #     printed = False
+        #     for i in generate_text:
+        #         t = time.time()
+        #         msg = i.choices[0].delta.to_dict()
+        #         text_stream = msg.get("content")
+        #         if text_stream:
+        #             if not printed:
+        #                 print(f"latency first token {t - start_time:.2f} s")
+        #                 printed = True
+        #             content += text_stream
+        #             yield {'message': text_stream, 'end': False}
+        #     logger.debug("一日食谱模型输出： " + content)
+        #     diet_cont.append(content)
         yield {'message': "", 'end': True}
 
     @staticmethod
@@ -2447,7 +2470,7 @@ class expertModel:
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"血压趋势分析 Output: {content}")
         return content
-    
+
     @clock
     def health_literature_interact(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
@@ -2455,7 +2478,7 @@ class expertModel:
         prompt_template = self.gsr.prompt_meta_data["event"]["conversation_deal"]["process"]
         pro = param
         user_info = pro.get("user_info",{})
-        
+
         result = ""
         for item in messages:
             result += item['role']+":"+item['content']
@@ -2470,18 +2493,18 @@ class expertModel:
                 "bmi": user_info.get("bmi", ''),
                 "sport_level": user_info.get("sport_level", '')
 
-            }      
+            }
         sys_prompt = prompt_template.format(**prompt_vars)
         history = []
         history.append({"role": "system", "content": sys_prompt})
         response = callLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=True
         )
-        pc_message = accept_stream_response(response, verbose=False) 
+        pc_message = accept_stream_response(response, verbose=False)
         pc_message =pc_message.replace("\n", "")
         pc = pc_message.split(",")
         return pc
-    
+
     @clock
     async def health_literature_generation(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
@@ -2490,7 +2513,7 @@ class expertModel:
         pro = param
         user_info = pro.get("user_info",{})
         programme = pro.get("programme",{})
-        
+
         result = ""
         for item in messages:
             if item.get("role") and item.get("content"):
@@ -2510,18 +2533,18 @@ class expertModel:
                 "fun": programme.get("fun",''),
                 "change": programme.get("change",''),
                 "diagnostic_results": pro.get("diagnostic_results",'')
-            }      
+            }
         sys_prompt = prompt_template.format(**prompt_vars)
         history = []
         history.append({"role": "system", "content": sys_prompt})
         content = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
-        # pc_message = accept_stream_response(response, verbose=False) 
+        # pc_message = accept_stream_response(response, verbose=False)
         pc_message =content.replace("\n", "")
         pc = pc_message.split(",")
         return pc
-    
+
     @clock
     def health_key_extraction(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
@@ -2532,7 +2555,7 @@ class expertModel:
             result += item['role']+":"+item['content']
         prompt_vars = {
             "messages":result
-        }       
+        }
         sys_prompt = prompt_template.format(**prompt_vars)
         history = []
         history.append({"role": "system", "content": sys_prompt})
@@ -2543,14 +2566,14 @@ class expertModel:
         pc_message =pc_message.replace("关键字", "")
         pc_message =pc_message.replace("提取结果", "")
         pc_message =pc_message.replace(":", "")
-        pc_message =pc_message.replace("：", "")       
+        pc_message =pc_message.replace("：", "")
         pc_message =pc_message.replace("\n", "")
         import re
         pc = re.split("[,，]",pc_message)
         filtered_list = [x for x in pc if x != ""]
         return filtered_list
 
-    
+
     @clock
     def health_blood_glucose_trend_analysis(self, param: Dict) -> str:
         """血糖趋势分析"""
@@ -2588,7 +2611,7 @@ class expertModel:
                     result = '血糖控制高危'
             else:
                 result = '没有对应时段或血糖'
-            return result       
+            return result
         model = self.gsr.model_config["blood_glucose_trend_analysis"]
         pro = param
         data = pro.get("glucose", {})
@@ -2601,8 +2624,8 @@ class expertModel:
         for date in data.keys():
             result += date + '|'
         result += '\n'
-        time_periods = ['空腹', '早餐后2h', '午餐后2h', '晚餐后2h']            
-    
+        time_periods = ['空腹', '早餐后2h', '午餐后2h', '晚餐后2h']
+
         # 组装步骤1
         compose_message1 = f"当前血糖{gl},{glucose_type(recent_time,float(gl))}。"
         time_deal = []
@@ -2613,7 +2636,7 @@ class expertModel:
             f_g =0
             message_f =''
             for date in data.keys():
-                t_e = slot_dict[time_period]              
+                t_e = slot_dict[time_period]
                 glucose_val = data[date][t_e]
                 if glucose_val != "":
                     glucose_val = float(glucose_val)
@@ -2624,7 +2647,7 @@ class expertModel:
                     else:
                         f_g += 1
                         g_t = glucose_type(time_period,glucose_val)
-                        message_f += f"血糖{glucose_val},{g_t}。"                 
+                        message_f += f"血糖{glucose_val},{g_t}。"
                     count += 1
             if count < 3:
                 message_ = f"血糖{count}天的记录中，{t_g}天血糖正常，{f_g}天血糖异常。" + message_f
@@ -2642,7 +2665,7 @@ class expertModel:
                 t_e = slot_dict[time]
                 result_2 += data[date][t_e] + '|'
             result_2 += '\n'
-        
+
         prompt_template = (
             "# 已知信息\n"
             "## 我的血糖情况\n"
@@ -2655,17 +2678,17 @@ class expertModel:
         prompt_vars = {
             "glucose_message": result_2,
             "glucose_3": glucose_3
-        }       
+        }
         sys_prompt = prompt_template.format(**prompt_vars)
 
-        
+
         history = []
         history.append({"role": "system", "content": sys_prompt})
         logger.debug(f"血糖趋势分析 LLM Input: {dumpJS(history)}")
         response = callLLM(
             history=history, temperature=0.8, top_p=1, model=model, stream=True
         )
-        content = accept_stream_response(response, verbose=False)   
+        content = accept_stream_response(response, verbose=False)
 
         if gl_code=='gl_2_pc':
             for time in time_periods:
@@ -2699,17 +2722,17 @@ class expertModel:
                 "weight": user_info.get("weight", ''),
                 "habits": user_info.get("habits", '')
             }
-                
+
             sys_prompt_pc = prompt_template_pc.format(**prompt_vars_pc)
             history_ = []
             history_.append({"role": "system", "content": sys_prompt_pc})
             response_ = callLLM(
                 history=history_, temperature=0.8, top_p=1, model=model, stream=True
             )
-            pc_message = accept_stream_response(response_, verbose=False) 
+            pc_message = accept_stream_response(response_, verbose=False)
             all_message =compose_message1+'\n'+content+'\n'+pc_message
             return all_message
-          
+
         # 组装步骤3
         for time in time_periods:
             result += '|' + time + '|'
@@ -2742,7 +2765,7 @@ class expertModel:
             "weight": user_info.get("weight", ''),
             "habits": user_info.get("habits", '')
         }
-              
+
         sys_prompt_suggest = prompt_template_suggest.format(**prompt_vars_suggest)
         history_ = []
         history_.append({"role": "system", "content": sys_prompt_suggest})
@@ -3325,17 +3348,19 @@ class Agents:
 
     def __compose_user_msg__(
         self,
-        mode: Literal["user_profile", "messages", "drug_plan"],
+        mode: Literal["user_profile", "messages", "drug_plan", "medical_records"],
         user_profile: UserProfile = None,
+        medical_records: MedicalRecords = None,
         messages: List[ChatMessage] = [],
         drug_plan: "List[DrugPlanItem]" = "[]",
         role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
-            for key, value in user_profile.items():
-                if value and USER_PROFILE_KEY_MAP.get(key):
-                    content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
@@ -3362,6 +3387,11 @@ class Agents:
                         + "\n"
                     )
                 content = content.strip()
+        elif mode == "medical_records":
+            if medical_records:
+                for key, value in medical_records.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -3381,7 +3411,7 @@ class Agents:
             v: getattr(self, v) for k, v in self.gsr.intent_aigcfunc_map.items()
         }
         for obj_str in dir(self):
-            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+            if (obj_str.startswith("aigc_functions_") or obj_str.startswith("sanji_") )and not self.funcmap.get(obj_str):
                 self.funcmap[obj_str] = getattr(self, obj_str)
 
     def aigc_functions_single_choice(self, prompt: str, options: List[str], **kwargs):
@@ -3751,6 +3781,126 @@ class Agents:
         return content
 
     # @param_check(check_params=["messages"])
+    async def aigc_functions_diagnosis_generation(self, **kwargs) -> str:
+        """西医决策-诊断生成"""
+
+        _event = "西医决策-诊断生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        medical_records: str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "medical_records": medical_records
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_chief_complaint_generation(self, **kwargs) -> str:
+        """西医决策-主诉生成"""
+
+        _event = "西医决策-主诉生成"
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_present_illness(self, **kwargs) -> str:
+        """西医决策-现病史生成"""
+
+        _event = "西医决策-现病史生成"
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_past_medical_history(self, **kwargs) -> str:
+        """西医决策-既往史生成"""
+
+        _event = "西医决策-既往史生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    async def aigc_functions_generate_allergic_history(self, **kwargs) -> str:
+        """西医决策-过敏史生成"""
+
+        _event = "西医决策-过敏史生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
+    # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
         _event = "中医调理"
@@ -3772,6 +3922,139 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
+
+    async def aigc_functions_food_principle_new(self, **kwargs) -> str:
+        """饮食原则"""
+        _event = "饮食原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs.get("diagnosis", "无"),
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        data = {}
+        lines = content.split('\n')
+        for line in lines:
+            key, values = line.split('：', 1)
+            if values=='无':
+                data[key]=[]
+            else:
+                data[key] = values
+        return data
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_sport_principle_new(self, **kwargs) -> str:
+        """运动原则"""
+        _event = "运动原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs.get("diagnosis", "无"),
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        data = {}
+        lines = content.split('\n')
+        for line in lines:
+            if '：' in line:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values
+            else:
+                data['运动课程']=line
+        return data
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_mental_principle_new(self, **kwargs) -> str:
+        """情志原则"""
+
+        _event = "情志原则"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs.get("diagnosis", "无"),
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        lines = content.split('\n')
+        data={}
+        l=['one','two','three','four']
+        for i in range(len(lines)):
+            data[l[i]]=lines[i]
+
+        return data
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_chinese_therapy_new(self, **kwargs) -> str:
+        """中医调理"""
+        _event = "中医调理"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs.get("diagnosis", "无"),
+        }
+        model_args = await self.__update_model_args__(kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        data = {}
+        lines = content.split('\n')
+        for line in lines:
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values
+        return data
 
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
@@ -3800,6 +4083,235 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
+
+    async def sanji_assess_3d_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_3d_cl"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = content.replace('：\n','：')
+        content = content.replace('：\n\n','\n')
+        data = {}
+        lines = content.split('\n')
+        for line in lines:
+            key, values = line.split('：', 1)
+            if values=='无':
+                data[key]=[]
+            else:
+                data[key] = values.split('|')
+        return data
+
+    async def sanji_assess_keyword_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_keyword_cl"
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+            process=0, _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = content.replace('：\n','：')
+        lines = content.split('\n')
+        data = {}
+        for line in lines:
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split(', ')
+        return data
+
+    async def sanji_assess_3health_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_3health_cl"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = content.replace('：\n','：')
+        lines = content.split('\n')
+        data = {}
+        for line in lines:
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = [values]
+        return data
+
+    async def sanji_assess_literature_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_liter_cl"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "diagnosis": kwargs.get("diagnosis", "无"),
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = content.replace('：\n','：')
+        lines = content.split('\n')
+        data = {}
+        for line in lines:
+            if len(line)>0:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split('|')
+        filtered_dict = {k: v for k, v in data.items() if k in ["物质","信息","能量"]}
+
+        return filtered_dict
+
+    # async def sanji_intervene_goal_classification(self, **kwargs) -> str:
+    #     """"""
+
+    #     _event = "sanji_intervene_cl"
+    #     user_profile: str = self.__compose_user_msg__(
+    #         "user_profile", user_profile=kwargs["user_profile"]
+    #     )
+    #     messages = (
+    #         self.__compose_user_msg__("messages", messages=kwargs["messages"])
+    #         if kwargs.get("messages")
+    #         else ""
+    #     )
+    #     prompt_vars = {
+    #         "user_profile": user_profile,
+    #         "messages": messages,
+    #     }
+    #     model_args = await self.__update_model_args__(
+    #         kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
+    #     )
+    #     content: str = await self.sanji_general(
+    #          _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+    #     )
+    #     prompt_vars_ = {
+    #         "user_profile": user_profile,
+    #         "messages": messages,
+    #         "content":content
+    #     }
+    #     result: str = await self.sanji_general(
+    #         process =2, _event=_event, prompt_vars=prompt_vars_, model_args=model_args, **kwargs
+    #     )
+    #     data = {}
+    #     data['goal']={}
+    #     data['literature']={}
+    #     lines = content.split('\n')
+    #     for line in lines:
+    #         if ':' in line or '：' in line:
+    #             key, values = line.split('：', 1)
+    #             if values=='无':
+    #                 data['goal'][key]=[]
+    #             else:
+    #                 data['goal'][key] = [values]
+
+
+    #     lines = result.split('\n')
+    #     for line in lines:
+    #         if len(line)>0:
+    #             key, values = line.split('：', 1)
+    #             if values=='无':
+    #                 data['literature'][key]=[]
+    #             else:
+    #                 data['literature'][key] = values.split('|')
+    #     filtered_dict = {k: v for k, v in data['literature'].items() if k in ["物质","信息","能量"]}
+    #     data['literature']=filtered_dict
+
+        # return data
+
+    async def sanji_intervene_goal_classification(self, **kwargs) -> str:
+        """"""
+
+        _event = "sanji_intervene_cl"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        data = {}
+        data['goal']={}
+        data['literature']={}
+        lines = content.split('\n')
+        for line in lines:
+            if ':' in line or '：' in line:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data['goal'][key]=[]
+                else:
+                    data['goal'][key] = [values]
+
+        return data
+
 
     @param_check(check_params=["plan_ai", "plan_human"])
     async def aigc_functions_plan_difference_finder(
@@ -4001,18 +4513,52 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
+        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+
         prompt = prompt_template.format(**prompt_vars)
-        # if kwargs.get("messages"):
-        #     messages = [{"role": "system", "content": prompt}] + kwargs["messages"]
-        #     logger.debug(
-        #         f"AIGC Functions {_event} LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
-        #     )
-        #     content: Union[str, Generator] = await acallLLM(
-        #         model=model,
-        #         history=messages,
-        #         **model_args,
-        #     )
-        # else:
+        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+
+        content: Union[str, Generator] = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        return content
+
+    async def sanji_general(
+        self,
+        process: int=1,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = 'Qwen1.5-72B-Chat'
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 0.3,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        des = self.gsr.get_event_item(event)["description"]
+        if process ==2:
+            des = self.gsr.get_event_item(event)["process"]+self.gsr.get_event_item(event)["constraint"]
+        if process ==0:
+            des += self.gsr.get_event_item(event)["constraint"]
+        prompt_template: str = (
+            prompt_template
+            if prompt_template
+            else des
+        )
+        prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
         content: Union[str, Generator] = await acallLLM(
             model=model,
