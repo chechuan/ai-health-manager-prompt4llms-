@@ -1,5 +1,5 @@
-export ENV=dev 
-export LOG_CONSOLE_LEVEL=TRACE 
+export ENV=dev
+export LOG_CONSOLE_LEVEL=TRACE
 export LOG_FILE_LEVEL=TRACE
 python src/server.py \
     --port 6500 \
