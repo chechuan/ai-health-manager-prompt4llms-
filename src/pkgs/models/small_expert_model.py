@@ -3979,18 +3979,18 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        data = {}
-        lines = content.split('\n')
-        for line in lines:
-            if '：' in line:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
-                else:
-                    data[key] = values
-            else:
-                data['运动课程']=line
-        return data
+        # data = {}
+        # lines = content.split('\n')
+        # for line in lines:
+        #     if '：' in line:
+        #         key, values = line.split('：', 1)
+        #         if values=='无':
+        #             data[key]=[]
+        #         else:
+        #             data[key] = values
+        #     else:
+        #         data['运动课程']=line
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle_new(self, **kwargs) -> str:
@@ -4016,13 +4016,13 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        lines = content.split('\n')
-        data={}
-        l=['one','two','three','four']
-        for i in range(len(lines)):
-            data[l[i]]=lines[i]
+        # lines = content.split('\n')
+        # data={}
+        # l=['one','two','three','four']
+        # for i in range(len(lines)):
+        #     data[l[i]]=lines[i]
 
-        return data
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy_new(self, **kwargs) -> str:
@@ -4045,16 +4045,171 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        data = {}
-        lines = content.split('\n')
-        for line in lines:
-            if len(line)>0:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
-                else:
-                    data[key] = values
-        return data
+        # data = {}
+        # lines = content.split('\n')
+        # for line in lines:
+        #     if len(line)>0:
+        #         key, values = line.split('：', 1)
+        #         if values=='无':
+        #             data[key]=[]
+        #         else:
+        #             data[key] = values
+        return content
+    
+    async def aigc_functions_auxiliary_history_talking(self, **kwargs: object):
+        """医生端 - 生成问题"""
+        _event = "生成医生问题"
+        def __fmt_history(_messages):
+            _role_map = {"user": "用户", "assistant": "医生"}
+            _tmp_lst = []
+            for item in _messages:
+                role = _role_map.get(item["role"], "用户")
+                content = item["content"]
+                _tmp_lst.append(f"{role}: {content}")
+            return "\n".join(_tmp_lst)
+
+        duplicate_content = {}
+        _messages = []
+        for item in kwargs["messages"]:
+            _content = item["content"]
+            if not duplicate_content.get(_content):
+                _messages.append(item)
+                duplicate_content[_content] = 1
+        history_str = __fmt_history(_messages)
+        prompt = (
+            f"# 用户与医生的对话记录\n{history_str}\n"
+            "# 角色定位\n"
+            "请你扮演一个经验丰富的医生,协助我为患者的疾病进行问诊\n"
+            "# 任务描述\n"
+            "1. 在多轮的对话中会提供患者的个人信息和感受,请你根据自身经验分析,针对个人情况提出相应的 问题\n"
+            "2. 问题关键点可以包括:持续时间、发生时机、诱因或症状发生部位等\n"
+            "3. 不要重复询问同一个问题,问题尽可能简洁,每次最多提出两个问题\n"
+            "4. 纯净模式，只输出要询问患者的问题，不同的问题用｜｜隔开\n"
+            "5. 输出示例如下\n"
+            "5. 您的发热情况如何，如否有测量体温？｜｜除了嗓子痛和痒，是否有咳嗽或者喉咙有异物感？\n"
+        )
+        model_args = await self.__update_model_args__(kwargs)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+
+        content: Union[str, Generator] = await acallLLM(
+            model="Qwen1.5-72B-Chat",
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        # 使用正则表达式找到所有的句子边界（句号或问号）
+        try:
+            sentences = content.split("｜｜",1)
+        except Exception as err:
+            logger.error(err)
+            sentences = [content]
+        return sentences
+    
+    async def aigc_functions_auxiliary_diagnosis(
+        self, **kwargs
+    ):
+        prompt_template = "# 患者与医生历史会话信息\n{history_str}\n\n"
+        user_input = (
+            "# 任务描述\n"
+            "请你扮演一个经验丰富的医生,协助我进行疾病的诊断,"
+            "根据患者与医生的历史会话信息,输出若干个患者最多5个可能的诊断以及对应的概率值\n"
+            "格式参考: 疾病-概率,疾病-概率, 以`,`分隔\n"
+            "只输出`疾病`-`概率`,避免输入任何其他内容"
+        )
+
+        # 2024年4月30日14:44:08 过滤重复的输入
+        duplicate_messages, _messages = {}, []
+        for item in kwargs["messages"]:
+            if not duplicate_messages.get(item["content"]):
+                _messages.append(item)
+                duplicate_messages[item["content"]] = 1
+        history_str = "\n".join([f"{item['content']}" for item in _messages])
+        prompt = prompt_template.format(history_str=history_str)
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": user_input},
+        ]
+        model_args = await self.__update_model_args__(kwargs)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+
+        try:
+            d_p_pair_str =  await acallLLM(
+            model="Qwen1.5-72B-Chat",
+            query=messages,
+            **model_args,
+        )
+            d_p_pair = [i.strip().split("-") for i in d_p_pair_str.split(",")]
+            d_p_pair = [
+                {"name": i[0], "prob": i[1].replace("%", "") + "%"} for i in d_p_pair
+            ]
+        except Exception as err:
+            logger.error(repr(err))
+            d_p_pair = []
+        return d_p_pair
+    
+    async def aigc_functions_relevant_inspection(self, **kwargs):
+        prompt_template = (
+            "# 患者与医生历史会话信息\n{history_str}\n\n"
+            "# 任务描述\n"
+            "你是一个经验丰富的医生,请你协助我进行疾病的鉴别诊断,输出建议我做的临床辅助检查项目\n"
+            "1. 请你根据历史会话信息、初步诊断的结果、鉴别诊断的知识、分析我的疾病，进一步输出能够让我确诊的临床检查项目\n"
+            "2. 只输出检查项目的名称，不要其他的内容\n"
+            "3. 不同检查项目名称之间用`,`隔开,检查项目不要重复\n\n"
+            "# 初步诊断结果\n{diagnosis_str}\n\n"
+            "Begins!"
+        )
+        duplicate_content = {}
+        _messages = []
+        for item in kwargs["messages"]:
+            _content = item["content"]
+            if not duplicate_content.get(_content):
+                _messages.append(item)
+                duplicate_content[_content] = 1
+        rolemap: Dict[str, str] = {"user": "患者", "assistant": "医生"}
+        history_str = "\n".join(
+            [f"{rolemap[item['role']]}: {item['content']}" for item in _messages]
+        )
+        diagnosis_str = ",".join([i["name"] for i in kwargs["diagnosis"]])
+        prompt = prompt_template.format(
+            history_str=history_str, diagnosis_str=diagnosis_str
+        )
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": history_str},
+        ]
+        model_args = await self.__update_model_args__(kwargs)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        content = await acallLLM(
+            model="Qwen1.5-72B-Chat",
+            query=messages,
+            **model_args,
+        )
+        return [i.strip() for i in content.split(",")]
 
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
