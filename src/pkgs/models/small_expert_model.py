@@ -3946,15 +3946,15 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        data = {}
-        lines = content.split('\n')
-        for line in lines:
-            key, values = line.split('：', 1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values
-        return data
+        # data = {}
+        # lines = content.split('\n')
+        # for line in lines:
+        #     key, values = line.split('：', 1)
+        #     if values=='无':
+        #         data[key]=[]
+        #     else:
+        #         data[key] = values
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_sport_principle_new(self, **kwargs) -> str:
