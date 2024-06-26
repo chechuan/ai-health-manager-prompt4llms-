@@ -198,6 +198,9 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_auxiliary_diagnosis",
         "aigc_functions_generate_medication_plan",
         "aigc_functions_generate_examination_plan",
+        "aigc_functions_auxiliary_history_talking",
+        "aigc_functions_auxiliary_diagnosis",
+        "aigc_functions_relevant_inspection"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -301,7 +304,7 @@ class AigcFunctionsRequest(BaseModel):
             ]
         ],
     )
-    diagnosis: Union[str, None] = Field(
+    diagnosis: Union[str, List,None] = Field(
         None,
         description="诊断结果",
         examples=["急性肠胃炎"],
