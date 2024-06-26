@@ -3978,18 +3978,18 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        data = {}
-        lines = content.split('\n')
-        for line in lines:
-            if '：' in line:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
-                else:
-                    data[key] = values
-            else:
-                data['运动课程']=line
-        return data
+        # data = {}
+        # lines = content.split('\n')
+        # for line in lines:
+        #     if '：' in line:
+        #         key, values = line.split('：', 1)
+        #         if values=='无':
+        #             data[key]=[]
+        #         else:
+        #             data[key] = values
+        #     else:
+        #         data['运动课程']=line
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_mental_principle_new(self, **kwargs) -> str:
@@ -4015,13 +4015,13 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        lines = content.split('\n')
-        data={}
-        l=['one','two','three','four']
-        for i in range(len(lines)):
-            data[l[i]]=lines[i]
+        # lines = content.split('\n')
+        # data={}
+        # l=['one','two','three','four']
+        # for i in range(len(lines)):
+        #     data[l[i]]=lines[i]
 
-        return data
+        return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy_new(self, **kwargs) -> str:
@@ -4044,16 +4044,16 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        data = {}
-        lines = content.split('\n')
-        for line in lines:
-            if len(line)>0:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
-                else:
-                    data[key] = values
-        return data
+        # data = {}
+        # lines = content.split('\n')
+        # for line in lines:
+        #     if len(line)>0:
+        #         key, values = line.split('：', 1)
+        #         if values=='无':
+        #             data[key]=[]
+        #         else:
+        #             data[key] = values
+        return content
     
     async def aigc_functions_auxiliary_history_talking(self, **kwargs: object):
         """医生端 - 生成问题"""
