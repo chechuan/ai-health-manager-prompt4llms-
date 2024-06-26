@@ -28,10 +28,7 @@ from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
-    OutpatientDiagnosisRequest,
-    ConversationRequest,
-    PastHistoryRequest,
-    AllergicHistoryRequest,
+    OutpatientSupportRequest,
     AigcSanjiRequest,
     AigcFunctionsResponse,
     BaseResponse,
@@ -339,6 +336,20 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
+    # @app.exception_handler(RequestValidationError)
+    # async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    #     # 提取并格式化错误信息
+    #     error_msg = "; ".join([error['msg'] for error in exc.errors()])
+    #     error_msg = {
+    #         "head": 601,
+    #         "items": {},
+    #         "msg": error_msg
+    #     }
+    #     return JSONResponse(
+    #         status_code=422,
+    #         content=error_msg,
+    #     )
+
     async def _async_aigc_functions(
             request_model: AigcFunctionsRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
@@ -425,13 +436,13 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
-    async def _async_outpatient_diagnosis(
-            request_model: OutpatientDiagnosisRequest,
+    async def _aigc_functions_outpatient_support(
+            request_model: OutpatientSupportRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
-        """处理门诊病历诊断生成的aigc函数"""
+        """处理西医决策支持的aigc函数"""
         try:
             param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/outpatient_diagnosis"
+                request_model, endpoint="/aigc/outpatient_support"
             )
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
@@ -454,92 +465,6 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
-    async def _async_generate_chief_complaint(
-            request_model: ConversationRequest,
-    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
-        """处理生成主诉、现病史的aigc函数"""
-        try:
-            param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/generate_chief_complaint"
-            )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应 构造返回数据的AsyncGenerator
-                _return: AsyncGenerator = response_generator(response)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
-        except Exception as err:
-            msg = repr(err)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
-                )
-            _return: str = ret.model_dump_json(exclude_unset=True)
-        finally:
-            return build_aigc_functions_response(_return)
-
-    async def _async_generate_past_history(
-            request_model: PastHistoryRequest,
-    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
-        """处理生成既往史的aigc函数"""
-        try:
-            param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/generate_past_history"
-            )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应 构造返回数据的AsyncGenerator
-                _return: AsyncGenerator = response_generator(response)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
-        except Exception as err:
-            msg = repr(err)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
-                )
-            _return: str = ret.model_dump_json(exclude_unset=True)
-        finally:
-            return build_aigc_functions_response(_return)
-
-    async def _async_generate_allergic_history(
-            request_model: AllergicHistoryRequest,
-    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
-        """处理生成过敏史的aigc函数"""
-        try:
-            param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/generate_allergic_history"
-            )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应 构造返回数据的AsyncGenerator
-                _return: AsyncGenerator = response_generator(response)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
-        except Exception as err:
-            msg = repr(err)
-            if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
-                )
-            _return: str = ret.model_dump_json(exclude_unset=True)
-        finally:
-            return build_aigc_functions_response(_return)
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
@@ -547,13 +472,7 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/sanji")(_async_aigc_sanji)
 
-    app.post("/aigc/outpatient_diagnosis")(_async_outpatient_diagnosis)
-
-    app.post("/aigc/generate_chief_complaint")(_async_generate_chief_complaint)
-
-    app.post("/aigc/generate_past_history")(_async_generate_past_history)
-
-    app.post("/aigc/generate_allergic_history")(_async_generate_allergic_history)
+    app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
 
 
 def create_app():

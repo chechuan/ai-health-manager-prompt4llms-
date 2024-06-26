@@ -9,6 +9,7 @@ import functools
 import json
 import pickle
 import os
+import re
 import sys
 import time
 import oss2
@@ -1070,6 +1071,15 @@ def download_from_oss(filepath: str = "oss path", save_path: str = "local save p
     bucket.get_object_to_file(filepath, save_path)
     logger.info(f"download {filepath} finished")
 
+
+def parse_examination_plan(content):
+    try:
+        # 解析JSON字符串
+        examination_plan = json.loads(content)
+        return examination_plan
+    except json.JSONDecodeError as e:
+        print(f"JSON解析错误: {e}")
+        return []
 
 if __name__ == "__main__":
     InitAllResource()
