@@ -4386,11 +4386,12 @@ class Agents:
         data = {}
         lines = content.split('\n')
         for line in lines:
-            key, values = line.split('：', -1)
-            if values=='无':
-                data[key]=[]
-            else:
-                data[key] = values.split('|')
+            if '：' in line:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data[key]=[]
+                else:
+                    data[key] = values.split('|')
         return data
 
     async def sanji_assess_keyword_classification(self, **kwargs) -> str:
