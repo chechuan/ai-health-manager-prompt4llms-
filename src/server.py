@@ -29,6 +29,7 @@ from src.utils.api_protocal import (
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
     OutpatientSupportRequest,
+    SanJiKangYangRequest,
     AigcSanjiRequest,
     AigcFunctionsResponse,
     BaseResponse,
@@ -336,19 +337,13 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
-    # @app.exception_handler(RequestValidationError)
-    # async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    #     # 提取并格式化错误信息
-    #     error_msg = "; ".join([error['msg'] for error in exc.errors()])
-    #     error_msg = {
-    #         "head": 601,
-    #         "items": {},
-    #         "msg": error_msg
-    #     }
-    #     return JSONResponse(
-    #         status_code=422,
-    #         content=error_msg,
-    #     )
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        # 提取并格式化错误信息
+        return JSONResponse(
+            status_code=500,
+            content={"head": 500, "items": {}, "msg": str(exc)},
+        )
 
     async def _async_aigc_functions(
             request_model: AigcFunctionsRequest,
@@ -465,6 +460,34 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+    async def _async_aigc_functions_sanji_kangyang(
+            request_model: SanJiKangYangRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+        """三济康养方案的AIGC函数"""
+        try:
+            param = await async_accept_param_purge(
+                request_model, endpoint="/aigc/sanji/kangyang"
+            )
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
+        except Exception as err:
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
+            _return: str = ret.model_dump_json(exclude_unset=True)
+        finally:
+            return build_aigc_functions_response(_return)
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
@@ -473,6 +496,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/sanji")(_async_aigc_sanji)
 
     app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
+
+    app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
 
 
 def create_app():

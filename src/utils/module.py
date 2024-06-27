@@ -49,6 +49,7 @@ try:
     from src.utils.Logger import logger
 except Exception as err:
     from Logger import logger
+from functools import wraps
 
 
 def clock(func):
@@ -1073,13 +1074,95 @@ def download_from_oss(filepath: str = "oss path", save_path: str = "local save p
 
 
 def parse_examination_plan(content):
+    """将字符串解析为 JSON 对象，如果解析失败则返回一个空列表"""
     try:
+        # 尝试将单引号替换为双引号
+        content = content.replace("'", '"')
         # 解析JSON字符串
         examination_plan = json.loads(content)
         return examination_plan
     except json.JSONDecodeError as e:
         print(f"JSON解析错误: {e}")
         return []
+
+def calculate_bmi(weight: float, height: float) -> float:
+    # bmi计算
+    return round(weight / ((height / 100) ** 2), 1)
+
+def calculate_bmr(weight: float, height: float, age: int, gender: str) -> float:
+    # 基础代谢率计算
+    if gender == "男":
+        return 10 * weight + 6.25 * height - 5 * age + 5
+    elif gender == "女":
+        return 10 * weight + 6.25 * height - 5 * age - 161
+    else:
+        raise ValueError("Invalid gender")
+
+def parse_measurement(value_str: str, measure_type: str) -> float:
+    """解析测量值字符串，支持体重和身高"""
+    if measure_type == "weight":
+        if "kg" in value_str:
+            return float(value_str.replace("kg", "").strip())
+        elif "公斤" in value_str:
+            return float(value_str.replace("公斤", "").strip())
+        elif "斤" in value_str:
+            return float(value_str.replace("斤", "").strip()) * 0.5
+        else:
+            raise ValueError("未知的体重单位")
+    elif measure_type == "height":
+        if "cm" in value_str:
+            return float(value_str.replace("cm", "").strip())
+        elif "米" in value_str:
+            return float(value_str.replace("米", "").strip()) * 100
+        else:
+            raise ValueError("未知的身高单位")
+    else:
+        raise ValueError("未知的测量类型")
+
+
+def parse_historical_diets(historical_diets: List[Dict[str, Union[str, Dict[str, List[str]]]]]) -> str:
+    """解析历史食谱的列表数据并转换成所需的格式"""
+    formatted_diets = ""
+    try:
+        for diet in historical_diets:
+            date = diet.get("date", "未知日期")
+            meals = diet.get("meals", {})
+            formatted_diets += f"{date}：\n"
+            for meal, foods in meals.items():
+                formatted_diets += f"{meal}：\n"
+                for food in foods:
+                    formatted_diets += f"  - {food}\n"
+    except Exception as e:
+        print(f"解析错误: {e}")
+
+    return formatted_diets.strip()
+
+def async_clock(func):
+    @wraps(func)
+    async def clocked(*args, **kwargs):
+        t0 = time.perf_counter()
+        result = await func(*args, **kwargs)
+        elapsed = time.perf_counter() - t0
+        name = func.__name__
+        arg_str = ', '.join(repr(arg) for arg in args)
+        print(f'[{elapsed:.8f}s] {name}({arg_str}) -> {result}')
+        return result
+    return clocked
+
+def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str:
+    """将餐次、食物名称的字典结构转换为文本形式"""
+    formatted_text = ""
+    for meal in meal_plan_data:
+        meal_name = meal["meal"]
+        foods = meal["foods"]
+        formatted_text += f"{meal_name}:\n"
+        for food in foods:
+            formatted_text += f"  - {food}\n"
+    return formatted_text.strip()
+
+
+
+
 
 if __name__ == "__main__":
     InitAllResource()
