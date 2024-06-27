@@ -23,12 +23,11 @@ def get_userInfo_history(userInfo, history=[]):
             user_info[i] = userInfo[i]
     history = [
         {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-        for i in history
+        for i in history[-5:]     # 保留最后5轮用户信息
     ]
     his_prompt = "\n".join(
         [
             ("assistant" if not i["role"] == "user" else "user")
-            + f": {i['content']}"
             + f": {i['content']}"
             for i in history
         ]
@@ -57,12 +56,11 @@ def get_familyInfo_history(familyInfo, history):
     roles = roles[:-1] if roles[-1] == '，' else roles
     history = [
         {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
-        for i in history
+        for i in history[-5:]       # 保留最后5轮用户信息
     ]
     his_prompt = "\n".join(
         [
             ("assistant" if not i["role"] == "user" else "user")
-            + f": {i['content']}"
             + f": {i['content']}"
             for i in history
         ]
