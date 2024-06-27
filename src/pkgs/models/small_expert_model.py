@@ -4682,13 +4682,13 @@ class Agents:
         model = self.gsr.get_model(event)
         prompt_template: str = self.gsr.get_event_item(event)["description"]
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
         content: str = callLLM(
             model=model,
             query=prompt,
             **model_args,
         )
-        logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
 
     async def aaigc_functions_general(
@@ -4716,10 +4716,10 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -4727,7 +4727,7 @@ class Agents:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
 
     async def sanji_general(
@@ -4762,14 +4762,14 @@ class Agents:
             else des
         )
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: \n{prompt}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
         content: Union[str, Generator] = await acallLLM(
             model=model,
             query=prompt,
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: \n{content}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
 
     async def __preprocess_function_args__(self, kwargs) -> dict:
