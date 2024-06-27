@@ -3473,10 +3473,14 @@ class Agents:
                 tmp_path.mkdir(parents=True)
 
             if image_url:
+                logger.info(f"start: image_url")
                 r = self.session.get(image_url)
+                logger.info(f"stop: image_url")
                 file_path = tmp_path.joinpath(basename(image_url))
+                logger.info(f"start2: image_url")
                 with open(file_path, mode="wb") as f:
                     f.write(r.content)
+                logger.info(f"stop2: image_url")
             elif kwargs.get("file_path"):
                 file_path = kwargs.get("file_path")
                 image_url = self.__upload_image__(file_path)
@@ -4465,8 +4469,10 @@ class Agents:
         content: str = await self.sanji_general(
              _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = content.replace('\n','')
-        lines = content.split('||',-1)
+        if '\n' in content:
+            lines = content.split('\n')
+        else:
+            lines = content.split('||')
         result = {'one':lines}
 
         return result
