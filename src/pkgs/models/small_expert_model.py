@@ -4466,9 +4466,10 @@ class Agents:
              _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = content.replace('\n','')
-        lines = content.split('|',-1)
+        lines = content.split('||',-1)
+        result = {'one':lines}
 
-        return lines
+        return result
 
 
     async def sanji_intervene_goal_classification(self, **kwargs) -> str:
@@ -4494,9 +4495,10 @@ class Agents:
              _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = content.replace('\n','')
-        lines = content.split('|',-1)
+        lines = content.split('||',-1)
+        result = {'one':lines}
 
-        return lines
+        return result
 
 
     @param_check(check_params=["plan_ai", "plan_human"])
