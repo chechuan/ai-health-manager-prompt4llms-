@@ -4492,13 +4492,22 @@ class Agents:
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = content.replace('\n','')
-        lines = content.split('||',-1)
-        result = {'one':lines}
 
-        return result
+        data = {}
+        data['goal']={}
+        data['literature']={}
+        lines = content.split('\n')
+        for line in lines:
+            if ':' in line or '：' in line:
+                key, values = line.split('：', 1)
+                if values=='无':
+                    data['goal'][key]=[]
+                else:
+                    data['goal'][key] = [values]
+
+        return data
 
 
     @param_check(check_params=["plan_ai", "plan_human"])
