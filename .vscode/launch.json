@@ -60,7 +60,7 @@
             "justMyCode": true,
             "env": {
                 "GEVENT_SUPPORT": "True",
-                "ENV": "dev"
+                "ENV": "local"
             },
             "args": [
                 "--special_prompt_version",

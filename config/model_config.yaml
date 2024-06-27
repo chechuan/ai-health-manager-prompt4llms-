@@ -40,9 +40,16 @@ local:
         - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
         - aigc_functions_generate_past_medical_history # 2024年6月25日 西医决策-既往史生成
         - aigc_functions_generate_allergic_history # 2024年6月25日 西医决策-过敏史生成
-#        - aigc_functions_auxiliary_diagnosis # 2024年6月25日 西医决策-辅助问诊
         - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
         - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
+        - aigc_functions_sjkyn_guideline_generation # 2024年6月27日 三济康养方案总则
+        - aigc_functions_dietary_guidelines_generation # 2024年6月27日 三济康养方案-饮食-饮食调理原则
+        - aigc_functions_dietary_details_generation # 2024年6月27日 三济康养方案-饮食-饮食调理细则
+        - aigc_functions_meal_plan_generation # 2024年6月27日 三济康养方案-饮食-带量食谱-生成餐次和食物名称
+        - aigc_functions_generate_food_quality_guidance # 2024年6月27日 三济康养方案-饮食-带量食谱-生成食物质量指导
+        - aigc_functions_sanji_plan_exercise_regimen # 2024年6月27日 三济康养方案-运动-运动调理原则
+        - aigc_functions_sanji_plan_exercise_plan # 2024年6月27日 三济康养方案-运动-运动计划
+
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -85,9 +92,11 @@ dev:
         - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
         - aigc_functions_generate_past_medical_history # 2024年6月25日 西医决策-既往史生成
         - aigc_functions_generate_allergic_history # 2024年6月25日 西医决策-过敏史生成
-#        - aigc_functions_auxiliary_diagnosis # 2024年6月25日 西医决策-辅助问诊
         - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
         - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
+        - aigc_functions_sjkyn_guideline_generation # 2024年6月27日 三济康养方案总则
+        - aigc_functions_dietary_guidelines_generation # 2024年6月27日 三济康养方案-饮食-饮食调理原则
+        - aigc_functions_dietary_details_generation # 2024年6月27日 三济康养方案-饮食-饮食调理细则
 test:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
