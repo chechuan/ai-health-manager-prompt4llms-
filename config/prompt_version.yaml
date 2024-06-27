@@ -108,6 +108,12 @@ dev:
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
         aigc_functions_sjkyn_guideline_generation: 0.0.1
+        aigc_functions_sanji_plan_exercise_regimen: 0.0.1
+        aigc_functions_sanji_plan_exercise_plan: 0.0.1
+        aigc_functions_dietary_guidelines_generation: 0.0.1
+        aigc_functions_dietary_details_generation: 0.0.1
+        aigc_functions_meal_plan_generation: 0.0.1
+        aigc_functions_generate_food_quality_guidance: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
