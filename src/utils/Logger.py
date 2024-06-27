@@ -40,8 +40,8 @@ class Logging:
             sink=sys.stderr,
             level=console_level,
             format=LOG_FORMAT,
-            backtrace=True,
-            diagnose=True,
+            backtrace=False,
+            diagnose=False,
             filter=partial(filter_function, appid),
         )
 

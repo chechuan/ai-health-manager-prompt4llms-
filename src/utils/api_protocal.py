@@ -106,6 +106,7 @@ USER_PROFILE_KEY_MAP = {
     "exercise_level": "运动水平",
     "exercise_risk": "运动风险",
     "emotional_issues": "情志问题",
+    "diagnosis": "诊断"
 }
 
 
@@ -225,7 +226,10 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_chinese_therapy_new",
         "aigc_functions_reason_for_care_plan",
         "aigc_functions_doctor_recommend",
-        "aigc_functions_consultation_summary_to_group"
+        "aigc_functions_consultation_summary_to_group",
+        "aigc_functions_auxiliary_history_talking",
+        "aigc_functions_auxiliary_diagnosis",
+        "aigc_functions_relevant_inspection",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -329,7 +333,7 @@ class AigcFunctionsRequest(BaseModel):
             ]
         ],
     )
-    diagnosis: Union[str, None] = Field(
+    diagnosis: Union[str, List, None] = Field(
         None,
         description="诊断结果",
         examples=["急性肠胃炎"],
@@ -418,7 +422,7 @@ class AigcSanjiRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                }
+                },
             ]
         ],
     )
@@ -550,20 +554,30 @@ class bloodPressureLevelResponse(BaseModel):
 # 西医决策支持
 class OutpatientUserProfile(BaseModel):
     age: Optional[int] = Field(None, description="年龄", ge=0, le=200)
-    gender: Optional[Literal["男", "女"]] = Field(None, description="性别", examples=["男", "女"])
+    gender: Optional[Literal["男", "女"]] = Field(
+        None, description="性别", examples=["男", "女"]
+    )
     height: Optional[str] = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: Optional[str] = Field(None, description="体重", examples=["65kg", "90斤"])
-    weight_evaluation: Optional[str] = Field(None, description="体重评价", examples=["正常"])
+    weight_evaluation: Optional[str] = Field(
+        None, description="体重评价", examples=["正常"]
+    )
     bmi: Optional[Union[None, float]] = None
     disease_history: Optional[List[str]] = Field(None, description="疾病史")
     allergic_history: Optional[List[str]] = Field(None, description="过敏史")
     surgery_history: Optional[List[str]] = Field(None, description="手术史")
-    main_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医主要诊断", examples=["高血压"])
-    secondary_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医次要诊断")
+    main_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医主要诊断", examples=["高血压"]
+    )
+    secondary_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医次要诊断"
+    )
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
     traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
     traditional_chinese_medicine_constitution: Optional[str] = None  # 中医体质
-    dietary_habits: Optional[str] = Field(None, description="饮食习惯", examples=["少食"])
+    dietary_habits: Optional[str] = Field(
+        None, description="饮食习惯", examples=["少食"]
+    )
     body_temperature: Optional[str] = None  # 体温(摄氏度)
     respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
     pulse_rate: Optional[str] = None  # 脉搏(次/分)
@@ -576,10 +590,18 @@ class OutpatientUserProfile(BaseModel):
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
     nation: Optional[str] = Field(None, description="民族", example=["汉族"])
-    daily_physical_labor_intensity: Optional[str] = Field(None, description="日常体力劳动水平", examples=["中"])
-    mood_swings: Optional[str] = Field(None, description="情绪波动", examples=["正常波动"])
-    motion_risk_level: Optional[str] = Field(None, description="运动风险等级", examples=["正常"])
-    exercise_intensity: Optional[str] = Field(None, description="运动强度", examples=["正常强度"])
+    daily_physical_labor_intensity: Optional[str] = Field(
+        None, description="日常体力劳动水平", examples=["中"]
+    )
+    mood_swings: Optional[str] = Field(
+        None, description="情绪波动", examples=["正常波动"]
+    )
+    motion_risk_level: Optional[str] = Field(
+        None, description="运动风险等级", examples=["正常"]
+    )
+    exercise_intensity: Optional[str] = Field(
+        None, description="运动强度", examples=["正常强度"]
+    )
 
 
 class MedicalRecords(BaseModel):
@@ -598,7 +620,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_generate_past_medical_history",
         "aigc_functions_generate_allergic_history",
         "aigc_functions_generate_medication_plan",
-        "aigc_functions_generate_examination_plan"
+        "aigc_functions_generate_examination_plan",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -647,10 +669,15 @@ class OutpatientSupportRequest(BaseModel):
     )
     medical_records: Optional[MedicalRecords] = Field(default_factory=MedicalRecords, description="病历")
 
+
     @root_validator(pre=True)
     def check_at_least_one_field(cls, values):
-        if not values.get('user_profile') and not values.get('messages') and not values.get("medical_records"):
-            raise ValueError('用户画像、会话记录和病历信息至少有一个是必填项。')
+        if (
+            not values.get("user_profile")
+            and not values.get("messages")
+            and not values.get("medical_records")
+        ):
+            raise ValueError("用户画像、会话记录和病历信息至少有一个是必填项。")
         return values
 
 
@@ -705,6 +732,7 @@ class SanJiKangYangRequest(BaseModel):
         "diagnosis_list": ["无"]
     }
     ])
+
     messages: Optional[List[ChatMessage]] = Field(
         None,
         description="对话历史",
@@ -728,6 +756,7 @@ class SanJiKangYangRequest(BaseModel):
         description="模型参数",
         examples=[[{"stream": False}]],
     )
+
     food_principle: Union[str, None] = Field(
         None,
         description="饮食原则",
@@ -778,23 +807,3 @@ class SanJiKangYangRequest(BaseModel):
             ]
         }
     ])
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

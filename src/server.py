@@ -28,6 +28,7 @@ from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
+    AigcFunctionsSanJiPlanRequest,
     OutpatientSupportRequest,
     SanJiKangYangRequest,
     AigcSanjiRequest,
@@ -489,6 +490,7 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
@@ -498,6 +500,7 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
+
 
 
 def create_app():

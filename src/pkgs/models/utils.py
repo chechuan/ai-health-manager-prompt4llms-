@@ -49,9 +49,9 @@ class ParamTools:
                 stats_records["user_profile"].append("daily_physical_labor_intensity")
         if not params["user_profile"].get(
             "history_of_present_illness"
-        ) and not params["user_profile"].get("health_goal"):
+        ) and not params["user_profile"].get("management_goals"):
             stats_records["user_profile"].append(
-                "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(health_goal)"
+                "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(management_goals)"
             )
         if not params.get("medical_records"):
             stats_records["medical_records"].append("病历数据缺失")
@@ -101,9 +101,9 @@ class ParamTools:
                 stats_records["user_profile"].append("daily_physical_labor_intensity")
         if not params["user_profile"].get(
             "history_of_present_illness"
-        ) and not params["user_profile"].get("health_goal"):
+        ) and not params["user_profile"].get("management_goals"):
             stats_records["user_profile"].append(
-                "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(health_goal)"
+                "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(management_goals)"
             )
         if not params.get("medical_records"):
             stats_records["medical_records"].append("病历数据缺失")
