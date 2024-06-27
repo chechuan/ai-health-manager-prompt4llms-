@@ -38,9 +38,12 @@ local:
         aigc_functions_generate_present_illness: 0.0.1
         aigc_functions_generate_past_medical_history: 0.0.1
         aigc_functions_generate_allergic_history: 0.0.1
-#        aigc_functions_auxiliary_diagnosis: 0.0.1
+        #        aigc_functions_auxiliary_diagnosis: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
+        aigc_functions_sanji_plan_exercise_regimen: 0.0.1
+        aigc_functions_sjkyn_guideline_generation: 0.0.1
+        aigc_functions_sanji_plan_exercise_plan: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
@@ -99,7 +102,7 @@ dev:
         aigc_functions_generate_present_illness: 0.0.1
         aigc_functions_generate_past_medical_history: 0.0.1
         aigc_functions_generate_allergic_history: 0.0.1
-#        aigc_functions_auxiliary_diagnosis: 0.0.1
+        #        aigc_functions_auxiliary_diagnosis: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
         glucose_consultation: 0.0.1

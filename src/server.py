@@ -28,6 +28,7 @@ from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
+    AigcFunctionsSanJiPlanRequest,
     OutpatientSupportRequest,
     AigcSanjiRequest,
     AigcFunctionsResponse,
@@ -465,6 +466,35 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+    async def _async_aigc_functions_sanji_plan(
+            request_model: AigcFunctionsSanJiPlanRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+        """aigc函数"""
+        try:
+            param = await async_accept_param_purge(
+                request_model, endpoint="/aigc/functions"
+            )
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
+        except Exception as err:
+            msg = repr(err)
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:  # 处理str响应 构造json str
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=""
+                )
+            _return: str = ret.model_dump_json(exclude_unset=True)
+        finally:
+            return build_aigc_functions_response(_return)
+
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
@@ -473,6 +503,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/sanji")(_async_aigc_sanji)
 
     app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
+
+    app.post("/aigc/sanji/plan")(_async_aigc_functions_sanji_plan)
 
 
 def create_app():

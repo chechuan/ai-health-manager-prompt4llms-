@@ -90,7 +90,7 @@ USER_PROFILE_KEY_MAP = {
     "past_history_of_present_illness": "既往史",
     "specialist_check": "专科检查",
     "disposal_plan": "处置方案",
-    "diagnosis": "诊断"
+    "diagnosis": "诊断",
 }
 
 
@@ -167,6 +167,11 @@ class UserProfile(BaseModel):
     exercise_intensity: Optional[str] = Field(
         None, description="运动强度", examples=["正常强度"]
     )
+    health_goal: Union[str, None] = Field(
+        None,
+        description="健康管理目标",
+        examples=["恢复肠道健康"],
+    )
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -193,7 +198,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_consultation_summary_to_group",
         "aigc_functions_auxiliary_history_talking",
         "aigc_functions_auxiliary_diagnosis",
-        "aigc_functions_relevant_inspection"
+        "aigc_functions_relevant_inspection",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -297,7 +302,7 @@ class AigcFunctionsRequest(BaseModel):
             ]
         ],
     )
-    diagnosis: Union[str, List,None] = Field(
+    diagnosis: Union[str, List, None] = Field(
         None,
         description="诊断结果",
         examples=["急性肠胃炎"],
@@ -340,6 +345,7 @@ class AigcFunctionsRequest(BaseModel):
         description="专家修改后的方案",
         examples=["专家方案示例"],
     )
+
 
 class AigcSanjiRequest(BaseModel):
     intentCode: Literal[
@@ -385,7 +391,7 @@ class AigcSanjiRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                }
+                },
             ]
         ],
     )
@@ -517,20 +523,30 @@ class bloodPressureLevelResponse(BaseModel):
 # 西医决策支持
 class OutpatientUserProfile(BaseModel):
     age: Optional[int] = Field(None, description="年龄", ge=0, le=200)
-    gender: Optional[Literal["男", "女"]] = Field(None, description="性别", examples=["男", "女"])
+    gender: Optional[Literal["男", "女"]] = Field(
+        None, description="性别", examples=["男", "女"]
+    )
     height: Optional[str] = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: Optional[str] = Field(None, description="体重", examples=["65kg", "90斤"])
-    weight_evaluation: Optional[str] = Field(None, description="体重评价", examples=["正常"])
+    weight_evaluation: Optional[str] = Field(
+        None, description="体重评价", examples=["正常"]
+    )
     bmi: Optional[Union[None, float]] = None
     disease_history: Optional[List[str]] = Field(None, description="疾病史")
     allergic_history: Optional[List[str]] = Field(None, description="过敏史")
     surgery_history: Optional[List[str]] = Field(None, description="手术史")
-    main_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医主要诊断", examples=["高血压"])
-    secondary_diagnosis_of_western_medicine: Optional[str] = Field(None, description="西医次要诊断")
+    main_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医主要诊断", examples=["高血压"]
+    )
+    secondary_diagnosis_of_western_medicine: Optional[str] = Field(
+        None, description="西医次要诊断"
+    )
     traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
     traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
     traditional_chinese_medicine_constitution: Optional[str] = None  # 中医体质
-    dietary_habits: Optional[str] = Field(None, description="饮食习惯", examples=["少食"])
+    dietary_habits: Optional[str] = Field(
+        None, description="饮食习惯", examples=["少食"]
+    )
     body_temperature: Optional[str] = None  # 体温(摄氏度)
     respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
     pulse_rate: Optional[str] = None  # 脉搏(次/分)
@@ -543,10 +559,18 @@ class OutpatientUserProfile(BaseModel):
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
     nation: Optional[str] = Field(None, description="民族", example=["汉族"])
-    daily_physical_labor_intensity: Optional[str] = Field(None, description="日常体力劳动水平", examples=["中"])
-    mood_swings: Optional[str] = Field(None, description="情绪波动", examples=["正常波动"])
-    motion_risk_level: Optional[str] = Field(None, description="运动风险等级", examples=["正常"])
-    exercise_intensity: Optional[str] = Field(None, description="运动强度", examples=["正常强度"])
+    daily_physical_labor_intensity: Optional[str] = Field(
+        None, description="日常体力劳动水平", examples=["中"]
+    )
+    mood_swings: Optional[str] = Field(
+        None, description="情绪波动", examples=["正常波动"]
+    )
+    motion_risk_level: Optional[str] = Field(
+        None, description="运动风险等级", examples=["正常"]
+    )
+    exercise_intensity: Optional[str] = Field(
+        None, description="运动强度", examples=["正常强度"]
+    )
 
 
 class MedicalRecords(BaseModel):
@@ -554,7 +578,7 @@ class MedicalRecords(BaseModel):
     present_illness_history: Optional[str] = Field(None, description="现病史")
     past_history_of_present_illness: Optional[str] = Field(None, description="既往史")
     allergic_history: Optional[List[str]] = Field(None, description="过敏史")
-    diagnosis_list: Optional[List[str]] = Field(None,description="诊断")
+    diagnosis_list: Optional[List[str]] = Field(None, description="诊断")
 
 
 class OutpatientSupportRequest(BaseModel):
@@ -565,7 +589,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_generate_past_medical_history",
         "aigc_functions_generate_allergic_history",
         "aigc_functions_generate_medication_plan",
-        "aigc_functions_generate_examination_plan"
+        "aigc_functions_generate_examination_plan",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -612,16 +636,88 @@ class OutpatientSupportRequest(BaseModel):
             ]
         ],
     )
-    medical_records: Optional[MedicalRecords] = Field(default_factory=MedicalRecords,description="病历")
+    medical_records: Optional[MedicalRecords] = Field(
+        default_factory=MedicalRecords, description="病历"
+    )
 
     @root_validator(pre=True)
     def check_at_least_one_field(cls, values):
-        if not values.get('user_profile') and not values.get('messages') and not values.get("medical_records"):
-            raise ValueError('用户画像、会话记录和病历信息至少有一个是必填项。')
+        if (
+            not values.get("user_profile")
+            and not values.get("messages")
+            and not values.get("medical_records")
+        ):
+            raise ValueError("用户画像、会话记录和病历信息至少有一个是必填项。")
         return values
 
 
-
-
-
-
+class AigcFunctionsSanJiPlanRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_sanji_plan_exercise_regimen",  # 三济 - 运动 - 运动调理原则
+        "aigc_functions_sanji_plan_exercise_plan"  # 三济 - 运动 - 运动计划
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_sanji_plan_exercise_plan",
+            "aigc_functions_sanji_plan_exercise_regimen",
+        ],
+    )
+    user_profile: UserProfile = Field(
+        {},
+        description="用户基本信息",
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
+    )
+    messages: Optional[List[ChatMessage]] = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+            ]
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    diagnosis: Union[str, List, None] = Field(
+        None,
+        description="诊断结果",
+        examples=["急性肠胃炎"],
+    )
+    food_principle: Union[str, None] = Field(
+        None,
+        description="饮食原则",
+        examples=[
+            '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
+        ],
+    )
+    sport_principle: Union[str, None] = Field(
+        None,
+        description="运动原则",
+        examples=[
+            "由于你被诊断为急性肠胃炎，建议暂时避免剧烈运动，等待病情恢复。在症状缓解后，可以逐步开始轻度运动，如散步、瑜伽。运动时间可从每次15分钟开始，逐渐增加到30分钟，每天1-2次。注意运动时不要吃得过饱，避免饭后立即运动。最佳运动心率保持在最大心率的50%-70%之间，即约112-156次/分钟。最大心率=220-年龄。恢复期间，保持良好的饮食习惯和充足的休息，有助于身体康复。如果运动过程中感到不适，应立即停止并就医。"
+        ],
+    )
+    mental_principle: Union[str, None] = Field(
+        None,
+        description="情志原则",
+        examples=[
+            "情志调理原则：保持心情愉悦，减轻焦虑。进行深呼吸练习，每日冥想10-15分钟。选择轻松的音乐助眠，保证7-9小时高质量睡眠。避免剧烈运动，做如瑜伽等轻柔运动促进身体舒缓。定期与亲朋交流，分享心情。如疼痛持续或加重，请及时就医。"
+        ],
+    )
+    chinese_therapy: Union[str, None] = Field(
+        None,
+        description="中医疗法",
+        examples=[
+            "针灸推拿：针对急性肠胃炎，可选取中脘、气海、天枢、足三里等穴位进行温和的针灸治疗，以调理脾胃，缓解腹痛和恶心。配合轻柔的腹部推拿，促进气血流通，加速炎症消退。\n\n药膳调理：建议采用健脾和胃、清热解毒的食材。如山药、薏米、白术、黄连、金银花等，可煮粥或炖汤食用。同时，减少油腻、辛辣食物，以减轻肠胃负担。\n\n茶饮调养：推荐饮用陈皮茶，以理气消胀；搭配薄荷叶，可缓解恶心感；再加点菊花，清热解毒。每日适量饮用，有助于肠胃功能恢复。避免冷饮，以防加重肠胃负担。同时，多饮温开水，保持水分平衡。\n\n此外，生活调理也至关重要，保持规律作息，避免过度劳累，保持心情舒畅，有助于身体的康复。如有必要，可配合中药汤剂，但需在专业中医师指导下使用。"
+        ],
+    )
+    medical_records: Optional[MedicalRecords] = Field(
+        None, description="病历"
+    )
