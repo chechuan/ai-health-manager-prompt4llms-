@@ -56,6 +56,7 @@ from src.utils.module import (
     download_from_oss,
     dumpJS,
     param_check,
+    parse_examination_plan
 )
 from collections import defaultdict
 
@@ -2516,7 +2517,8 @@ class expertModel:
 
         result = ""
         for item in messages:
-            result += item['role']+":"+item['content']
+            if item.get("role") and item.get("content"):
+                result += item['role']+":"+item["content"]
         prompt_vars = {
                 "age": user_info.get("age", ''),
                 "gender": user_info.get("gender", ''),
@@ -3806,6 +3808,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        content = parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -3897,6 +3900,109 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        content = parse_examination_plan(content)
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_medication_plan(self, **kwargs) -> str:
+        """西药医嘱生成"""
+
+        _event = "西药医嘱生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        medical_records: str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "medical_records": medical_records
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        if isinstance(content, openai.AsyncStream):
+            return content
+        try:
+            content = json5.loads(content)
+        except Exception as e:
+            try:
+                # 处理JSON代码块
+                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+                if content_json:
+                    content = dumpJS(json5.loads(content_json[0]))
+                else:
+                    # 处理Python代码块
+                    content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+                    if content_python:
+                        content = content_python[0].strip()
+                    else:
+                        raise ValueError("No matching code block found")
+            except Exception as e:
+                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
+                content = dumpJS([])
+        content = parse_examination_plan(content)
+        return content
+
+    # @param_check(check_params=["messages"])
+    async def aigc_functions_generate_examination_plan(self, **kwargs) -> str:
+        """检查检验医嘱生成"""
+
+        _event = "检查检验医嘱生成"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile")
+        )
+        medical_records: str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
+        messages = (
+            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            if kwargs.get("messages")
+            else ""
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "medical_records": medical_records
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        if isinstance(content, openai.AsyncStream):
+            return content
+        try:
+            content = json5.loads(content)
+        except Exception as e:
+            try:
+                # 处理JSON代码块
+                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+                if content_json:
+                    content = dumpJS(json5.loads(content_json[0]))
+                else:
+                    # 处理Python代码块
+                    content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+                    if content_python:
+                        content = content_python[0].strip()
+                    else:
+                        raise ValueError("No matching code block found")
+            except Exception as e:
+                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
+                content = dumpJS([])
+        content = parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
