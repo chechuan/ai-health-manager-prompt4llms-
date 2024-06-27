@@ -28,7 +28,6 @@ from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
     AigcFunctionsDoctorRecommendRequest,
     AigcFunctionsRequest,
-    AigcFunctionsSanJiPlanRequest,
     OutpatientSupportRequest,
     SanJiKangYangRequest,
     AigcSanjiRequest,

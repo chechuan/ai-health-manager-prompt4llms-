@@ -4223,6 +4223,8 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
                 content = dumpJS([])
+        content = parse_examination_plan(content)
+
         return content
 
     # @param_check(check_params=["messages"])
