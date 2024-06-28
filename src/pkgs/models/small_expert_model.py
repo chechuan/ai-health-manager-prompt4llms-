@@ -602,8 +602,8 @@ class expertModel:
             hist_s = "\n".join(
                 [f"{_role_map.get(i['role'])}: {i['content']}" for i in history]
             )
-            # current_date = datetime.now().date()
-            current_date = datetime.datetime.now()
+            current_date = datetime.now().date()
+            # current_date = datetime.datetime.now()
             drug_situ, drug_msg = "", [
                 "漏服药物",
                 "正常服药",
