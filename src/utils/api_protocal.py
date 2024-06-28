@@ -190,19 +190,19 @@ class UserProfile(BaseModel):
     exercise_intensity: Optional[str] = Field(
         None, description="运动强度", examples=["正常强度"]
     )
-    current_diseases: Optional[str] = Field(None, description="现患疾病", example="高血压, 糖尿病")
-    management_goals: Optional[str] = Field(None, description="管理目标", example="减重, 降血压")
-    food_allergies: Optional[str] = Field(None, description="食物过敏", example="花生")
-    special_diet: Optional[str] = Field(None, description="特殊饮食习惯", example="素食")
-    taste_preferences: Optional[str] = Field(None, description="口味偏好", example="清淡")
+    current_diseases: Optional[str] = Field(None, description="现患疾病", example=["高血压, 糖尿病"])
+    management_goals: Optional[str] = Field(None, description="管理目标", example=["减重, 降血压"])
+    food_allergies: Optional[str] = Field(None, description="食物过敏", example=["花生"])
+    special_diet: Optional[str] = Field(None, description="特殊饮食习惯", example=["素食"])
+    taste_preferences: Optional[str] = Field(None, description="口味偏好", example=["清淡"])
     special_physiological_period: Optional[str] = Field(None,
                                                         description="是否特殊生理期，如备孕期、孕早期、孕中期、孕晚期等",
-                                                        example="备孕期")
-    region: Optional[str] = Field(None, description="所处地域", example="北京")
-    exercise_habits: Optional[str] = Field(None, description="运动习惯", example="每天锻炼")
-    exercise_level: Optional[str] = Field(None, description="运动水平", example="中等")
-    exercise_risk: Optional[str] = Field(None, description="运动风险", example="低")
-    emotional_issues: Optional[str] = Field(None, description="情志问题", example="焦虑")
+                                                        example=["备孕期"])
+    region: Optional[str] = Field(None, description="所处地域", example=["北京"])
+    exercise_habits: Optional[str] = Field(None, description="运动习惯", example=["每天锻炼"])
+    exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
+    exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
+    emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
 
 
 class AigcFunctionsRequest(BaseModel):
