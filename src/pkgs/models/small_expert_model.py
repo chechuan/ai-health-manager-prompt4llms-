@@ -1312,10 +1312,9 @@ class expertModel:
             diet_cont.extend(reference_diet)
         days = 1
         for i in range(days):
-            cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime(
-                "%Y-%m-%d"
-            )
-            ref_diet_str = "\n".join(diet_cont[-2:])
+            # cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
+            ref_diet_str = '\n'.join(diet_cont[-2:])
+
             prompt = temp.substitute(
                 num=len(users),
                 roles=roles,
