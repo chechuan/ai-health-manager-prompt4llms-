@@ -552,7 +552,7 @@ def create_app():
                 json.dumps(item, ensure_ascii=False), "delta"
             )
 
-    async def decorate_jiahe_complete(
+    async def decorate_general_complete(
             generator
     ) -> AsyncGenerator:
         try:
@@ -598,7 +598,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/health_qa")
             generator: AsyncGenerator = expertModel.eat_health_qa(param.get("query", ""))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -613,7 +613,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_userInfo_question")
             generator: AsyncGenerator = expertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -631,7 +631,7 @@ def create_app():
                                                                        param.get('location', ''),
                                                                        param.get('history', []),
                                                                        param.get('userInfo', []))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -650,7 +650,7 @@ def create_app():
                                                                          param.get('location', ''),
                                                                          param.get('history', []),
                                                                          param.get('requirements', []))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -672,7 +672,7 @@ def create_app():
                                                                     param.get('requirements', []),
                                                                     param.get('reference_diet', []),
                                                                     param.get('days', 1))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -690,7 +690,7 @@ def create_app():
                                                                            param.get('location', ''),
                                                                            param.get('history', []),
                                                                            param.get('userInfo', []))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -710,7 +710,7 @@ def create_app():
                                                                  param.get('history', []),
                                                                  param.get('userInfo', []),
                                                                  )
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -732,7 +732,7 @@ def create_app():
                                                                      param.get('days', 0),
                                                                      param.get('history', []),
                                                                      param.get('userInfo', {}))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -747,7 +747,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_daily_diet")
             generator: AsyncGenerator = expertModel.gen_diet_effect(param.get('diet', ''))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -762,7 +762,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/guess_asking_nutrition_counseling")
             generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='intent')
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -775,10 +775,10 @@ def create_app():
     async def _guess_asking_query(request: Request):
         """猜你想问-用户问题接口"""
         try:
-            param = await accept_param(request, endpoint="/guess_asking_intent")
+            param = await accept_param(request, endpoint="/guess_asking_query")
             generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='user_query',
                                                                      question=param.get('query', ''))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
@@ -788,13 +788,13 @@ def create_app():
             return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/guess_asking_diet", methods=["post"])
-    async def _guess_asking_query(request: Request):
+    async def _guess_asking_diet(request: Request):
         """猜你想问-食谱接口"""
         try:
-            param = await accept_param(request, endpoint="/guess_asking_intent")
+            param = await accept_param(request, endpoint="/guess_asking_diet")
             generator: AsyncGenerator = expertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='diet',
                                                                      question=param.get('diet', ''))
-            result = decorate_jiahe_complete(
+            result = decorate_general_complete(
                 generator
             )
         except Exception as err:
