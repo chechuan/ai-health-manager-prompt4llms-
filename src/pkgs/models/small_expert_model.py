@@ -3191,7 +3191,7 @@ class Agents:
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
 
-    def get_ocr(self,payload):
+    async def get_ocr(self,payload):
         import requests
         url = "http://10.228.67.99:26927/ocr"
         # payload = {'image_url': 'http://ai-health-manager-algorithm.oss-cn-beijing.aliyuncs.com/reportUpload/e7339bfc-3033-4200-a03f-9bc828004da3.jpg'}
@@ -3201,10 +3201,10 @@ class Agents:
         response = requests.request("POST", url, headers=headers, data=payload, files=files)
         return response.json()
 
-    def __ocr_report__(self, **kwargs):
+    async def __ocr_report__(self, **kwargs):
         """报告OCR功能"""
         payload = {'image_url': kwargs.get('url','')}
-        raw_result = self.get_ocr(payload)
+        raw_result = await self.get_ocr(payload)
         docs = ""
         if raw_result:
             process_ocr_result = [line[1] for line in raw_result]
@@ -3521,7 +3521,7 @@ class Agents:
         image_url, file_path = prepare_file(**kwargs)
         if not file_path:
             return self.__report_interpretation_result__(msg="请输入信息源")
-        docs, raw_result, process_ocr_result = self.__ocr_report__(**kwargs)
+        docs, raw_result, process_ocr_result = await self.__ocr_report__(**kwargs)
         if not docs:
             return self.__report_interpretation_result__(
                 msg="未识别出报告内容，请重新尝试",
