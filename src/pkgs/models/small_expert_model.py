@@ -6,6 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 import asyncio
+from copy import deepcopy
 import json
 import random
 import re
@@ -19,16 +20,20 @@ import openai
 from fastapi.exceptions import ValidationException
 from requests import Session
 
-from src.utils.api_protocal import (USER_PROFILE_KEY_MAP, DoctorInfo,
-                                    DrugPlanItem, UserProfile,
-                                    bloodPressureLevelResponse)
+from src.utils.api_protocal import (
+    USER_PROFILE_KEY_MAP,
+    DoctorInfo,
+    DrugPlanItem,
+    KeyIndicators,
+    UserProfile,
+    bloodPressureLevelResponse,
+)
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 import datetime
 from datetime import datetime, timedelta
 from string import Template
-from typing import (AsyncGenerator, Dict, Generator, List, Literal, Optional,
-                    Union)
+from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
 
 from langchain.prompts.prompt import PromptTemplate
 from PIL import Image, ImageDraw, ImageFont
@@ -44,13 +49,22 @@ from src.pkgs.models.utils import ParamTools
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level,
-                              construct_naive_response_generator,
-                              download_from_oss, dumpJS, param_check,
-                              parse_examination_plan, calculate_bmr,
-                              parse_measurement, parse_historical_diets,
-                              async_clock, convert_meal_plan_to_text)
+from src.utils.module import (
+    InitAllResource,
+    accept_stream_response,
+    clock,
+    compute_blood_pressure_level,
+    construct_naive_response_generator,
+    download_from_oss,
+    dumpJS,
+    param_check,
+    parse_examination_plan,
+    calculate_bmr,
+    parse_measurement,
+    parse_historical_diets,
+    async_clock,
+    convert_meal_plan_to_text,
+)
 
 
 class expertModel:
@@ -1313,7 +1327,7 @@ class expertModel:
         days = 1
         for i in range(days):
             # cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
-            ref_diet_str = '\n'.join(diet_cont[-2:])
+            ref_diet_str = "\n".join(diet_cont[-2:])
 
             prompt = temp.substitute(
                 num=len(users),
@@ -3217,11 +3231,11 @@ class Agents:
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
 
-    async def get_ocr(self,payload):
+    async def get_ocr(self, payload):
         import requests
         url = "http://10.228.67.99:26927/ocr"
         # payload = {'image_url': 'http://ai-health-manager-algorithm.oss-cn-beijing.aliyuncs.com/reportUpload/e7339bfc-3033-4200-a03f-9bc828004da3.jpg'}
-        files=[
+        files = [
         ]
         headers = {}
         response = requests.request("POST", url, headers=headers, data=payload, files=files)
@@ -3229,7 +3243,7 @@ class Agents:
 
     async def __ocr_report__(self, **kwargs):
         """报告OCR功能"""
-        payload = {'image_url': kwargs.get('url','')}
+        payload = {'image_url': kwargs.get('url', '')}
         raw_result = await self.get_ocr(payload)
         docs = ""
         if raw_result:
@@ -3386,11 +3400,19 @@ class Agents:
 
     def __compose_user_msg__(
         self,
-        mode: Literal["user_profile", "messages", "drug_plan", "medical_records", "ietary_guidelines"],
+        mode: Literal[
+            "user_profile",
+            "messages",
+            "drug_plan",
+            "medical_records",
+            "ietary_guidelines",
+            "key_indicators",
+        ],
         user_profile: UserProfile = None,
         medical_records: MedicalRecords = None,
         ietary_guidelines: DietaryGuidelinesDetails = None,
         messages: List[ChatMessage] = [],
+        key_indicators: "List[KeyIndicators]" = "[]",
         drug_plan: "List[DrugPlanItem]" = "[]",
         role_map: Dict = {},
     ) -> str:
@@ -3436,7 +3458,27 @@ class Agents:
                 for key, value in ietary_guidelines.items():
                     if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
                         content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "key_indicators":
+            # 创建一个字典来存储按时间聚合的数据
+            aggregated_data = {}
 
+            # 遍历数据并聚合
+            for item in key_indicators:
+                for entry in item["data"]:
+                    time = entry["time"].split(" ")[0]
+                    value = entry["value"]
+                    if time not in aggregated_data:
+                        aggregated_data[time] = {}
+                    aggregated_data[time][item["key"]] = value
+
+            # 创建Markdown表格
+            content = "| 测量时间 | 体重 | 体脂率 | BMI |\n"
+            content += "| ------ | ---- | ------ | ----- |\n"
+
+            # 填充表格
+            for time, measurements in aggregated_data.items():
+                row = f"| {time} | {measurements.get('体重', '')} | {measurements.get('体脂率', '')} | {measurements.get('bmi', '')} |\n"
+                content += row
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -4091,8 +4133,9 @@ class Agents:
         )
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
-
+        messages_str = self.__compose_user_msg__(
+            "messages", messages=kwargs.get("messages", "")
+        )
 
         # 构建提示变量
         prompt_vars = {
@@ -4138,14 +4181,19 @@ class Agents:
                     user_profile_str += f"基础代谢:\n{bmr}\n"
 
             # 组合用户画像信息字符串
-            user_profile_str += self.__compose_user_msg__("user_profile", user_profile=user_profile)
+            user_profile_str += self.__compose_user_msg__(
+                "user_profile", user_profile=user_profile
+            )
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records",
-                                                        medical_records=kwargs.get("medical_records"))
+        medical_records_str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages_str = self.__compose_user_msg__(
+            "messages", messages=kwargs.get("messages", "")
+        )
 
         # 构建提示变量
         prompt_vars = {
@@ -4156,11 +4204,14 @@ class Agents:
         }
 
         # 更新模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(_event=_event, prompt_vars=prompt_vars, model_args=model_args,
-                                                          **kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
 
         return content
 
@@ -4177,12 +4228,22 @@ class Agents:
             raise ValueError("用户画像信息缺失")
 
         # 验证用户画像中的必填字段
-        required_fields = ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity"]
+        required_fields = [
+            "age",
+            "gender",
+            "height",
+            "weight",
+            "bmi",
+            "daily_physical_labor_intensity",
+        ]
         for field in required_fields:
             if field not in user_profile_data or user_profile_data[field] is None:
                 raise ValueError(f"{field}为必填项，且不能为空")
 
-        if not (user_profile_data.get("current_diseases") or user_profile_data.get("management_goals")):
+        if not (
+            user_profile_data.get("current_diseases")
+            or user_profile_data.get("management_goals")
+        ):
             raise ValueError("现患疾病或管理目标必须至少填写一个")
 
         user_profile = UserProfile(**user_profile_data)
@@ -4195,12 +4256,15 @@ class Agents:
         bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
 
         # 组合用户画像信息字符串，并添加 BMR 信息
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile.dict())
+        user_profile_str = self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile.dict()
+        )
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records",
-                                                        medical_records=kwargs.get("medical_records"))
+        medical_records_str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
 
         # 饮食调理原则获取
         food_principle = kwargs.get("food_principle")
@@ -4217,15 +4281,18 @@ class Agents:
             "messages": messages,
             "current_date": datetime.today().strftime("%Y-%m-%d"),
             "medical_records": medical_records_str,
-            "food_principle": food_principle
+            "food_principle": food_principle,
         }
 
         # 更新模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(_event=_event, prompt_vars=prompt_vars, model_args=model_args,
-                                                          **kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
         if isinstance(content, openai.AsyncStream):
             return content
         try:
@@ -4254,12 +4321,22 @@ class Agents:
             raise ValueError("用户画像信息缺失")
 
         # 验证用户画像中的必填字段
-        required_fields = ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity"]
+        required_fields = [
+            "age",
+            "gender",
+            "height",
+            "weight",
+            "bmi",
+            "daily_physical_labor_intensity",
+        ]
         for field in required_fields:
             if field not in user_profile_data or user_profile_data[field] is None:
                 raise ValueError(f"{field}为必填项，且不能为空")
 
-        if not (user_profile_data.get("current_diseases") or user_profile_data.get("management_goals")):
+        if not (
+            user_profile_data.get("current_diseases")
+            or user_profile_data.get("management_goals")
+        ):
             raise ValueError("现患疾病或管理目标必须至少填写一个")
 
         user_profile = UserProfile(**user_profile_data)
@@ -4272,12 +4349,15 @@ class Agents:
         bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
 
         # 组合用户画像信息字符串，并添加 BMR 信息
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile.dict())
+        user_profile_str = self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile.dict()
+        )
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records",
-                                                        medical_records=kwargs.get("medical_records"))
+        medical_records_str = self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
 
         # 组合会话记录字符串
         messages = (
@@ -4290,7 +4370,9 @@ class Agents:
         food_principle = kwargs.get("food_principle")
 
         # 饮食调理细则
-        ietary_guidelines = self.__compose_user_msg__("ietary_guidelines",ietary_guidelines=kwargs.get("ietary_guidelines"))
+        ietary_guidelines = self.__compose_user_msg__(
+            "ietary_guidelines", ietary_guidelines=kwargs.get("ietary_guidelines")
+        )
 
         # 获取历史食谱
         historical_diets = parse_historical_diets(kwargs.get("historical_diets"))
@@ -4303,15 +4385,18 @@ class Agents:
             "medical_records": medical_records_str,
             "food_principle": food_principle,
             "ietary_guidelines": ietary_guidelines,
-            "historical_diets": historical_diets
+            "historical_diets": historical_diets,
         }
 
         # 更新模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(_event=_event, prompt_vars=prompt_vars, model_args=model_args,
-                                                          **kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
 
         if isinstance(content, openai.AsyncStream):
             return content
@@ -4325,7 +4410,9 @@ class Agents:
                     content = dumpJS(json5.loads(content_json[0]))
                 else:
                     # 处理Python代码块
-                    content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+                    content_python = re.findall(
+                        r"```python(.*?)```", content, re.DOTALL
+                    )
                     if content_python:
                         content = content_python[0].strip()
                     else:
@@ -4348,16 +4435,28 @@ class Agents:
             raise ValueError("用户画像信息缺失")
 
         # 验证用户画像中的必填字段
-        required_fields = ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity"]
+        required_fields = [
+            "age",
+            "gender",
+            "height",
+            "weight",
+            "bmi",
+            "daily_physical_labor_intensity",
+        ]
         for field in required_fields:
             if field not in user_profile_data or user_profile_data[field] is None:
                 raise ValueError(f"{field}为必填项，且不能为空")
 
-        if not (user_profile_data.get("current_diseases") or user_profile_data.get("management_goals")):
+        if not (
+            user_profile_data.get("current_diseases")
+            or user_profile_data.get("management_goals")
+        ):
             raise ValueError("现患疾病或管理目标必须至少填写一个")
 
         ietary_guidelines = kwargs.get("ietary_guidelines")
-        if not ietary_guidelines or not ietary_guidelines.get("basic_nutritional_needs"):
+        if not ietary_guidelines or not ietary_guidelines.get(
+            "basic_nutritional_needs"
+        ):
             raise ValueError("饮食调理细则中的基础营养需求为必填项，且不能为空")
 
         basic_nutritional_needs = ietary_guidelines.get("basic_nutritional_needs")
@@ -4374,23 +4473,27 @@ class Agents:
         bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
 
         # 组合用户画像信息字符串，并添加 BMR 信息
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile.dict())
+        user_profile_str = self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile.dict()
+        )
         user_profile_str += f"基础代谢:\n{bmr}\n"
-
 
         # 构建提示变量
         prompt_vars = {
             "user_profile": user_profile_str,
             "basic_nutritional_needs": basic_nutritional_needs,
-            "meal_plan": meal_plan
+            "meal_plan": meal_plan,
         }
 
         # 更新模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(_event=_event, prompt_vars=prompt_vars, model_args=model_args,
-                                                          **kwargs)
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
 
         if isinstance(content, openai.AsyncStream):
             return content
@@ -4404,7 +4507,9 @@ class Agents:
                     content = dumpJS(json5.loads(content_json[0]))
                 else:
                     # 处理Python代码块
-                    content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+                    content_python = re.findall(
+                        r"```python(.*?)```", content, re.DOTALL
+                    )
                     if content_python:
                         content = content_python[0].strip()
                     else:
@@ -4455,7 +4560,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
-            "medical_records": medical_records
+            "medical_records": medical_records,
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
@@ -4465,7 +4570,9 @@ class Agents:
         )
         return content
 
-    async def aigc_functions_sanji_plan_exercise_plan(self, **kwargs) -> Union[str, Generator]:
+    async def aigc_functions_sanji_plan_exercise_plan(
+        self, **kwargs
+    ) -> Union[str, Generator]:
         """三济康养方案-运动-运动计划
 
         # 能力说明
@@ -4506,7 +4613,7 @@ class Agents:
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
             "medical_records": medical_records,
-            "sport_principle": kwargs.get("sport_principle", "无")
+            "sport_principle": kwargs.get("sport_principle", "无"),
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
@@ -4523,9 +4630,68 @@ class Agents:
             data = []
         return data
 
+    async def aigc_functions_body_fat_weight_management_consultation(
+        self, kwargs
+    ) -> Union[str, Generator]:
+        """体脂体重管理-问诊
+
+        需求文档: https://alidocs.dingtalk.com/i/nodes/dQPGYqjpJYpZo0qYtaj01POMVakx1Z5N?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxwurbdeo3dgi5ppwl
+
+        # 能力说明
+
+        对于存在体脂体重管理需求的用户，识别其体脂体重变化趋势，通过问诊能力获取更多信息。
+
+        - Args
+            1. 画像
+                - 年龄（必填）
+                - 性别（必填）
+                - 身高（必填）
+                - 疾病史（非必填）
+            2. 当前日期
+            3. 体重体脂记录数据:测量日期、测量时间、体重数据、体脂数据、bmi（体重、bmi必填，体脂不必填）
+            4. 对话历史（非必填）
+        - Return
+            问题: str
+        """
+        _event, kwargs = "体脂体重管理-问诊", deepcopy(kwargs)
+        # 参数检查
+        ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
+
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+        if kwargs["messages"] and len(kwargs["messages"]) >= 6:
+            messages = self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "健康管理师", "user": "客户"})
+            kwargs["intentCode"] = "aigc_functions_body_fat_weight_management_consultation_suggestions"
+            _event = "体脂体重管理-问诊-建议"
+        else:
+            messages = (
+                self.__compose_user_msg__("messages", messages=kwargs["messages"])
+                if kwargs.get("messages")
+                else ""
+            )
+        key_indicators = self.__compose_user_msg__(
+            "key_indicators", key_indicators=kwargs["key_indicators"]
+        )
+        prompt_vars = {
+            "user_profile": user_profile,
+            "messages": messages,
+            "datetime": datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
+            "key_indicators": key_indicators,
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
+        )
+        content: Union[str, Generator] = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+
     def calculate_bmr(weight: float, height: str, age: int, gender: str) -> float:
         """计算基础代谢率 (BMR)"""
-        height_cm = float(height.replace("cm", "")) if "cm" in height else float(height) * 100
+        height_cm = (
+            float(height.replace("cm", "")) if "cm" in height else float(height) * 100
+        )
         if gender == "男":
             return 10 * weight + 6.25 * height_cm - 5 * age + 5
         elif gender == "女":
@@ -4891,19 +5057,23 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            process=0,
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
         )
-        content = content.replace('：\n','：')
-        content = content.replace('：\n\n','\n')
+        content = content.replace("：\n", "：")
+        content = content.replace("：\n\n", "\n")
         data = {}
-        lines = content.split('\n')
+        lines = content.split("\n")
         for line in lines:
-            if '：' in line:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
+            if "：" in line:
+                key, values = line.split("：", 1)
+                if values == "无":
+                    data[key] = []
                 else:
-                    data[key] = values.split('|')
+                    data[key] = values.split("|")
         return data
 
     async def sanji_assess_keyword_classification(self, **kwargs) -> str:
@@ -4922,18 +5092,22 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-            process=0, _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            process=0,
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
         )
-        content = content.replace('：\n','：')
-        lines = content.split('\n')
+        content = content.replace("：\n", "：")
+        lines = content.split("\n")
         data = {}
         for line in lines:
-            if '：' in line:
-                key, values = line.split('：', 1)
-                if values=='无':
-                    data[key]=[]
+            if "：" in line:
+                key, values = line.split("：", 1)
+                if values == "无":
+                    data[key] = []
                 else:
-                    data[key] = values.split(', ')
+                    data[key] = values.split(", ")
         return data
 
     async def sanji_assess_3health_classification(self, **kwargs) -> str:
@@ -4956,16 +5130,20 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             process=0,_event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            process=0,
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
         )
-        content = content.replace('：\n','：')
-        lines = content.split('\n')
+        content = content.replace("：\n", "：")
+        lines = content.split("\n")
         data = {}
         for line in lines:
-            if len(line)>0:
-                key, values = line.split('：', -1)
-                if values=='无':
-                    data[key]=[]
+            if len(line) > 0:
+                key, values = line.split("：", -1)
+                if values == "无":
+                    data[key] = []
                 else:
                     data[key] = [values]
         return data
@@ -4991,16 +5169,15 @@ class Agents:
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        if '\n' in content:
-            lines = content.split('\n')
+        if "\n" in content:
+            lines = content.split("\n")
         else:
-            lines = content.split('||')
-        result = {'one':lines}
+            lines = content.split("||")
+        result = {"one": lines}
 
         return result
-
 
     async def sanji_intervene_goal_classification(self, **kwargs) -> str:
         """"""
@@ -5022,20 +5199,24 @@ class Agents:
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
         )
         content: str = await self.sanji_general(
-            process=0, _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            process=0,
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
         )
 
         data = {}
-        data['goal'] = {}
-        data['literature'] = {}
-        lines = content.split('\n')
+        data["goal"] = {}
+        data["literature"] = {}
+        lines = content.split("\n")
         for line in lines:
-            if ':' in line or '：' in line:
-                key, values = line.split('：', 1)
-                if values == '无':
-                    data['goal'][key] = []
+            if ":" in line or "：" in line:
+                key, values = line.split("：", 1)
+                if values == "无":
+                    data["goal"][key] = []
                 else:
-                    data['goal'][key] = [values]
+                    data["goal"][key] = [values]
 
         return data
 
@@ -5079,7 +5260,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
-            "medical_records": medical_records
+            "medical_records": medical_records,
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
@@ -5089,7 +5270,9 @@ class Agents:
         )
         return content
 
-    async def aigc_functions_sanji_plan_exercise_plan(self, **kwargs) -> Union[str, Generator]:
+    async def aigc_functions_sanji_plan_exercise_plan(
+        self, **kwargs
+    ) -> Union[str, Generator]:
         """三济康养方案-运动-运动计划
 
         # 能力说明
@@ -5130,7 +5313,7 @@ class Agents:
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
             "medical_records": medical_records,
-            "sport_principle": kwargs.get("sport_principle", "无")
+            "sport_principle": kwargs.get("sport_principle", "无"),
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
@@ -5363,7 +5546,7 @@ class Agents:
 
     async def sanji_general(
         self,
-        process: int=1,
+        process: int = 1,
         _event: str = "",
         prompt_vars: dict = {},
         model_args: Dict = {},
@@ -5372,7 +5555,7 @@ class Agents:
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
-        model = 'Qwen1.5-32B-Chat'
+        model = "Qwen1.5-32B-Chat"
         model_args: dict = (
             {
                 "temperature": 0,
@@ -5383,15 +5566,14 @@ class Agents:
             else model_args
         )
         des = self.gsr.get_event_item(event)["description"]
-        if process ==2:
-            des = self.gsr.get_event_item(event)["process"]+self.gsr.get_event_item(event)["constraint"]
-        if process ==0:
+        if process == 2:
+            des = (
+                self.gsr.get_event_item(event)["process"]
+                + self.gsr.get_event_item(event)["constraint"]
+            )
+        if process == 0:
             des += self.gsr.get_event_item(event)["constraint"]
-        prompt_template: str = (
-            prompt_template
-            if prompt_template
-            else des
-        )
+        prompt_template: str = prompt_template if prompt_template else des
         prompt = prompt_template.format(**prompt_vars)
         logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
         content: Union[str, Generator] = await acallLLM(

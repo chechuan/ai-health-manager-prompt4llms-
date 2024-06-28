@@ -47,9 +47,9 @@ class ParamTools:
                 stats_records["user_profile"].append("bmi")
             if not params["user_profile"].get("daily_physical_labor_intensity"):
                 stats_records["user_profile"].append("daily_physical_labor_intensity")
-        if not params["user_profile"].get(
-            "history_of_present_illness"
-        ) and not params["user_profile"].get("management_goals"):
+        if not params["user_profile"].get("history_of_present_illness") and not params[
+            "user_profile"
+        ].get("management_goals"):
             stats_records["user_profile"].append(
                 "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(management_goals)"
             )
@@ -63,6 +63,7 @@ class ParamTools:
         for k, v in stats_records.items():
             if v:
                 raise AssertionError(", ".join(v))
+
     @classmethod
     def check_aigc_functions_sanji_plan_exercise_plan(cls, params: dict) -> List:
         """检查参数是否满足三济方案 - 运动 - 运动调理原则
@@ -99,9 +100,9 @@ class ParamTools:
                 stats_records["user_profile"].append("bmi")
             if not params["user_profile"].get("daily_physical_labor_intensity"):
                 stats_records["user_profile"].append("daily_physical_labor_intensity")
-        if not params["user_profile"].get(
-            "history_of_present_illness"
-        ) and not params["user_profile"].get("management_goals"):
+        if not params["user_profile"].get("history_of_present_illness") and not params[
+            "user_profile"
+        ].get("management_goals"):
             stats_records["user_profile"].append(
                 "user_profile 缺失现病史(history_of_present_illness) or 缺失健康管理目标(management_goals)"
             )
@@ -112,6 +113,65 @@ class ParamTools:
         for k, v in stats_records.items():
             if not v:
                 return
+        for k, v in stats_records.items():
+            if v:
+                raise AssertionError(", ".join(v))
+
+    @classmethod
+    def check_aigc_functions_body_fat_weight_management_consultation(
+        cls, params: dict
+    ) -> List:
+        """检查参数是否满足三济方案 - 运动 - 运动调理原则
+
+        - Args
+            1. 画像
+                - 年龄（必填）
+                - 性别（必填）
+                - 身高（必填）
+                - 疾病史（非必填）
+            2. 当前日期
+            3. 体重体脂记录数据:测量日期、测量时间、体重数据、体脂数据、bmi（体重、bmi必填，体脂不必填）
+            4. 对话历史（非必填）
+        """
+        stats_records = {"user_profile": [], "key_indicators": []}
+        # 用户画像
+        if (
+            not params.get("user_profile")
+            or not params["user_profile"].get("age")
+            or not params["user_profile"].get("gender")
+            or not params["user_profile"].get("height")
+        ):
+            stats_records["user_profile"].append("用户画像必填项缺失")
+            if not params["user_profile"].get("age"):
+                stats_records["user_profile"].append("age")
+            if not params["user_profile"].get("gender"):
+                stats_records["user_profile"].append("gender")
+            if not params["user_profile"].get("height"):
+                stats_records["user_profile"].append("height")
+        if not params.get("key_indicators"):
+            stats_records["key_indicators"].append("缺少关键指标数据")
+        else:
+            key_list = [i["key"] for i in params["key_indicators"]]
+            if "体重" not in key_list:
+                stats_records["key_indicators"].append("体重")
+            if "bmi" not in key_list:
+                stats_records["key_indicators"].append("bmi")
+            for item in params["key_indicators"]:
+                if item["key"] == "体重":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("体重数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("体重数据格式不符")
+                    elif len(item["data"]) < 2:
+                        stats_records["key_indicators"].append("体重数据不足2条")
+                elif item["key"] == "bmi":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("BMI数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("BMI数据格式不符")
+                    elif len(item["data"]) < 2:
+                        stats_records["key_indicators"].append("BMI数据不足2条")
+
         for k, v in stats_records.items():
             if v:
                 raise AssertionError(", ".join(v))
