@@ -6,11 +6,12 @@
 @Contact :   1627635056@qq.com
 """
 
+from datetime import date
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
+from click import File
 from fastapi import Body
 from pydantic import BaseModel, Field, root_validator, validator
-from datetime import date
 
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
@@ -47,6 +48,10 @@ class RolePlayRequest(BaseModel):
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant", "system", "function", "other"] = "other"
     content: str = Field(...)
+
+
+class ChatMessages(BaseModel):
+    messages: List[ChatMessage] = Field(...)
 
 
 class BaseResponse(BaseModel):
@@ -106,7 +111,7 @@ USER_PROFILE_KEY_MAP = {
     "exercise_level": "运动水平",
     "exercise_risk": "运动风险",
     "emotional_issues": "情志问题",
-    "diagnosis": "诊断"
+    "diagnosis": "诊断",
 }
 
 
@@ -114,8 +119,9 @@ DIETARY_GUIDELINES_KEY_MAP = {
     "focus_issues": "重点关注问题",
     "suitable_foods": "适宜吃",
     "unsuitable_foods": "不宜吃",
-    "basic_nutritional_needs": "基础营养需求"
+    "basic_nutritional_needs": "基础营养需求",
 }
+
 
 class DrugPlanItem(BaseModel):
     drug_name: str  # 药品名称
@@ -190,19 +196,33 @@ class UserProfile(BaseModel):
     exercise_intensity: Optional[str] = Field(
         None, description="运动强度", examples=["正常强度"]
     )
-    current_diseases: Optional[str] = Field(None, description="现患疾病", example="高血压, 糖尿病")
-    management_goals: Optional[str] = Field(None, description="管理目标", example="减重, 降血压")
+    current_diseases: Optional[str] = Field(
+        None, description="现患疾病", example="高血压, 糖尿病"
+    )
+    management_goals: Optional[str] = Field(
+        None, description="管理目标", example="减重, 降血压"
+    )
     food_allergies: Optional[str] = Field(None, description="食物过敏", example="花生")
-    special_diet: Optional[str] = Field(None, description="特殊饮食习惯", example="素食")
-    taste_preferences: Optional[str] = Field(None, description="口味偏好", example="清淡")
-    special_physiological_period: Optional[str] = Field(None,
-                                                        description="是否特殊生理期，如备孕期、孕早期、孕中期、孕晚期等",
-                                                        example="备孕期")
+    special_diet: Optional[str] = Field(
+        None, description="特殊饮食习惯", example="素食"
+    )
+    taste_preferences: Optional[str] = Field(
+        None, description="口味偏好", example="清淡"
+    )
+    special_physiological_period: Optional[str] = Field(
+        None,
+        description="是否特殊生理期，如备孕期、孕早期、孕中期、孕晚期等",
+        example="备孕期",
+    )
     region: Optional[str] = Field(None, description="所处地域", example="北京")
-    exercise_habits: Optional[str] = Field(None, description="运动习惯", example="每天锻炼")
+    exercise_habits: Optional[str] = Field(
+        None, description="运动习惯", example="每天锻炼"
+    )
     exercise_level: Optional[str] = Field(None, description="运动水平", example="中等")
     exercise_risk: Optional[str] = Field(None, description="运动风险", example="低")
-    emotional_issues: Optional[str] = Field(None, description="情志问题", example="焦虑")
+    emotional_issues: Optional[str] = Field(
+        None, description="情志问题", example="焦虑"
+    )
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -532,6 +552,9 @@ class DoctorInfo(BaseModel):
         )
 
 
+class KeyIndicators(BaseModel): ...
+
+
 class bloodPressureLevelResponse(BaseModel):
     level: int = Field(..., description="血压等级")
     contents: List[str] = Field([], description="要返回的话术")
@@ -667,8 +690,9 @@ class OutpatientSupportRequest(BaseModel):
             ]
         ],
     )
-    medical_records: Optional[MedicalRecords] = Field(default_factory=MedicalRecords, description="病历")
-
+    medical_records: Optional[MedicalRecords] = Field(
+        default_factory=MedicalRecords, description="病历"
+    )
 
     @root_validator(pre=True)
     def check_at_least_one_field(cls, values):
@@ -683,28 +707,46 @@ class OutpatientSupportRequest(BaseModel):
 
 # 三济康养方案
 class DietaryGuidelinesDetails(BaseModel):
-    focus_issues: Optional[str] = Field(None, description="重点关注问题",
-                                        example="控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。")
-    suitable_foods: Optional[str] = Field(None, description="适宜吃",
-                                          example="高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。")
-    unsuitable_foods: Optional[str] = Field(None, description="不宜吃",
-                                            example="高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。")
-    basic_nutritional_needs: Optional[str] = Field(None, description="基础营养需求",
-                                                   example="每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。")
+    focus_issues: Optional[str] = Field(
+        None,
+        description="重点关注问题",
+        example="控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。",
+    )
+    suitable_foods: Optional[str] = Field(
+        None,
+        description="适宜吃",
+        example="高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。",
+    )
+    unsuitable_foods: Optional[str] = Field(
+        None,
+        description="不宜吃",
+        example="高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。",
+    )
+    basic_nutritional_needs: Optional[str] = Field(
+        None,
+        description="基础营养需求",
+        example="每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。",
+    )
 
 
 class HistoricalDiet(BaseModel):
     date: str = Field(None, description="当前日期", example="2024年6月20日")
-    meals: Optional[Dict[str, List[str]]] = Field(None, description="餐次和食物名称", example={
-        "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
-        "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
-        "晚餐": ["玉米", "鸡腿", "牛奶"]
-    })
+    meals: Optional[Dict[str, List[str]]] = Field(
+        None,
+        description="餐次和食物名称",
+        example={
+            "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
+            "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
+            "晚餐": ["玉米", "鸡腿", "牛奶"],
+        },
+    )
 
 
 class MealPlan(BaseModel):
     meal: str = Field(description="餐次", example="早餐")
-    foods: List[str] = Field(description="食物名称", example=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"])
+    foods: List[str] = Field(
+        description="食物名称", example=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]
+    )
 
 
 class SanJiKangYangRequest(BaseModel):
@@ -715,23 +757,32 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_meal_plan_generation",
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
-        "aigc_functions_sanji_plan_exercise_plan"
-    ] = Field(description="意图编码/事件编码", examples=[
+        "aigc_functions_sanji_plan_exercise_plan",
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
             "aigc_functions_sanji_plan_exercise_plan",
             "aigc_functions_sanji_plan_exercise_regimen",
-        ]
-)
-    user_profile: Optional[UserProfile] = Field(
-        None, description="三济康养方案用户画像，包含详细的用户信息", examples=[{"age": 18, "gender": "男", "weight": "65kg"}]
+        ],
     )
-    medical_records: Optional[MedicalRecords] = Field(default_factory=MedicalRecords, description="病历", examples=[{
-        "history_of_present_illness": "高血压",
-        "chief_complaint": "肚子疼",
-        "past_history_of_present_illness": "糖尿病",
-        "allergic_history": ["无"],
-        "diagnosis_list": ["无"]
-    }
-    ])
+    user_profile: Optional[UserProfile] = Field(
+        None,
+        description="三济康养方案用户画像，包含详细的用户信息",
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
+    )
+    medical_records: Optional[MedicalRecords] = Field(
+        default_factory=MedicalRecords,
+        description="病历",
+        examples=[
+            {
+                "history_of_present_illness": "高血压",
+                "chief_complaint": "肚子疼",
+                "past_history_of_present_illness": "糖尿病",
+                "allergic_history": ["无"],
+                "diagnosis_list": ["无"],
+            }
+        ],
+    )
 
     messages: Optional[List[ChatMessage]] = Field(
         None,
@@ -747,7 +798,7 @@ class SanJiKangYangRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                }
+                },
             ]
         ],
     )
@@ -764,46 +815,110 @@ class SanJiKangYangRequest(BaseModel):
             '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
     )
-    ietary_guidelines: Optional[DietaryGuidelinesDetails] = Field(None, description="饮食调理细则", examples=[{
-        "重点关注问题": "控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。",
-        "适宜吃": "高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。",
-        "不宜吃": "高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。",
-        "基础营养需求": "每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。"
-    }])
-    historical_diets: Optional[List[HistoricalDiet]] = Field(None, description="历史食谱", examples=[{
-        "historical_diets": [
+    ietary_guidelines: Optional[DietaryGuidelinesDetails] = Field(
+        None,
+        description="饮食调理细则",
+        examples=[
             {
-                "date": "2024-05-01",
-                "meals": {
-                    "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
-                    "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
-                    "晚餐": ["玉米", "鸡腿", "牛奶"]
-                }
-            },
-            {
-                "date": "2024-05-02",
-                "meals": {
-                    "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
-                    "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
-                    "晚餐": ["玉米", "鸡腿", "牛奶"]
-                }
+                "重点关注问题": "控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。",
+                "适宜吃": "高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。",
+                "不宜吃": "高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。",
+                "基础营养需求": "每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。",
             }
-        ]
-    }])
-    meal_plan: List[MealPlan] = Field(None, description="待输出质量的食谱列表", examples=[
-        {
-            "meal": "早餐",
-            "foods": [
-                "燕麦粥",
-                "鸡蛋",
-                "拌菠菜",
-                "小米粥"
+        ],
+    )
+    historical_diets: Optional[List[HistoricalDiet]] = Field(
+        None,
+        description="历史食谱",
+        examples=[
+            {
+                "historical_diets": [
+                    {
+                        "date": "2024-05-01",
+                        "meals": {
+                            "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
+                            "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
+                            "晚餐": ["玉米", "鸡腿", "牛奶"],
+                        },
+                    },
+                    {
+                        "date": "2024-05-02",
+                        "meals": {
+                            "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
+                            "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
+                            "晚餐": ["玉米", "鸡腿", "牛奶"],
+                        },
+                    },
+                ]
+            }
+        ],
+    )
+    meal_plan: List[MealPlan] = Field(
+        None,
+        description="待输出质量的食谱列表",
+        examples=[
+            {"meal": "早餐", "foods": ["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]},
+            {"meal": "上午加餐", "foods": ["小番茄"]},
+        ],
+    )
+
+
+class BodyFatWeightManagementRequest(BaseModel):
+    intent_code: Literal["aigc_functions_body_fat_weight_management_consultation"] = (
+        Field(..., description="意图编码")
+    )
+    user_profile: UserProfile = Field(
+        ...,
+        description="三济康养方案用户画像，包含详细的用户信息",
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
+    )
+    messages: ChatMessages = Field(
+        None,
+        description="对话历史",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是什么时候出现的？",
+                },
+                {"role": "user", "content": "突然出现的"},
             ]
-        },
-        {
-            "meal": "上午加餐",
-            "foods": [
-                "小番茄"
-            ]
-        }
-    ])
+        ],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    key_indicators: Optional[KeyIndicators] = Field(
+        None,
+        description="关键指标",
+        examples=[
+            {
+                "key_indicators": [
+                    {
+                        "key": "体重",
+                        "data": [
+                            {"time": "2024-06-28 10:25:32", "value": "80.8"},
+                            {"time": "2024-06-27 10:25:32", "value": "80.3"},
+                        ],
+                    },
+                    {
+                        "key": "体脂率",
+                        "data": [
+                            {"time": "2024-06-28 10:25:32", "value": "30.10%"},
+                            {"time": "2024-06-27 10:25:32", "value": "30.50%"},
+                        ],
+                    },
+                    {
+                        "key": "bmi",
+                        "data": [
+                            {"time": "2024-06-28 10:25:32", "value": "26.08"},
+                            {"time": "2024-06-27 10:25:32", "value": "25.92"},
+                        ],
+                    },
+                ]
+            }
+        ],
+    )

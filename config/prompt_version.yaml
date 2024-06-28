@@ -47,6 +47,8 @@ local:
         aigc_functions_dietary_details_generation: 0.0.1
         aigc_functions_meal_plan_generation: 0.0.1
         aigc_functions_generate_food_quality_guidance: 0.0.1
+        aigc_functions_body_fat_weight_management_consultation: 0.0.1
+        aigc_functions_body_fat_weight_management_consultation_suggestions: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
