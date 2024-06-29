@@ -5098,16 +5098,19 @@ class Agents:
             model_args=model_args,
             **kwargs,
         )
-        content = content.replace("：\n", "：")
-        lines = content.split("\n")
-        data = {}
-        for line in lines:
-            if "：" in line:
-                key, values = line.split("：", 1)
-                if values == "无":
-                    data[key] = []
-                else:
-                    data[key] = values.split(", ")
+        # content = content.replace("：\n", "：")
+        # lines = content.split("\n")
+        # data = {}
+        # for line in lines:
+        #     if "：" in line:
+        #         key, values = line.split("：", 1)
+        #         if values == "无":
+        #             data[key] = []
+        #         else:
+        #             data[key] = values.split(", ")
+        content = content.split("||")
+        data={}
+        data['one']=content
         return data
 
     async def sanji_assess_3health_classification(self, **kwargs) -> str:
