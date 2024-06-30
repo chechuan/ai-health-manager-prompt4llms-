@@ -5143,8 +5143,8 @@ class Agents:
         lines = content.split("\n")
         data = {}
         for line in lines:
-            if len(line) > 0:
-                key, values = line.split("：", -1)
+            if "：" in line:
+                key, values = line.split("：", 1)
                 if values == "无":
                     data[key] = []
                 else:
