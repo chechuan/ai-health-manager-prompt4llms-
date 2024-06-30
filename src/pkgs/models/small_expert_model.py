@@ -5145,7 +5145,7 @@ class Agents:
         for line in lines:
             if "：" in line:
                 key, values = line.split("：", 1)
-                if values == "无":
+                if values == "无;" or values == ";":
                     data[key] = []
                 else:
                     data[key] = [values]
