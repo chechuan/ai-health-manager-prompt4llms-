@@ -21,7 +21,6 @@ local:
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -34,7 +33,6 @@ dev:
             api_key: sk-laikang-aihealthmanager-dev
             support_models:
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
@@ -45,7 +43,6 @@ dev:
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
 test:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-test
@@ -58,7 +55,6 @@ test:
             api_key: sk-laikang-aihealthmanager-dev
             support_models:
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
@@ -69,7 +65,6 @@ test:
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
 fat:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-qa.op.laikang.com/aihealthmanager-qa
@@ -82,7 +77,6 @@ fat:
             api_key: sk-laikang-aihealthmanager-dev
             support_models:
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
@@ -93,7 +87,6 @@ fat:
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
 prod:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate.op.laikang.com/aihealthmanager
@@ -106,7 +99,6 @@ prod:
             api_key: sk-laikang-aihealthmanager-dev
             support_models:
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat
                 - Baichuan2-7B-Chat
                 - Yi-34B-Chat
         vllm:
@@ -117,4 +109,3 @@ prod:
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - Qwen-14B-Chat
-                - Qwen-72B-Chat

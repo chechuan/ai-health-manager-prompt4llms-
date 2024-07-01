@@ -330,7 +330,7 @@ Begin!"""
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
         response = callLLM(
             history=messages,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
             temperature=0.7,
             top_p=0.8,
             n=1,

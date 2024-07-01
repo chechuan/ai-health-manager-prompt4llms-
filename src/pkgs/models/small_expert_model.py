@@ -217,7 +217,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("压力模型输出:" + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -245,7 +245,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -313,7 +313,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         logger.debug("体重方案/修改模型输出： " + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -447,7 +447,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
@@ -725,7 +725,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             logger.debug("血压安抚模型输出： " + generate_text)
             if generate_text.find("\nThought") == -1:
@@ -776,7 +776,7 @@ class expertModel:
                     top_p=0.8,
                     temperature=0.0,
                     do_sample=False,
-                    model="Qwen-72B-Chat",
+                    model="Qwen1.5-72B-Chat",
                 )
                 if "YES" in text:
                     return True
@@ -817,7 +817,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             ).strip()
 
             niti_daughter_role_map = {
@@ -847,7 +847,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             ).strip()
 
             return noti_doc_cont, noti_daughter_cont
@@ -1609,7 +1609,7 @@ class expertModel:
     #         top_p=0.9,
     #         temperature=0.8,
     #         do_sample=True,
-    #         model="Qwen-72B-Chat",
+    #         model="Qwen1.5-72B-Chat",
     #     )
     #
     #     # 2. 生成食谱的实物功效
@@ -1630,7 +1630,7 @@ class expertModel:
     #         temperature=0.8,
     #         do_sample=True,
     #         stream=True,
-    #         model="Qwen-72B-Chat",
+    #         model="Qwen1.5-72B-Chat",
     #     )
     #     response_time = time.time()
     #     print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1853,7 +1853,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
@@ -1913,7 +1913,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             logger.debug("血压安抚模型输出： " + generate_text)
             if generate_text.find("\nThought") == -1:
@@ -1964,7 +1964,7 @@ class expertModel:
                     top_p=0.8,
                     temperature=0.0,
                     do_sample=False,
-                    model="Qwen-72B-Chat",
+                    model="Qwen1.5-72B-Chat",
                 )
                 if "YES" in text:
                     return True
@@ -2005,7 +2005,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             ).strip()
 
             niti_daughter_role_map = {
@@ -2035,7 +2035,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen-72B-Chat",
+                model="Qwen1.5-72B-Chat",
             ).strip()
 
             return noti_doc_cont, noti_daughter_cont
@@ -3580,7 +3580,7 @@ class Agents:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
             report_type = callLLM(
-                history=messages, model="Qwen-72B-Chat", temperature=0.7, top_p=0.5
+                history=messages, model="Qwen1.5-72B-Chat", temperature=0.7, top_p=0.5
             )
             logger.debug(f"Report interpretation report type: {report_type}")
             if report_type not in options:
@@ -3668,7 +3668,7 @@ class Agents:
         ]
         content: str = await acallLLM(
             history=messages,
-            model="Qwen-72B-Chat",
+            model="Qwen1.5-72B-Chat",
             temperature=0.7,
             top_p=0.8,
         )
