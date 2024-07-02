@@ -222,8 +222,17 @@ class InitAllResource:
         self.__info_config__(model_config)
 
     def __info_config__(self, model_config):
+        logger.debug(f"Initialize api config ...")
         for key, value in self.api_config.items():
-            logger.debug(f"Initialize api config: {key}: {value}")
+            if key == "model_supply":
+                value_list = [f"default: {value['default']}"]
+                for k, v in value.items():
+                    if isinstance(v, dict):
+                        api_base = v["api_base"]
+                        support_models = v["support_models"]
+                        value_list.append(f"[{k}]: api_base: {api_base}, support_models: {support_models}")
+                value = ", ".join(value_list)
+            logger.debug(f"[{key:^16}]: {value}")
         logger.debug(
             f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}"
         )
