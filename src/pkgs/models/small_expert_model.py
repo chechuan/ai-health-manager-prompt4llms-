@@ -1126,6 +1126,7 @@ class expertModel:
                     model="Qwen1.5-72B-Chat",
                 )
                 logger.debug("判断是否在语境中模型输出： " + generate_text)
+                generate_text = generate_text[generate_text.find('Output') + 6:].split('\n')[0].strip()
                 if "否" in generate_text:
                     return {"result": "outContext"}
                 else:
