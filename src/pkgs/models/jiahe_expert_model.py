@@ -53,7 +53,7 @@ class JiaheExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
         self.client = openai.OpenAI()
-h
+
     @staticmethod
     async def long_term_nutritional_management(userInfo={}, history=[]):
         """长期营养管理意图识别"""
@@ -62,7 +62,7 @@ h
         messages = [
             {
                 "role": "user",
-                "content": jiahe_nutritious_manage_prompt.format(his_prompt),
+                "content": jiahe_recognition_nutritious_manage_prompt.format(his_prompt),
             }
         ]
         logger.debug("长期营养管理识别模型输入： " + json.dumps(messages, ensure_ascii=False))
@@ -75,7 +75,7 @@ h
             do_sample=True,
             model="Qwen1.5-32B-Chat",
         )
-        logger.debug("长期营养管理识别模型输出： " + json.dumps(messages, ensure_ascii=False))
+        logger.debug("长期营养管理识别模型输出： " + generate_text)
         generate_text = generate_text[generate_text.find('Output')+6:].split('\n')[0].strip()
         if '否' in generate_text:
             yield {'underlying_intent': False, 'message': '', 'end': True}
@@ -95,5 +95,5 @@ h
                 do_sample=True,
                 model="Qwen1.5-32B-Chat",
             )
-            logger.debug("长期营养管理话术模型输出： " + json.dumps(messages, ensure_ascii=False))
+            logger.debug("长期营养管理话术模型输出： " + generate_text)
             yield {"message": generate_text, "underlying_intent": True, "end": True}

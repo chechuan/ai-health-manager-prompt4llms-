@@ -372,7 +372,7 @@ Begins!"""
 
 jiahe_recognition_nutritious_manage_prompt = """# 已知信息
 ## 对话历史
-user: {0}
+{0}
 # 任务描述
 你是一个经验丰富的健康智能伙伴，请你帮忙分析对话历史中的用户query是否可能对存在长期营养管理的需求。
 ## 内容要求
