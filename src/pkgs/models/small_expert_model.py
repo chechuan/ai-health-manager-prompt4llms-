@@ -1107,15 +1107,15 @@ class expertModel:
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
             if history:
-                # 1. 判断是否终止
+                # 1. 判断回复是否在语境中
                 messages = [
                     {
                         "role": "user",
-                        "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                        "content": jiahe_collect_userInfo_in_context_prompt.format(his_prompt),
                     }
                 ]
                 logger.debug(
-                    "判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False)
+                    "判断是否在语境中模型输入： " + json.dumps(messages, ensure_ascii=False)
                 )
                 generate_text = callLLM(
                     history=messages,
@@ -1125,13 +1125,36 @@ class expertModel:
                     do_sample=True,
                     model="Qwen1.5-72B-Chat",
                 )
-                logger.debug("判断是否终止模型输出： " + generate_text)
-                if "中止" in generate_text:
-                    return {"result": False}
+                logger.debug("判断是否在语境中模型输出： " + generate_text)
+                generate_text = generate_text[generate_text.find('Output') + 6:].split('\n')[0].strip()
+                if "否" in generate_text:
+                    return {"result": "outContext"}
                 else:
-                    return {"result": True}
+                    # 2. 判断是否终止
+                    messages = [
+                        {
+                            "role": "user",
+                            "content": jiahe_confirm_terminal_prompt.format(his_prompt),
+                        }
+                    ]
+                    logger.debug(
+                        "判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False)
+                    )
+                    generate_text = callLLM(
+                        history=messages,
+                        max_tokens=2048,
+                        top_p=0.9,
+                        temperature=0.8,
+                        do_sample=True,
+                        model="Qwen1.5-72B-Chat",
+                    )
+                    logger.debug("判断是否终止模型输出： " + generate_text)
+                    if "中止" in generate_text:
+                        return {"result": 'terminal'}
+                    else:
+                        return {"result": 'order'}
         else:
-            return {"result": False}
+            return {"result": 'terminal'}
 
     @staticmethod
     async def gather_userInfo(userInfo={}, history=[]):

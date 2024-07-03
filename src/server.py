@@ -23,6 +23,7 @@ sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import Agents, expertModel
+from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
@@ -673,6 +674,22 @@ def create_app():
                                                                     param.get('requirements', []),
                                                                     param.get('reference_diet', []),
                                                                     param.get('days', 1))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/long_term_nutritional_management", methods=["post"])
+    async def _gen_long_term_nutritional_management_recognition(request: Request):
+        """长期营养管理识别"""
+        try:
+            param = await accept_param(request, endpoint="/long_term_nutritional_management")
+            generator: AsyncGenerator = JiaheExpertModel.long_term_nutritional_management(param.get('userInfo', []),
+                                                                    param.get('history', []))
             result = decorate_general_complete(
                 generator
             )
