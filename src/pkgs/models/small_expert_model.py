@@ -616,8 +616,8 @@ class expertModel:
             hist_s = "\n".join(
                 [f"{_role_map.get(i['role'])}: {i['content']}" for i in history]
             )
-            # current_date = datetime.now().date()
-            current_date = datetime.datetime.now()
+            current_date = datetime.now().date()
+            # current_date = datetime.datetime.now()
             drug_situ, drug_msg = "", [
                 "漏服药物",
                 "正常服药",
@@ -3231,22 +3231,20 @@ class Agents:
             logger.error(f"font file not found: {self.image_font_path}")
             exit(1)
 
-    def get_ocr(self, payload):
+    async def get_ocr(self, payload):
         import requests
-
         url = "http://10.228.67.99:26927/ocr"
         # payload = {'image_url': 'http://ai-health-manager-algorithm.oss-cn-beijing.aliyuncs.com/reportUpload/e7339bfc-3033-4200-a03f-9bc828004da3.jpg'}
-        files = []
+        files = [
+        ]
         headers = {}
-        response = requests.request(
-            "POST", url, headers=headers, data=payload, files=files
-        )
+        response = requests.request("POST", url, headers=headers, data=payload, files=files)
         return response.json()
 
-    def __ocr_report__(self, **kwargs):
+    async def __ocr_report__(self, **kwargs):
         """报告OCR功能"""
-        payload = {"image_url": kwargs.get("url", "")}
-        raw_result = self.get_ocr(payload)
+        payload = {'image_url': kwargs.get('url', '')}
+        raw_result = await self.get_ocr(payload)
         docs = ""
         if raw_result:
             process_ocr_result = [line[1] for line in raw_result]
@@ -3600,7 +3598,7 @@ class Agents:
         image_url, file_path = prepare_file(**kwargs)
         if not file_path:
             return self.__report_interpretation_result__(msg="请输入信息源")
-        docs, raw_result, process_ocr_result = self.__ocr_report__(**kwargs)
+        docs, raw_result, process_ocr_result = await self.__ocr_report__(**kwargs)
         if not docs:
             return self.__report_interpretation_result__(
                 msg="未识别出报告内容，请重新尝试",
@@ -3880,6 +3878,14 @@ class Agents:
         """西医决策-诊断生成"""
 
         _event = "西医决策-诊断生成"
+
+        # 必填字段和至少需要一项的参数列表
+
+        at_least_one = ["user_profile", "messages", "medical_records"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
@@ -3902,7 +3908,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -3910,6 +3916,14 @@ class Agents:
         """西医决策-主诉生成"""
 
         _event = "西医决策-主诉生成"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "messages": []
+        }
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -3929,6 +3943,14 @@ class Agents:
         """西医决策-现病史生成"""
 
         _event = "西医决策-现病史生成"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "messages": []
+        }
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -3948,6 +3970,16 @@ class Agents:
         """西医决策-既往史生成"""
 
         _event = "西医决策-既往史生成"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["past_history_of_present_illness"]
+        }
+        at_least_one = ["user_profile", "messages"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
@@ -3963,13 +3995,23 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     async def aigc_functions_generate_allergic_history(self, **kwargs) -> str:
         """西医决策-过敏史生成"""
 
         _event = "西医决策-过敏史生成"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["allergic_history"]
+        }
+        at_least_one = ["user_profile", "messages"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
@@ -3985,7 +4027,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -3993,6 +4035,13 @@ class Agents:
         """西药医嘱生成"""
 
         _event = "西药医嘱生成"
+
+        # 必填字段和至少需要一项的参数列表
+        at_least_one = ["messages", "medical_records"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
@@ -4038,7 +4087,7 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions process_content json5.loads error: {e}")
                 content = dumpJS([])
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -4046,6 +4095,13 @@ class Agents:
         """检查检验医嘱生成"""
 
         _event = "检查检验医嘱生成"
+
+        # 必填字段和至少需要一项的参数列表
+        at_least_one = ["messages", "medical_records"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
@@ -4091,42 +4147,44 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions process_content json5.loads error: {e}")
                 content = dumpJS([])
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_sjkyn_guideline_generation(self, **kwargs) -> str:
-        """三济康养方案总则"""
+        """
+        三济康养方案总则
+
+        根据用户画像和病历信息生成康养方案总则。
+
+        参数:
+            kwargs (dict): 包含用户画像和病历信息的参数字典
+
+        返回:
+            str: 生成的康养方案总则内容
+        """
 
         _event = "三济康养方案总则"
 
-        # 获取并验证必填字段
-        user_profile = kwargs.get("user_profile")
-        if not user_profile:
-            raise ValueError("用户画像信息缺失")
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "current_diseases"]
+        }
+        at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
-        required_fields = ["height", "weight", "bmi", "current_diseases"]
-        for field in required_fields:
-            if field not in user_profile or user_profile[field] is None:
-                raise ValueError(f"{USER_PROFILE_KEY_MAP[field]}为必填项，且不能为空")
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
 
-        # 提取必要的用户信息字段并解析体重和身高
-        try:
-            weight = parse_measurement(user_profile["weight"], "weight")
-            height = parse_measurement(user_profile["height"], "height")
-        except ValueError as e:
-            raise ValueError(f"体重或身高格式不正确: {str(e)}")
-
-        age = user_profile["age"]
-        gender = user_profile["gender"]
-
-        # 计算基础代谢率
-        bmr = calculate_bmr(weight, height, age, gender)
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
 
         # 组合用户画像信息字符串
         user_profile_str = self.__compose_user_msg__(
             "user_profile", user_profile=user_profile
         )
+
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
@@ -4167,25 +4225,13 @@ class Agents:
         user_profile = kwargs.get("user_profile", {})
 
         # 初始化变量
-        user_profile_str = ""
+        user_profile_str = self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile
+        )
 
-        # 处理用户画像信息
-        if user_profile:
-            if user_profile.get("weight"):
-                weight = parse_measurement(user_profile["weight"], "weight")
-            if user_profile.get("height"):
-                height = parse_measurement(user_profile["height"], "height")
-            if user_profile.get("age") and user_profile.get("gender"):
-                age = user_profile["age"]
-                gender = user_profile["gender"]
-                if weight and height:
-                    bmr = calculate_bmr(weight, height, age, gender)
-                    user_profile_str += f"基础代谢:\n{bmr}\n"
-
-            # 组合用户画像信息字符串
-            user_profile_str += self.__compose_user_msg__(
-                "user_profile", user_profile=user_profile
-            )
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
         medical_records_str = self.__compose_user_msg__(
@@ -4223,44 +4269,23 @@ class Agents:
 
         _event = "饮食调理细则生成"
 
-        # 获取并验证必填字段
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", ("current_diseases", "management_goals")]
+        }
 
-        user_profile_data = kwargs.get("user_profile")
-        if not user_profile_data:
-            raise ValueError("用户画像信息缺失")
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
 
-        # 验证用户画像中的必填字段
-        required_fields = [
-            "age",
-            "gender",
-            "height",
-            "weight",
-            "bmi",
-            "daily_physical_labor_intensity",
-        ]
-        for field in required_fields:
-            if field not in user_profile_data or user_profile_data[field] is None:
-                raise ValueError(f"{field}为必填项，且不能为空")
+        user_profile = kwargs.get("user_profile", {})
 
-        if not (
-            user_profile_data.get("current_diseases")
-            or user_profile_data.get("management_goals")
-        ):
-            raise ValueError("现患疾病或管理目标必须至少填写一个")
-
-        user_profile = UserProfile(**user_profile_data)
-
-        # 解析体重和身高
-        weight = parse_measurement(user_profile.weight, "weight")
-        height = parse_measurement(user_profile.height, "height")
-
-        # 计算基础代谢率 (BMR)
-        bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
-
-        # 组合用户画像信息字符串，并添加 BMR 信息
+        # 初始化变量
         user_profile_str = self.__compose_user_msg__(
-            "user_profile", user_profile=user_profile.dict()
+            "user_profile", user_profile=user_profile
         )
+
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
@@ -4306,54 +4331,35 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
                 content = dumpJS([])
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
 
         return content
 
     # @param_check(check_params=["messages"])
     @async_clock
     async def aigc_functions_meal_plan_generation(self, **kwargs) -> str:
-        """生成餐次、食物名称"""
+        """带量食谱-生成餐次、食物名称"""
 
         _event = "生成餐次、食物名称"
 
-        # 获取并验证必填字段
-        user_profile_data = kwargs.get("user_profile")
-        if not user_profile_data:
-            raise ValueError("用户画像信息缺失")
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                             ("current_diseases", "management_goals")]
+        }
 
-        # 验证用户画像中的必填字段
-        required_fields = [
-            "age",
-            "gender",
-            "height",
-            "weight",
-            "bmi",
-            "daily_physical_labor_intensity",
-        ]
-        for field in required_fields:
-            if field not in user_profile_data or user_profile_data[field] is None:
-                raise ValueError(f"{field}为必填项，且不能为空")
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
 
-        if not (
-            user_profile_data.get("current_diseases")
-            or user_profile_data.get("management_goals")
-        ):
-            raise ValueError("现患疾病或管理目标必须至少填写一个")
+        user_profile = kwargs.get("user_profile", {})
 
-        user_profile = UserProfile(**user_profile_data)
-
-        # 解析体重和身高
-        weight = parse_measurement(user_profile.weight, "weight")
-        height = parse_measurement(user_profile.height, "height")
-
-        # 计算基础代谢率 (BMR)
-        bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
-
-        # 组合用户画像信息字符串，并添加 BMR 信息
+        # 初始化变量
         user_profile_str = self.__compose_user_msg__(
-            "user_profile", user_profile=user_profile.dict()
+            "user_profile", user_profile=user_profile
         )
+
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
@@ -4422,7 +4428,7 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions process_content json5.loads error: {e}")
                 content = dumpJS([])
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     @async_clock
@@ -4431,54 +4437,32 @@ class Agents:
 
         _event = "生成餐次、食物名称的质量指导"
 
-        # 获取并验证必填字段
-        user_profile_data = kwargs.get("user_profile")
-        if not user_profile_data:
-            raise ValueError("用户画像信息缺失")
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                             ("current_diseases", "management_goals")],
+            "ietary_guidelines": {
+                "basic_nutritional_needs": ""
+            }
+        }
 
-        # 验证用户画像中的必填字段
-        required_fields = [
-            "age",
-            "gender",
-            "height",
-            "weight",
-            "bmi",
-            "daily_physical_labor_intensity",
-        ]
-        for field in required_fields:
-            if field not in user_profile_data or user_profile_data[field] is None:
-                raise ValueError(f"{field}为必填项，且不能为空")
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
 
-        if not (
-            user_profile_data.get("current_diseases")
-            or user_profile_data.get("management_goals")
-        ):
-            raise ValueError("现患疾病或管理目标必须至少填写一个")
+        user_profile = kwargs.get("user_profile", {})
 
-        ietary_guidelines = kwargs.get("ietary_guidelines")
-        if not ietary_guidelines or not ietary_guidelines.get(
-            "basic_nutritional_needs"
-        ):
-            raise ValueError("饮食调理细则中的基础营养需求为必填项，且不能为空")
+        # 初始化变量
+        user_profile_str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile", {})
+        )
 
-        basic_nutritional_needs = ietary_guidelines.get("basic_nutritional_needs")
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        user_profile_str += f"基础代谢:\n{bmr}\n"
+
+        basic_nutritional_needs = kwargs.get("ietary_guidelines").get("basic_nutritional_needs")
 
         meal_plan = convert_meal_plan_to_text(kwargs.get("meal_plan"))
-
-        user_profile = UserProfile(**user_profile_data)
-
-        # 解析体重和身高
-        weight = parse_measurement(user_profile.weight, "weight")
-        height = parse_measurement(user_profile.height, "height")
-
-        # 计算基础代谢率 (BMR)
-        bmr = calculate_bmr(weight, height, user_profile.age, user_profile.gender)
-
-        # 组合用户画像信息字符串，并添加 BMR 信息
-        user_profile_str = self.__compose_user_msg__(
-            "user_profile", user_profile=user_profile.dict()
-        )
-        user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 构建提示变量
         prompt_vars = {
@@ -4519,7 +4503,7 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions process_content json5.loads error: {e}")
                 content = dumpJS([])
-        content = parse_examination_plan(content)
+        content = await parse_examination_plan(content)
         return content
 
     async def aigc_functions_sanji_plan_exercise_regimen(self, **kwargs) -> str:
@@ -4544,14 +4528,21 @@ class Agents:
         """
         _event = "三济康养方案-运动-运动调理原则"
 
-        # 参数检查
-        ParamTools.check_aigc_functions_sanji_plan_exercise_regimen(kwargs)
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                             ("current_diseases", "management_goals")]
+        }
+        at_least_one = ["user_profile", "medical_records", "key_indicators"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
-            "user_profile", user_profile=kwargs["user_profile"]
+            "user_profile", user_profile=kwargs.get("user_profile", {})
         )
         medical_records = self.__compose_user_msg__(
-            "medical_records", medical_records=kwargs.get("medical_records", [])
+            "medical_records", medical_records=kwargs.get("medical_records", {})
         )
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
@@ -4596,14 +4587,21 @@ class Agents:
         """
         _event = "三济康养方案-运动-运动计划"
 
-        # 参数检查
-        ParamTools.check_aigc_functions_sanji_plan_exercise_plan(kwargs)
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                             ("current_diseases", "management_goals")]
+        }
+        at_least_one = ["user_profile", "medical_records", "key_indicators"]
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
-            "user_profile", user_profile=kwargs["user_profile"]
+            "user_profile", user_profile=kwargs.get("user_profile", {})
         )
         medical_records = self.__compose_user_msg__(
-            "medical_records", medical_records=kwargs.get("medical_records", [])
+            "medical_records", medical_records=kwargs.get("medical_records", {})
         )
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
@@ -4657,7 +4655,7 @@ class Agents:
         """
         _event, kwargs = "体脂体重管理-问诊", deepcopy(kwargs)
         # 参数检查
-        ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
+        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
@@ -5508,12 +5506,12 @@ class Agents:
         return content
 
     async def aaigc_functions_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
@@ -5532,10 +5530,17 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
+        # 将 \n 替换为空字符串
+        formatted_prompt_vars = {k: v.replace("\n", " ") if isinstance(v, str) else v for k, v in prompt_vars.items()}
+        logger.debug(f"Prompt Vars Before Formatting: {repr(formatted_prompt_vars)}")
+
+        # 格式化提示模板
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+
+        # 将 \n 替换为空字符串
+        formatted_prompt = prompt.replace("\n", " ")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(formatted_prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
