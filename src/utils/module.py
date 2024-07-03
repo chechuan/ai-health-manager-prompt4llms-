@@ -1073,7 +1073,7 @@ def download_from_oss(filepath: str = "oss path", save_path: str = "local save p
     logger.info(f"download {filepath} finished")
 
 
-def parse_examination_plan(content):
+async def parse_examination_plan(content):
     """将字符串解析为 JSON 对象，如果解析失败则返回一个空列表"""
     try:
         # 尝试将单引号替换为双引号

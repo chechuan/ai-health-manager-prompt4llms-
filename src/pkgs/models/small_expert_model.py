@@ -5506,12 +5506,12 @@ class Agents:
         return content
 
     async def aaigc_functions_general(
-            self,
-            _event: str = "",
-            prompt_vars: dict = {},
-            model_args: Dict = {},
-            prompt_template: str = "",
-            **kwargs,
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
@@ -5530,17 +5530,10 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
-        # 将 \n 替换为空字符串
-        formatted_prompt_vars = {k: v.replace("\n", " ") if isinstance(v, str) else v for k, v in prompt_vars.items()}
-        logger.debug(f"Prompt Vars Before Formatting: {repr(formatted_prompt_vars)}")
-
-        # 格式化提示模板
         prompt = prompt_template.format(**prompt_vars)
-
-        # 将 \n 替换为空字符串
-        formatted_prompt = prompt.replace("\n", " ")
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(formatted_prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
