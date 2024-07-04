@@ -1,4 +1,4 @@
-export ENV=dev
+export ENV=local
 export LOG_CONSOLE_LEVEL=TRACE
 export LOG_FILE_LEVEL=TRACE
 python src/server.py \
