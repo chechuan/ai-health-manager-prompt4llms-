@@ -532,7 +532,7 @@ def create_app():
                 yield_item["data"]["appendData"] = yield_item["appendData"]
                 item = {**yield_item["data"]}
                 logger.info(
-                    "Output (except mid_vars & backend_history):\n"
+                    "Output (except mid_vars & backend_history):"
                     + json.dumps(item, ensure_ascii=False)
                 )
                 if return_mid_vars:
@@ -566,7 +566,7 @@ def create_app():
                 # yield_item = await next(generator)
                 item = {**yield_item}
                 logger.info(
-                    "Output (except mid_vars & backend_history):\n"
+                    "Output (except mid_vars & backend_history):"
                     + json.dumps(item, ensure_ascii=False)
                 )
                 yield format_sse_chat_complete(
