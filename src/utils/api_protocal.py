@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 
 from click import File
 from fastapi import Body
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, Field
 
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
@@ -561,59 +561,6 @@ class bloodPressureLevelResponse(BaseModel):
     events: List[Dict] = Field([], description="后续跟随事件")
 
 
-# 西医决策支持
-class OutpatientUserProfile(BaseModel):
-    age: Optional[int] = Field(None, description="年龄", ge=0, le=200)
-    gender: Optional[Literal["男", "女"]] = Field(
-        None, description="性别", examples=["男", "女"]
-    )
-    height: Optional[str] = Field(None, description="身高", examples=["175cm", "1.8米"])
-    weight: Optional[str] = Field(None, description="体重", examples=["65kg", "90斤"])
-    weight_evaluation: Optional[str] = Field(
-        None, description="体重评价", examples=["正常"]
-    )
-    bmi: Optional[Union[None, float]] = None
-    disease_history: Optional[List[str]] = Field(None, description="疾病史")
-    allergic_history: Optional[List[str]] = Field(None, description="过敏史")
-    surgery_history: Optional[List[str]] = Field(None, description="手术史")
-    main_diagnosis_of_western_medicine: Optional[str] = Field(
-        None, description="西医主要诊断", examples=["高血压"]
-    )
-    secondary_diagnosis_of_western_medicine: Optional[str] = Field(
-        None, description="西医次要诊断"
-    )
-    traditional_chinese_medicine_diagnosis: Optional[str] = None  # 中医诊断
-    traditional_chinese_medicine_syndrome_types: Optional[str] = None  # 中医证型
-    traditional_chinese_medicine_constitution: Optional[str] = None  # 中医体质
-    dietary_habits: Optional[str] = Field(
-        None, description="饮食习惯", examples=["少食"]
-    )
-    body_temperature: Optional[str] = None  # 体温(摄氏度)
-    respiratory_rate: Optional[str] = None  # 呼吸频率(次/分)
-    pulse_rate: Optional[str] = None  # 脉搏(次/分)
-    diastolic_blood_pressure: Optional[Union[float, int]] = None  # 舒张压(mmHg)
-    systolic_blood_pressure: Optional[Union[float, int]] = None  # 收缩压(mmHg)
-    chief_complaint: Optional[str] = None  # 主诉
-    history_of_present_illness: Optional[str] = None  # 现病史
-    family_history_of_disease: Optional[str] = None  # 家族疾病史
-    past_history_of_present_illness: Optional[str] = None  # 既往史
-    specialist_check: Optional[str] = None  # 专科检查
-    disposal_plan: Optional[str] = None  # 处置方案
-    nation: Optional[str] = Field(None, description="民族", example=["汉族"])
-    daily_physical_labor_intensity: Optional[str] = Field(
-        None, description="日常体力劳动水平", examples=["中"]
-    )
-    mood_swings: Optional[str] = Field(
-        None, description="情绪波动", examples=["正常波动"]
-    )
-    motion_risk_level: Optional[str] = Field(
-        None, description="运动风险等级", examples=["正常"]
-    )
-    exercise_intensity: Optional[str] = Field(
-        None, description="运动强度", examples=["正常强度"]
-    )
-
-
 class MedicalRecords(BaseModel):
     chief_complaint: Optional[str] = Field(None, description="主诉")
     present_illness_history: Optional[str] = Field(None, description="现病史")
@@ -622,6 +569,7 @@ class MedicalRecords(BaseModel):
     diagnosis_list: Optional[List[str]] = Field(None, description="诊断")
 
 
+# 西医决策支持
 class OutpatientSupportRequest(BaseModel):
     intentCode: Literal[
         "aigc_functions_diagnosis_generation",
@@ -637,7 +585,7 @@ class OutpatientSupportRequest(BaseModel):
         description="模型参数",
         examples=[[{"stream": False}]],
     )
-    user_profile: Optional[OutpatientUserProfile] = None
+    user_profile: Optional[UserProfile] = None
     messages: Optional[List[ChatMessage]] = Field(
         None,
         description="对话历史",
@@ -678,18 +626,18 @@ class OutpatientSupportRequest(BaseModel):
         ],
     )
     medical_records: Optional[MedicalRecords] = Field(
-        default_factory=MedicalRecords, description="病历"
+        None,
+        description="病历",
+        examples=[
+            {
+                "history_of_present_illness": "高血压",
+                "chief_complaint": "肚子疼",
+                "past_history_of_present_illness": "糖尿病",
+                "allergic_history": ["无"],
+                "diagnosis_list": ["无"],
+            }
+        ],
     )
-
-    @root_validator(pre=True)
-    def check_at_least_one_field(cls, values):
-        if (
-            not values.get("user_profile")
-            and not values.get("messages")
-            and not values.get("medical_records")
-        ):
-            raise ValueError("用户画像、会话记录和病历信息至少有一个是必填项。")
-        return values
 
 
 # 三济康养方案
@@ -758,7 +706,7 @@ class SanJiKangYangRequest(BaseModel):
         examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
     )
     medical_records: Optional[MedicalRecords] = Field(
-        default_factory=MedicalRecords,
+        None,
         description="病历",
         examples=[
             {
@@ -780,12 +728,7 @@ class SanJiKangYangRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你的腹痛是突然出现的还是慢慢发生的？",
-                },
-                {"role": "user", "content": "突然出现的"},
-                {
-                    "role": "assistant",
-                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                },
+                }
             ]
         ],
     )

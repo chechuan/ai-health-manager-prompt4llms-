@@ -346,7 +346,7 @@ def mount_aigc_functions(app: FastAPI):
         # 提取并格式化错误信息
         return JSONResponse(
             status_code=500,
-            content={"head": 500, "items": {}, "msg": str(exc)},
+            content={"head": 500, "items": None, "msg": str(exc)},
         )
 
     async def _async_aigc_functions(
@@ -372,7 +372,7 @@ def mount_aigc_functions(app: FastAPI):
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
@@ -401,7 +401,7 @@ def mount_aigc_functions(app: FastAPI):
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
@@ -429,7 +429,7 @@ def mount_aigc_functions(app: FastAPI):
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=False)
         finally:
@@ -458,7 +458,7 @@ def mount_aigc_functions(app: FastAPI):
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
@@ -487,7 +487,7 @@ def mount_aigc_functions(app: FastAPI):
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
@@ -1010,7 +1010,7 @@ def create_app():
                 _return: AsyncGenerator = response_generator(msg, error=True)
             else:
                 ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=""
+                    head=601, msg=msg, items=None
                 )
             _return: str = ret.model_dump_json(exclude_unset=True)
         finally:
