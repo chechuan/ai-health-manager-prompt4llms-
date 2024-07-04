@@ -1262,22 +1262,24 @@ class expertModel:
             stream=True,
             model="Qwen1.5-32B-Chat",
         )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {"message": text_stream, "end": False}
-        logger.debug("出具饮食调理原则模型输出： " + content)
-        yield {"message": "", "end": True}
+        logger.debug("出具饮食调理原则模型输出： " + generate_text)
+        yield {"message": generate_text, "end": True}
+        # response_time = time.time()
+        # print(f"latency {response_time - start_time:.2f} s -> response")
+        # content = ""
+        # printed = False
+        # for i in generate_text:
+        #     t = time.time()
+        #     msg = i.choices[0].delta.to_dict()
+        #     text_stream = msg.get("content")
+        #     if text_stream:
+        #         if not printed:
+        #             print(f"latency first token {t - start_time:.2f} s")
+        #             printed = True
+        #         content += text_stream
+        #         yield {"message": text_stream, "end": False}
+        # logger.debug("出具饮食调理原则模型输出： " + content)
+        # yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_family_principle(
@@ -1310,25 +1312,27 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=True,
+            # stream=True,
             model="Qwen1.5-32B-Chat",
         )
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {"message": text_stream, "end": False}
-        logger.debug("出具家庭饮食原则模型输出： " + content)
-        yield {"message": "", "end": True}
+        logger.debug("出具家庭饮食原则模型输出： " + generate_text)
+        yield {"message": generate_text, "end": True}
+        # response_time = time.time()
+        # print(f"latency {response_time - start_time:.2f} s -> response")
+        # content = ""
+        # printed = False
+        # for i in generate_text:
+        #     t = time.time()
+        #     msg = i.choices[0].delta.to_dict()
+        #     text_stream = msg.get("content")
+        #     if text_stream:
+        #         if not printed:
+        #             print(f"latency first token {t - start_time:.2f} s")
+        #             printed = True
+        #         content += text_stream
+        #         yield {"message": text_stream, "end": False}
+        # logger.debug("出具家庭饮食原则模型输出： " + content)
+        # yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_family_diet(
@@ -1386,7 +1390,7 @@ class expertModel:
             diet_cont.append(generate_text)
             response_time = time.time()
             print(f"家庭一日饮食计划生成耗时 {response_time - start_time:.2f}")
-            yield {"message": generate_text, "end": False}
+            yield {"message": generate_text, "end": True}
 
             # response_time = time.time()
             # print(f"latency {response_time - start_time:.2f} s -> response")
@@ -1404,7 +1408,7 @@ class expertModel:
             #         yield {"message": text_stream, "end": False}
             # logger.debug("出具家庭一日饮食计划模型输出： " + content)
             # diet_cont.append(content)
-        yield {"message": "", "end": True}
+        # yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_nutrious_principle(cur_date, location, history=[], userInfo={}):
