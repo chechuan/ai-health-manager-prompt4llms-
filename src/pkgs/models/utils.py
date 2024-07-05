@@ -162,7 +162,7 @@ class ParamTools:
             raise ValueError("性别必须是 '男' 或 '女' (gender must be '男' or '女')")
 
     @classmethod
-    async def check_and_calculate_bmr(cls, user_profile: dict, field_names: dict) -> float:
+    async def check_and_calculate_bmr(cls, user_profile: dict) -> float:
         """
         检查计算基础代谢率（BMR）所需的数据是否存在，并计算BMR
 
@@ -177,7 +177,7 @@ class ParamTools:
             ValueError: 如果缺少必要的数据，抛出错误
         """
         required_fields = ["weight", "height", "age", "gender"]
-        missing_fields = [field_names.get(field, field) for field in required_fields if field not in user_profile]
+        missing_fields = [field for field in required_fields if field not in user_profile]
         if missing_fields:
             raise ValueError(
                 f"缺少计算基础代谢率所需的数据 (missing data to calculate BMR): {', '.join(missing_fields)}")
