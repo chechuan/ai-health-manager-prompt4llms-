@@ -1259,7 +1259,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=True,
+            # stream=True,
             model="Qwen1.5-32B-Chat",
         )
         logger.debug("出具饮食调理原则模型输出： " + generate_text)
