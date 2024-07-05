@@ -1385,7 +1385,7 @@ class expertModel:
                 temperature=0.8,
                 do_sample=True,
                 # stream=True,
-                model="Qwen1.5-32B-Chat",
+                model="Qwen1.5-72B-Chat",
             )
             diet_cont.append(generate_text)
             response_time = time.time()
