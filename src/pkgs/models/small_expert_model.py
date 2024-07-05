@@ -5236,6 +5236,11 @@ class Agents:
         data = {}
         data["goal"] = {}
         data["literature"] = {}
+        
+        content = content.replace("：\n", "：")
+        # if '-' in content:
+        #     lines = content.split("\n\n")
+        # else:
         lines = content.split("\n")
         for line in lines:
             if ":" in line or "：" in line:
@@ -5243,7 +5248,9 @@ class Agents:
                 if values == "无":
                     data["goal"][key] = []
                 else:
-                    data["goal"][key] = [values]
+                    my_list = values.split("||")
+                    filtered_list = [item for item in my_list if item]
+                    data["goal"][key] = filtered_list
 
         return data
 
