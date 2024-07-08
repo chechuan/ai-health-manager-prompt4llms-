@@ -237,6 +237,13 @@ prod:
         aigc_functions_mental_principle: 0.0.1
         aigc_functions_chinese_therapy: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
+        aigc_functions_chief_complaint_generation: 0.0.1
+        aigc_functions_diagnosis_generation: 0.0.1
+        aigc_functions_generate_present_illness: 0.0.1
+        aigc_functions_generate_past_medical_history: 0.0.1
+        aigc_functions_generate_allergic_history: 0.0.1
+        aigc_functions_generate_medication_plan: 0.0.1
+        aigc_functions_generate_examination_plan: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
