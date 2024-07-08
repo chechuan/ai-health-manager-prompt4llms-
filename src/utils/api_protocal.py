@@ -148,8 +148,10 @@ class JiaheUserProfile(BaseModel):
 
 
 class UserProfile(BaseModel):
-    age: int = Field(None, description="年龄", ge=0, le=200)
-    gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    # age: int = Field(None, description="年龄", ge=0, le=200)
+    # gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    age: Optional[int] = None
+    gender: Optional[str] = None
     height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
     weight_evaluation: Optional[str] = Field(
