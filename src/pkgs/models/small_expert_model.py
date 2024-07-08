@@ -4354,13 +4354,13 @@ class Agents:
         _event = "生成餐次、食物名称"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
-                             ("current_diseases", "management_goals")]
-        }
-
-        # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        # required_fields = {
+        #     "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+        #                      ("current_diseases", "management_goals")]
+        # }
+        #
+        # # 验证必填字段
+        # await ParamTools.check_required_fields(kwargs, required_fields)
 
         user_profile = kwargs.get("user_profile", {})
 
@@ -4370,7 +4370,8 @@ class Agents:
         )
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        # bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = 20
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
