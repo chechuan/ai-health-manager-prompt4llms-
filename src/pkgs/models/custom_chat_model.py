@@ -80,13 +80,20 @@ class CustomChatAuxiliary(CustomChatModel):
 
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
+        def find_second_occurrence(s, char):
+            first_index = s.find(char)
+            if first_index == -1:
+                return -1
+            second_index = s.find(char, first_index + 1)
+            return second_index
         try:
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
+            thought_index2=find_second_occurrence(text, '\nThought:')
             if thought_index == -1 or doctor_index == -1:
                 return "None", text
             thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 :].strip()
+            doctor = text[doctor_index + 8 :thought_index2].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -260,7 +267,7 @@ class CustomChatAuxiliary(CustomChatModel):
         event = self.__extract_event_from_gsr__(
             self.gsr, "auxiliary_diagnosis_summary_diet_rec"
         )
-        prompt_template_str = event['description']+event["process"]
+        prompt_template_str = event["process"]
         compose_message = ""
         for i in history:
             role, content = i["role"], i["content"]
@@ -326,7 +333,7 @@ class CustomChatAuxiliary(CustomChatModel):
         conts = []
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor:
+        elif not doctor or "问诊Finished" in doctor:
             doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             conts = [
                 "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？"
