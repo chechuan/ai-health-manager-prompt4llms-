@@ -1523,7 +1523,7 @@ class expertModel:
             do_sample=True,
             model="Qwen1.5-32B-Chat",
         )
-        logger.debug("猜你想问问题模型输出： " + generate_text)
+        logger.debug("猜你想问问题模型输出： " + generate_text.replace('\n', ' '))
 
         # 2. 对问题列表做饮食子意图识别
         messages = [
@@ -1533,7 +1533,7 @@ class expertModel:
             }
         ]
         logger.debug(
-            "营养咨询-猜你想问意图识别模型输入： "
+            "猜你想问意图识别模型输入： "
             + json.dumps(messages, ensure_ascii=False)
         )
         generate_text = callLLM(
@@ -1544,7 +1544,7 @@ class expertModel:
             do_sample=True,
             model="Qwen1.5-32B-Chat",
         )
-        logger.debug("营养咨询-猜你想问模型意图识别输出： " + generate_text)
+        logger.debug("猜你想问模型意图识别输出： " + generate_text.replace('\n', ' '))
         qs = generate_text.split("\n")
         res = []
         for i in qs:
@@ -1559,22 +1559,6 @@ class expertModel:
                 continue
         yield {"message": "\n".join(res[:3]), "end": True}
 
-        response_time = time.time()
-        print(f"latency {response_time - start_time:.2f} s -> response")
-        content = ""
-        printed = False
-        for i in generate_text:
-            t = time.time()
-            msg = i.choices[0].delta.to_dict()
-            text_stream = msg.get("content")
-            if text_stream:
-                if not printed:
-                    print(f"latency first token {t - start_time:.2f} s")
-                    printed = True
-                content += text_stream
-                yield {"message": text_stream, "end": False}
-        logger.debug("营养咨询-猜你想问模型输出： " + content)
-        yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_diet_effect(diet):
