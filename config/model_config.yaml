@@ -213,4 +213,11 @@ prod:
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
         - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
+        - aigc_functions_chief_complaint_generation # 2024年6月24日 西医决策-主诉生成
+        - aigc_functions_diagnosis_generation # 2024年6月25日 西医决策-诊断生成
+        - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
+        - aigc_functions_generate_past_medical_history # 2024年6月25日 西医决策-既往史生成
+        - aigc_functions_generate_allergic_history # 2024年6月25日 西医决策-过敏史生成
+        - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
+        - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
 
