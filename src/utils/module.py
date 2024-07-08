@@ -958,7 +958,8 @@ async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """
     if not error:
         async for chunk in response:
-            if chunk.object == "text_completion":
+            # if chunk.object == "text_completion":
+            if "chat" not in chunk.object:
                 content = chunk.choices[0].text
             else:
                 content = chunk.choices[0].delta.content
