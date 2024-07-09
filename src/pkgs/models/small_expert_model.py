@@ -6,12 +6,12 @@
 @Contact :   1627635056@qq.com
 """
 import asyncio
-from copy import deepcopy
 import json
 import random
 import re
 import sys
 import time
+from copy import deepcopy
 from os.path import basename
 from pathlib import Path
 
@@ -52,18 +52,18 @@ from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
     accept_stream_response,
+    async_clock,
+    calculate_bmr,
     clock,
     compute_blood_pressure_level,
     construct_naive_response_generator,
+    convert_meal_plan_to_text,
     download_from_oss,
     dumpJS,
     param_check,
     parse_examination_plan,
-    calculate_bmr,
-    parse_measurement,
     parse_historical_diets,
-    async_clock,
-    convert_meal_plan_to_text,
+    parse_measurement,
 )
 
 
@@ -1111,11 +1111,14 @@ class expertModel:
                 messages = [
                     {
                         "role": "user",
-                        "content": jiahe_collect_userInfo_in_context_prompt.format(his_prompt),
+                        "content": jiahe_collect_userInfo_in_context_prompt.format(
+                            his_prompt
+                        ),
                     }
                 ]
                 logger.debug(
-                    "判断是否在语境中模型输入： " + json.dumps(messages, ensure_ascii=False)
+                    "判断是否在语境中模型输入： "
+                    + json.dumps(messages, ensure_ascii=False)
                 )
                 generate_text = callLLM(
                     history=messages,
@@ -1126,7 +1129,11 @@ class expertModel:
                     model="Qwen1.5-72B-Chat",
                 )
                 logger.debug("判断是否在语境中模型输出： " + generate_text)
-                generate_text = generate_text[generate_text.find('Output') + 6:].split('\n')[0].strip()
+                generate_text = (
+                    generate_text[generate_text.find("Output") + 6 :]
+                    .split("\n")[0]
+                    .strip()
+                )
                 if "否" in generate_text:
                     return {"result": "outContext"}
                 else:
@@ -1138,7 +1145,8 @@ class expertModel:
                         }
                     ]
                     logger.debug(
-                        "判断是否终止模型输入： " + json.dumps(messages, ensure_ascii=False)
+                        "判断是否终止模型输入： "
+                        + json.dumps(messages, ensure_ascii=False)
                     )
                     generate_text = callLLM(
                         history=messages,
@@ -1150,11 +1158,11 @@ class expertModel:
                     )
                     logger.debug("判断是否终止模型输出： " + generate_text)
                     if "中止" in generate_text:
-                        return {"result": 'terminal'}
+                        return {"result": "terminal"}
                     else:
-                        return {"result": 'order'}
+                        return {"result": "order"}
         else:
-            return {"result": 'terminal'}
+            return {"result": "terminal"}
 
     @staticmethod
     async def gather_userInfo(userInfo={}, history=[]):
@@ -1259,7 +1267,7 @@ class expertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=True,
+            # stream=True,
             model="Qwen1.5-32B-Chat",
         )
         logger.debug("出具饮食调理原则模型输出： " + generate_text)
@@ -1523,7 +1531,7 @@ class expertModel:
             do_sample=True,
             model="Qwen1.5-32B-Chat",
         )
-        logger.debug("猜你想问问题模型输出： " + generate_text.replace('\n', ' '))
+        logger.debug("猜你想问问题模型输出： " + generate_text.replace("\n", " "))
 
         # 2. 对问题列表做饮食子意图识别
         messages = [
@@ -1533,8 +1541,7 @@ class expertModel:
             }
         ]
         logger.debug(
-            "猜你想问意图识别模型输入： "
-            + json.dumps(messages, ensure_ascii=False)
+            "猜你想问意图识别模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         generate_text = callLLM(
             history=messages,
@@ -1544,7 +1551,7 @@ class expertModel:
             do_sample=True,
             model="Qwen1.5-32B-Chat",
         )
-        logger.debug("猜你想问模型意图识别输出： " + generate_text.replace('\n', ' '))
+        logger.debug("猜你想问模型意图识别输出： " + generate_text.replace("\n", " "))
         qs = generate_text.split("\n")
         res = []
         for i in qs:
@@ -1558,7 +1565,6 @@ class expertModel:
             finally:
                 continue
         yield {"message": "\n".join(res[:3]), "end": True}
-
 
     @staticmethod
     async def gen_diet_effect(diet):
@@ -1753,6 +1759,7 @@ class expertModel:
         #     logger.debug("一日食谱模型输出： " + content)
         #     diet_cont.append(content)
         yield {"message": "", "end": True}
+
 
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
@@ -3244,17 +3251,19 @@ class Agents:
 
     async def get_ocr(self, payload):
         import requests
+
         url = "http://10.228.67.99:26927/ocr"
         # payload = {'image_url': 'http://ai-health-manager-algorithm.oss-cn-beijing.aliyuncs.com/reportUpload/e7339bfc-3033-4200-a03f-9bc828004da3.jpg'}
-        files = [
-        ]
+        files = []
         headers = {}
-        response = requests.request("POST", url, headers=headers, data=payload, files=files)
+        response = requests.request(
+            "POST", url, headers=headers, data=payload, files=files
+        )
         return response.json()
 
     async def __ocr_report__(self, **kwargs):
         """报告OCR功能"""
-        payload = {'image_url': kwargs.get('url', '')}
+        payload = {"image_url": kwargs.get("url", "")}
         raw_result = await self.get_ocr(payload)
         docs = ""
         if raw_result:
@@ -3929,9 +3938,7 @@ class Agents:
         _event = "西医决策-主诉生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "messages": []
-        }
+        required_fields = {"messages": []}
 
         # 验证必填字段
         await ParamTools.check_required_fields(kwargs, required_fields)
@@ -3956,9 +3963,7 @@ class Agents:
         _event = "西医决策-现病史生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "messages": []
-        }
+        required_fields = {"messages": []}
 
         # 验证必填字段
         await ParamTools.check_required_fields(kwargs, required_fields)
@@ -3983,9 +3988,7 @@ class Agents:
         _event = "西医决策-既往史生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "user_profile": ["past_history_of_present_illness"]
-        }
+        required_fields = {"user_profile": ["past_history_of_present_illness"]}
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
@@ -4015,9 +4018,7 @@ class Agents:
         _event = "西医决策-过敏史生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "user_profile": ["allergic_history"]
-        }
+        required_fields = {"user_profile": ["allergic_history"]}
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
@@ -4179,7 +4180,14 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "current_diseases"]
+            "user_profile": [
+                "age",
+                "gender",
+                "height",
+                "weight",
+                "bmi",
+                "current_diseases",
+            ]
         }
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
@@ -4282,7 +4290,14 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", ("current_diseases", "management_goals")]
+            "user_profile": [
+                "age",
+                "gender",
+                "height",
+                "weight",
+                "bmi",
+                ("current_diseases", "management_goals"),
+            ]
         }
 
         # 验证必填字段
@@ -4451,11 +4466,16 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
-                             ("current_diseases", "management_goals")],
-            "ietary_guidelines": {
-                "basic_nutritional_needs": ""
-            }
+            "user_profile": [
+                "age",
+                "gender",
+                "height",
+                "weight",
+                "bmi",
+                "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals"),
+            ],
+            "ietary_guidelines": {"basic_nutritional_needs": ""},
         }
 
         # 验证必填字段
@@ -4472,7 +4492,9 @@ class Agents:
         bmr = await ParamTools.check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
-        basic_nutritional_needs = kwargs.get("ietary_guidelines").get("basic_nutritional_needs")
+        basic_nutritional_needs = kwargs.get("ietary_guidelines").get(
+            "basic_nutritional_needs"
+        )
 
         meal_plan = convert_meal_plan_to_text(kwargs.get("meal_plan"))
 
@@ -4542,8 +4564,15 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
-                             ("current_diseases", "management_goals")]
+            "user_profile": [
+                "age",
+                "gender",
+                "height",
+                "weight",
+                "bmi",
+                "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals"),
+            ]
         }
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
@@ -4601,8 +4630,15 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
-                             ("current_diseases", "management_goals")]
+            "user_profile": [
+                "age",
+                "gender",
+                "height",
+                "weight",
+                "bmi",
+                "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals"),
+            ]
         }
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
@@ -4667,14 +4703,22 @@ class Agents:
         """
         _event, kwargs = "体脂体重管理-问诊", deepcopy(kwargs)
         # 参数检查
-        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
+        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(
+            kwargs
+        )
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
         if kwargs["messages"] and len(kwargs["messages"]) >= 6:
-            messages = self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "健康管理师", "user": "客户"})
-            kwargs["intentCode"] = "aigc_functions_body_fat_weight_management_consultation_suggestions"
+            messages = self.__compose_user_msg__(
+                "messages",
+                messages=kwargs["messages"],
+                role_map={"assistant": "健康管理师", "user": "客户"},
+            )
+            kwargs["intentCode"] = (
+                "aigc_functions_body_fat_weight_management_consultation_suggestions"
+            )
             _event = "体脂体重管理-问诊-建议"
         else:
             messages = (
@@ -5121,8 +5165,8 @@ class Agents:
         #         else:
         #             data[key] = values.split(", ")
         content = content.split("||")
-        data={}
-        data['one']=content
+        data = {}
+        data["one"] = content
         return data
 
     async def sanji_assess_3health_classification(self, **kwargs) -> str:
@@ -5162,7 +5206,6 @@ class Agents:
                 else:
                     data[key] = [values]
         return data
-
 
     async def sanji_assess_literature_classification(self, **kwargs) -> str:
         """"""
@@ -5225,7 +5268,7 @@ class Agents:
         data = {}
         data["goal"] = {}
         data["literature"] = {}
-        
+
         content = content.replace("：\n", "：")
         # if '-' in content:
         #     lines = content.split("\n\n")

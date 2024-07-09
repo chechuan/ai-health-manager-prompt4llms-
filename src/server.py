@@ -759,6 +759,28 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/gen_current_diet", methods=["post"])
+    async def _gen_current_diet(request: Request):
+        """生成当餐食谱接口"""
+        try:
+            param = await accept_param(request, endpoint="/gen_current_diet")
+            generator: AsyncGenerator = JiaheExpertModel.gen_current_diet(param.get('cur_date', ''),
+                                                                     param.get('location', ''),
+                                                                     param.get('diet_principle', ''),
+                                                                     param.get('reference_daily_diets', []),
+                                                                    param.get('meal_number', ''),
+                                                                     param.get('history', []),
+                                                                     param.get('userInfo', {}),
+                                                                          param.get('today_diet', ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/gen_diet_effect", methods=["post"])
     async def _gen_diet_effect(request: Request):
         """饮食功效接口"""
