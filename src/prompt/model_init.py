@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from ast import dump
 import time
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -186,6 +187,10 @@ async def acallLLM(
             query = apply_chat_template(query)
         kwds["prompt"] = query
         completion = await aclient.completions.create(**kwds)
+        logger.info(f"Model generate completion:{repr(completion)}")
+        while not completion.choices:
+            completion = await aclient.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
             return completion
         ret = completion.choices[0].text
@@ -202,6 +207,10 @@ async def acallLLM(
                 h = history
         kwds["messages"] = h
         completion = await aclient.chat.completions.create(**kwds)
+        logger.info(f"Model generate completion:{repr(completion)}")
+        while not completion.choices:
+            completion = await aclient.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
             return completion
         ret = completion.choices[0].message.content.strip()
