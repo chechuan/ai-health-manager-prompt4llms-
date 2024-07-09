@@ -5388,7 +5388,8 @@ class Agents:
         )
         try:
             # raise AssertionError("未定义err")
-            result = [i.strip() for i in response.split(",")]
+            # result = [i.strip() for i in response.split(",")]
+            result = [i.strip() for i in re.split(r"[,|，]", response)]
         except Exception as err:
             logger.error(repr(err))
             result = err
