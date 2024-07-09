@@ -97,3 +97,51 @@ class JiaheExpertModel:
             )
             logger.debug("长期营养管理话术模型输出： " + generate_text)
             yield {"message": generate_text, "underlying_intent": True, "end": True}
+
+    @staticmethod
+    async def gen_current_diet(
+            cur_date,
+            location,
+            diet_principle,
+            reference_daily_diets,
+            meal_number,
+            history=[],
+            userInfo={},
+            today_diet=''
+    ):
+        """生成当餐食谱"""
+        userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        ref_diet_str = "\n".join(reference_daily_diets[-2:])
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_current_diet_prompt.format(
+                    userInfo,
+                    cur_date,
+                    location,
+                    his_prompt,
+                    diet_principle,
+                    ref_diet_str,
+                    today_diet,
+                    meal_number
+                ),
+            }
+        ]
+        logger.debug(
+            "当餐食谱模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = await acallLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            model="Qwen1.5-32B-Chat",
+        )
+        logger.info("当餐食谱模型生成时间：" + str(time.time() - start_time))
+        logger.debug(
+            "当餐食谱模型输出： " + json.dumps(generate_text, ensure_ascii=False)
+        )
+        yield {"message": generate_text, "end": True}

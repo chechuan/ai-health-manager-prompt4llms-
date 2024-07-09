@@ -1760,6 +1760,7 @@ class expertModel:
         #     diet_cont.append(content)
         yield {"message": "", "end": True}
 
+
     @staticmethod
     def tool_rules_blood_pressure_level(**kwargs) -> dict:
         """计算血压等级
