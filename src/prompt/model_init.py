@@ -208,11 +208,12 @@ async def acallLLM(
         kwds["messages"] = h
         completion = await aclient.chat.completions.create(**kwds)
         logger.info(f"Model generate completion:{repr(completion)}")
+        
+        if stream:
+            return completion
         while not completion.choices:
             completion = await aclient.completions.create(**kwds)
             logger.info(f"Model generate completion:{repr(completion)}")
-        if stream:
-            return completion
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
     logger.info(
