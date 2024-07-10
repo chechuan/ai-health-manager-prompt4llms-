@@ -187,12 +187,12 @@ async def acallLLM(
             query = apply_chat_template(query)
         kwds["prompt"] = query
         completion = await aclient.completions.create(**kwds)
-        logger.info(f"Model generate completion:{repr(completion)}")
+        logger.info(f"Model generate completion:{repr(completion)}")       
+        if stream:
+            return completion
         while not completion.choices:
             completion = await aclient.completions.create(**kwds)
             logger.info(f"Model generate completion:{repr(completion)}")
-        if stream:
-            return completion
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
