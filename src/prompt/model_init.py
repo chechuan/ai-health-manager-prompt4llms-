@@ -185,7 +185,9 @@ async def acallLLM(
     if not history:
         if "qwen1.5" in model.lower():
             query = apply_chat_template(query)
-        kwds["prompt"] = query      
+        kwds["prompt"] = query
+        completion = await aclient.completions.create(**kwds)
+        logger.info(f"Model generate completion:{repr(completion)}")      
         if stream:
             return completion
         while not completion.choices:
