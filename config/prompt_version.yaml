@@ -244,6 +244,15 @@ prod:
         aigc_functions_generate_allergic_history: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
+        aigc_functions_food_principle_new: 0.0.1
+        aigc_functions_sport_principle_new: 0.0.1
+        aigc_functions_mental_principle_new: 0.0.1
+        aigc_functions_chinese_therapy_new: 0.0.1
+        sanji_assess_keyword_classification: 0.0.1
+        sanji_assess_literature_classification: 0.0.1
+        sanji_assess_3d_classification: 0.0.1
+        sanji_assess_3health_classification: 0.0.1
+        sanji_intervene_goal_classification: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
