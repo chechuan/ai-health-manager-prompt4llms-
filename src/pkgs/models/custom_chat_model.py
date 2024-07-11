@@ -174,7 +174,8 @@ class CustomChatAuxiliary(CustomChatModel):
             result += '|' + time + '|'
             for date in data.keys():
                 t_e = slot_dict[time]
-                result += data[date][t_e] + '|'
+                if t_e in data[date]:
+                    result += data[date][t_e] + '|'
             result += '\n'
         
         prompt_vars = {
