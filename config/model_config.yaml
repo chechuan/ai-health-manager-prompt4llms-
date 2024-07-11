@@ -198,6 +198,7 @@ prod:
         - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
         - custom_chat_gaily_assistant # 自定义对话-闲聊
         - aigc_functions_single_choice # 单选题
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
         - aigc_functions_consultation_summary # 2024年04月20日 问诊摘要
         - aigc_functions_diagnosis # 2024年04月20日 诊断
