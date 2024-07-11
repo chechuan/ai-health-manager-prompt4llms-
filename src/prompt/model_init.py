@@ -5,6 +5,7 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
+from ast import dump
 import time
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -95,6 +96,9 @@ def callLLM(
         completion = client.completions.create(**kwds)
         if stream:
             return completion
+        while not completion.choices:
+            completion = client.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
@@ -112,6 +116,9 @@ def callLLM(
         completion = client.chat.completions.create(**kwds)
         if stream:
             return completion
+        while not completion.choices:
+            completion = client.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
     logger.info(
@@ -186,8 +193,12 @@ async def acallLLM(
             query = apply_chat_template(query)
         kwds["prompt"] = query
         completion = await aclient.completions.create(**kwds)
+        logger.info(f"Model generate completion:{repr(completion)}")      
         if stream:
             return completion
+        while not completion.choices:
+            completion = await aclient.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
@@ -202,8 +213,13 @@ async def acallLLM(
                 h = history
         kwds["messages"] = h
         completion = await aclient.chat.completions.create(**kwds)
+        logger.info(f"Model generate completion:{repr(completion)}")
+        
         if stream:
             return completion
+        while not completion.choices:
+            completion = await aclient.completions.create(**kwds)
+            logger.info(f"Model generate completion:{repr(completion)}")
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
     logger.info(
