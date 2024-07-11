@@ -11,6 +11,8 @@ import asyncio
 import time
 
 import openai
+from prettytable import PrettyTable
+from loguru import logger
 
 short_prompt = """请给我20个保持健康的建议吧."""
 
@@ -93,13 +95,13 @@ async def send_a_request(id, completion_tokens_list):
         prompt = short_prompt
     time_st = time.time()
     # 使用 OpenAI 的 Completion API
-    print(f"Send request {id}.")
+    logger.debug(f"Send request {id}.")
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": prompt},
     ]
     response = await aclient.chat.completions.create(
-        model="Qwen2-7B-Instruct",  # 请根据你的订阅选择合适的模型
+        model=args.model,  # 请根据你的订阅选择合适的模型
         messages=messages,
         max_tokens=4096,
         temperature=1,
@@ -109,7 +111,7 @@ async def send_a_request(id, completion_tokens_list):
     response_data = response.model_dump()
     response_data["usage"]["cost"] = round(time.time() - time_st, 2)
     completion_tokens_list.append(response_data["usage"])
-    print(
+    logger.debug(
         {
             "id": id,
             "conversation_id": response_data["id"],
@@ -124,7 +126,7 @@ async def control_concurrency(task, semaphore):
         await task
 
 
-async def perform_load_test(concurrency, num_requests):
+async def perform_load_test():
     """
     模拟并发请求
     """
@@ -136,20 +138,20 @@ async def perform_load_test(concurrency, num_requests):
 
     completion_tokens_list = []
     # 创建信号量，限制并发量
-    semaphore = asyncio.Semaphore(concurrency)
+    semaphore = asyncio.Semaphore(args.concurrency)
     # 创建并发任务
     tasks = [
         control_concurrency(send_a_request(id, completion_tokens_list), semaphore)
-        for id in range(num_requests)
+        for id in range(args.num_requests)
     ]
 
     # 等待所有任务完成
     await asyncio.gather(*tasks)
 
     # 删除首尾的几个请求，因为这些请求是warmup请求
-    completion_tokens_list = completion_tokens_list[
-        args.concurrency * 2 : -2 * args.concurrency
-    ]
+    # completion_tokens_list = completion_tokens_list[
+    #     args.concurrency * 2 : -2 * args.concurrency
+    # ]
     # 计算平均吞吐量
     if len(completion_tokens_list) > 0:
         average_tokens = sum(
@@ -161,11 +163,26 @@ async def perform_load_test(concurrency, num_requests):
         average_prompt_tokens = sum(
             [i["prompt_tokens"] for i in completion_tokens_list]
         ) / len(completion_tokens_list)
-        print(
-            f"Average prompt tokens: {average_prompt_tokens:.2f}, Average completion tokens: {average_completion_tokens:.2f}."
+        table = PrettyTable()
+        table.field_names = [
+            "Concurrency",
+            "Num of Requests",
+            "Average Prompt Tokens",
+            "Average Completion Tokens",
+            "Generation Average Throughput",
+            "All Generation Thoughput",
+        ]
+        table.add_row(
+            [
+                args.concurrency,
+                args.num_requests,
+                average_prompt_tokens,
+                average_completion_tokens,
+                f"{average_tokens:.2f}",
+                f"{average_tokens*concurrency:.2f}",
+            ]
         )
-        print(f"Generation average throughput: {average_tokens:.2f} tokens/s")
-        print(f"All generation Thoughput: {average_tokens*concurrency:.2f} tokens/")
+        print(table)
 
 
 def init_args():
@@ -193,6 +210,12 @@ def init_args():
         choices=["long", "short"],
         help="测试类型，长提示 or 短提示",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="Qwen2-7B-Instruct",
+        help="模型名称",
+    )
     args = parser.parse_args()
 
     return args
@@ -201,5 +224,7 @@ def init_args():
 if __name__ == "__main__":
     args = init_args()
     concurrency = args.concurrency
-    num_requests = 20 * concurrency
-    asyncio.run(perform_load_test(concurrency, num_requests))
+    args.num_requests = 2 * concurrency
+    asyncio.run(perform_load_test())
+
+    # python -m src.test.test_llm_throughput --concurrency 1 --prompt-type long
