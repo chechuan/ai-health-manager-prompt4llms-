@@ -1,6 +1,6 @@
 model=Qwen2-7B-Instruct
-concurrency=1
-prompt_type=long
+concurrency=50
+prompt_type=short
 
 python -m src.test.test_llm_throughput \
     --model $model \

@@ -9,6 +9,7 @@
 import argparse
 import asyncio
 import time
+from typing import List
 
 import openai
 from prettytable import PrettyTable
@@ -95,7 +96,7 @@ async def send_a_request(id, completion_tokens_list):
         prompt = short_prompt
     time_st = time.time()
     # 使用 OpenAI 的 Completion API
-    logger.debug(f"Send request {id}.")
+    logger.debug(f"Send request {id}/{args.num_requests}")
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": prompt},
@@ -126,7 +127,7 @@ async def control_concurrency(task, semaphore):
         await task
 
 
-async def perform_load_test():
+async def perform_load_test() -> List:
     """
     模拟并发请求
     """
@@ -141,7 +142,7 @@ async def perform_load_test():
     semaphore = asyncio.Semaphore(args.concurrency)
     # 创建并发任务
     tasks = [
-        control_concurrency(send_a_request(id, completion_tokens_list), semaphore)
+        control_concurrency(send_a_request(id + 1, completion_tokens_list), semaphore)
         for id in range(args.num_requests)
     ]
 
@@ -149,9 +150,9 @@ async def perform_load_test():
     await asyncio.gather(*tasks)
 
     # 删除首尾的几个请求，因为这些请求是warmup请求
-    # completion_tokens_list = completion_tokens_list[
-    #     args.concurrency * 2 : -2 * args.concurrency
-    # ]
+    completion_tokens_list = completion_tokens_list[
+        args.concurrency * 2 : -2 * args.concurrency
+    ]
     # 计算平均吞吐量
     if len(completion_tokens_list) > 0:
         average_tokens = sum(
@@ -163,26 +164,14 @@ async def perform_load_test():
         average_prompt_tokens = sum(
             [i["prompt_tokens"] for i in completion_tokens_list]
         ) / len(completion_tokens_list)
-        table = PrettyTable()
-        table.field_names = [
-            "Concurrency",
-            "Num of Requests",
-            "Average Prompt Tokens",
-            "Average Completion Tokens",
-            "Generation Average Throughput",
-            "All Generation Thoughput",
+        return [
+            args.concurrency,
+            args.num_requests,
+            f"{average_prompt_tokens:.2f}",
+            f"{average_completion_tokens:.2f}",
+            f"{average_tokens:.2f}",
+            f"{average_tokens*concurrency:.2f}",
         ]
-        table.add_row(
-            [
-                args.concurrency,
-                args.num_requests,
-                average_prompt_tokens,
-                average_completion_tokens,
-                f"{average_tokens:.2f}",
-                f"{average_tokens*concurrency:.2f}",
-            ]
-        )
-        print(table)
 
 
 def init_args():
@@ -198,10 +187,17 @@ def init_args():
         "--api-key", type=str, default="empty", help="openai-like api key"
     )
     parser.add_argument(
-        "--concurrency",
-        type=int,
-        default=5,
+        "--concurrency-lst",
+        type=str,
+        default="1,5,10,20,50",
+        # default="1,2",
         help="请求并发量",
+    )
+    parser.add_argument(
+        "--alpha-times",
+        type=int,
+        default=10,
+        help="总请求数=倍率*并发数, 注: 开始的2*并发和结束的2*并发数会被忽略，保证warmup和warmdown",
     )
     parser.add_argument(
         "--prompt-type",
@@ -223,8 +219,18 @@ def init_args():
 
 if __name__ == "__main__":
     args = init_args()
-    concurrency = args.concurrency
-    args.num_requests = 2 * concurrency
-    asyncio.run(perform_load_test())
-
-    # python -m src.test.test_llm_throughput --concurrency 1 --prompt-type long
+    table = PrettyTable()
+    table.field_names = [
+        "Concurrency",
+        "Num of Requests",
+        "Average Prompt Tokens",
+        "Average Completion Tokens",
+        "Generation Average Throughput",
+        "All Generation Thoughput",
+    ]
+    args.concurrency_lst = [int(i) for i in args.concurrency_lst.split(",")]
+    for concurrency in args.concurrency_lst:
+        args.concurrency = concurrency
+        args.num_requests = args.alpha_times * concurrency
+        table.add_row(asyncio.run(perform_load_test()))
+    print(table)
