@@ -87,11 +87,14 @@ class CustomChatAuxiliary(CustomChatModel):
             second_index = s.find(char, first_index + 1)
             return second_index
         try:
+            text =text.replace('：',':')
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
             thought_index2=find_second_occurrence(text, '\nThought:')
-            if thought_index == -1 or doctor_index == -1:
-                return "None", text
+            if thought_index != -1 and doctor_index == -1:
+                return "None", text[thought_index + 8 : doctor_index].strip()
+            if thought_index == -1 and doctor_index != -1:
+                return "None", text[doctor_index + 8 :].strip()
             thought = text[thought_index + 8 : doctor_index].strip()
             doctor = text[doctor_index + 8 :thought_index2].strip()
             return thought, doctor
