@@ -1973,7 +1973,7 @@ class expertModel:
             message_f = ""
             for date in data.keys():
                 t_e = slot_dict[time_period]
-                glucose_val = data[date][t_e]
+                glucose_val = data[date].get('t_e')
                 if glucose_val != "":
                     glucose_val = float(glucose_val)
                     if 3.9 <= glucose_val < 7.0 and time_period == "空腹":
