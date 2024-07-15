@@ -46,8 +46,8 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": [
-                "--env",
-                "local",
+                // "--env",
+                // "local",
                 // "--use_cache"
             ]
         },
