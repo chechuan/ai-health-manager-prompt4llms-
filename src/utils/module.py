@@ -1160,6 +1160,38 @@ def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str
             formatted_text += f"  - {food}\n"
     return formatted_text.strip()
 
+def parse_height(height: str) -> float:
+    """解析身高，将其标准化为米为单位"""
+    if isinstance(height, (int, float)):
+        return height / 100.0 if height > 10 else height
+    elif isinstance(height, str):
+        height = height.strip().lower()
+        if 'cm' in height:
+            return float(height.replace('cm', '').strip()) / 100.0
+        elif 'm' in height:
+            return float(height.replace('m', '').strip())
+        else:
+            value = float(height)
+            return value / 100.0 if value > 10 else value
+    raise ValueError("无法解析的身高格式")
+
+def calculate_standard_weight(height: str, gender: str) -> float:
+    """计算标准体重"""
+    height_value = parse_height(height) * 100.0  # 转换为厘米
+    if gender == "男":
+        return (height_value - 100) * 0.9
+    elif gender == "女":
+        return (height_value - 100) * 0.9 - 2.5
+    return None
+
+def calculate_standard_body_fat_rate(gender: str) -> str:
+    """计算标准体脂率"""
+    if gender == "男":
+        return "10%-20%"
+    elif gender == "女":
+        return "15%-25%"
+    return None
+
 
 
 
