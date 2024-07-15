@@ -34,7 +34,8 @@ def get_userInfo_history(userInfo, history=[]):
     )
     info = ''
     for i in user_info.keys():
-        info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+        if user_info[i] and user_info[i] != '未知':
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
 
     return info, his_prompt
 
@@ -51,7 +52,7 @@ def get_familyInfo_history(familyInfo, history):
         info = f'{user.get("family_role", "")}的健康标签'
         roles = roles + user.get("family_role", "") + '，'
         for i in user_info.keys():
-            if user_info[i]:
+            if user_info[i] and user_info[i] != '未知':
                 info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
         infos = infos + '\n' + info
     roles = roles[:-1] if roles[-1] == '，' else roles
