@@ -124,6 +124,12 @@ dev:
         aigc_functions_generate_food_quality_guidance: 0.0.1
         aigc_functions_body_fat_weight_management_consultation: 0.0.1
         aigc_functions_body_fat_weight_management_consultation_suggestions: 0.0.1
+        aigc_functions_weight_data_analysis_1day: 0.0.1
+        aigc_functions_weight_data_analysis_2day: 0.0.1
+        aigc_functions_weight_data_analysis_multiday: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1

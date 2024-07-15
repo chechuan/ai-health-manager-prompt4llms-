@@ -110,6 +110,12 @@ dev:
         - aigc_functions_sanji_plan_exercise_plan # 2024年6月27日 三济康养方案-运动-运动计划
         - aigc_functions_body_fat_weight_management_consultation # 2024年6月28日 体脂体重管理-问诊
         - aigc_functions_body_fat_weight_management_consultation_suggestions # 2024年6月28日 体脂体重管理-问诊-建议
+        - aigc_functions_weight_data_analysis_1day # 2024年7月11日 体脂体重管理-体重数据分析-1日数据
+        - aigc_functions_weight_data_analysis_2day # 2024年7月12日 体脂体重管理-体重数据分析-2日数据
+        - aigc_functions_weight_data_analysis_multiday # 2024年7月12日 体脂体重管理-体重数据分析-多日数据
+        - aigc_functions_body_fat_weight_data_analysis_1day # 2024年7月12日 体重及体脂数据分析-1日数据
+        - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
+        - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
 test:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
