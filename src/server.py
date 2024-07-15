@@ -1008,14 +1008,14 @@ def create_app():
         finally:
             return ret
 
-    async def _body_fat_weight_management_consultation(request_model: BodyFatWeightManagementRequest):
-        """体脂体重管理-问诊
+    async def _aigc_functions_weight_management(request_model: BodyFatWeightManagementRequest):
+        """体脂体重管理
         """
         try:
             param = await async_accept_param_purge(
-                request_model, endpoint="/bodyfatweightmanagement/consultation"
+                request_model, endpoint="/aigc/weight_management"
             )
-            response: Union[str, AsyncGenerator] = await agents.aigc_functions_body_fat_weight_management_consultation(param)
+            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 _return: AsyncGenerator = response_generator(response)
             else:
@@ -1035,7 +1035,7 @@ def create_app():
         finally:
             return build_aigc_functions_response(_return)
 
-    app.route("/bodyfatweightmanagement/consultation", methods=["post"])(_body_fat_weight_management_consultation)
+    app.route("/aigc/weight_management", methods=["post"])(_aigc_functions_weight_management)
 
     mount_aigc_functions(app)
     mount_rule_endpoints(app)
