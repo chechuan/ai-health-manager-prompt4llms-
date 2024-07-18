@@ -14,6 +14,7 @@ import sys
 import time
 from os.path import basename
 from pathlib import Path
+from json.decoder import JSONDecodeError
 
 import json5
 import openai
@@ -4344,6 +4345,8 @@ class Agents:
     async def aigc_functions_meal_plan_generation(self, **kwargs) -> str:
         """带量食谱-生成餐次、食物名称"""
 
+        kwargs["intentCode"] = "aigc_functions_meal_plan_generation"
+
         _event = "生成餐次、食物名称"
 
         # 必填字段和至少需要一项的参数列表
@@ -4440,6 +4443,8 @@ class Agents:
     async def aigc_functions_generate_food_quality_guidance(self, **kwargs) -> str:
         """生成餐次、食物名称的质量指导"""
 
+        kwargs["intentCode"] = "aigc_functions_generate_food_quality_guidance"
+
         _event = "生成餐次、食物名称的质量指导"
 
         # 必填字段和至少需要一项的参数列表
@@ -4488,28 +4493,30 @@ class Agents:
 
         if isinstance(content, openai.AsyncStream):
             return content
+
+        # 尝试直接解析content
         try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
-        return content
+            # 预处理数据，去除可能的多余字符
+            cleaned_content = re.sub(r'```.*?```', '', content, flags=re.MULTILINE).strip()
+            # 再次尝试解析
+            parsed_data = json.loads(cleaned_content)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON data: {e}")
+            # 检查是否存在json代码块
+            match = re.search(r"```json(.*?)```", content, re.DOTALL)
+            if match:
+                json_block = match.group(1).strip()
+                try:
+                    parsed_data = json.loads(json_block)
+                except json.JSONDecodeError as inner_e:
+                    logger.error(f"Failed to parse JSON from code block: {inner_e}")
+                    parsed_data = []
+            else:
+                logger.error("No matching JSON code block found in the content.")
+                parsed_data = []
+
+        # 返回解析后的数据
+        return parsed_data
 
     async def aigc_functions_sanji_plan_exercise_regimen(self, **kwargs) -> str:
         """三济康养方案-运动-运动调理原则
@@ -5730,6 +5737,11 @@ class Agents:
         if not self.funcmap.get(intent_code):
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
+
+        # 检查是否为特定的并行化意图代码
+        if intent_code in ["aigc_functions_meal_plan_generation"]:
+            return await self.handle_parallel_intent(**kwargs)
+
         # kwargs = await self.__preprocess_function_args__(kwargs)
         try:
             func = self.funcmap.get(intent_code)
@@ -5741,6 +5753,48 @@ class Agents:
             logger.exception(f"call_function {intent_code} error: {e}")
             raise e
         return content
+
+    async def handle_parallel_intent(self, **kwargs) -> Union[str, Generator]:
+        """处理并行意图代码"""
+        try:
+            meal_plan_parameters = kwargs.get("meal_plan_parameters")
+
+            if meal_plan_parameters:
+                # 并行处理多个 meal_plan_parameters
+                meal_plan_tasks = [self.aigc_functions_meal_plan_generation(**param) for param in meal_plan_parameters]
+                meal_plans = await asyncio.gather(*meal_plan_tasks)
+
+                # 创建生成食物质量指导的任务列表，并行运行
+                food_quality_guidance_tasks = [
+                    self.aigc_functions_generate_food_quality_guidance(**{**param, "meal_plan": meal_plan})
+                    for param, meal_plan in zip(meal_plan_parameters, meal_plans)
+                ]
+
+                food_quality_guidance_results = await asyncio.gather(*food_quality_guidance_tasks)
+
+                # 返回内容组合
+                combined_response = [
+                    {
+                        "meal_plan": meal_plan,
+                        "food_quality_guidance": food_quality_guidance
+                    }
+                    for meal_plan, food_quality_guidance in zip(meal_plans, food_quality_guidance_results)
+                ]
+                return combined_response
+            else:
+                # 串行处理单个请求
+                meal_plan = await self.aigc_functions_meal_plan_generation(**kwargs)
+                food_quality_guidance = await self.aigc_functions_generate_food_quality_guidance(
+                    **{**kwargs, "meal_plan": meal_plan})
+                combined_response = {
+                    "meal_plan": meal_plan,
+                    "food_quality_guidance": food_quality_guidance
+                }
+                return combined_response
+
+        except Exception as e:
+            logger.exception(f"handle_parallel_intent error: {e}")
+            raise e
 
 
 if __name__ == "__main__":
