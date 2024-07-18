@@ -5738,9 +5738,9 @@ class Agents:
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
 
-        # 检查是否为特定的并行化意图代码
-        if intent_code in ["aigc_functions_meal_plan_generation"]:
-            return await self.handle_parallel_intent(**kwargs)
+        # # 检查是否为特定的并行化意图代码
+        # if intent_code in ["aigc_functions_meal_plan_generation"]:
+        #     return await self.handle_parallel_intent(**kwargs)
 
         # kwargs = await self.__preprocess_function_args__(kwargs)
         try:
@@ -5754,47 +5754,47 @@ class Agents:
             raise e
         return content
 
-    async def handle_parallel_intent(self, **kwargs) -> Union[str, Generator]:
-        """处理并行意图代码"""
-        try:
-            meal_plan_parameters = kwargs.get("meal_plan_parameters")
-
-            if meal_plan_parameters:
-                # 并行处理多个 meal_plan_parameters
-                meal_plan_tasks = [self.aigc_functions_meal_plan_generation(**param) for param in meal_plan_parameters]
-                meal_plans = await asyncio.gather(*meal_plan_tasks)
-
-                # 创建生成食物质量指导的任务列表，并行运行
-                food_quality_guidance_tasks = [
-                    self.aigc_functions_generate_food_quality_guidance(**{**param, "meal_plan": meal_plan})
-                    for param, meal_plan in zip(meal_plan_parameters, meal_plans)
-                ]
-
-                food_quality_guidance_results = await asyncio.gather(*food_quality_guidance_tasks)
-
-                # 返回内容组合
-                combined_response = [
-                    {
-                        "meal_plan": meal_plan,
-                        "food_quality_guidance": food_quality_guidance
-                    }
-                    for meal_plan, food_quality_guidance in zip(meal_plans, food_quality_guidance_results)
-                ]
-                return combined_response
-            else:
-                # 串行处理单个请求
-                meal_plan = await self.aigc_functions_meal_plan_generation(**kwargs)
-                food_quality_guidance = await self.aigc_functions_generate_food_quality_guidance(
-                    **{**kwargs, "meal_plan": meal_plan})
-                combined_response = {
-                    "meal_plan": meal_plan,
-                    "food_quality_guidance": food_quality_guidance
-                }
-                return combined_response
-
-        except Exception as e:
-            logger.exception(f"handle_parallel_intent error: {e}")
-            raise e
+    # async def handle_parallel_intent(self, **kwargs) -> Union[str, Generator]:
+    #     """处理并行意图代码"""
+    #     try:
+    #         meal_plan_parameters = kwargs.get("meal_plan_parameters")
+    #
+    #         if meal_plan_parameters:
+    #             # 并行处理多个 meal_plan_parameters
+    #             meal_plan_tasks = [self.aigc_functions_meal_plan_generation(**param) for param in meal_plan_parameters]
+    #             meal_plans = await asyncio.gather(*meal_plan_tasks)
+    #
+    #             # 创建生成食物质量指导的任务列表，并行运行
+    #             food_quality_guidance_tasks = [
+    #                 self.aigc_functions_generate_food_quality_guidance(**{**param, "meal_plan": meal_plan})
+    #                 for param, meal_plan in zip(meal_plan_parameters, meal_plans)
+    #             ]
+    #
+    #             food_quality_guidance_results = await asyncio.gather(*food_quality_guidance_tasks)
+    #
+    #             # 返回内容组合
+    #             combined_response = [
+    #                 {
+    #                     "meal_plan": meal_plan,
+    #                     "food_quality_guidance": food_quality_guidance
+    #                 }
+    #                 for meal_plan, food_quality_guidance in zip(meal_plans, food_quality_guidance_results)
+    #             ]
+    #             return combined_response
+    #         else:
+    #             # 串行处理单个请求
+    #             meal_plan = await self.aigc_functions_meal_plan_generation(**kwargs)
+    #             food_quality_guidance = await self.aigc_functions_generate_food_quality_guidance(
+    #                 **{**kwargs, "meal_plan": meal_plan})
+    #             combined_response = {
+    #                 "meal_plan": meal_plan,
+    #                 "food_quality_guidance": food_quality_guidance
+    #             }
+    #             return combined_response
+    #
+    #     except Exception as e:
+    #         logger.exception(f"handle_parallel_intent error: {e}")
+    #         raise e
 
 
 if __name__ == "__main__":
