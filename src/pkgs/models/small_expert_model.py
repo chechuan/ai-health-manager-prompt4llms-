@@ -2005,7 +2005,7 @@ class expertModel:
             result_2 += "|" + time + "|"
             for date in data.keys():
                 t_e = slot_dict[time]
-                result_2 += data[date][t_e] + "|"
+                result_2 += data[date].get(t_e,'') + "|"
             result_2 += "\n"
 
         prompt_template = (
