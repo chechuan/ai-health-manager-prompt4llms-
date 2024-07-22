@@ -7,6 +7,7 @@
 """
 import copy
 import json
+import os
 import subprocess
 import sys
 from argparse import ArgumentParser
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import AnyStr, BinaryIO, Dict, List, Tuple, Union
 
 import pandas as pd
+from dotenv import load_dotenv
 from pydantic import Field
 from requests import Session
 from rich import print
@@ -21,15 +23,19 @@ from tqdm import tqdm
 
 sys.path.append(Path.cwd().as_posix())
 
+from loguru import logger
+
 from protocal import CreateKnowledgeBaseRequest, SearchDocsRequest, UploadDocsRequest
 
-from configs import logger
+load_dotenv()
 
 
 def parse_args() -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument("--kb-name", type=str, default="valid", help="验证知识库名称")
-    parser.add_argument("--vector-store-type", type=str, default="faiss", help="向量库类型")
+    parser.add_argument(
+        "--vector-store-type", type=str, default="faiss", help="向量库类型"
+    )
     parser.add_argument(
         "--embed-model",
         type=str,
@@ -62,7 +68,7 @@ def parse_args() -> ArgumentParser:
 
 
 class ShareResource:
-    base_kb_url: str = "http://10.228.67.99:26925"
+    base_kb_url: str = os.getenv("BASE_KB_URL", "http://10.228.67.99:26925")
     methods_map: Dict = {
         "get_kb_list": "/knowledge_base/list_knowledge_bases",
         "create_kb": "/knowledge_base/create_knowledge_base",
@@ -117,7 +123,9 @@ class ShareResource:
             logger.info(f"Create KB {self.args.kb_name} success.")
         return response
 
-    def __compose_files__(self, file_path: Path) -> List[Tuple[AnyStr, Tuple[AnyStr, BinaryIO, AnyStr]]]:
+    def __compose_files__(
+        self, file_path: Path
+    ) -> List[Tuple[AnyStr, Tuple[AnyStr, BinaryIO, AnyStr]]]:
         match file_path.suffix:
             case ".docx":
                 suffix = "vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -150,7 +158,9 @@ class ShareResource:
         """预处理文件 格式转换, 名称调整"""
         _all_file_paths = []
         for file_path in all_file_paths:
-            _file_name = file_path.name.replace(" ", "-").replace("(", "（").replace(")", "）")
+            _file_name = (
+                file_path.name.replace(" ", "-").replace("(", "（").replace(")", "）")
+            )
             if _file_name != file_path.name:
                 _file_path = file_path.parent / _file_name
                 file_path.rename(_file_path)
@@ -169,7 +179,7 @@ class ShareResource:
         else:
             raise ValueError("upload_dir must be str or list")
 
-        all_file_paths = self.__preprocess_file_format__(all_file_paths)
+        all_file_paths = self.__preprocess_file_format__(all_file_paths)[:5]
 
         exist_files = self.list_files()
         for file_path in tqdm(
@@ -198,7 +208,7 @@ class ShareResource:
             data = UploadDocsRequest(
                 knowledge_base_name=self.args.kb_name,
                 to_vector_store=True,
-                chunk_size=250,
+                chunk_size=500,
                 chunk_overlap=50,
                 zh_title_enhance=True,
                 override=True,
@@ -215,7 +225,12 @@ class ShareResource:
 
     @staticmethod
     def get_all_file_paths(dir_path: Union[str, Path]) -> List[Path]:
-        file_paths = [file_path for file_path in Path(dir_path).glob("**/*") if file_path.is_file()]
+        file_paths = [
+            file_path
+            for file_path in Path(dir_path).glob("**/*")
+            if file_path.is_file()
+            and file_path.suffix not in [".json", ".xls", ".xlsx"]
+        ]
         return file_paths
 
     def load_valid_dataset(self) -> pd.DataFrame:
@@ -248,7 +263,9 @@ class ShareResource:
                 rerank_top_k=20,
             )
             with self.get_session() as session:
-                response = session.post(self.get_method_url("search_docs"), json=data.dict()).json()
+                response = session.post(
+                    self.get_method_url("search_docs"), json=data.dict()
+                ).json()
             if response:
                 row["匹配结果"] = json.dumps(response, ensure_ascii=False)
             _result.append(row.to_dict())
@@ -273,6 +290,8 @@ class ShareResource:
                     logger.trace("Record example")
                     print(_row)
                 _final_result.append(_row)
-        final_save_path = self.save_path.parent / (self.save_path.stem + "_final" + self.save_path.suffix)
+        final_save_path = self.save_path.parent / (
+            self.save_path.stem + "_final" + self.save_path.suffix
+        )
         pd.DataFrame(_final_result).to_excel(final_save_path)
         logger.success(f"save result to {final_save_path}")

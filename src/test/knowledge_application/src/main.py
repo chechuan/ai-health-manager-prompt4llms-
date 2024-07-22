@@ -21,6 +21,7 @@ def main():
         logger.debug(f"KB named {obj.args.kb_name} already exists.")
     if not obj.save_path.exists():
         obj.upload_docs()
+        
         ds = obj.load_valid_dataset()
         ds_matched = obj.match_with_knowledge(ds)
         logger.info(f"Save to {obj.save_path}.")
