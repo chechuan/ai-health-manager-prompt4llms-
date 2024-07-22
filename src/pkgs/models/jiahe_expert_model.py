@@ -673,3 +673,35 @@ class JiaheExpertModel:
             "当餐食谱模型输出： " + json.dumps(generate_text, ensure_ascii=False)
         )
         yield {"message": generate_text, "end": True}
+
+    # @staticmethod
+    # async def guess_asking_child_userInfo():
+
+    @staticmethod
+    async def gen_child_diet_principle(userInfo={}):
+        """儿童饮食调理原则"""
+        userInfo = get_userInfo(userInfo)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_child_diet_principle.format(
+                    userInfo
+                ),
+            }
+        ]
+        logger.debug(
+            "儿童饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=512,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            model="Qwen1.5-32B-Chat",
+        )
+        logger.debug("儿童饮食原则模型输出latancy： " + str(time.time() - start_time))
+        logger.debug("儿童饮食原则模型输出： " + generate_text)
+        yield {"message": generate_text, "end": True}

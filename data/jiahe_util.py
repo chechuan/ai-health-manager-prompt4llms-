@@ -40,6 +40,19 @@ def get_userInfo_history(userInfo, history=[]):
     return info, his_prompt
 
 
+def get_userInfo(userInfo):
+    user_info = JiaheUserProfile().model_dump()
+    for i in userInfo:
+        if userInfo[i]:
+            user_info[i] = userInfo[i]
+    info = ''
+    for i in user_info.keys():
+        if user_info[i] and user_info[i] != '未知':
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+
+    return info
+
+
 def get_familyInfo_history(familyInfo, history):
     infos = ''
     roles = ''
