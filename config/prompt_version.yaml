@@ -63,6 +63,7 @@ local:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -133,6 +134,7 @@ dev:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0

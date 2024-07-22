@@ -3779,7 +3779,7 @@ class Agents:
             "basic_nutritional_needs"
         )
 
-        meal_plan = convert_meal_plan_to_text(kwargs.get("meal_plan"))
+        meal_plan = convert_meal_plan_to_text(kwargs.get("meal_plan", []))
 
         # 构建提示变量
         prompt_vars = {
