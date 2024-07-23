@@ -34,7 +34,6 @@ class CustomChatModel:
             "blood_meas": expertModel.tool_rules_blood_pressure_level_2,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
-            # "glucose_consultation": expertModel.tool_rules_glucose_level
             # "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
