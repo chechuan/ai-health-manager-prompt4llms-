@@ -674,8 +674,35 @@ class JiaheExpertModel:
         )
         yield {"message": generate_text, "end": True}
 
-    # @staticmethod
-    # async def guess_asking_child_userInfo():
+    @staticmethod
+    async def guess_asking_child(userInfo, dish_efficacy, nutrient_efficacy):
+        """儿童猜你想问"""
+        userInfo = get_userInfo(userInfo)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_child_guess_asking.format(
+                    userInfo, dish_efficacy, nutrient_efficacy
+                ),
+            }
+        ]
+        logger.debug(
+            "儿童猜你想问模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=512,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            model="Qwen1.5-32B-Chat",
+        )
+        logger.debug("儿童猜你想问模型输出latancy： " + str(time.time() - start_time))
+        logger.debug("儿童猜你想问模型输出： " + generate_text)
+        yield {"message": generate_text, "end": True}
+
 
     @staticmethod
     async def gen_child_diet_principle(userInfo={}):
@@ -705,3 +732,39 @@ class JiaheExpertModel:
         logger.debug("儿童饮食原则模型输出latancy： " + str(time.time() - start_time))
         logger.debug("儿童饮食原则模型输出： " + generate_text)
         yield {"message": generate_text, "end": True}
+
+    def call_embedding(dish):
+        # get_em('dish_embedding')
+        # return
+        return read_dish_xlsx()
+        # # # inputs =
+        # logger.debug(
+        #     "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+        # )
+        #
+        # d = set(dish)
+        # ds = get_dish_info("dishes.json")
+        # idxes = []
+        # for i, x in enumerate(ds):
+        #     x = x['name']
+        #     x = set(x)
+        #     if len(set(d) & set(x)) > 0:
+        #         idxes.append(i)
+        #
+        # embs = open('emb', 'r').readlines()
+        # for i, emb in embs:
+        #     emb = json.loads(emb)
+
+
+
+
+        start_time = time.time()
+        generate_text = callEmbedding(
+            inputs=dish,
+            model="bce-embedding-base-v1",
+        )
+
+        logger.info("bce embedding模型生成时间：" + str(time.time() - start_time))
+        logger.debug(
+            "bce embedding模型输出： " + json.dumps(generate_text, ensure_ascii=False)
+        )
