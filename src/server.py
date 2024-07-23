@@ -657,6 +657,25 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/gen_embedding", methods=["post"])
+    async def _gen_embedding(request: Request):
+        try:
+            param = await accept_param(request, endpoint="/gen_embedding")
+            # generator: AsyncGenerator = JiaheExpertModel.call_embedding(param.get('inouts', []))
+            item = JiaheExpertModel.call_embedding(param.get('inputs', []))
+            result = make_result(items=item)
+        except AssertionError as err:
+            logger.exception(err)
+            result = make_result(head=601, msg=repr(err), items=param)
+
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+
+        finally:
+            return result
+
     @app.route("/family_diet_principle", methods=["post"])
     async def _gen_diet_principle(request: Request):
         """家庭饮食推荐原则接口"""
@@ -850,6 +869,22 @@ def create_app():
             param = await accept_param(request, endpoint="/guess_asking_diet")
             generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='diet',
                                                                      question=param.get('diet', ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/child_guess_asking", methods=["post"])
+    async def _guess_asking_child(request: Request):
+        """儿童猜你想问"""
+        try:
+            param = await accept_param(request, endpoint="/child_guess_asking")
+            generator: AsyncGenerator = JiaheExpertModel.guess_asking_child(param.get('userInfo', {}), param.get('dish_efficacy', ''),
+                                                                          param.get('nutrient_efficacy', ''))
             result = decorate_general_complete(
                 generator
             )
