@@ -1,5 +1,10 @@
 from src.utils.api_protocal import *
 from data.constrant import *
+from src.prompt.model_init import callLLM, acallLLM
+from src.utils.Logger import logger
+import json, time
+import openai
+import openpyxl as op
 
 jiahe_userInfo_map = {
     'age':'年龄',
@@ -13,6 +18,7 @@ jiahe_userInfo_map = {
     'taste_preference':'口味偏好',
     'is_specific_menstrual_period':'是否特殊生理期',
     'constitution': '中医体质',
+    'taste_taboo': '口味禁忌'
 }
 
 
@@ -34,9 +40,23 @@ def get_userInfo_history(userInfo, history=[]):
     )
     info = ''
     for i in user_info.keys():
-        info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+        if user_info[i] and user_info[i] != '未知':
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
 
     return info, his_prompt
+
+
+def get_userInfo(userInfo):
+    user_info = JiaheUserProfile().model_dump()
+    for i in userInfo:
+        if userInfo[i]:
+            user_info[i] = userInfo[i]
+    info = ''
+    for i in user_info.keys():
+        if user_info[i] and user_info[i] != '未知':
+            info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
+
+    return info
 
 
 def get_familyInfo_history(familyInfo, history):
@@ -51,7 +71,7 @@ def get_familyInfo_history(familyInfo, history):
         info = f'{user.get("family_role", "")}的健康标签'
         roles = roles + user.get("family_role", "") + '，'
         for i in user_info.keys():
-            if user_info[i]:
+            if user_info[i] and user_info[i] != '未知':
                 info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
         infos = infos + '\n' + info
     roles = roles[:-1] if roles[-1] == '，' else roles
@@ -68,3 +88,62 @@ def get_familyInfo_history(familyInfo, history):
     )
 
     return roles, infos, his_prompt
+
+def callEmbedding(
+    i, inputs, file, model='bce-embedding-base-v1'
+):
+
+    client = openai.OpenAI()
+    if not isinstance(inputs, list):
+        inputs = [inputs]
+        t_st = time.time()
+    logger.debug('begin to call embedding')
+    completion = client.embeddings.create(input = inputs, model=model)
+    logger.debug('finished call embedding')
+    time_cost = round(time.time() - t_st, 1)
+    f = open('dish_embedding', 'w')
+    xs = []
+    for emb in completion.data:
+        xs.append(emb.embedding)
+        # file.write(json.dumps(emb.embedding) + '\n')
+        logger.debug(f"get embedding {i}")
+
+    logger.info(
+        f"cost: {time_cost}s"
+    )
+    return xs
+
+def read_dish_xlsx(file_path="/Users/yuanhuachao/Desktop/ai-health-manager-prompt4llms/data/dishes.xlsx"):
+    workbook = op.load_workbook(file_path)
+    worksheet = workbook["Sheet1"]
+    rows = worksheet.max_row
+    columns = worksheet.max_column
+    dishes = []
+    with open('dish_embedding_0722.txt', 'w') as f:
+        i = 0
+        for i in range(1, rows+1):
+            # if i > 3:
+            #     break
+            if worksheet.cell(row=i, column=1).value.strip() == 'code':
+                continue
+            xs = callEmbedding(i, worksheet.cell(row=i, column=2).value.strip(), f)
+            for x in xs:
+                # import pdb
+                # pdb.set_trace()
+                f.write(json.dumps(x) + '\n')
+            # dishes.append(worksheet.cell(row=i, column=2).value.strip())
+        # f.close()
+        print(f'len dishes: {len(dishes)}')
+    return {'result':'OK'}
+    # callEmbedding(dishes)
+
+
+def get_dish_info(file):
+    data = json.load(open(file, 'r'), ensure_ascii=False)
+    return data
+
+
+def get_em(f):
+    d = open(f, 'r').readlines()
+    print(f'emb数据条数：{len(d)}')
+

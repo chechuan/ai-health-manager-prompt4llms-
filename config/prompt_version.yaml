@@ -49,6 +49,12 @@ local:
         aigc_functions_generate_food_quality_guidance: 0.0.1
         aigc_functions_body_fat_weight_management_consultation: 0.0.1
         aigc_functions_body_fat_weight_management_consultation_suggestions: 0.0.1
+        aigc_functions_weight_data_analysis_1day: 0.0.1
+        aigc_functions_weight_data_analysis_2day: 0.0.1
+        aigc_functions_weight_data_analysis_multiday: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
@@ -57,6 +63,7 @@ local:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -118,9 +125,16 @@ dev:
         aigc_functions_generate_food_quality_guidance: 0.0.1
         aigc_functions_body_fat_weight_management_consultation: 0.0.1
         aigc_functions_body_fat_weight_management_consultation_suggestions: 0.0.1
+        aigc_functions_weight_data_analysis_1day: 0.0.1
+        aigc_functions_weight_data_analysis_2day: 0.0.1
+        aigc_functions_weight_data_analysis_multiday: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -256,6 +270,7 @@ prod:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0

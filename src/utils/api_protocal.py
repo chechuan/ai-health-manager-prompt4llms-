@@ -112,6 +112,9 @@ USER_PROFILE_KEY_MAP = {
     "exercise_risk": "运动风险",
     "emotional_issues": "情志问题",
     "diagnosis": "诊断",
+    "standard_weight": "标准体重",
+    "target_weight": "用户目标体重",
+    "standard_body_fat_rate": "标准体脂率"
 }
 
 
@@ -143,6 +146,7 @@ class JiaheUserProfile(BaseModel):
     special_diet: str = Field("未知", description="特殊饮食习惯")
     allergy_food: str = Field("未知", description="过敏食物")
     taste_preference: str = Field("未知", description="口味偏好")
+    taste_taboo: str = Field("未知", description="口味禁忌")
     is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
     constitution: str = Field("未知", description="中医体质")
 
@@ -154,6 +158,7 @@ class UserProfile(BaseModel):
     gender: Optional[str] = None
     height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
+    target_weight: str = Field(None, description="目标体重", examples=["65kg", "90斤"])
     weight_evaluation: Optional[str] = Field(
         None, description="体重评价", examples=["正常"]
     )
@@ -211,7 +216,6 @@ class UserProfile(BaseModel):
     exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
     exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
     emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
-
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -796,8 +800,20 @@ class SanJiKangYangRequest(BaseModel):
 
 
 class BodyFatWeightManagementRequest(BaseModel):
-    intent_code: Literal["aigc_functions_body_fat_weight_management_consultation"] = (
-        Field(..., description="意图编码")
+    intent_code: Literal[
+        "aigc_functions_body_fat_weight_management_consultation",
+        "aigc_functions_weight_data_analysis_1day",
+        "aigc_functions_weight_data_analysis_2day",
+        "aigc_functions_weight_data_analysis_multiday",
+        "aigc_functions_body_fat_weight_data_analysis_1day",
+        "aigc_functions_body_fat_weight_data_analysis_2day",
+        "aigc_functions_body_fat_weight_data_analysis_multiday"
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_sanji_plan_exercise_plan",
+            "aigc_functions_sanji_plan_exercise_regimen"
+        ]
     )
     user_profile: UserProfile = Field(
         ...,

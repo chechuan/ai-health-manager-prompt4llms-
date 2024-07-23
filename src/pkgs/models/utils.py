@@ -85,56 +85,110 @@ class ParamTools:
     async def check_aigc_functions_body_fat_weight_management_consultation(
             cls, params: dict
     ) -> List:
-        """检查参数是否满足三济方案 - 运动 - 运动调理原则
+        """检查参数是否满足需求
 
-        - Args
-            1. 画像
-                - 年龄（必填）
-                - 性别（必填）
-                - 身高（必填）
-                - 疾病史（非必填）
-            2. 当前日期
-            3. 体重体脂记录数据:测量日期、测量时间、体重数据、体脂数据、bmi（体重、bmi必填，体脂不必填）
-            4. 对话历史（非必填）
-        """
+    - Args
+        intentCode: str
+            - aigc_functions_body_fat_weight_management_consultation
+            - aigc_functions_weight_data_analysis
+            - aigc_functions_body_fat_weight_data_analysis
+    """
         stats_records = {"user_profile": [], "key_indicators": []}
-        # 用户画像
-        if (
-                not params.get("user_profile")
-                or not params["user_profile"].get("age")
-                or not params["user_profile"].get("gender")
-                or not params["user_profile"].get("height")
-        ):
-            stats_records["user_profile"].append("用户画像必填项缺失")
-            if not params["user_profile"].get("age"):
-                stats_records["user_profile"].append("age")
-            if not params["user_profile"].get("gender"):
-                stats_records["user_profile"].append("gender")
-            if not params["user_profile"].get("height"):
-                stats_records["user_profile"].append("height")
-        if not params.get("key_indicators"):
-            stats_records["key_indicators"].append("缺少关键指标数据")
-        else:
-            key_list = [i["key"] for i in params["key_indicators"]]
-            if "体重" not in key_list:
-                stats_records["key_indicators"].append("体重")
-            if "bmi" not in key_list:
-                stats_records["key_indicators"].append("bmi")
-            for item in params["key_indicators"]:
-                if item["key"] == "体重":
-                    if not item.get("data"):
-                        stats_records["key_indicators"].append("体重数据缺失")
-                    elif not isinstance(item["data"], list):
-                        stats_records["key_indicators"].append("体重数据格式不符")
-                    elif len(item["data"]) < 2:
-                        stats_records["key_indicators"].append("体重数据不足2条")
-                elif item["key"] == "bmi":
-                    if not item.get("data"):
-                        stats_records["key_indicators"].append("BMI数据缺失")
-                    elif not isinstance(item["data"], list):
-                        stats_records["key_indicators"].append("BMI数据格式不符")
-                    elif len(item["data"]) < 2:
-                        stats_records["key_indicators"].append("BMI数据不足2条")
+        intentCode = params.get("intentCode")
+        if intentCode == "aigc_functions_body_fat_weight_management_consultation":
+            # 用户画像
+            if (
+                    not params.get("user_profile")
+                    or not params["user_profile"].get("age")
+                    or not params["user_profile"].get("gender")
+                    or not params["user_profile"].get("height")
+            ):
+                stats_records["user_profile"].append("用户画像必填项缺失")
+                if not params["user_profile"].get("age"):
+                    stats_records["user_profile"].append("age")
+                if not params["user_profile"].get("gender"):
+                    stats_records["user_profile"].append("gender")
+                if not params["user_profile"].get("height"):
+                    stats_records["user_profile"].append("height")
+            if not params.get("key_indicators"):
+                stats_records["key_indicators"].append("缺少关键指标数据")
+            else:
+                key_list = [i["key"] for i in params["key_indicators"]]
+                if "体重" not in key_list:
+                    stats_records["key_indicators"].append("体重")
+                if "bmi" not in key_list:
+                    stats_records["key_indicators"].append("bmi")
+                for item in params["key_indicators"]:
+                    if item["key"] == "体重":
+                        if not item.get("data"):
+                            stats_records["key_indicators"].append("体重数据缺失")
+                        elif not isinstance(item["data"], list):
+                            stats_records["key_indicators"].append("体重数据格式不符")
+                    elif item["key"] == "bmi":
+                        if not item.get("data"):
+                            stats_records["key_indicators"].append("BMI数据缺失")
+                        elif not isinstance(item["data"], list):
+                            stats_records["key_indicators"].append("BMI数据格式不符")
+
+        elif intentCode == "aigc_functions_weight_data_analysis":
+            # 用户画像检查
+            if (
+                    not params.get("user_profile")
+                    or not params["user_profile"].get("age")
+                    or not params["user_profile"].get("gender")
+                    or not params["user_profile"].get("height")
+                    or not params["user_profile"].get("bmi")
+            ):
+                stats_records["user_profile"].append("用户画像必填项缺失")
+                if not params["user_profile"].get("age"):
+                    stats_records["user_profile"].append("age")
+                if not params["user_profile"].get("gender"):
+                    stats_records["user_profile"].append("gender")
+                if not params["user_profile"].get("height"):
+                    stats_records["user_profile"].append("height")
+                if not params["user_profile"].get("bmi"):
+                    stats_records["user_profile"].append("bmi")
+            if not params.get("key_indicators"):
+                stats_records["key_indicators"].append("缺少关键指标数据")
+            else:
+                key_list = [i["key"] for i in params["key_indicators"]]
+                if "体重" not in key_list:
+                    stats_records["key_indicators"].append("体重")
+                if "bmi" not in key_list:
+                    stats_records["key_indicators"].append("bmi")
+                for item in params["key_indicators"]:
+                    if item["key"] == "体重":
+                        if not item.get("data"):
+                            stats_records["key_indicators"].append("体重数据缺失")
+                        elif not isinstance(item["data"], list):
+                            stats_records["key_indicators"].append("体重数据格式不符")
+                    elif item["key"] == "bmi":
+                        if not item.get("data"):
+                            stats_records["key_indicators"].append("BMI数据缺失")
+                        elif not isinstance(item["data"], list):
+                            stats_records["key_indicators"].append("BMI数据格式不符")
+
+        elif intentCode == "aigc_functions_body_fat_weight_data_analysis":
+            if (
+                    not params.get("user_profile")
+                    or not params["user_profile"].get("gender")
+            ):
+                stats_records["user_profile"].append("用户画像必填项缺失")
+                if not params["user_profile"].get("gender"):
+                    stats_records["user_profile"].append("gender")
+
+            if not params.get("key_indicators"):
+                stats_records["key_indicators"].append("缺少关键指标数据")
+            else:
+                key_list = [i["key"] for i in params["key_indicators"]]
+                if "体脂率" not in key_list:
+                    stats_records["key_indicators"].append("体脂率")
+                for item in params["key_indicators"]:
+                    if item["key"] == "体脂率":
+                        if not item.get("data"):
+                            stats_records["key_indicators"].append("体脂率数据缺失")
+                        elif not isinstance(item["data"], list):
+                            stats_records["key_indicators"].append("体脂率数据格式不符")
 
         for k, v in stats_records.items():
             if v:

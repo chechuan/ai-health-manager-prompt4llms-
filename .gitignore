@@ -6,3 +6,4 @@ doc/test/debug
 .idea/
 .vscode/
 .tmp
+.DS_Store

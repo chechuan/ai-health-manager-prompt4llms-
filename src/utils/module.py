@@ -249,6 +249,7 @@ class InitAllResource:
         """从mysql中请求prompt meta data"""
 
         def filter_format(obj, splited=False):
+            """格式化对象数据，处理换行符并可选地分割事件"""
             obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
             obj_rev = json.loads(obj_str)
             if splited:
@@ -259,41 +260,70 @@ class InitAllResource:
 
         def search_target_version_item(item_list, ikey, curr_item_id, version):
             """从列表中返回指定version的item, 默认未指定则为latest"""
-            spec_version = version.get(curr_item_id, None)
-            if spec_version:
-                for item in item_list:
-                    if item[ikey] == curr_item_id:
-                        if item["version"] == spec_version:
-                            logger.debug(
-                                f"load spec version {ikey} - {curr_item_id} - {spec_version}"
-                            )
-                            return item
+            try:
+                # 获取指定的版本，如果没有则为None
+                spec_version = version.get(curr_item_id, None)
+                latest_item = None
+
+                if spec_version:
+                    # 查找指定版本的item
+                    for item in item_list:
+                        if item.get(ikey) == curr_item_id:
+                            if item.get("version") == spec_version:
+                                logger.debug(
+                                    f"load spec version {ikey} - {curr_item_id} - {spec_version}"
+                                )
+                                return item
+                            else:
+                                # 如果不是指定版本，则记录为最新版本
+                                latest_item = item
                         else:
-                            latest_item = item
-                    else:
-                        continue
-            else:
-                latest_item = [
-                    i
-                    for i in item_list
-                    if i[ikey] == curr_item_id and i["version"] == "latest"
-                ][0]
-            return latest_item
+                            continue
+                else:
+                    # 如果没有指定版本，查找最新版本的item
+                    latest_item = next(
+                        (i for i in item_list if i.get(ikey) == curr_item_id and i.get("version") == "latest"),
+                        None
+                    )
+
+                # 返回找到的最新版本item
+                if latest_item:
+                    return latest_item
+                else:
+                    return None
+            except IndexError as e:
+                logger.error(
+                    f"IndexError: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
+            except KeyError as e:
+                logger.error(
+                    f"KeyError: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
+            except Exception as e:
+                logger.error(
+                    f"Unexpected error: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
+
+            return None
 
         data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
+
+        # 检查是否使用缓存数据
         if not self.args.use_cache or not data_cache_file.exists():
+            # 从数据库中查询数据
             mysql_conn = MysqlConnector(**self.mysql_config)
             prompt_meta_data = defaultdict(dict)
+
+            # 查询各类prompt数据
             prompt_character = mysql_conn.query("select * from ai_prompt_character")
             prompt_event = mysql_conn.query("select * from ai_prompt_event")
             prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
             prompt_intent = mysql_conn.query("select * from ai_prompt_intent")
+
+            # 格式化查询结果
             prompt_character = filter_format(prompt_character, splited=True)
             prompt_event = filter_format(prompt_event)
             prompt_tool = filter_format(prompt_tool)
             prompt_intent = filter_format(prompt_intent)
 
-            # 优先使用指定的version 否则使用latest
+            # 根据指定的版本构建prompt meta data
             if self.args.special_prompt_version:
                 for key, v in self.prompt_version.items():
                     if not v:
@@ -318,39 +348,32 @@ class InitAllResource:
                             for i in prompt_character:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = (
-                                    search_target_version_item(
-                                        prompt_character, "name", i["name"], v
-                                    )
+                                prompt_meta_data[key][i["name"]] = search_target_version_item(
+                                    prompt_character, "name", i["name"], v
                                 )
                         elif key == "event":
                             for i in prompt_event:
                                 if prompt_meta_data[key].get(i["intent_code"]):
                                     continue
-                                prompt_meta_data[key][i["intent_code"]] = (
-                                    search_target_version_item(
-                                        prompt_event, "intent_code", i["intent_code"], v
-                                    )
+                                prompt_meta_data[key][i["intent_code"]] = search_target_version_item(
+                                    prompt_event, "intent_code", i["intent_code"], v
                                 )
                         elif key == "tool":
                             for i in prompt_tool:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = (
-                                    search_target_version_item(
-                                        prompt_tool, "name", i["name"], v
-                                    )
+                                prompt_meta_data[key][i["name"]] = search_target_version_item(
+                                    prompt_tool, "name", i["name"], v
                                 )
                         elif key == "intent":
                             for i in prompt_intent:
                                 if prompt_meta_data[key].get(i["name"]):
                                     continue
-                                prompt_meta_data[key][i["name"]] = (
-                                    search_target_version_item(
-                                        prompt_intent, "name", i["name"], v
-                                    )
+                                prompt_meta_data[key][i["name"]] = search_target_version_item(
+                                    prompt_intent, "name", i["name"], v
                                 )
             else:
+                # 默认情况下构建prompt meta data
                 prompt_meta_data["character"] = {
                     i["name"]: i for i in prompt_character if i["type"] == "event"
                 }
@@ -362,6 +385,8 @@ class InitAllResource:
                     i["name"]: i for i in prompt_tool if i["in_used"] == 1
                 }
                 prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
+
+            # 初始化intent和tool的映射关系
             prompt_meta_data["init_intent"] = {
                 i["code"]: True for i in prompt_tool if i["init_intent"] == 1
             }
@@ -369,27 +394,28 @@ class InitAllResource:
                 i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"
             }
             prompt_meta_data["rollout_tool_after_complete"] = {
-                i["code"]: 1
-                for i in prompt_tool
-                if i["requirement"] == "complete_rollout"
+                i["code"]: 1 for i in prompt_tool if i["requirement"] == "complete_rollout"
             }
             prompt_meta_data["prompt_tool_code_map"] = {
                 i["code"]: i["name"] for i in prompt_tool if i["code"]
             }
+
+            # 将数据缓存到本地文件
             pickle.dump(prompt_meta_data, open(data_cache_file, "wb"))
             logger.debug(f"dump prompt_meta_data to {data_cache_file}")
             del mysql_conn
         else:
+            # 从本地缓存文件中加载数据
             prompt_meta_data = pickle.load(open(data_cache_file, "rb"))
             logger.debug(f"load prompt_meta_data from {data_cache_file}")
 
+        # 处理tool的参数
         for name, func in prompt_meta_data["tool"].items():
-            func["params"] = (
-                json.loads(func["params"]) if func["params"] else func["params"]
-            )
+            func["params"] = json.loads(func["params"]) if func["params"] else func["params"]
+
+        # 构建intent描述的映射关系
         intent_desc_map = {
-            code: item["intent_desc"]
-            for code, item in prompt_meta_data["event"].items()
+            code: item.get("intent_desc", "") for code, item in prompt_meta_data["event"].items() if item is not None
         }
         default_desc_map = loadJS(Path("data", "intent_desc_map.json"))
         # 以intent_desc_map.json定义的intent_desc优先
@@ -1170,6 +1196,38 @@ def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str
         for food in foods:
             formatted_text += f"  - {food}\n"
     return formatted_text.strip()
+
+def parse_height(height: str) -> float:
+    """解析身高，将其标准化为米为单位"""
+    if isinstance(height, (int, float)):
+        return height / 100.0 if height > 10 else height
+    elif isinstance(height, str):
+        height = height.strip().lower()
+        if 'cm' in height:
+            return float(height.replace('cm', '').strip()) / 100.0
+        elif 'm' in height:
+            return float(height.replace('m', '').strip())
+        else:
+            value = float(height)
+            return value / 100.0 if value > 10 else value
+    raise ValueError("无法解析的身高格式")
+
+def calculate_standard_weight(height: str, gender: str) -> float:
+    """计算标准体重"""
+    height_value = parse_height(height) * 100.0  # 转换为厘米
+    if gender == "男":
+        return (height_value - 100) * 0.9
+    elif gender == "女":
+        return (height_value - 100) * 0.9 - 2.5
+    return None
+
+def calculate_standard_body_fat_rate(gender: str) -> str:
+    """计算标准体脂率"""
+    if gender == "男":
+        return "10%-20%"
+    elif gender == "女":
+        return "15%-25%"
+    return None
 
 
 
