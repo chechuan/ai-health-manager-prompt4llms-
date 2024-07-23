@@ -146,7 +146,7 @@ class JiaheUserProfile(BaseModel):
     special_diet: str = Field("未知", description="特殊饮食习惯")
     allergy_food: str = Field("未知", description="过敏食物")
     taste_preference: str = Field("未知", description="口味偏好")
-    tase_taboo: str = Field("未知", description="口味禁忌")
+    taste_taboo: str = Field("未知", description="口味禁忌")
     is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
     constitution: str = Field("未知", description="中医体质")
 

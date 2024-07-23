@@ -705,7 +705,7 @@ class JiaheExpertModel:
 
 
     @staticmethod
-    async def gen_child_diet_principle(userInfo={}):
+    async def gen_child_diet_principle(userInfo):
         """儿童饮食调理原则"""
         userInfo = get_userInfo(userInfo)
         messages = [
@@ -733,38 +733,40 @@ class JiaheExpertModel:
         logger.debug("儿童饮食原则模型输出： " + generate_text)
         yield {"message": generate_text, "end": True}
 
+    @staticmethod
     def call_embedding(dish):
         # get_em('dish_embedding')
         # return
-        return read_dish_xlsx()
+        # return read_dish_xlsx()
         # # # inputs =
-        # logger.debug(
-        #     "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+        logger.debug(
+            "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+        )
+
+        d = set(dish)
+        ds = get_dish_info("dishes.json")
+        idxes = []
+        for i, x in enumerate(ds):
+            x = x['name']
+            x = set(x)
+            if len(set(d) & set(x)) > 0:
+                idxes.append(i)
+
+        embs = open('emb', 'r').readlines()
+        for i in idxes:
+            emb = json.loads(embs[i].strip())
+
+
+
+
+
+        # start_time = time.time()
+        # generate_text = callEmbedding(
+        #     inputs=dish,
+        #     model="bce-embedding-base-v1",
         # )
         #
-        # d = set(dish)
-        # ds = get_dish_info("dishes.json")
-        # idxes = []
-        # for i, x in enumerate(ds):
-        #     x = x['name']
-        #     x = set(x)
-        #     if len(set(d) & set(x)) > 0:
-        #         idxes.append(i)
-        #
-        # embs = open('emb', 'r').readlines()
-        # for i, emb in embs:
-        #     emb = json.loads(emb)
-
-
-
-
-        start_time = time.time()
-        generate_text = callEmbedding(
-            inputs=dish,
-            model="bce-embedding-base-v1",
-        )
-
-        logger.info("bce embedding模型生成时间：" + str(time.time() - start_time))
-        logger.debug(
-            "bce embedding模型输出： " + json.dumps(generate_text, ensure_ascii=False)
-        )
+        # logger.info("bce embedding模型生成时间：" + str(time.time() - start_time))
+        # logger.debug(
+        #     "bce embedding模型输出： " + json.dumps(generate_text, ensure_ascii=False)
+        # )
