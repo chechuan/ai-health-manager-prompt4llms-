@@ -16,12 +16,13 @@ local:
         vllm:
             api_base: http://10.228.67.99:26928
             api_key: sk-0afNS66vdMwkraLu4d9e24F913804aFeBbCd8a355035BbC3
-            support_models:
+                support_models:
                 - Baichuan2-7B-Chat
+                - Qwen-14B-Chat
+                - Qwen1.5-14B-Chat
                 - Qwen1.5-32B-Chat
                 - Qwen1.5-72B-Chat
                 - bce-embedding-base-v1
-                - Qwen-14B-Chat
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
