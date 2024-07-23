@@ -1,4 +1,4 @@
-export ENV=fat
+export ENV=dev
 export LOG_CONSOLE_LEVEL=DEBUG 
 export LOG_FILE_LEVEL=DEBUG
 python src/server.py \

@@ -114,7 +114,9 @@ USER_PROFILE_KEY_MAP = {
     "diagnosis": "诊断",
     "standard_weight": "标准体重",
     "target_weight": "用户目标体重",
-    "standard_body_fat_rate": "标准体脂率"
+    "standard_body_fat_rate": "标准体脂率",
+    "bmr": "基础代谢",
+    "recommended_caloric_intake": "保持当前体重推荐摄入热量值"
 }
 
 
@@ -243,6 +245,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_auxiliary_history_talking",
         "aigc_functions_auxiliary_diagnosis",
         "aigc_functions_relevant_inspection",
+        "aigc_functions_judge_question",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -797,6 +800,62 @@ class SanJiKangYangRequest(BaseModel):
             {"meal": "上午加餐", "foods": ["小番茄"]},
         ],
     )
+    meal_plan_parameters: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="多套参数列表，每套参数包含用户画像、病历信息、消息、饮食原则、饮食调理细则等",
+        example=[
+            {
+                "user_profile": {
+                    "age": "30",
+                    "gender": "male",
+                    "height": "175",
+                    "weight": "70",
+                    "bmi": "22.9",
+                    "daily_physical_labor_intensity": "medium",
+                    "current_diseases": "none",
+                    "management_goals": "maintain weight"
+                },
+                "medical_records": {
+                    "history_of_present_illness": "none",
+                    "chief_complaint": "none",
+                    "past_history_of_present_illness": "none",
+                    "allergic_history": "none"
+                },
+                "messages": [
+                    {"role": "user", "content": "I want to maintain my current weight."}
+                ],
+                "food_principle": "balance",
+                "ietary_guidelines": {
+                    "basic_nutritional_needs": "Maintain balanced diet with 2000 kcal per day"
+                }
+            },
+            {
+                "user_profile": {
+                    "age": "40",
+                    "gender": "female",
+                    "height": "165",
+                    "weight": "60",
+                    "bmi": "22.0",
+                    "daily_physical_labor_intensity": "low",
+                    "current_diseases": "none",
+                    "management_goals": "lose weight"
+                },
+                "medical_records": {
+                    "history_of_present_illness": "none",
+                    "chief_complaint": "none",
+                    "past_history_of_present_illness": "none",
+                    "allergic_history": "none"
+                },
+                "messages": [
+                    {"role": "user", "content": "I want to lose weight."}
+                ],
+                "food_principle": "balance",
+                "ietary_guidelines": {
+                    "basic_nutritional_needs": "Maintain balanced diet with 1800 kcal per day"
+                }
+            }
+        ]
+    )
 
 
 class BodyFatWeightManagementRequest(BaseModel):
@@ -870,3 +929,4 @@ class BodyFatWeightManagementRequest(BaseModel):
             }
         ],
     )
+
