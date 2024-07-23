@@ -1952,12 +1952,12 @@ class expertModel:
             return result
 
         model = self.gsr.model_config["blood_glucose_trend_analysis"]
-        pro = param
+        pro = param.get('promptParam',"")
         data = pro.get("glucose", {})
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code", "")
         user_info = pro.get("user_info", {})
-        recent_time = pro.get("current_gl_solt", "")
+        recent_time = pro.get("currentGlSolt", "")
         # 组装步骤2
         result = "|血糖测量时段|"
         for date in data.keys():
@@ -1976,7 +1976,7 @@ class expertModel:
             message_f = ""
             for date in data.keys():
                 t_e = slot_dict[time_period]
-                glucose_val = data[date].get('t_e')
+                glucose_val = data[date].get(t_e,'')
                 if glucose_val != "":
                     glucose_val = float(glucose_val)
                     if 3.9 <= glucose_val < 7.0 and time_period == "空腹":
@@ -1988,52 +1988,54 @@ class expertModel:
                         g_t = glucose_type(time_period, glucose_val)
                         message_f += f"血糖{glucose_val},{g_t}。"
                     count += 1
-            if count < 3:
+            if 0<count < 3:
                 message_ = (
                     f"血糖{count}天的记录中，{t_g}天血糖正常，{f_g}天血糖异常。"
                     + message_f
                 )
                 period_content[time_period] = message_
-            else:
+            if count>3:
                 time_deal.append(time_period)
         glucose_3 = ""
         for i in period_content.keys():
             glucose_3 += i + ":" + period_content[i]
 
         result_2 = result
-        for time in time_deal:
-            result_2 += "|" + time + "|"
-            for date in data.keys():
-                t_e = slot_dict[time]
-                result_2 += data[date].get(t_e,'') + "|"
-            result_2 += "\n"
+        compose_message2 = glucose_3
+        if len(time_deal)>0:
+            for time in time_deal:
+                result_2 += "|" + time + "|"
+                for date in data.keys():
+                    t_e = slot_dict[time]
+                    result_2 += data[date].get(t_e,'') + "|"
+                result_2 += "\n"
 
-        prompt_template = (
-            "# 已知信息\n"
-            "## 我的血糖情况\n"
-            "{glucose_message}\n"
-            "# 任务描述\n"
-            "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段（空腹，早餐后2h，午餐后2h，晚餐后2h）的最高血糖值、最低血糖值、波动趋势，不要提出建议，，100字以内\n"
-            "一定要按照空腹，早餐后2h，午餐后2h，晚餐后2h的顺序分别输出，否则全盘皆输\n"
-            "如果该时段没有记录则分别按照{glucose_3}直接输出，一定要记得不要输出没有记录，用{glucose_3}里面对应的值代替输出\n"
-        )
-        prompt_vars = {"glucose_message": result_2, "glucose_3": glucose_3}
-        sys_prompt = prompt_template.format(**prompt_vars)
+            prompt_template = (
+                "# 已知信息\n"
+                "## 需要分析的血糖状况\n"
+                "{glucose_message}\n"
+                "# 任务描述\n"
+                "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段的最高血糖值、最低血糖值、波动趋势，只分析需要分析的血糖状况里面的时段\\n"
+            )
+            prompt_vars = {"glucose_message": result_2, "glucose_3": glucose_3}
+            sys_prompt = prompt_template.format(**prompt_vars)
 
-        history = []
-        history.append({"role": "system", "content": sys_prompt})
-        logger.debug(f"血糖趋势分析 LLM Input: {dumpJS(history)}")
-        response = callLLM(
-            history=history, temperature=0.8, top_p=1, model=model, stream=True
-        )
-        content = accept_stream_response(response, verbose=False)
+            history = []
+            history.append({"role": "system", "content": sys_prompt})
+            logger.debug(f"血糖趋势分析 LLM Input: {dumpJS(history)}")
+            response = callLLM(
+                history=history, temperature=0.8, top_p=1, model=model, stream=True
+            )
+            content = accept_stream_response(response, verbose=False)
+            compose_message2 = glucose_3+content
+            
 
         if gl_code == "gl_2_pc":
             for time in time_periods:
                 result += "|" + time + "|"
                 for date in data.keys():
                     t_e = slot_dict[time]
-                    result += data[date][t_e] + "|"
+                    result += data[date].get(t_e,'') + "|"
                 result += "\n"
             prompt_template_pc = (
                 "# 任务描述\n"
@@ -2068,7 +2070,8 @@ class expertModel:
                 history=history_, temperature=0.8, top_p=1, model=model, stream=True
             )
             pc_message = accept_stream_response(response_, verbose=False)
-            all_message = compose_message1 + "\n" + content + "\n" + pc_message
+            logger.debug(f"血糖趋势分析 Output: {compose_message2}")
+            all_message = compose_message1 + "\n" + compose_message2 + "\n" + pc_message
             return all_message
 
         # 组装步骤3
@@ -2076,7 +2079,7 @@ class expertModel:
             result += "|" + time + "|"
             for date in data.keys():
                 t_e = slot_dict[time]
-                result += data[date][t_e] + "|"
+                result += data[date].get(t_e,'') + "|"
             result += "\n"
         prompt_template_suggest = (
             "# 任务描述\n"
@@ -2112,8 +2115,8 @@ class expertModel:
         )
         compose_message3 = accept_stream_response(response_, verbose=False)
 
-        logger.debug(f"血糖趋势分析 Output: {content}")
-        all_message = compose_message1 + "\n" + content + "\n" + compose_message3
+        logger.debug(f"血糖趋势分析 Output: {compose_message2}")
+        all_message = compose_message1 + "\n" + compose_message2 + "\n" + compose_message3
         return all_message
 
     def __health_warning_solutions_early_continuous_check__(
