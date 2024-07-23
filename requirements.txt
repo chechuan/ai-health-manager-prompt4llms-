@@ -31,3 +31,4 @@ opencv-python-headless
 sse_starlette
 shortuuid
 oss2
+scikit-learn

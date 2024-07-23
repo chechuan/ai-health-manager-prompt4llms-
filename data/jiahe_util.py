@@ -5,6 +5,8 @@ from src.utils.Logger import logger
 import json, time
 import openai
 import openpyxl as op
+from sklearn.metrics.pairwise import cosine_similarity
+from data.jiahe_prompt import *
 
 jiahe_userInfo_map = {
     'age':'年龄',
@@ -90,23 +92,23 @@ def get_familyInfo_history(familyInfo, history):
     return roles, infos, his_prompt
 
 def callEmbedding(
-    i, inputs, file, model='bce-embedding-base-v1'
+    inputs, model='bce-embedding-base-v1'
 ):
 
     client = openai.OpenAI()
     if not isinstance(inputs, list):
         inputs = [inputs]
-        t_st = time.time()
+    t_st = time.time()
     logger.debug('begin to call embedding')
     completion = client.embeddings.create(input = inputs, model=model)
     logger.debug('finished call embedding')
     time_cost = round(time.time() - t_st, 1)
-    f = open('dish_embedding', 'w')
+    # f = open('dish_embedding', 'w')
     xs = []
     for emb in completion.data:
         xs.append(emb.embedding)
         # file.write(json.dumps(emb.embedding) + '\n')
-        logger.debug(f"get embedding {i}")
+        # logger.debug(f"get embedding {i}")
 
     logger.info(
         f"cost: {time_cost}s"
@@ -146,4 +148,99 @@ def get_dish_info(file):
 def get_em(f):
     d = open(f, 'r').readlines()
     print(f'emb数据条数：{len(d)}')
+
+    def get_dish_from_database(dish):
+        # get_em('dish_embedding')
+        # return
+        # return read_dish_xlsx()
+        # # # inputs =
+        logger.debug(
+            "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+        )
+
+        d = set(dish)
+        ds = get_dish_info("dishes.json")
+        idxes = []
+        for i, x in enumerate(ds):
+            x = x['name']
+            x = set(x)
+            if len(set(d) & set(x)) > 0:
+                idxes.append(i)
+
+        embs = open('emb', 'r').readlines()
+        for i in idxes:
+            emb = json.loads(embs[i].strip())
+
+
+
+def get_dish_from_database(dish, userInfo):
+    # get_em('dish_embedding')
+    # return
+    # return read_dish_xlsx()
+    # # # inputs =
+
+    # 1. 向量匹配
+    logger.debug(
+        "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+    )
+
+    d = set(dish)
+    ds = get_dish_info("dishes.json")
+    idxes = []
+    for i, x in enumerate(ds):
+        x = x['name']
+        x = set(x)
+        if len(set(d) & set(x)) > 0:
+            idxes.append(i)
+
+    embs = open('emb', 'r').readlines()
+    res = []
+    for i in idxes:
+        cur_emb = callEmbedding(dish)[0]
+        emb = json.loads(embs[i].strip())
+        # cal cos_similarity
+        cosine_sim = cosine_similarity([cur_emb], [emb])
+        if cosine_sim > 0.8:
+            res.append(i)
+
+    # 2. llm判断
+    dish_str = ''
+    for i in res:
+        dish_str = dish_str + '\n' + ds[i]['name']
+
+    userInfo = get_userInfo(userInfo)
+    messages = [
+        {
+            "role": "user",
+            "content": jiahe_judge_dishes_prompt.format(
+                userInfo, dish_str
+            ),
+        }
+    ]
+    logger.debug(
+        "儿童菜品llm判断模型输入： " + json.dumps(messages, ensure_ascii=False)
+    )
+    start_time = time.time()
+    generate_text = callLLM(
+        history=messages,
+        max_tokens=512,
+        top_p=0.9,
+        temperature=0.8,
+        do_sample=True,
+        # stream=True,
+        model="Qwen1.5-32B-Chat",
+    )
+    logger.debug("儿童菜品llm判断模型输出latancy： " + str(time.time() - start_time))
+    logger.debug("儿童菜品llm判断模型输出： " + generate_text)
+    ds = generate_text.split('\n')
+    dd = []
+    for d in ds:
+        if '否' not in d:
+            dd.append(d)
+    if not dd or len(dd) > 1:
+        return {}
+
+
+
+    return res
 

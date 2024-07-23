@@ -733,28 +733,92 @@ class JiaheExpertModel:
         logger.debug("儿童饮食原则模型输出： " + generate_text)
         yield {"message": generate_text, "end": True}
 
+
     @staticmethod
-    def call_embedding(dish):
-        # get_em('dish_embedding')
-        # return
-        # return read_dish_xlsx()
-        # # # inputs =
+    def child_dish_rec(userInfo, cur_date, location, ref_dish):
+        # 1. 生成菜品、功效
+        userInfo = get_userInfo(userInfo)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_child_dish_effect.format(
+                    userInfo, cur_date, location, ref_dish
+                ),
+            }
+        ]
         logger.debug(
-            "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+            "儿童菜品功效模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=512,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            model="Qwen1.5-32B-Chat",
+        )
+        logger.debug("儿童菜品功效模型输出latancy： " + str(time.time() - start_time))
+        logger.debug("儿童菜品功效模型输出： " + generate_text)
 
-        d = set(dish)
-        ds = get_dish_info("dishes.json")
-        idxes = []
-        for i, x in enumerate(ds):
-            x = x['name']
-            x = set(x)
-            if len(set(d) & set(x)) > 0:
-                idxes.append(i)
+        dish = json.loads(generate_text.strip())
+        name = dish.get('菜肴名称', '')
+        effect = dish.get('菜肴营养价值功效', '')
 
-        embs = open('emb', 'r').readlines()
-        for i in idxes:
-            emb = json.loads(embs[i].strip())
+        # 2. 匹配库里字段
+        dish_data = get_dish_from_database(name, userInfo)
+        if not dish_data:
+            userInfo = get_userInfo(userInfo)
+            messages = [
+                {
+                    "role": "user",
+                    "content": jiahe_gen_dish_nutrient_caloric.format(
+                        userInfo
+                    ),
+                }
+            ]
+            logger.debug(
+                "儿童菜品热量模型输入： " + json.dumps(messages, ensure_ascii=False)
+            )
+            start_time = time.time()
+            generate_text = callLLM(
+                history=messages,
+                max_tokens=512,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                # stream=True,
+                model="Qwen1.5-32B-Chat",
+            )
+            logger.debug("儿童菜品热量模型输出latancy： " + str(time.time() - start_time))
+            logger.debug("儿童菜品热量模型输出： " + generate_text)
+
+            d = json.loads(generate_text.strip())
+            caloric = d.get('每100克可食用部分', {}).get('热量值', 0)
+            carbon_water = d.get('每100克可食用部分', {}).get('碳水化合物含量', 0)
+            protein  = d.get('每100克可食用部分', {}).get('蛋白质含量', 0)
+            fat = d.get('每100克可食用部分', {}).get('脂肪含量', 0)
+
+            if caloric == 0:
+                carbon_water_ratio = 0
+                protein_ratio = 0
+                fat_ratio = 0
+            else:
+                carbon_water_ratio = carbon_water * 4 / caloric
+                protein_ratio = protein * 4 / caloric
+                fat_ratio = fat * 9 / caloric
+
+        yield {"message": {"dish_name": name, "dish_effect": effect, "image": "",
+                           "nutrient_elements": [
+                               {"nutrient_name": "碳水化合物", "content": round(float(carbon_water), 2),
+                                "caloric_ratio": round(float(carbon_water_ratio), 2)},
+                               {"nutrient_name": "蛋白质", "content": round(float(protein), 2),
+                                "caloric_ratio": round(float(protein_ratio), 2)},
+                               {"nutrient_name": "脂肪", "content": round(float(fat), 2),
+                                "caloric_ratio": round(float(fat_ratio), 2)}
+                           ]}}
+
 
 
 
