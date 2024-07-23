@@ -642,6 +642,7 @@ class expertModel:
                 pro =kwargs.get("promptParam",{})
                 prompt = t.substitute(
                 bp_msg=bp_msg,
+                history=hist_s,
                 age=pro.get("askAge",''),
                 sex=pro.get("askSix",''),
                 height=pro.get("askHeight",''),
