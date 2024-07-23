@@ -114,7 +114,9 @@ USER_PROFILE_KEY_MAP = {
     "diagnosis": "诊断",
     "standard_weight": "标准体重",
     "target_weight": "用户目标体重",
-    "standard_body_fat_rate": "标准体脂率"
+    "standard_body_fat_rate": "标准体脂率",
+    "bmr": "基础代谢",
+    "recommended_caloric_intake": "保持当前体重推荐摄入热量值"
 }
 
 
@@ -240,6 +242,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_auxiliary_history_talking",
         "aigc_functions_auxiliary_diagnosis",
         "aigc_functions_relevant_inspection",
+        "aigc_functions_judge_question",
     ] = Field(
         description="意图编码/事件编码",
         examples=[

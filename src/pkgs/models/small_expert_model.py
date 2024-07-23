@@ -5754,47 +5754,21 @@ class Agents:
             raise e
         return content
 
-    # async def handle_parallel_intent(self, **kwargs) -> Union[str, Generator]:
-    #     """处理并行意图代码"""
-    #     try:
-    #         meal_plan_parameters = kwargs.get("meal_plan_parameters")
-    #
-    #         if meal_plan_parameters:
-    #             # 并行处理多个 meal_plan_parameters
-    #             meal_plan_tasks = [self.aigc_functions_meal_plan_generation(**param) for param in meal_plan_parameters]
-    #             meal_plans = await asyncio.gather(*meal_plan_tasks)
-    #
-    #             # 创建生成食物质量指导的任务列表，并行运行
-    #             food_quality_guidance_tasks = [
-    #                 self.aigc_functions_generate_food_quality_guidance(**{**param, "meal_plan": meal_plan})
-    #                 for param, meal_plan in zip(meal_plan_parameters, meal_plans)
-    #             ]
-    #
-    #             food_quality_guidance_results = await asyncio.gather(*food_quality_guidance_tasks)
-    #
-    #             # 返回内容组合
-    #             combined_response = [
-    #                 {
-    #                     "meal_plan": meal_plan,
-    #                     "food_quality_guidance": food_quality_guidance
-    #                 }
-    #                 for meal_plan, food_quality_guidance in zip(meal_plans, food_quality_guidance_results)
-    #             ]
-    #             return combined_response
-    #         else:
-    #             # 串行处理单个请求
-    #             meal_plan = await self.aigc_functions_meal_plan_generation(**kwargs)
-    #             food_quality_guidance = await self.aigc_functions_generate_food_quality_guidance(
-    #                 **{**kwargs, "meal_plan": meal_plan})
-    #             combined_response = {
-    #                 "meal_plan": meal_plan,
-    #                 "food_quality_guidance": food_quality_guidance
-    #             }
-    #             return combined_response
-    #
-    #     except Exception as e:
-    #         logger.exception(f"handle_parallel_intent error: {e}")
-    #         raise e
+    def aigc_functions_judge_question(self, **kwargs):
+        """
+        判断输入的句子是否为疑问句
+
+        - Args:
+            prompt (str): 输入的句子
+
+        - Returns:
+            int: 是否为疑问句，1表示是疑问句，0表示非疑问句
+        """
+        options = ["0", "1"]
+        prompt = kwargs.get("prompt")
+        new_prompt = f"请你帮我判断用户输入的句子是否为疑问句：'{prompt}'，疑问句:'1',非疑问句:'0'"
+        answer = self.aigc_functions_single_choice(new_prompt, options)
+        return answer
 
 
 if __name__ == "__main__":
