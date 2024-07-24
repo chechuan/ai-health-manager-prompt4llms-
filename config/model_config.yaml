@@ -57,6 +57,7 @@ local:
         - aigc_functions_body_fat_weight_data_analysis_1day # 2024年7月12日 体重及体脂数据分析-1日数据
         - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
         - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型

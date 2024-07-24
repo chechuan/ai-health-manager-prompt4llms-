@@ -28,6 +28,7 @@ from src.utils.api_protocal import (
     KeyIndicators,
     UserProfile,
     bloodPressureLevelResponse,
+    PhysicianInfo
 )
 
 sys.path.append(Path(__file__).parents[4].as_posix())
@@ -3449,6 +3450,70 @@ class Agents:
         content = await parse_examination_plan(content)
         return content
 
+    async def aigc_functions_physician_consultation_decision_support_v2(self, **kwargs) -> str:
+        """
+        西医决策-医师问诊决策支持-v2
+
+        根据用户画像、医师信息、会话记录、预问诊会话记录等信息，生成问诊问题列表。
+
+        参数:
+            kwargs (dict): 包含以下键的参数字典：
+                - user_profile (dict): 用户画像（非必填）
+                - physician_info (dict): 接诊医师信息（非必填）
+                - messages (list): 会话记录（必填）
+                - pre_consultation_records (list): 预问诊会话记录（非必填）
+
+        返回:
+            str: 生成的问诊问题列表
+        """
+
+        _event = "西医决策-医师问诊决策支持-v2"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {"messages": []}
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
+
+        # 处理用户画像信息
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile", "")
+        )
+
+        # 处理医师信息
+        physician_info_data = kwargs.get("physician_info")
+        physician_info = PhysicianInfo(**physician_info_data) if physician_info_data else ""
+
+        # 处理会话记录
+        messages = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+
+        # 处理预问诊会话记录
+        pre_consultation_records = self.__compose_user_msg__(
+            "messages", messages=kwargs.get("pre_consultation_records", ""),
+            role_map={"assistant": "医生智伴", "user": "患者"}
+        )
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile,
+            "physician_info": physician_info,
+            "messages": messages,
+            "pre_consultation_records": pre_consultation_records
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        # 解析生成的问诊问题
+        content = await parse_examination_plan(content)
+        return content
     # @param_check(check_params=["messages"])
     async def aigc_functions_sjkyn_guideline_generation(self, **kwargs) -> str:
         """
