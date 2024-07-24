@@ -733,6 +733,35 @@ class JiaheExpertModel:
         logger.debug("儿童饮食原则模型输出： " + generate_text)
         yield {"message": generate_text, "end": True}
 
+    @staticmethod
+    async def gen_child_nutrious_effect(userInfo, cur_date, location):
+        """儿童营养素补充剂及功效"""
+        info = get_userInfo(userInfo)
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_child_nutrient_effect_prompt.format(
+                    info, cur_date, location
+                ),
+            }
+        ]
+        logger.debug(
+            "儿童营养素补充剂及功效模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = callLLM(
+            history=messages,
+            max_tokens=512,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            model="Qwen1.5-32B-Chat",
+        )
+        print(f"latency {time.time() - start_time:.2f} s -> response")
+        logger.debug("儿童营养素补充剂及功效模型输出： " + generate_text)
+        yield {"message": generate_text, "end": True}
+
 
     @staticmethod
     def child_dish_rec(userInfo, cur_date, location, ref_dish):

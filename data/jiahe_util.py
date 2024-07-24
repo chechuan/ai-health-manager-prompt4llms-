@@ -5,7 +5,7 @@ from src.utils.Logger import logger
 import json, time
 import openai
 import openpyxl as op
-from sklearn.metrics.pairwise import cosine_similarity
+# from sklearn.metrics.pairwise import cosine_similarity
 from data.jiahe_prompt import *
 
 jiahe_userInfo_map = {
@@ -115,29 +115,28 @@ def callEmbedding(
     )
     return xs
 
-def read_dish_xlsx(file_path="/Users/yuanhuachao/Desktop/ai-health-manager-prompt4llms/data/dishes.xlsx"):
-    workbook = op.load_workbook(file_path)
-    worksheet = workbook["Sheet1"]
-    rows = worksheet.max_row
-    columns = worksheet.max_column
-    dishes = []
-    with open('dish_embedding_0722.txt', 'w') as f:
-        i = 0
-        for i in range(1, rows+1):
-            # if i > 3:
-            #     break
-            if worksheet.cell(row=i, column=1).value.strip() == 'code':
-                continue
-            xs = callEmbedding(i, worksheet.cell(row=i, column=2).value.strip(), f)
-            for x in xs:
-                # import pdb
-                # pdb.set_trace()
-                f.write(json.dumps(x) + '\n')
-            # dishes.append(worksheet.cell(row=i, column=2).value.strip())
-        # f.close()
-        print(f'len dishes: {len(dishes)}')
-    return {'result':'OK'}
-    # callEmbedding(dishes)
+# def read_dish_xlsx(file_path="/Users/yuanhuachao/Desktop/ai-health-manager-prompt4llms/data/dishes.xlsx"):
+#     workbook = op.load_workbook(file_path)
+#     worksheet = workbook["Sheet1"]
+#     rows = worksheet.max_row
+#     columns = worksheet.max_column
+#     dishes = []
+#     with open('2.txt', 'w') as f:
+#         i = 0
+#         for i in range(1, rows+1):
+#             # if i > 3:
+#             #     break
+#             if worksheet.cell(row=i, column=1).value.strip() == 'code':
+#                 continue
+#             xs = callEmbedding(i, worksheet.cell(row=i, column=2).value.strip(), f)
+#             for x in xs:
+#                 # import pdb
+#                 # pdb.set_trace()
+#                 f.write(json.dumps(x) + '\n')
+#             # dishes.append(worksheet.cell(row=i, column=2).value.strip())
+#         # f.close()
+#         print(f'len dishes: {len(dishes)}')
+#     return {'result':'OK'}
 
 
 def get_dish_info(file):
@@ -171,7 +170,10 @@ def get_em(f):
         for i in idxes:
             emb = json.loads(embs[i].strip())
 
-
+def jaccard_text_similarity(text1, text2):
+    set1 = set(text1.split())
+    set2 = set(text2.split())
+    return len(set1 & set2) / len(set1 | set2)
 
 def get_dish_from_database(dish, userInfo):
     # get_em('dish_embedding')
@@ -184,36 +186,30 @@ def get_dish_from_database(dish, userInfo):
         "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
     )
 
-    d = set(dish)
     ds = get_dish_info("dishes.json")
-    idxes = []
+    target_dish = {}
     for i, x in enumerate(ds):
-        x = x['name']
-        x = set(x)
-        if len(set(d) & set(x)) > 0:
-            idxes.append(i)
-
-    embs = open('emb', 'r').readlines()
-    res = []
-    for i in idxes:
-        cur_emb = callEmbedding(dish)[0]
-        emb = json.loads(embs[i].strip())
-        # cal cos_similarity
-        cosine_sim = cosine_similarity([cur_emb], [emb])
-        if cosine_sim > 0.8:
-            res.append(i)
+        if not target_dish and jaccard_text_similarity(x['name'], dish) > 0.5:
+            target_dish = x
+        elif jaccard_text_similarity(x['name'], dish) > jaccard_text_similarity(x['name'], target_dish):
+            target_dish = x
+    # embs = open('emb', 'r').readlines()
+    # for i in idxes:
+    #     cur_emb = callEmbedding(dish)[0]
+    #     emb = json.loads(embs[i].strip())
+    #     # cal cos_similarity
+    #     cosine_sim = cosine_similarity([cur_emb], [emb])
+    #     if cosine_sim > 0.8:
+    #         res.append(i)
 
     # 2. llm判断
-    dish_str = ''
-    for i in res:
-        dish_str = dish_str + '\n' + ds[i]['name']
 
     userInfo = get_userInfo(userInfo)
     messages = [
         {
             "role": "user",
             "content": jiahe_judge_dishes_prompt.format(
-                userInfo, dish_str
+                userInfo, target_dish['name']
             ),
         }
     ]
@@ -232,15 +228,16 @@ def get_dish_from_database(dish, userInfo):
     )
     logger.debug("儿童菜品llm判断模型输出latancy： " + str(time.time() - start_time))
     logger.debug("儿童菜品llm判断模型输出： " + generate_text)
-    ds = generate_text.split('\n')
+    ds = json.loads(generate_text.strip())
     dd = []
     for d in ds:
-        if '否' not in d:
+        if '否' not in d.get('待判断菜肴名称', ''):
             dd.append(d)
     if not dd or len(dd) > 1:
         return {}
+    cur_d = dd[0].get('待判断菜肴名称', '')
+    # for dishd in ds:
+    #     if dishdhd['name'] == cur_d:
 
 
-
-    return res
 
