@@ -4931,43 +4931,12 @@ class Agents:
             else:
                 return "肥胖状态", "减脂"
 
-    def determine_weight_status(self, age: int, bmi: float) -> str:
-        """
-        根据年龄和BMI值判断体重状态。
-
-        参数:
-            age (int): 用户的年龄
-            bmi (float): 用户的BMI值
-
-        返回:
-            str: 体重状态（偏低、正常、超重、肥胖）
-        """
-        if age >= 18:
-            if age <= 64:
-                if bmi < 18.5:
-                    return "偏低"
-                elif 18.5 <= bmi < 24:
-                    return "正常"
-                elif 24 <= bmi < 28:
-                    return "超重"
-                elif bmi >= 28:
-                    return "肥胖"
-            elif age > 64:
-                if bmi < 20:
-                    return "偏低"
-                elif 20 <= bmi < 26.9:
-                    return "正常"
-                elif 26.9 <= bmi < 28:
-                    return "超重"
-                elif bmi >= 28:
-                    return "肥胖"
-        return "未知"
-
     async def aigc_functions_recommended_daily_calorie_intake(self, **kwargs) -> str:
         """
         推荐每日饮食摄入热量值（B端）
 
-        根据用户画像如健康状态、管理目标等信息，推荐用户每日饮食应该摄入的热量值，供B端营养师参考和调整，方便营养师指导用户的饮食方案。
+        根据用户画像如健康状态、管理目标等信息，推荐用户每日饮食应该摄入的热量值，
+        供B端营养师参考和调整，方便营养师指导用户的饮食方案。
 
         参数:
             kwargs (dict): 包含用户画像和病历信息的参数字典
@@ -4980,8 +4949,10 @@ class Agents:
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
-            "user_profile": ["age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
-                             ("current_diseases", "management_goals")]
+            "user_profile": [
+                "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                "recommended_caloric_intake", ("current_diseases", "management_goals")
+            ]
         }
 
         # 验证必填字段
@@ -4990,40 +4961,21 @@ class Agents:
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
 
-        # 获取年龄和BMI值，并计算体重状态
-        age = user_profile.get("age")
-        bmi = user_profile.get("bmi")
-        weight_status = self.determine_weight_status(age, bmi)
-        user_profile["weight_status"] = weight_status
-
         # 使用工具类方法检查并计算基础代谢率（BMR）
         bmr = await ParamTools.check_and_calculate_bmr(user_profile)
         user_profile["bmr"] = f"{bmr}kcal"
 
-        # 检查并添加推荐的热量摄入值
-        recommended_caloric_intake = user_profile.get("recommended_caloric_intake")
-        if recommended_caloric_intake:
-            user_profile["recommended_caloric_intake"] = f"{recommended_caloric_intake}kcal"
-
-        # 检查并组装饮食调理原则
-
         # 组合用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__(
-            "user_profile", user_profile=user_profile
-        )
+        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__(
-            "medical_records", medical_records=kwargs.get("medical_records")
-        )
+        medical_records_str = self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__(
-            "messages", messages=kwargs.get("messages", "")
-        )
+        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 检查并获取饮食调理原则
-        food_principle = kwargs.get("food_principle", None)
+        food_principle = kwargs.get("food_principle", "")
 
         # 构建提示变量
         prompt_vars = {
@@ -5034,14 +4986,25 @@ class Agents:
         }
 
         # 更新模型参数
-        model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
         # 调用通用的 AIGC 函数并返回内容
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+
+        if isinstance(content, openai.AsyncStream):
+            return content
+        try:
+            content = json5.loads(content)
+        except Exception as e:
+            try:
+                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
+                content = dumpJS(json5.loads(content))
+            except Exception as e:
+                logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
+                content = dumpJS([])
+        content = await parse_examination_plan(content)
 
         return content
 

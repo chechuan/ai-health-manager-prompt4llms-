@@ -116,7 +116,8 @@ USER_PROFILE_KEY_MAP = {
     "target_weight": "用户目标体重",
     "standard_body_fat_rate": "标准体脂率",
     "bmr": "基础代谢",
-    "recommended_caloric_intake": "保持当前体重推荐摄入热量值"
+    "recommended_caloric_intake": "保持当前体重推荐摄入热量值",
+    "weight_status": "体重状态"
 }
 
 
@@ -215,6 +216,8 @@ class UserProfile(BaseModel):
     exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
     exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
     emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
+    weight_status: Optional[str] = Field(None, description="体重状态", example=["偏低", "正常", "超重", "肥胖"])
+    recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -699,6 +702,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
         "aigc_functions_sanji_plan_exercise_plan",
+        "aigc_functions_recommended_daily_calorie_intake"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -864,7 +868,6 @@ class BodyFatWeightManagementRequest(BaseModel):
         "aigc_functions_body_fat_weight_data_analysis_1day",
         "aigc_functions_body_fat_weight_data_analysis_2day",
         "aigc_functions_body_fat_weight_data_analysis_multiday",
-        "aigc_functions_recommended_daily_calorie_intake",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -925,13 +928,6 @@ class BodyFatWeightManagementRequest(BaseModel):
                     },
                 ]
             }
-        ],
-    )
-    food_principle: Union[str, None] = Field(
-        None,
-        description="饮食原则",
-        examples=[
-            '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
     )
 
