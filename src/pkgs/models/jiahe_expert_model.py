@@ -764,14 +764,14 @@ class JiaheExpertModel:
 
 
     @staticmethod
-    def child_dish_rec(userInfo, cur_date, location, ref_dish):
+    async def child_dish_rec(userInfo, cur_date, location, ref_dish, dish_principle):
         # 1. 生成菜品、功效
         userInfo = get_userInfo(userInfo)
         messages = [
             {
                 "role": "user",
                 "content": jiahe_child_dish_effect.format(
-                    userInfo, cur_date, location, ref_dish
+                    userInfo, cur_date, location, ref_dish, dish_principle
                 ),
             }
         ]
@@ -790,20 +790,27 @@ class JiaheExpertModel:
         )
         logger.debug("儿童菜品功效模型输出latancy： " + str(time.time() - start_time))
         logger.debug("儿童菜品功效模型输出： " + generate_text)
-
+        generate_text = generate_text.replace("`", '').replace("json", '').strip()
+        generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}')+1]
         dish = json.loads(generate_text.strip())
         name = dish.get('菜肴名称', '')
         effect = dish.get('菜肴营养价值功效', '')
 
         # 2. 匹配库里字段
         dish_data = get_dish_from_database(name, userInfo)
-        if not dish_data:
-            userInfo = get_userInfo(userInfo)
+        image = ''
+        if dish_data:
+            caloric = dish_data.get('calories', 0)
+            carbon_water = dish_data.get('carbon_water', 0)
+            protein = dish_data.get('protien', 0)
+            fat = dish_data.get('fat', 0)
+            image = dish_data.get('image', '')
+        else:
             messages = [
                 {
                     "role": "user",
                     "content": jiahe_gen_dish_nutrient_caloric.format(
-                        userInfo
+                        name
                     ),
                 }
             ]
@@ -823,22 +830,24 @@ class JiaheExpertModel:
             logger.debug("儿童菜品热量模型输出latancy： " + str(time.time() - start_time))
             logger.debug("儿童菜品热量模型输出： " + generate_text)
 
+            generate_text = generate_text.replace("`", '').replace("json", '').replace("python", '').strip()
+            generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}') + 1]
             d = json.loads(generate_text.strip())
             caloric = d.get('每100克可食用部分', {}).get('热量值', 0)
             carbon_water = d.get('每100克可食用部分', {}).get('碳水化合物含量', 0)
             protein  = d.get('每100克可食用部分', {}).get('蛋白质含量', 0)
             fat = d.get('每100克可食用部分', {}).get('脂肪含量', 0)
 
-            if caloric == 0:
-                carbon_water_ratio = 0
-                protein_ratio = 0
-                fat_ratio = 0
-            else:
-                carbon_water_ratio = carbon_water * 4 / caloric
-                protein_ratio = protein * 4 / caloric
-                fat_ratio = fat * 9 / caloric
+        if caloric == 0:
+            carbon_water_ratio = 0
+            protein_ratio = 0
+            fat_ratio = 0
+        else:
+            carbon_water_ratio = carbon_water * 4 / caloric
+            protein_ratio = protein * 4 / caloric
+            fat_ratio = fat * 9 / caloric
 
-        yield {"message": {"dish_name": name, "dish_effect": effect, "image": "",
+        yield {"message": {"dish_name": name, "dish_effect": effect, "image": image,
                            "nutrient_elements": [
                                {"nutrient_name": "碳水化合物", "content": round(float(carbon_water), 2),
                                 "caloric_ratio": round(float(carbon_water_ratio), 2)},
@@ -846,7 +855,7 @@ class JiaheExpertModel:
                                 "caloric_ratio": round(float(protein_ratio), 2)},
                                {"nutrient_name": "脂肪", "content": round(float(fat), 2),
                                 "caloric_ratio": round(float(fat_ratio), 2)}
-                           ]}}
+                           ]}, "end": True}
 
 
 

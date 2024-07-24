@@ -632,7 +632,7 @@ def create_app():
             generator: AsyncGenerator = JiaheExpertModel.gen_diet_principle(param.get('cur_date', ''),
                                                                        param.get('location', ''),
                                                                        param.get('history', []),
-                                                                       param.get('userInfo', []))
+                                                                       param.get('userInfo', {}))
             result = decorate_general_complete(
                 generator
             )
@@ -663,8 +663,27 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/child_nutrient_effect")
             generator: AsyncGenerator = JiaheExpertModel.gen_child_nutrious_effect(param.get('userInfo', {}),
-                                                                                   param.get('cur_date', {}),
-                                                                                   param.get('location', {}))
+                                                                                   param.get('cur_date', ''),
+                                                                                   param.get('location', ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/child_dish_rec", methods=["post"])
+    async def _gen_child_dish_rec(request: Request):
+        """儿童饮食推荐接口"""
+        try:
+            param = await accept_param(request, endpoint="/child_dish_rec")
+            generator: AsyncGenerator = JiaheExpertModel.child_dish_rec(param.get('userInfo', {}),
+                                                                                   param.get('cur_date', ''),
+                                                                                   param.get('location', ''),
+                                                                                   param.get('history_dishes', ''),
+                                                                                   param.get('child_diet_principle', ''))
             result = decorate_general_complete(
                 generator
             )
