@@ -863,7 +863,8 @@ class BodyFatWeightManagementRequest(BaseModel):
         "aigc_functions_weight_data_analysis_multiday",
         "aigc_functions_body_fat_weight_data_analysis_1day",
         "aigc_functions_body_fat_weight_data_analysis_2day",
-        "aigc_functions_body_fat_weight_data_analysis_multiday"
+        "aigc_functions_body_fat_weight_data_analysis_multiday",
+        "aigc_functions_recommended_daily_calorie_intake",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -924,6 +925,13 @@ class BodyFatWeightManagementRequest(BaseModel):
                     },
                 ]
             }
+        ],
+    )
+    food_principle: Union[str, None] = Field(
+        None,
+        description="饮食原则",
+        examples=[
+            '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
     )
 
