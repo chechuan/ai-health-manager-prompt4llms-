@@ -690,7 +690,7 @@ class JiaheExpertModel:
             "儿童猜你想问模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         start_time = time.time()
-        generate_text = callLLM(
+        generate_text = await acallLLM(
             history=messages,
             max_tokens=512,
             top_p=0.9,
@@ -720,7 +720,7 @@ class JiaheExpertModel:
             "儿童饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         start_time = time.time()
-        generate_text = callLLM(
+        generate_text = await acallLLM(
             history=messages,
             max_tokens=512,
             top_p=0.9,
@@ -749,7 +749,7 @@ class JiaheExpertModel:
             "儿童营养素补充剂及功效模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
         start_time = time.time()
-        generate_text = callLLM(
+        generate_text = await acallLLM(
             history=messages,
             max_tokens=512,
             top_p=0.9,
