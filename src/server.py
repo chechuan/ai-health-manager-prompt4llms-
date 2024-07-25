@@ -657,6 +657,23 @@ def create_app():
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 
+    @app.route("/child_nutrient_effect", methods=["post"])
+    async def _gen_child_nutrient_effect(request: Request):
+        """儿童饮食原则接口"""
+        try:
+            param = await accept_param(request, endpoint="/child_nutrient_effect")
+            generator: AsyncGenerator = JiaheExpertModel.gen_child_nutrious_effect(param.get('userInfo', {}),
+                                                                                   param.get('cur_date', {}),
+                                                                                   param.get('location', {}))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
     @app.route("/gen_embedding", methods=["post"])
     async def _gen_embedding(request: Request):
         try:

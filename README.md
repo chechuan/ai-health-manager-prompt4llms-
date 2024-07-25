@@ -1,3 +1,23 @@
+## 脚本说明
+
+1. **提取日志文件并生成统计数据**
+   - 该脚本用于从日志文件中提取数据并生成统计数据，支持普通日志文件、压缩日志文件、CSV 文件和压缩 CSV 文件。
+   - 运行方法:
+     - 命令行: `python ./src/test/extract_logs.py`
+     - IDE: 打开 `extract_logs.py` 文件，右键点击选择 `Run` 运行脚本。
+   - 输出文件: `.cache/logs.jsonl`, `.cache/stats.json`
+   - [详细说明](https://confluence.enncloud.cn/pages/viewpage.action?pageId=871749037)
+
+2. **算法接口自动化测试**
+   - 该脚本用于自动化测试算法接口，读取日志文件中的测试数据并发送请求到指定端点，记录响应结果。
+   - 运行方法:
+     - 命令行: `python ./src/test/algorithm_interface_auto_test.py`
+     - IDE: 打开 `algorithm_interface_auto_test.py` 文件，右键点击选择 `Run` 运行脚本。
+   - 输出文件: `.cache/basic_test_results.xlsx`, `.cache/final_test_results.xlsx`
+   - [详细说明](https://confluence.enncloud.cn/pages/viewpage.action?pageId=871749053)
+
+使用顺序：请先运行 `extract_logs.py` 脚本提取并生成统计数据，然后运行 `test_endpoints.py` 脚本进行自动化接口测试。
+
 # ChangeLog
 
 \[ [需求文档](https://alidocs.dingtalk.com/i/nodes/KGZLxjv9VGBk7RlwH5adK7vmW6EDybno?utm_scene=team_space) | [Local Swagger Doc](http:127.0.0.1:6500/docs) | [提示工程实验平台](http://10.39.91.251:40017/) \]

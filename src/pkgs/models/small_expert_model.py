@@ -14,6 +14,7 @@ import time
 from copy import deepcopy
 from os.path import basename
 from pathlib import Path
+from json.decoder import JSONDecodeError
 
 import json5
 import openai
@@ -27,6 +28,7 @@ from src.utils.api_protocal import (
     KeyIndicators,
     UserProfile,
     bloodPressureLevelResponse,
+    PhysicianInfo
 )
 
 sys.path.append(Path(__file__).parents[4].as_posix())
@@ -2812,6 +2814,70 @@ class Agents:
         content = await parse_examination_plan(content)
         return content
 
+    async def aigc_functions_physician_consultation_decision_support_v2(self, **kwargs) -> str:
+        """
+        西医决策-医师问诊决策支持-v2
+
+        根据用户画像、医师信息、会话记录、预问诊会话记录等信息，生成问诊问题列表。
+
+        参数:
+            kwargs (dict): 包含以下键的参数字典：
+                - user_profile (dict): 用户画像（非必填）
+                - physician_info (dict): 接诊医师信息（非必填）
+                - messages (list): 会话记录（必填）
+                - pre_consultation_records (list): 预问诊会话记录（非必填）
+
+        返回:
+            str: 生成的问诊问题列表
+        """
+
+        _event = "西医决策-医师问诊决策支持-v2"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {"messages": []}
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
+
+        # 处理用户画像信息
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile", "")
+        )
+
+        # 处理医师信息
+        physician_info_data = kwargs.get("physician_info")
+        physician_info = PhysicianInfo(**physician_info_data) if physician_info_data else ""
+
+        # 处理会话记录
+        messages = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+
+        # 处理预问诊会话记录
+        pre_consultation_records = self.__compose_user_msg__(
+            "messages", messages=kwargs.get("pre_consultation_records", ""),
+            role_map={"assistant": "医生智伴", "user": "患者"}
+        )
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile,
+            "physician_info": physician_info,
+            "messages": messages,
+            "pre_consultation_records": pre_consultation_records
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        # 解析生成的问诊问题
+        content = await parse_examination_plan(content)
+        return content
     # @param_check(check_params=["messages"])
     async def aigc_functions_sjkyn_guideline_generation(self, **kwargs) -> str:
         """
@@ -3016,6 +3082,8 @@ class Agents:
     async def aigc_functions_meal_plan_generation(self, **kwargs) -> str:
         """带量食谱-生成餐次、食物名称"""
 
+        kwargs["intentCode"] = "aigc_functions_meal_plan_generation"
+
         _event = "生成餐次、食物名称"
 
         # 必填字段和至少需要一项的参数列表
@@ -3112,6 +3180,8 @@ class Agents:
     async def aigc_functions_generate_food_quality_guidance(self, **kwargs) -> str:
         """生成餐次、食物名称的质量指导"""
 
+        kwargs["intentCode"] = "aigc_functions_generate_food_quality_guidance"
+
         _event = "生成餐次、食物名称的质量指导"
 
         # 必填字段和至少需要一项的参数列表
@@ -3167,28 +3237,30 @@ class Agents:
 
         if isinstance(content, openai.AsyncStream):
             return content
+
+        # 尝试直接解析content
         try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
-        return content
+            # 预处理数据，去除可能的多余字符
+            cleaned_content = re.sub(r'```.*?```', '', content, flags=re.MULTILINE).strip()
+            # 再次尝试解析
+            parsed_data = json.loads(cleaned_content)
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse JSON data: {e}")
+            # 检查是否存在json代码块
+            match = re.search(r"```json(.*?)```", content, re.DOTALL)
+            if match:
+                json_block = match.group(1).strip()
+                try:
+                    parsed_data = json.loads(json_block)
+                except json.JSONDecodeError as inner_e:
+                    logger.error(f"Failed to parse JSON from code block: {inner_e}")
+                    parsed_data = []
+            else:
+                logger.error("No matching JSON code block found in the content.")
+                parsed_data = []
+
+        # 返回解析后的数据
+        return parsed_data
 
     async def aigc_functions_sanji_plan_exercise_regimen(self, **kwargs) -> str:
         """三济康养方案-运动-运动调理原则
@@ -3619,6 +3691,207 @@ class Agents:
                 return "偏高状态", "减脂"
             else:
                 return "肥胖状态", "减脂"
+
+    async def aigc_functions_recommended_daily_calorie_intake(self, **kwargs) -> str:
+        """
+        推荐每日饮食摄入热量值（B端）
+
+        根据用户画像如健康状态、管理目标等信息，推荐用户每日饮食应该摄入的热量值，
+        供B端营养师参考和调整，方便营养师指导用户的饮食方案。
+
+        参数:
+            kwargs (dict): 包含用户画像和病历信息的参数字典
+
+        返回:
+            str: 生成的每日饮食推荐摄入热量值（单位：kcal）
+        """
+
+        _event = "推荐每日饮食摄入热量值"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": [
+                "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                "recommended_caloric_intake", ("current_diseases", "management_goals")
+            ]
+        }
+
+        # 验证必填字段
+        await ParamTools.check_required_fields(kwargs, required_fields)
+
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
+
+        # 使用工具类方法检查并计算基础代谢率（BMR）
+        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        user_profile["bmr"] = f"{bmr}kcal"
+
+        # 组合用户画像信息字符串
+        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+
+        # 组合病历信息字符串
+        medical_records_str = self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
+
+        # 组合消息字符串
+        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+
+        # 检查并获取饮食调理原则
+        food_principle = kwargs.get("food_principle", "")
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile_str,
+            "messages": messages_str,
+            "medical_records": medical_records_str,
+            "food_principle": food_principle
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        if isinstance(content, openai.AsyncStream):
+            return content
+        try:
+            content = json5.loads(content)
+        except Exception as e:
+            try:
+                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
+                content = dumpJS(json5.loads(content))
+            except Exception as e:
+                logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
+                content = dumpJS([])
+        content = await parse_examination_plan(content)
+
+        return content
+
+    # async def aigc_functions_recommended_macro_nutrient_ratios(self, **kwargs) -> Dict[str, List[Dict[str, float]]]:
+    #     """
+    #     推荐三大产能营养素能量占比（B端）
+    #
+    #     根据用户画像如健康状态、管理目标等信息，推荐用户每日三大产能的供能占比，包含碳水化合物、蛋白质、脂肪，供B端营养师参考和调整，方便营养师指导用户的饮食方案。
+    #
+    #     参数:
+    #         kwargs (dict): 包含用户画像和病历信息的参数字典
+    #
+    #     返回:
+    #         Dict[str, List[Dict[str, float]]]: 三大产能营养素供能占比推荐值
+    #     """
+    #
+    #     _event = "推荐三大产能营养素能量占比"
+    #
+    #     # 必填字段和至少需要一项的参数列表
+    #     required_fields = {
+    #         "user_profile": ["age", "gender", "height", "weight", "bmi", "current_diseases", "management_goals"]
+    #     }
+    #     at_least_one = ["user_profile"]
+    #
+    #     # 验证必填字段
+    #     await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+    #
+    #     # 获取用户画像信息
+    #     user_profile = kwargs.get("user_profile", {})
+    #
+    #     # 组合用户画像信息字符串
+    #     user_profile_str = self.__compose_user_msg__(
+    #         "user_profile", user_profile=user_profile
+    #     )
+    #
+    #     # 组合病历信息字符串
+    #     medical_records_str = self.__compose_user_msg__(
+    #         "medical_records", medical_records=kwargs.get("medical_records")
+    #     )
+    #
+    #     # 组合消息字符串
+    #     messages_str = self.__compose_user_msg__(
+    #         "messages", messages=kwargs.get("messages", "")
+    #     )
+    #
+    #     # 构建提示变量
+    #     prompt_vars = {
+    #         "user_profile": user_profile_str,
+    #         "messages": messages_str,
+    #         "current_date": datetime.datetime.today().strftime("%Y-%m-%d"),
+    #         "medical_records": medical_records_str,
+    #     }
+    #
+    #     # 更新模型参数
+    #     model_args = await self.__update_model_args__(
+    #         kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+    #     )
+    #
+    #     # 调用通用的 AIGC 函数并返回内容
+    #     content: Dict[str, List[Dict[str, float]]] = await self.aaigc_functions_general(
+    #         _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+    #     )
+    #
+    #     return content
+    #
+    # async def aigc_functions_recommended_meal_plan(self, **kwargs) -> Dict[str, List[Dict[str, float]]]:
+    #     """
+    #     推荐餐次及每餐能量占比（B端）
+    #
+    #     根据用户画像如健康状态、管理目标等信息，推荐用户一天餐次安排及每餐能量占比，供B端营养师参考和调整，方便营养师指导用户的饮食方案。
+    #
+    #     参数:
+    #         kwargs (dict): 包含用户画像和病历信息的参数字典
+    #
+    #     返回:
+    #         Dict[str, List[Dict[str, float]]]: 餐次及每餐能量占比推荐值
+    #     """
+    #
+    #     _event = "推荐餐次及每餐能量占比"
+    #
+    #     # 必填字段和至少需要一项的参数列表
+    #     required_fields = {
+    #         "user_profile": ["age", "gender", "height", "weight", "bmi", "current_diseases", "management_goals"]
+    #     }
+    #     at_least_one = ["user_profile"]
+    #
+    #     # 验证必填字段
+    #     await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+    #
+    #     # 获取用户画像信息
+    #     user_profile = kwargs.get("user_profile", {})
+    #
+    #     # 组合用户画像信息字符串
+    #     user_profile_str = self.__compose_user_msg__(
+    #         "user_profile", user_profile=user_profile
+    #     )
+    #
+    #     # 组合病历信息字符串
+    #     medical_records_str = self.__compose_user_msg__(
+    #         "medical_records", medical_records=kwargs.get("medical_records")
+    #     )
+    #
+    #     # 组合消息字符串
+    #     messages_str = self.__compose_user_msg__(
+    #         "messages", messages=kwargs.get("messages", "")
+    #     )
+    #
+    #     # 构建提示变量
+    #     prompt_vars = {
+    #         "user_profile": user_profile_str,
+    #         "messages": messages_str,
+    #         "current_date": datetime.datetime.today().strftime("%Y-%m-%d"),
+    #         "medical_records": medical_records_str,
+    #     }
+    #
+    #     # 更新模型参数
+    #     model_args = await self.__update_model_args__(
+    #         kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+    #     )
+    #
+    #     # 调用通用的 AIGC 函数并返回内容
+    #     content: Dict[str, List[Dict[str, float]]] = await self.aaigc_functions_general(
+    #         _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+    #     )
+    #
+    #     return content
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
@@ -4438,6 +4711,11 @@ class Agents:
         if not self.funcmap.get(intent_code):
             logger.error(f"intentCode {intent_code} not found in funcmap")
             raise RuntimeError(f"Code not supported.")
+
+        # # 检查是否为特定的并行化意图代码
+        # if intent_code in ["aigc_functions_meal_plan_generation"]:
+        #     return await self.handle_parallel_intent(**kwargs)
+
         # kwargs = await self.__preprocess_function_args__(kwargs)
         try:
             func = self.funcmap.get(intent_code)
@@ -4449,6 +4727,22 @@ class Agents:
             logger.exception(f"call_function {intent_code} error: {e}")
             raise e
         return content
+
+    def aigc_functions_judge_question(self, **kwargs):
+        """
+        判断输入的句子是否为疑问句
+
+        - Args:
+            prompt (str): 输入的句子
+
+        - Returns:
+            int: 是否为疑问句，1表示是疑问句，0表示非疑问句
+        """
+        options = ["0", "1"]
+        prompt = kwargs.get("prompt")
+        new_prompt = f"请你帮我判断用户输入的句子是否为疑问句：'{prompt}'，疑问句:'1',非疑问句:'0'"
+        answer = self.aigc_functions_single_choice(new_prompt, options)
+        return answer
 
 
 if __name__ == "__main__":

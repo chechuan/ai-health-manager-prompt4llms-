@@ -114,7 +114,10 @@ USER_PROFILE_KEY_MAP = {
     "diagnosis": "诊断",
     "standard_weight": "标准体重",
     "target_weight": "用户目标体重",
-    "standard_body_fat_rate": "标准体脂率"
+    "standard_body_fat_rate": "标准体脂率",
+    "bmr": "基础代谢",
+    "recommended_caloric_intake": "保持当前体重推荐摄入热量值",
+    "weight_status": "体重状态"
 }
 
 
@@ -216,6 +219,8 @@ class UserProfile(BaseModel):
     exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
     exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
     emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
+    weight_status: Optional[str] = Field(None, description="体重状态", example=["偏低", "正常", "超重", "肥胖"])
+    recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -243,6 +248,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_auxiliary_history_talking",
         "aigc_functions_auxiliary_diagnosis",
         "aigc_functions_relevant_inspection",
+        "aigc_functions_judge_question",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -545,6 +551,19 @@ class DoctorInfo(BaseModel):
         )
 
 
+class PhysicianInfo(BaseModel):
+    name: str = Field(None, description="姓名")
+    department: str = Field(None, description="科室")
+    description: str = Field(None, description="简介")
+
+    def __str__(self) -> str:
+        return (
+            f"姓名: {self.name}\n"
+            f"科室:{self.department}\n"
+            f"简介:{self.description}\n"
+        )
+
+
 class KeyIndicators(BaseModel): ...
 
 
@@ -585,6 +604,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_generate_allergic_history",
         "aigc_functions_generate_medication_plan",
         "aigc_functions_generate_examination_plan",
+        "aigc_functions_physician_consultation_decision_support_v2",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -644,6 +664,56 @@ class OutpatientSupportRequest(BaseModel):
             }
         ],
     )
+    physician_info: Optional[PhysicianInfo] = Field(
+        None,
+        description="接诊医师信息",
+        examples=[
+            {
+                "name": "李医生",
+                "department": "心内科",
+                "description": "主任医师"
+            }
+        ],
+    )
+    pre_consultation_records: Optional[List[ChatMessage]] = Field(
+        None,
+        description="预问诊会话记录",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
 
 
 # 三济康养方案
@@ -699,6 +769,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
         "aigc_functions_sanji_plan_exercise_plan",
+        "aigc_functions_recommended_daily_calorie_intake"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -797,6 +868,62 @@ class SanJiKangYangRequest(BaseModel):
             {"meal": "上午加餐", "foods": ["小番茄"]},
         ],
     )
+    meal_plan_parameters: Optional[List[Dict[str, Any]]] = Field(
+        None,
+        description="多套参数列表，每套参数包含用户画像、病历信息、消息、饮食原则、饮食调理细则等",
+        example=[
+            {
+                "user_profile": {
+                    "age": "30",
+                    "gender": "male",
+                    "height": "175",
+                    "weight": "70",
+                    "bmi": "22.9",
+                    "daily_physical_labor_intensity": "medium",
+                    "current_diseases": "none",
+                    "management_goals": "maintain weight"
+                },
+                "medical_records": {
+                    "history_of_present_illness": "none",
+                    "chief_complaint": "none",
+                    "past_history_of_present_illness": "none",
+                    "allergic_history": "none"
+                },
+                "messages": [
+                    {"role": "user", "content": "I want to maintain my current weight."}
+                ],
+                "food_principle": "balance",
+                "ietary_guidelines": {
+                    "basic_nutritional_needs": "Maintain balanced diet with 2000 kcal per day"
+                }
+            },
+            {
+                "user_profile": {
+                    "age": "40",
+                    "gender": "female",
+                    "height": "165",
+                    "weight": "60",
+                    "bmi": "22.0",
+                    "daily_physical_labor_intensity": "low",
+                    "current_diseases": "none",
+                    "management_goals": "lose weight"
+                },
+                "medical_records": {
+                    "history_of_present_illness": "none",
+                    "chief_complaint": "none",
+                    "past_history_of_present_illness": "none",
+                    "allergic_history": "none"
+                },
+                "messages": [
+                    {"role": "user", "content": "I want to lose weight."}
+                ],
+                "food_principle": "balance",
+                "ietary_guidelines": {
+                    "basic_nutritional_needs": "Maintain balanced diet with 1800 kcal per day"
+                }
+            }
+        ]
+    )
 
 
 class BodyFatWeightManagementRequest(BaseModel):
@@ -807,7 +934,7 @@ class BodyFatWeightManagementRequest(BaseModel):
         "aigc_functions_weight_data_analysis_multiday",
         "aigc_functions_body_fat_weight_data_analysis_1day",
         "aigc_functions_body_fat_weight_data_analysis_2day",
-        "aigc_functions_body_fat_weight_data_analysis_multiday"
+        "aigc_functions_body_fat_weight_data_analysis_multiday",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -870,3 +997,4 @@ class BodyFatWeightManagementRequest(BaseModel):
             }
         ],
     )
+
