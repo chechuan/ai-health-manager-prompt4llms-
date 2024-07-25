@@ -55,7 +55,7 @@ local:
         aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
         aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
         aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
-        aigc_functions_recommended_daily_calorie_intake: 0.0.1
+        aigc_functions_physician_consultation_decision_support_v2: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
@@ -132,6 +132,7 @@ dev:
         aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
         aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
         aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
+        aigc_functions_physician_consultation_decision_support_v2: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
