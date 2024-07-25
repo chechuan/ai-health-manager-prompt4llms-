@@ -6,12 +6,17 @@
 @Contact :   1627635056@qq.com
 """
 
+import asyncio
 import os
+import re
 import sys
 from pathlib import Path
+from typing import Dict, List
 
 import json5
+import jsonlines
 import openai
+import pandas as pd
 from dotenv import load_dotenv
 from openai.types.chat import ChatCompletion
 from qwen_agent.agents import Assistant
@@ -51,8 +56,8 @@ class queryJudge(BaseTool):
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ]
-        result: ChatCompletion = client.chat.completions.create(
-            messages=msg, model="Qwen2-7B-Instruct"
+        result: ChatCompletion = asyncio.run(
+            aclient.chat.completions.create(messages=msg, model="Qwen2-7B-Instruct")
         )
         return result.choices[0].message.content
 
@@ -103,11 +108,12 @@ class searchKnowledgeTool(BaseTool):
         if not response:
             return "未查询到相关知识"
         else:
-            return "\n\n".join([i["page_content"] for i in response])
+            return "\n\n".join(
+                [re.sub(r"\n+", "\n", i["page_content"]) for i in response]
+            )
 
 
 def init_agent_service():
-    # llm_cfg = {"model": "qwen-max"}
     llm_cfg = {
         "model": "Qwen2-7B-Instruct",
         "model_server": "http://10.39.91.251:40024/v1",
@@ -123,7 +129,7 @@ def init_agent_service():
     tools = [
         "query_judge",
         "search_knowledge",
-    ]  # code_interpreter is a built-in tool in Qwen-Agent
+    ]
     bot = Assistant(
         llm=llm_cfg,
         name="查克拉",
@@ -131,19 +137,45 @@ def init_agent_service():
         system_message=system,
         function_list=tools,
     )
-
     return bot
 
 
-def test(query: str = "成人糖尿病夏天吃什么比较合适?"):
-    # Define the agent
+async def send_a_req(id, query: str) -> List[Dict]:
+    print()
     bot = init_agent_service()
-
-    # Chat
     messages = [{"role": "user", "content": query}]
-    for response in bot.run_nonstream(messages=messages, stream=False):
-        print("bot response:", response)
 
+    rsps = bot.run_nonstream(messages=messages, stream=False)
+
+    processed_query.append(query)
+    with jsonlines.open(rsps_cache_path, mode="a") as f:
+        f.write(messages + rsps)
+
+async def control_concurrency(task, semaphore):
+    async with semaphore:
+        await task
+async def main(query: str = "成人糖尿病夏天吃什么比较合适?"):
+    # Define the agent
+    global rsps_cache_path
+    global processed_query
+
+    samaphore = asyncio.Semaphore(10)
+
+    root_path = Path(__file__).parents[1]
+    query_file_path = root_path.joinpath(".cache/kb_valid_query.json")
+    rsps_cache_path = root_path.joinpath(".cache", "valid_ver1.1.jsonl")
+    if not rsps_cache_path.exists():
+        rsps_cache_path.touch()
+
+    all_query = json5.load(open(query_file_path, "r"))
+    processed_query = [i[0]["content"] for i in jsonlines.open(rsps_cache_path)]
+    tasks = []
+    for id, query in enumerate(all_query):
+        if query in processed_query:
+            continue
+        tasks.append(control_concurrency(send_a_req(id, query), samaphore))
+
+    await asyncio.gather(*tasks)
 
 def app_tui():
     # Define the agent
@@ -177,10 +209,10 @@ def app_gui():
 
 
 if __name__ == "__main__":
-    client = openai.OpenAI(
+    aclient = openai.AsyncOpenAI(
         api_key=os.getenv("OPENAI_API_KEY"),
         base_url=os.getenv("OPENAI_API_BASE_URL"),
     )
-    test()
+    asyncio.run(main())
     # app_tui()
     # app_gui()
