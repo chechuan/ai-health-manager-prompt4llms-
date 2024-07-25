@@ -236,4 +236,6 @@ prod:
         - aigc_functions_generate_allergic_history # 2024年6月25日 西医决策-过敏史生成
         - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
         - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+
 

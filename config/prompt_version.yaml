@@ -260,6 +260,7 @@ prod:
         aigc_functions_generate_allergic_history: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
+        aigc_functions_physician_consultation_decision_support_v2: 0.0.1
         aigc_functions_food_principle_new: 0.0.1
         aigc_functions_sport_principle_new: 0.0.1
         aigc_functions_mental_principle_new: 0.0.1

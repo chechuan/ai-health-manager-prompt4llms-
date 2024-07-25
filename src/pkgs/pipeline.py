@@ -1137,7 +1137,7 @@ class Chat_v2:
 
             level = ""
             tool = "askHuman" if weight_res["scene_ending"] == False else "convComplete"
-        elif intentCode == "blood_meas":
+        elif intentCode  =="blood_meas":
             blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = blood_res["contents"][0]
             conts = blood_res["contents"][1:]

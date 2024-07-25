@@ -17,7 +17,7 @@ from data.constrant import (
 )
 from src.pkgs.models.small_expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM, acallLLM
-from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
+from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt,_auxiliary_diagnosis_system_prompt_v7
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -34,7 +34,6 @@ class CustomChatModel:
             "blood_meas": expertModel.tool_rules_blood_pressure_level_2,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
-            # "glucose_consultation": expertModel.tool_rules_glucose_level
             # "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
@@ -142,8 +141,9 @@ class CustomChatAuxiliary(CustomChatModel):
         self, history: List[Dict[str, str]]
     ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
-        event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
-        sys_prompt = event["description"] + "\n" + event["process"]
+        # event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
+        # sys_prompt = event["description"] + "\n" + event["process"]
+        sys_prompt = _auxiliary_diagnosis_system_prompt_v7
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -328,7 +328,8 @@ class CustomChatAuxiliary(CustomChatModel):
     async def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
-        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        model = "Qwen1.5-72B-Chat"
         history = [
             i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
         ]
@@ -345,7 +346,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 n=1,
                 presence_penalty=0,
                 frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
+                # stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
@@ -362,9 +363,12 @@ class CustomChatAuxiliary(CustomChatModel):
         conts = []
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor or "问诊Finished" in doctor:
-            doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+        # elif not doctor or "问诊Finished" in doctor:
+        elif '?' not in doctor and '？' not in doctor:
+            # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             conts = [
+                sug,
                 "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？"
             ]
         else:
