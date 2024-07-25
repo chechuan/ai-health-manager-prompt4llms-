@@ -1954,7 +1954,7 @@ class expertModel:
             return result
 
         model = self.gsr.model_config["blood_glucose_trend_analysis"]
-        pro = param.get('promptParam',"")
+        pro = param
         data = pro.get("glucose", {})
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code", "")
