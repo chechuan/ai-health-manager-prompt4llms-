@@ -144,7 +144,7 @@ async def acallLLM(
     history: List[Dict] = [],
     temperature=0.5,
     top_p=0.5,
-    max_tokens=512,
+    max_tokens=1024,
     model: str = DEFAULT_MODEL,
     stop=[],
     stream=False,
@@ -197,7 +197,7 @@ async def acallLLM(
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
     if not history:
-        if "qwen1.5" in model.lower():
+        if "qwen" in model.lower():
             query = apply_chat_template(query)
         kwds["prompt"] = query
         completion = await aclient.completions.create(**kwds)
