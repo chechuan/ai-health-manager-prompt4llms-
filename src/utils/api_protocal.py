@@ -116,7 +116,8 @@ USER_PROFILE_KEY_MAP = {
     "target_weight": "用户目标体重",
     "standard_body_fat_rate": "标准体脂率",
     "bmr": "基础代谢",
-    "recommended_caloric_intake": "保持当前体重推荐摄入热量值"
+    "recommended_caloric_intake": "保持当前体重推荐摄入热量值",
+    "weight_status": "体重状态"
 }
 
 
@@ -218,6 +219,8 @@ class UserProfile(BaseModel):
     exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
     exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
     emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
+    weight_status: Optional[str] = Field(None, description="体重状态", example=["偏低", "正常", "超重", "肥胖"])
+    recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -702,6 +705,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
         "aigc_functions_sanji_plan_exercise_plan",
+        "aigc_functions_recommended_daily_calorie_intake"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -866,7 +870,7 @@ class BodyFatWeightManagementRequest(BaseModel):
         "aigc_functions_weight_data_analysis_multiday",
         "aigc_functions_body_fat_weight_data_analysis_1day",
         "aigc_functions_body_fat_weight_data_analysis_2day",
-        "aigc_functions_body_fat_weight_data_analysis_multiday"
+        "aigc_functions_body_fat_weight_data_analysis_multiday",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
