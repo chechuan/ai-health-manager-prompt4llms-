@@ -58,6 +58,9 @@ local:
         - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
         - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
         - aigc_functions_recommended_daily_calorie_intake # 2024年7月24日 推荐每日饮食摄入热量值（B端）
+        - aigc_functions_recommended_macro_nutrient_ratios # 2024年7月25日 推荐三大产能营养素能量占比（B端）
+        - aigc_functions_recommended_meal_plan # 2024年7月25日 推荐餐次及每餐能量占比（B端）
+        - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型

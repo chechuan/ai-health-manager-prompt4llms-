@@ -692,6 +692,8 @@ class MealPlan(BaseModel):
         description="食物名称", example=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]
     )
 
+class DietPlanStandards(BaseModel): ...
+
 
 class SanJiKangYangRequest(BaseModel):
     intentCode: Literal[
@@ -702,7 +704,9 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
         "aigc_functions_sanji_plan_exercise_plan",
-        "aigc_functions_recommended_daily_calorie_intake"
+        "aigc_functions_recommended_daily_calorie_intake",
+        "aigc_functions_recommended_macro_nutrient_ratios",
+        "aigc_functions_recommended_meal_plan",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -750,7 +754,7 @@ class SanJiKangYangRequest(BaseModel):
 
     food_principle: Union[str, None] = Field(
         None,
-        description="饮食原则",
+        description="饮食调理原则",
         examples=[
             '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
@@ -856,6 +860,64 @@ class SanJiKangYangRequest(BaseModel):
                 }
             }
         ]
+    )
+    diet_plan_standards: Optional[DietPlanStandards] = Field(
+        None,
+        description="饮食方案标准",
+        examples=[
+      {
+        "diet_plan_standards": {
+          "recommended_daily_caloric_intake": {
+            "calories": 1300,
+            "unit": "kcal"
+          },
+          "recommended_macronutrient_grams": [
+            {
+              "nutrient": "碳水化合物",
+              "min_energy_ratio": 0.45,
+              "max_energy_ratio": 0.55
+            },
+            {
+              "nutrient": "蛋白质",
+              "min_energy_ratio": 0.15,
+              "max_energy_ratio": 0.25
+            },
+            {
+              "nutrient": "脂肪",
+              "min_energy_ratio": 0.25,
+              "max_energy_ratio": 0.35
+            }
+          ],
+          "recommended_meal_energy": [
+            {
+              "meal_name": "早餐",
+              "min_energy_ratio": 0.25,
+              "max_energy_ratio": 0.3
+            },
+            {
+              "meal_name": "上午加餐",
+              "min_energy_ratio": 0,
+              "max_energy_ratio": 0.1
+            },
+            {
+              "meal_name": "午餐",
+              "min_energy_ratio": 0.3,
+              "max_energy_ratio": 0.4
+            },
+            {
+              "meal_name": "下午加餐",
+              "min_energy_ratio": 0,
+              "max_energy_ratio": 0.1
+            },
+            {
+              "meal_name": "晚餐",
+              "min_energy_ratio": 0.3,
+              "max_energy_ratio": 0.4
+            }
+          ]
+        }
+      }
+    ]
     )
 
 
