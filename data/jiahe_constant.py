@@ -1,0 +1,1 @@
+DISH_FILE = 'data/dishes.json'

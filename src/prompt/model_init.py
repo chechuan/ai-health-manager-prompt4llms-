@@ -113,7 +113,15 @@ def callLLM(
                 h = history
         kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
-        completion = client.chat.completions.create(**kwds)
+        retry = True
+        while retry:
+            try:
+                completion = client.chat.completions.create(**kwds)
+                retry = False
+            except Exception as e:
+                retry = True
+                logger.info(f"request llm model error, retry to request")
+                continue
         if stream:
             return completion
         while not completion.choices:
@@ -136,7 +144,7 @@ async def acallLLM(
     history: List[Dict] = [],
     temperature=0.5,
     top_p=0.5,
-    max_tokens=512,
+    max_tokens=1024,
     model: str = DEFAULT_MODEL,
     stop=[],
     stream=False,
@@ -189,7 +197,7 @@ async def acallLLM(
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
     if not history:
-        if "qwen1.5" in model.lower():
+        if "qwen" in model.lower():
             query = apply_chat_template(query)
         kwds["prompt"] = query
         completion = await aclient.completions.create(**kwds)
@@ -214,7 +222,15 @@ async def acallLLM(
             else:
                 h = history
         kwds["messages"] = h
-        completion = await aclient.chat.completions.create(**kwds)
+        retry = True
+        while retry:
+            try:
+                completion = await aclient.chat.completions.create(**kwds)
+                retry = False
+            except Exception as e:
+                retry = True
+                logger.info(f"request llm model error, retry to request")
+                continue
         logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
             return completion

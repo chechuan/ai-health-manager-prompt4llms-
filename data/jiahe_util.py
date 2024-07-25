@@ -7,6 +7,7 @@ import openai
 import openpyxl as op
 # from sklearn.metrics.pairwise import cosine_similarity
 from data.jiahe_prompt import *
+from data.jiahe_constant import *
 
 jiahe_userInfo_map = {
     'age':'年龄',
@@ -140,7 +141,7 @@ def callEmbedding(
 
 
 def get_dish_info(file):
-    data = json.load(open(file, 'r'), ensure_ascii=False)
+    data = json.load(open(file, 'r'))
     return data
 
 
@@ -161,9 +162,7 @@ def get_em(f):
         ds = get_dish_info("dishes.json")
         idxes = []
         for i, x in enumerate(ds):
-            x = x['name']
-            x = set(x)
-            if len(set(d) & set(x)) > 0:
+            if len(set(d) & set(x['name'])) > 0:
                 idxes.append(i)
 
         embs = open('emb', 'r').readlines()
@@ -181,18 +180,23 @@ def get_dish_from_database(dish, userInfo):
     # return read_dish_xlsx()
     # # # inputs =
 
-    # 1. 向量匹配
-    logger.debug(
-        "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
-    )
+    # 1. 向量/关键词匹配
+    # logger.debug(
+    #     "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+    # )
 
-    ds = get_dish_info("dishes.json")
+    ds = get_dish_info(DISH_FILE)
     target_dish = {}
+    # import pdb
+    # pdb.set_trace()
     for i, x in enumerate(ds):
-        if not target_dish and jaccard_text_similarity(x['name'], dish) > 0.5:
+        if jaccard_text_similarity(x['name'], dish) < 0.5:
+            continue
+        if not target_dish and jaccard_text_similarity(x['name'], dish) >= 0.5:
             target_dish = x
-        elif jaccard_text_similarity(x['name'], dish) > jaccard_text_similarity(x['name'], target_dish):
+        elif jaccard_text_similarity(x['name'], dish) > jaccard_text_similarity(x['name'], target_dish['name']):
             target_dish = x
+    logger.debug(f'dish dataset recall data: {json.dumps(target_dish)}')
     # embs = open('emb', 'r').readlines()
     # for i in idxes:
     #     cur_emb = callEmbedding(dish)[0]
@@ -201,7 +205,8 @@ def get_dish_from_database(dish, userInfo):
     #     cosine_sim = cosine_similarity([cur_emb], [emb])
     #     if cosine_sim > 0.8:
     #         res.append(i)
-
+    if not target_dish:
+        return {}
     # 2. llm判断
 
     userInfo = get_userInfo(userInfo)
@@ -228,16 +233,10 @@ def get_dish_from_database(dish, userInfo):
     )
     logger.debug("儿童菜品llm判断模型输出latancy： " + str(time.time() - start_time))
     logger.debug("儿童菜品llm判断模型输出： " + generate_text)
-    ds = json.loads(generate_text.strip())
-    dd = []
-    for d in ds:
-        if '否' not in d.get('待判断菜肴名称', ''):
-            dd.append(d)
-    if not dd or len(dd) > 1:
+    if '否' in generate_text:
         return {}
-    cur_d = dd[0].get('待判断菜肴名称', '')
-    # for dishd in ds:
-    #     if dishdhd['name'] == cur_d:
+    else:
+        return target_dish
 
 
 
