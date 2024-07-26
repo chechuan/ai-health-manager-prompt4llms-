@@ -121,6 +121,8 @@ class CustomChatAuxiliary(CustomChatModel):
                 return "None", text[thought_index + 8 : doctor_index].strip()
             if thought_index == -1 and doctor_index != -1:
                 return "None", text[doctor_index + 8 :].strip()
+            if thought_index == -1 and doctor_index == -1:
+                return "None", text
             thought = text[thought_index + 8 : doctor_index].strip()
             doctor = text[doctor_index + 8 :thought_index2].strip()
             return thought, doctor
