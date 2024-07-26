@@ -1113,14 +1113,20 @@ def download_from_oss(filepath: str = "oss path", save_path: str = "local save p
 async def parse_examination_plan(content):
     """将字符串解析为 JSON 对象，如果解析失败则返回一个空列表"""
     try:
-        # 尝试将单引号替换为双引号
-        content = content.replace("'", '"')
-        # 解析JSON字符串
-        examination_plan = json.loads(content)
+        # 检查 content 是否为字符串
+        if isinstance(content, str):
+            # 尝试将单引号替换为双引号
+            content = content.replace("'", '"')
+            # 解析JSON字符串
+            examination_plan = json.loads(content)
+        else:
+            # 如果 content 不是字符串，直接返回它
+            examination_plan = content
         return examination_plan
     except json.JSONDecodeError as e:
         print(f"JSON解析错误: {e}")
         return []
+
 
 def calculate_bmi(weight: float, height: float) -> float:
     # bmi计算
@@ -1157,22 +1163,36 @@ def parse_measurement(value_str: str, measure_type: str) -> float:
         raise ValueError("未知的测量类型")
 
 
-def parse_historical_diets(historical_diets: List[Dict[str, Union[str, Dict[str, List[str]]]]]) -> str:
-    """解析历史食谱的列表数据并转换成所需的格式"""
-    formatted_diets = ""
-    try:
-        for diet in historical_diets:
-            date = diet.get("date", "未知日期")
-            meals = diet.get("meals", {})
-            formatted_diets += f"{date}：\n"
-            for meal, foods in meals.items():
-                formatted_diets += f"{meal}：\n"
-                for food in foods:
-                    formatted_diets += f"  - {food}\n"
-    except Exception as e:
-        print(f"解析错误: {e}")
+def format_historical_meal_plans_v2(historical_meal_plans: list) -> str:
+    """
+    将历史食谱转换为指定格式的字符串
 
-    return formatted_diets.strip()
+    参数:
+        historical_meal_plans (list): 包含历史食谱的列表
+
+    返回:
+        str: 格式化的历史食谱字符串
+    """
+    if not historical_meal_plans:
+        raise ValueError("历史食谱数据为空")
+
+    formatted_output = ""
+
+    for day in historical_meal_plans:
+        date = day.get("date")
+        if not date:
+            continue
+        formatted_output += f"{date}：\n"
+
+        meals = day.get("meals", {})
+        for meal_time, foods in meals.items():
+            if not foods:
+                continue
+            formatted_output += f"{meal_time}：\n"
+            for food in foods:
+                formatted_output += f"{food}\n"
+
+    return formatted_output.strip()
 
 def async_clock(func):
     @wraps(func)
@@ -1228,6 +1248,137 @@ def calculate_standard_body_fat_rate(gender: str) -> str:
     elif gender == "女":
         return "15%-25%"
     return None
+
+def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
+    """
+    根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果
+
+    参数:
+        diet_plan_standards (dict): 包含饮食方案标准的字典
+
+    返回:
+        str: 格式化的输出结果
+
+    抛出:
+        DietPlanCalculationError: 如果数据缺失，则抛出异常
+    """
+    # 检查推荐每日饮食摄入热量值是否存在且有效
+    if not diet_plan_standards.get("recommended_daily_caloric_intake") or not diet_plan_standards[
+        "recommended_daily_caloric_intake"].get("calories"):
+        raise ValueError("缺少推荐每日饮食摄入热量值")
+
+    calories = diet_plan_standards["recommended_daily_caloric_intake"]["calories"]
+
+    # 获取推荐的三大产能营养素和推荐餐次及每餐的能量数据
+    macronutrients = diet_plan_standards.get("recommended_macronutrient_grams", [])
+    meals = diet_plan_standards.get("recommended_meal_energy", [])
+
+    # 如果推荐的三大产能营养素或推荐餐次及每餐能量的数据缺失，抛出异常
+    if not macronutrients or not meals:
+        raise ValueError("缺少推荐三大产能营养素或推荐餐次及每餐能量的数据")
+
+    def calculate_macronutrient_range(calories, min_ratio, max_ratio, divisor):
+        """
+        根据能量占比计算营养素的质量范围
+
+        参数:
+            calories (float): 推荐每日饮食摄入热量值
+            min_ratio (float): 能量占比的最小值
+            max_ratio (float): 能量占比的最大值
+            divisor (int): 能量转换因子，碳水化合物和蛋白质为4，脂肪为9
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        min_value = (calories * min_ratio) / divisor
+        max_value = (calories * max_ratio) / divisor
+        return round(min_value), round(max_value)
+
+    def get_macronutrient_range(nutrient):
+        """
+        获取指定营养素的质量范围
+
+        参数:
+            nutrient (str): 营养素名称
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        for item in macronutrients:
+            if item["nutrient"] == nutrient:
+                return calculate_macronutrient_range(calories, item.get("min_energy_ratio", 0),
+                                                     item.get("max_energy_ratio", 0),
+                                                     4 if nutrient != "脂肪" else 9)
+        return 0, 0
+
+    # 计算各营养素的质量范围
+    carb_min, carb_max = get_macronutrient_range("碳水化合物")
+    protein_min, protein_max = get_macronutrient_range("蛋白质")
+    fat_min, fat_max = get_macronutrient_range("脂肪")
+
+    def calculate_meal_energy_range(calories, min_ratio, max_ratio):
+        """
+        根据能量占比计算每餐的能量范围
+
+        参数:
+            calories (float): 推荐每日饮食摄入热量值
+            min_ratio (float): 每餐能量占比的最小值
+            max_ratio (float): 每餐能量占比的最大值
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        min_value = calories * min_ratio
+        max_value = calories * max_ratio
+        return round(min_value), round(max_value)
+
+    # 计算每餐的能量范围，并格式化输出
+    meal_energy_ranges = []
+    for meal in meals:
+        meal_name = meal["meal_name"]
+        min_energy, max_energy = calculate_meal_energy_range(calories, meal.get("min_energy_ratio", 0),
+                                                             meal.get("max_energy_ratio", 0))
+        meal_energy_ranges.append(f"{meal_name}：{min_energy}kcal-{max_energy}kcal")
+
+    # 格式化输出结果
+    output = f"## 推荐每日饮食摄入热量值\n{calories}kcal\n"
+    output += "## 推荐三大产能营养素推荐克数\n"
+    output += f"碳水化合物：{carb_min}g-{carb_max}g\n"
+    output += f"蛋白质：{protein_min}g-{protein_max}g\n"
+    output += f"脂肪：{fat_min}g-{fat_max}g\n"
+    output += "## 推荐餐次及每餐能量\n"
+    output += "\n".join(meal_energy_ranges)
+
+    return output
+
+def format_historical_meal_plans(historical_meal_plans: list) -> str:
+    """
+    将历史食谱转换为指定格式的字符串
+
+    参数:
+        historical_meal_plans (list): 包含历史食谱的列表
+
+    返回:
+        str: 格式化的历史食谱字符串
+    """
+    if not historical_meal_plans:
+        return "历史食谱数据为空"
+
+    formatted_output = ""
+
+    for day in historical_meal_plans:
+        date = day.get("date")
+        if not date:
+            continue
+        formatted_output += f"{date}：\n"
+
+        meals = day.get("meals", {})
+        for meal_time, foods in meals.items():
+            if not foods:
+                continue
+            formatted_output += f"{meal_time}：{'、'.join(foods)}\n"
+
+    return formatted_output.strip()
 
 
 
