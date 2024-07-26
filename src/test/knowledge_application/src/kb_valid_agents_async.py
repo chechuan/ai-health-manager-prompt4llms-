@@ -47,17 +47,18 @@ class queryJudge(BaseTool):
 
     def call(self, params: str, **kwargs) -> str:
         prompt = json5.loads(params)["query"]
-        system = (
-            "请你帮我判断给出的问题是否需要查询知识库的知识,"
-            "如果需要严谨的知识支撑才能回答,或者你本身不懂/不确定相关知识,"
-            "则输出`Yes`,要求后续步骤查询相关知识,不需要相关知识就可以回答则输出`No`"
-        )
+        system = """请你帮我判断给出的问题是否需要查询知识库的知识
+        如果你本身无法解读,需要严谨的知识支撑才能回答,或者你本身不懂/不确定相关知识,则输出`Yes`,要求后续步骤查询相关知识,不需要相关知识就可以回答则输出`No`"""
         msg = [
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ]
-        result: ChatCompletion = asyncio.run(
-            aclient.chat.completions.create(messages=msg, model="Qwen2-7B-Instruct")
+        client = openai.OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            base_url=os.getenv("OPENAI_API_BASE_URL"),
+        )
+        result: ChatCompletion = client.chat.completions.create(
+            messages=msg, model="Qwen2-7B-Instruct"
         )
         return result.choices[0].message.content
 
@@ -141,25 +142,30 @@ def init_agent_service():
 
 
 async def send_a_req(id, query: str) -> List[Dict]:
-    print()
+    print(f"start to process task: {id}")
+    # 异步调用init_agent_service
     bot = init_agent_service()
     messages = [{"role": "user", "content": query}]
 
+    # 异步调用bot.run_nonstream
     rsps = bot.run_nonstream(messages=messages, stream=False)
 
     processed_query.append(query)
     with jsonlines.open(rsps_cache_path, mode="a") as f:
         f.write(messages + rsps)
+    print(f"finish processing task: {id}")
 
 async def control_concurrency(task, semaphore):
     async with semaphore:
         await task
+
+
 async def main(query: str = "成人糖尿病夏天吃什么比较合适?"):
     # Define the agent
     global rsps_cache_path
     global processed_query
 
-    samaphore = asyncio.Semaphore(10)
+    semaphore = asyncio.Semaphore(1)
 
     root_path = Path(__file__).parents[1]
     query_file_path = root_path.joinpath(".cache/kb_valid_query.json")
@@ -173,46 +179,43 @@ async def main(query: str = "成人糖尿病夏天吃什么比较合适?"):
     for id, query in enumerate(all_query):
         if query in processed_query:
             continue
-        tasks.append(control_concurrency(send_a_req(id, query), samaphore))
+        tasks.append(control_concurrency(send_a_req(id, query), semaphore))
 
     await asyncio.gather(*tasks)
 
-def app_tui():
-    # Define the agent
-    bot = init_agent_service()
 
-    # Chat
-    messages = []
-    while True:
-        query = input("user question: ")
-        messages.append({"role": "user", "content": query})
-        response = []
-        for response in bot.run(messages=messages):
-            print("bot response:", response)
-        messages.extend(response)
+# def app_tui():
+#     # Define the agent
+#     bot = init_agent_service()
+
+#     # Chat
+#     messages = []
+#     while True:
+#         query = input("user question: ")
+#         messages.append({"role": "user", "content": query})
+#         response = []
+#         for response in bot.run(messages=messages):
+#             print("bot response:", response)
+#         messages.extend(response)
 
 
-def app_gui():
-    # Define the agent
-    bot = init_agent_service()
-    chatbot_config = {
-        "prompt.suggestions": [
-            "画一只猫的图片",
-            "画一只可爱的小腊肠狗",
-            "画一幅风景画，有湖有山有树",
-        ]
-    }
-    WebUI(
-        bot,
-        chatbot_config=chatbot_config,
-    ).run()
+# def app_gui():
+#     # Define the agent
+#     bot = init_agent_service()
+#     chatbot_config = {
+#         "prompt.suggestions": [
+#             "画一只猫的图片",
+#             "画一只可爱的小腊肠狗",
+#             "画一幅风景画，有湖有山有树",
+#         ]
+#     }
+#     WebUI(
+#         bot,
+#         chatbot_config=chatbot_config,
+#     ).run()
 
 
 if __name__ == "__main__":
-    aclient = openai.AsyncOpenAI(
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_API_BASE_URL"),
-    )
     asyncio.run(main())
     # app_tui()
     # app_gui()
