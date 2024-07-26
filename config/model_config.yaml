@@ -35,6 +35,7 @@ local:
         - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
         - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
+    Qwen2-7B-Instruct:
         - aigc_functions_chief_complaint_generation # 2024年6月24日 西医决策-主诉生成
         - aigc_functions_diagnosis_generation # 2024年6月25日 西医决策-诊断生成
         - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
@@ -61,6 +62,11 @@ local:
         - aigc_functions_recommended_macro_nutrient_ratios # 2024年7月25日 推荐三大产能营养素能量占比（B端）
         - aigc_functions_recommended_meal_plan # 2024年7月25日 推荐餐次及每餐能量占比（B端）
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+        - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
+    Qwen2-72B-Instruct:
+        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
+
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -120,79 +126,8 @@ dev:
         - aigc_functions_body_fat_weight_data_analysis_1day # 2024年7月12日 体重及体脂数据分析-1日数据
         - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
         - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
-test:
-    Qwen1.5-32B-Chat:
-        - general_react_model # react模型
-        - decorate_search_prompt # 查询知识库装饰
-        - food_purchasing_list_management # 食材清单管理
-        - food_purchasing_list_generate_by_content # 基于内容生成食材清单
-        - call_schedular_time_understand # 日程时间理解
-        - call_schedule_query # 查询日程最终的组装输出
-        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-        - call_schedule_create_reply # 创建日程的回复
-        - blood_glucose_trend_analysis # 血糖趋势分析
-        - call_llm_with_search_engine # 与搜索引擎对话
-        - blood_pressure_trend_analysis # 血压心率趋势分析
-        - health_warning_solutions_early # 预警解决方案
-        - reunion_meals_restaurant_selection # 共策决策
-        - assert_diet_suggest_in_content # 内容中提供饮食建议
-        - report_interpretation_chat # 报告解读对话
-        - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
-        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
-        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
-        - custom_chat_gaily_assistant # 自定义对话-闲聊
-        - aigc_functions_single_choice # 单选题
-        - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
-        - aigc_functions_consultation_summary # 2024年04月20日 问诊摘要
-        - aigc_functions_diagnosis # 2024年04月20日 诊断
-        - aigc_functions_diagnosis_assert_is_provided_diagnosis # 2024年04月20日 判断医生是否已提供诊断
-        - aigc_functions_drug_recommendation # 2024年04月20日 药品推荐
-        - aigc_functions_food_principle # 2024年04月20日 饮食原则
-        - aigc_functions_sport_principle # 2024年04月20日 运动原则
-        - aigc_functions_mental_principle # 2024年04月20日 情志原则
-        - aigc_functions_reason_for_care_plan # 2024年04月20日 康养方案推荐原因
-        - aigc_functions_chinese_therapy # 2024年04月20日 中医调理
-        - aigc_functions_diagnosis_result # 2024年04月20日 诊断-给出结论
-        - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
-        - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
-        - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
-        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
-fat:
-    Qwen1.5-32B-Chat:
-        - general_react_model # react模型
-        - decorate_search_prompt # 查询知识库装饰
-        - food_purchasing_list_management # 食材清单管理
-        - food_purchasing_list_generate_by_content # 基于内容生成食材清单
-        - call_schedular_time_understand # 日程时间理解
-        - call_schedule_query # 查询日程最终的组装输出
-        - call_schedule_create_extract_event_time_pair # 日程创建 提取事件-时间描述pair
-        - call_schedule_create_reply # 创建日程的回复
-        - call_llm_with_search_engine # 与搜索引擎对话
-        - blood_pressure_trend_analysis # 血压心率趋势分析
-        - health_warning_solutions_early # 预警解决方案
-        - reunion_meals_restaurant_selection # 共策决策
-        - assert_diet_suggest_in_content # 内容中提供饮食建议
-        - report_interpretation_chat # 报告解读对话
-        - auxiliary_diagnosis_judgment_repetition # 辅助诊断判断-重复
-        - custom_chat_auxiliary_diagnosis # 自定义对话辅助诊断
-        - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
-        - custom_chat_gaily_assistant # 自定义对话-闲聊
-        - aigc_functions_single_choice # 单选题
-        - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
-        - aigc_functions_consultation_summary # 2024年04月20日 问诊摘要
-        - aigc_functions_diagnosis # 2024年04月20日 诊断
-        - aigc_functions_diagnosis_assert_is_provided_diagnosis # 2024年04月20日 判断医生是否已提供诊断
-        - aigc_functions_drug_recommendation # 2024年04月20日 药品推荐
-        - aigc_functions_food_principle # 2024年04月20日 饮食原则
-        - aigc_functions_sport_principle # 2024年04月20日 运动原则
-        - aigc_functions_mental_principle # 2024年04月20日 情志原则
-        - aigc_functions_reason_for_care_plan # 2024年04月20日 康养方案推荐原因
-        - aigc_functions_chinese_therapy # 2024年04月20日 中医调理
-        - aigc_functions_diagnosis_result # 2024年04月20日 诊断-给出结论
-        - aigc_functions_plan_difference_finder # 2024年04月19日 差异点发现
-        - aigc_functions_plan_difference_analysis # 2024年04月19日 差异能力分析
-        - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
-        - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
+    Qwen2-7B-Instruct:
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
 prod:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型
@@ -214,6 +149,7 @@ prod:
         - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
         - custom_chat_gaily_assistant # 自定义对话-闲聊
         - aigc_functions_single_choice # 单选题
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
         - aigc_functions_consultation_summary # 2024年04月20日 问诊摘要
         - aigc_functions_diagnosis # 2024年04月20日 诊断
@@ -236,4 +172,5 @@ prod:
         - aigc_functions_generate_allergic_history # 2024年6月25日 西医决策-过敏史生成
         - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
         - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
-
+    Qwen2-7B-Instruct:
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
