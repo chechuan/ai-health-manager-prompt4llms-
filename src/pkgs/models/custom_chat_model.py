@@ -347,32 +347,32 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
-        for _ in range(2):
-            content = callLLM(
+        # for _ in range(2):
+        content = callLLM(
                 model=model,
                 history=messages,
-                temperature=0,
-                max_tokens=1024,
-                top_p=0.8,
+                temperature=0.7,
+                max_tokens=2048,
+                top_p=0.5,
                 n=1,
                 presence_penalty=0,
-                frequency_penalty=0.5,
+                frequency_penalty=0,
                 # stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
-            logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-            thought, doctor = self.__parse_response__(content)
-            is_repeat = self.judge_repeat(history, doctor, model)
-            logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
-            if is_repeat:
-                valid = False
-                continue
-            else:
-                valid = True
-                break
+        logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
+        thought, doctor = self.__parse_response__(content)
+            # is_repeat = self.judge_repeat(history, doctor, model)
+            # logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
+            # if is_repeat:
+            #     valid = False
+            #     continue
+            # else:
+            #     valid = True
+            #     break
         conts = []
-        if thought == "None" or doctor == "None":
+        if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
         elif '?' not in doctor and '？' not in doctor:
