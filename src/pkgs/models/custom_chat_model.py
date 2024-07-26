@@ -113,18 +113,25 @@ class CustomChatAuxiliary(CustomChatModel):
             second_index = s.find(char, first_index + 1)
             return second_index
         try:
+            l1=len(s1)
+            l2=len(s2)
             text =text.replace('：',':')
             thought_index = text.find(s1)
+            if thought_index == -1 :
+                doctor_index = text.find(s2)
+                if doctor_index != -1:
+                    return "None", text[doctor_index + l2 :].strip()
+                else:
+                    return "None", text 
             doctor_index = text.find("\n"+s2)
+            if doctor_index == -1:
+                return "None", text[thought_index + l1 :].strip()
+            thought = text[thought_index + l1 : doctor_index].strip()
             thought_index2=find_second_occurrence(text, "\n"+s1)
-            if thought_index != -1 and doctor_index == -1:
-                return "None", text[thought_index + 8 : doctor_index].strip()
-            if thought_index == -1 and doctor_index != -1:
-                return "None", text[doctor_index + 8 :].strip()
-            if thought_index == -1 and doctor_index == -1:
-                return "None", text
-            thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 :thought_index2].strip()
+            if thought_index2 !=-1:
+                doctor = text[doctor_index + l2 :thought_index2].strip()
+            else:
+                doctor = text[doctor_index + l2 :].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -340,32 +347,32 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
-        for _ in range(2):
-            content = callLLM(
+        # for _ in range(2):
+        content = callLLM(
                 model=model,
                 history=messages,
-                temperature=0,
-                max_tokens=1024,
-                top_p=0.8,
+                temperature=0.7,
+                max_tokens=2048,
+                top_p=0.5,
                 n=1,
                 presence_penalty=0,
-                frequency_penalty=0.5,
+                frequency_penalty=0,
                 # stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
-            logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-            thought, doctor = self.__parse_response__(content)
-            is_repeat = self.judge_repeat(history, doctor, model)
-            logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
-            if is_repeat:
-                valid = False
-                continue
-            else:
-                valid = True
-                break
+        logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
+        thought, doctor = self.__parse_response__(content)
+            # is_repeat = self.judge_repeat(history, doctor, model)
+            # logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
+            # if is_repeat:
+            #     valid = False
+            #     continue
+            # else:
+            #     valid = True
+            #     break
         conts = []
-        if thought == "None" or doctor == "None":
+        if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
         elif '?' not in doctor and '？' not in doctor:
@@ -432,12 +439,12 @@ class CustomChatAuxiliary(CustomChatModel):
         thought, output = self.__parse_diff_response__(content,'thought:','output:')
         # 用if_entropy字段来控制不同的场景
         if if_entropy=='0':
-            result = output+'。基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:'
+            result = output+'基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:'
         elif if_entropy=='1':
             if '；' in output:
                 output=output.split('；',1)[0]
             entropy = pro.get('askEntropy','')
-            result = '叔叔，您的生命熵为'+entropy+'，主要问题是血压不稳定，需要重点控制血压。'+output+'。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。'
+            result = '叔叔，您的生命熵为'+entropy+'，主要问题是血压不稳定，需要重点控制血压。'+output+'血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。'
         else:
             result = '基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:'
 
