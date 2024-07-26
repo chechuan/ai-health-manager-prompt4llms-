@@ -138,6 +138,12 @@ dev:
         aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
         aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
         aigc_functions_physician_consultation_decision_support_v2: 0.0.1
+        aigc_functions_recommended_daily_calorie_intake: 0.0.1
+        aigc_functions_recommended_macro_nutrient_ratios: 0.0.1
+        aigc_functions_recommended_meal_plan: 0.0.1
+        aigc_functions_recommended_meal_plan_with_recipes: 0.0.1
+        aigc_functions_generate_related_questions: 0.0.1
+        aigc_functions_guide_user_back_to_consultation: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
