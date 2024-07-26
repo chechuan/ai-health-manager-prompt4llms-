@@ -3765,7 +3765,7 @@ class Agents:
             except Exception as e:
                 logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
                 content = dumpJS([])
-
+        content = await parse_examination_plan(content)
         return content
 
     async def aigc_functions_recommended_macro_nutrient_ratios(self, **kwargs) -> Dict[str, List[Dict[str, float]]]:
