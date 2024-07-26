@@ -677,7 +677,7 @@ class OutpatientSupportRequest(BaseModel):
     )
     pre_consultation_records: Optional[List[ChatMessage]] = Field(
         None,
-        description="预问诊会话记录",
+        description="预约问诊记录",
         examples=[
             [
                 {"role": "user", "content": "我肚子疼"},
@@ -759,7 +759,6 @@ class MealPlan(BaseModel):
         description="食物名称", example=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]
     )
 
-
 class SanJiKangYangRequest(BaseModel):
     intentCode: Literal[
         "aigc_functions_sjkyn_guideline_generation",
@@ -769,7 +768,12 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_quality_guidance",
         "aigc_functions_sanji_plan_exercise_regimen",
         "aigc_functions_sanji_plan_exercise_plan",
-        "aigc_functions_recommended_daily_calorie_intake"
+        "aigc_functions_recommended_daily_calorie_intake",
+        "aigc_functions_recommended_macro_nutrient_ratios",
+        "aigc_functions_recommended_meal_plan",
+        "aigc_functions_recommended_meal_plan_with_recipes",
+        "aigc_functions_generate_related_questions",
+        "aigc_functions_guide_user_back_to_consultation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -817,7 +821,7 @@ class SanJiKangYangRequest(BaseModel):
 
     food_principle: Union[str, None] = Field(
         None,
-        description="饮食原则",
+        description="饮食调理原则",
         examples=[
             '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
@@ -923,6 +927,149 @@ class SanJiKangYangRequest(BaseModel):
                 }
             }
         ]
+    )
+    diet_plan_standards: Union[Dict, None] = Field(
+        None,
+        description="饮食方案标准",
+        examples=[
+      {
+        "diet_plan_standards": {
+          "recommended_daily_caloric_intake": {
+            "calories": 1300,
+            "unit": "kcal"
+          },
+          "recommended_macronutrient_grams": [
+            {
+              "nutrient": "碳水化合物",
+              "min_energy_ratio": 0.45,
+              "max_energy_ratio": 0.55
+            },
+            {
+              "nutrient": "蛋白质",
+              "min_energy_ratio": 0.15,
+              "max_energy_ratio": 0.25
+            },
+            {
+              "nutrient": "脂肪",
+              "min_energy_ratio": 0.25,
+              "max_energy_ratio": 0.35
+            }
+          ],
+          "recommended_meal_energy": [
+            {
+              "meal_name": "早餐",
+              "min_energy_ratio": 0.25,
+              "max_energy_ratio": 0.3
+            },
+            {
+              "meal_name": "上午加餐",
+              "min_energy_ratio": 0,
+              "max_energy_ratio": 0.1
+            },
+            {
+              "meal_name": "午餐",
+              "min_energy_ratio": 0.3,
+              "max_energy_ratio": 0.4
+            },
+            {
+              "meal_name": "下午加餐",
+              "min_energy_ratio": 0,
+              "max_energy_ratio": 0.1
+            },
+            {
+              "meal_name": "晚餐",
+              "min_energy_ratio": 0.3,
+              "max_energy_ratio": 0.4
+            }
+          ]
+        }
+      }
+    ]
+    )
+    user_question: Union[str, None] = Field(
+        None,
+        description="用户问题",
+        examples=[
+            '总是早醒，多梦应该注意什么？'
+        ],
+    )
+    main_conversation_history: Optional[List[ChatMessage]] = Field(
+        None,
+        description="主线会话记录",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
+    )
+    branch_conversation_history: Optional[List[ChatMessage]] = Field(
+        None,
+        description="支线会话记录",
+        examples=[
+            [
+                {"role": "user", "content": "我肚子疼"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是突然出现的还是慢慢发生的？",
+                },
+                {"role": "user", "content": "突然出现的"},
+                {
+                    "role": "assistant",
+                    "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
+                },
+                {"role": "user", "content": "下腹痛"},
+                {
+                    "role": "assistant",
+                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
+                },
+                {"role": "user", "content": "一阵一阵的，还可以忍受"},
+                {
+                    "role": "assistant",
+                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
+                },
+                {"role": "user", "content": "绞痛吧，有点恶心"},
+                {
+                    "role": "assistant",
+                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+                {
+                    "role": "assistant",
+                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
+                },
+                {"role": "user", "content": "同时出现，没有别的症状"},
+            ]
+        ],
     )
 
 

@@ -33,15 +33,15 @@ def pre_process_model_args(**kwargs) -> Dict:
 
 
 def callLLM(
-    query: str = "",
-    history: List[Dict] = [],
-    temperature=0.5,
-    top_p=0.5,
-    max_tokens=512,
-    model: str = DEFAULT_MODEL,
-    stop=[],
-    stream=False,
-    **kwargs,
+        query: str = "",
+        history: List[Dict] = [],
+        temperature=0.5,
+        top_p=0.5,
+        max_tokens=512,
+        model: str = DEFAULT_MODEL,
+        stop=[],
+        stream=False,
+        **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
 
@@ -134,21 +134,21 @@ def callLLM(
         + f"prompt_tokens:{completion.usage.prompt_tokens}, "
         + f"completion_tokens:{completion.usage.completion_tokens}, "
         + f"total_tokens:{completion.usage.total_tokens}, "
-        f"cost: {time_cost}s"
+          f"cost: {time_cost}s"
     )
     return ret
 
 
 async def acallLLM(
-    query: str = "",
-    history: List[Dict] = [],
-    temperature=0.5,
-    top_p=0.5,
-    max_tokens=1024,
-    model: str = DEFAULT_MODEL,
-    stop=[],
-    stream=False,
-    **kwargs,
+        query: str = "",
+        history: List[Dict] = [],
+        temperature=0.5,
+        top_p=0.5,
+        max_tokens=1024,
+        model: str = DEFAULT_MODEL,
+        stop=[],
+        stream=False,
+        **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
 
@@ -206,9 +206,8 @@ async def acallLLM(
             return completion
         while not completion.choices:
             completion = await aclient.completions.create(**kwds)
-            logger.info(f"Model generate completion:{repr(completion)}")      
-       
-        
+            logger.info(f"Model generate completion:{repr(completion)}")
+
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
@@ -237,8 +236,7 @@ async def acallLLM(
         while not completion.choices:
             completion = await aclient.completions.create(**kwds)
             logger.info(f"Model generate completion:{repr(completion)}")
-        
-        
+
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
     logger.info(
@@ -246,7 +244,7 @@ async def acallLLM(
         + f"prompt_tokens:{completion.usage.prompt_tokens}, "
         + f"completion_tokens:{completion.usage.completion_tokens}, "
         + f"total_tokens:{completion.usage.total_tokens}, "
-        f"cost: {time_cost}s"
+          f"cost: {time_cost}s"
     )
     return ret
 
