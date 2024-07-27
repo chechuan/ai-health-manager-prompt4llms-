@@ -4961,7 +4961,7 @@ class Agents:
         logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
