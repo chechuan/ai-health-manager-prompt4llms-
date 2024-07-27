@@ -357,6 +357,11 @@ class AigcFunctionsRequest(BaseModel):
         description="诊断结果",
         examples=["急性肠胃炎"],
     )
+    symptom: Union[str, List, None] = Field(
+        None,
+        description="诊断疾病结果",
+        examples=["急性肠胃炎"],
+    )
     food_principle: Union[str, None] = Field(
         None,
         description="饮食原则",
@@ -454,6 +459,11 @@ class AigcSanjiRequest(BaseModel):
     diagnosis: Union[str, None] = Field(
         None,
         description="诊断结果",
+        examples=["急性肠胃炎"],
+    )
+    symptom: Union[str, List, None] = Field(
+        None,
+        description="诊断疾病结果",
         examples=["急性肠胃炎"],
     )
 
