@@ -4262,6 +4262,8 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
+            "symptom": kwargs.get("symptom", "无"),
+            
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1
