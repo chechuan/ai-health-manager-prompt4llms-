@@ -4262,6 +4262,8 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
+            "symptom": kwargs.get("symptom", "无"),
+            
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1
@@ -4295,6 +4297,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
+            "symptom": kwargs.get("symptom", "无"),
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
@@ -4332,6 +4335,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
+            "symptom": kwargs.get("symptom", "无"),
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
@@ -4363,6 +4367,7 @@ class Agents:
             "user_profile": user_profile,
             "messages": messages,
             "diagnosis": kwargs.get("diagnosis", "无"),
+            "symptom": kwargs.get("symptom", "无"),
         }
         model_args = await self.__update_model_args__(kwargs)
         content: str = await self.aaigc_functions_general(
@@ -4652,6 +4657,7 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
+            "symptom": kwargs.get("symptom","")
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
@@ -4721,7 +4727,9 @@ class Agents:
         prompt_vars = {
             "user_profile": user_profile,
             "messages": messages,
+            "symptom": kwargs.get("symptom","")
         }
+
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
         )
@@ -4959,7 +4967,7 @@ class Agents:
         logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,

@@ -144,9 +144,9 @@ _auxiliary_diagnosis_system_prompt_v7 ="""# 任务描述
 - 请不要以列表格式输出问题
 - 将“就医”建议替换为“联系医生”
 ## 输出格式
-question：用户的主诉
-thought：结合已有信息和对话，思考当前步骤医生应该怎么问或者答
-doctor：输出当前轮次医生应该说的话
+Question：用户的主诉
+Thought：结合已有信息和对话，思考当前步骤医生应该怎么问或者答
+Doctor：输出当前轮次医生应该说的话
 Observation: 用户对你提出的问题的回复
 ...(Thought/Doctor/Observation 可能会循环一次或多次直到你获取到了足够的信息能判断病情)"""
 
