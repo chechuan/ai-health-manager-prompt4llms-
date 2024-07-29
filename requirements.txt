@@ -1,34 +1,34 @@
 fastapi
 uvicorn
-pydantic
+pydantic==2.8.2
 pyyaml
 gevent
 openai
 langchain==0.0.330
-langchain_community
+langchain_community==0.0.20
 SQLAlchemy==1.4.49
 json5
 loguru
 pandas==2.1.2
 fastapi
 pymysql==1.1.0
-Cython
+# Cython
 cchardet
 chardet
 typing-extensions==4.8.0
 beautifulsoup4
 lxml
 duckduckgo_search
-urllib3==1.26.18
+urllib3==1.25.11
 pysocks
 pretty_errors
 openpyxl
 # rapidocr_onnxruntime
-pdf2image
-pdfminer.six
-Pillow
-opencv-python-headless
+# pdf2image
+# pdfminer.six
+# Pillow
+# opencv-python-headless
 sse_starlette
 shortuuid
 oss2
-scikit-learn
+# scikit-learn
