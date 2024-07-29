@@ -88,6 +88,7 @@ class CustomChatAuxiliary(CustomChatModel):
             return second_index
         try:
             text =text.replace('：',':')
+            text =text.replace('doctor','Doctor')
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
             thought_index2=find_second_occurrence(text, '\nThought:')
@@ -375,7 +376,7 @@ class CustomChatAuxiliary(CustomChatModel):
         if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
-        elif '?' not in doctor and '？' not in doctor:
+        elif '?' not in doctor and '？' not in doctor and '有没有' not in doctor:
             # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             conts = [
