@@ -39,8 +39,8 @@ from string import Template
 from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
 
 from langchain.prompts.prompt import PromptTemplate
-from PIL import Image, ImageDraw, ImageFont
-from rapidocr_onnxruntime import RapidOCR
+# from PIL import Image, ImageDraw, ImageFont
+# from rapidocr_onnxruntime import RapidOCR
 
 from chat.qwen_chat import Chat
 from data.constrant import *
@@ -1881,7 +1881,7 @@ class expertModel:
 
 class Agents:
     session = Session()
-    ocr = RapidOCR()
+    # ocr = RapidOCR()
 
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr: InitAllResource = gsr

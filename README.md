@@ -75,6 +75,10 @@ Script:`doc/deploy_proj`
 
 -   [x] 角色事件知识接入对话流程
 
+## v0.5.1
+
+-   [x] [大模型知识应用测试](src/test/knowledge_application)
+
 ## v0.6
 
 -   [ ] 通用 ai-naive 事件处理流程
