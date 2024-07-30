@@ -89,6 +89,7 @@ class CustomChatAuxiliary(CustomChatModel):
         try:
             text =text.replace('：',':')
             text =text.replace('doctor','Doctor')
+            text =text.replace('Question:','')
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
             thought_index2=find_second_occurrence(text, '\nThought:')
@@ -117,6 +118,8 @@ class CustomChatAuxiliary(CustomChatModel):
             l1=len(s1)
             l2=len(s2)
             text =text.replace('：',':')
+            text =text.replace('doctor','Doctor')
+            text =text.replace('Question:','')
             thought_index = text.find(s1)
             if thought_index == -1 :
                 doctor_index = text.find(s2)
@@ -202,6 +205,7 @@ class CustomChatAuxiliary(CustomChatModel):
             "2.我会提供近一周血糖数据, 请你根据自身经验分析,针对我的个人情况提出相应的问题，每次最多提出两个问题。\n"
             "3.问题关键点可以包括: 是否出现不适症状，症状的持续时间及严重程度，用药情况，饮食情况，血压波动的诱因等,同类问题可以总结在一起问。\n"
             "4.最后请你结合获取到的信息给出结论分析，并解释患者症状可能的原因，如果患者存在饮食和运动不规律、治疗依从性差、情绪应激、睡眠障碍、酗酒、感染、胰岛素不规范注射等情况，给出合理建议。多轮问诊最多3轮，不要打招呼，不要输出列表，只输出问题，不要输出其他内容，直接开始问诊。每轮输出不超过250字。\n"
+            "5.输出结论和建议时，不要带小标题，直接输出结论和建议内容。\n"
         )
 
         pro = kwargs.get("promptParam", {})
@@ -608,7 +612,7 @@ class CustomChatAuxiliary(CustomChatModel):
             )
 
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-        thought, doctor = self.__parse_response__(content)
+        thought, doctor = self.__parse_diff_response__(content,'Thought:','Doctor:')
           
         conts = []
         
