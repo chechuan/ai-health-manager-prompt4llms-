@@ -62,6 +62,7 @@ local:
         aigc_functions_recommended_meal_plan_with_recipes: 0.0.1
         aigc_functions_generate_related_questions: 0.0.1
         aigc_functions_guide_user_back_to_consultation: 0.0.1
+        aigc_functions_generate_greeting: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1

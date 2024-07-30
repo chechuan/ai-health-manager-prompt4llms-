@@ -345,7 +345,7 @@ def mount_aigc_functions(app: FastAPI):
         # 提取并格式化错误信息
         return JSONResponse(
             status_code=500,
-            content={"head": 500, "items": None, "msg": str(exc)},
+            content={"head": 500, "items": None, "msg": exc.errors()},
         )
 
     async def _async_aigc_functions(

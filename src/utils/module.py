@@ -9,11 +9,10 @@ import functools
 import json
 import pickle
 import os
-import re
 import sys
 import time
 import oss2
-from base64 import encode
+from lunar_python import Lunar, Solar
 from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -24,7 +23,6 @@ from typing import (
     Dict,
     Generator,
     List,
-    Literal,
     Tuple,
     Union,
 )
@@ -39,7 +37,7 @@ import yaml
 from sqlalchemy import MetaData, Table, create_engine
 from typing import Optional
 from data.constrant import CACHE_DIR
-from src.utils.api_protocal import AigcFunctionsRequest, AigcFunctionsResponse
+from src.utils.api_protocal import AigcFunctionsResponse
 from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
@@ -121,6 +119,8 @@ class InitAllResource:
         self.__init_model_supplier__()
         self.client = openai.OpenAI()
         self.aclient = openai.AsyncOpenAI()
+
+        self.weather_api_config = self.__load_weather_api_config__()
 
     def __parse_args__(
         self,
@@ -234,6 +234,11 @@ class InitAllResource:
                 logger.debug(f"Initialize prompt version {key} - {ik} - {iv}")
         for key, model_list in model_config.items():
             logger.debug(f"Model Usage: {key} - {model_list}")
+
+    def __load_weather_api_config__(self) -> dict:
+        """加载天气 API 配置"""
+        weather_api = load_yaml(Path("config", "weather_config.yaml"))["weather_api"]
+        return weather_api
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:
@@ -1121,6 +1126,7 @@ def calculate_bmi(weight: float, height: float) -> float:
     # bmi计算
     return round(weight / ((height / 100) ** 2), 1)
 
+
 def calculate_bmr(weight: float, height: float, age: int, gender: str) -> float:
     # 基础代谢率计算
     if gender == "男":
@@ -1183,6 +1189,7 @@ def format_historical_meal_plans_v2(historical_meal_plans: list) -> str:
 
     return formatted_output.strip()
 
+
 def async_clock(func):
     @wraps(func)
     async def clocked(*args, **kwargs):
@@ -1195,6 +1202,7 @@ def async_clock(func):
         return result
     return clocked
 
+
 def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str:
     """将餐次、食物名称的字典结构转换为文本形式"""
     formatted_text = ""
@@ -1205,6 +1213,7 @@ def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str
         for food in foods:
             formatted_text += f"  - {food}\n"
     return formatted_text.strip()
+
 
 def parse_height(height: str) -> float:
     """解析身高，将其标准化为米为单位"""
@@ -1221,6 +1230,7 @@ def parse_height(height: str) -> float:
             return value / 100.0 if value > 10 else value
     raise ValueError("无法解析的身高格式")
 
+
 def calculate_standard_weight(height: str, gender: str) -> float:
     """计算标准体重"""
     height_value = parse_height(height) * 100.0  # 转换为厘米
@@ -1230,6 +1240,7 @@ def calculate_standard_weight(height: str, gender: str) -> float:
         return (height_value - 100) * 0.9 - 2.5
     return None
 
+
 def calculate_standard_body_fat_rate(gender: str) -> str:
     """计算标准体脂率"""
     if gender == "男":
@@ -1237,6 +1248,7 @@ def calculate_standard_body_fat_rate(gender: str) -> str:
     elif gender == "女":
         return "15%-25%"
     return None
+
 
 def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     """
@@ -1340,6 +1352,7 @@ def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
 
     return output
 
+
 def format_historical_meal_plans(historical_meal_plans: list) -> str:
     """
     将历史食谱转换为指定格式的字符串
@@ -1370,7 +1383,120 @@ def format_historical_meal_plans(historical_meal_plans: list) -> str:
     return formatted_output.strip()
 
 
+def get_city_id(city_name, geoapi_url, api_key):
+    url = f"{geoapi_url}?location={city_name}&key={api_key}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = json.loads(response.content)
+        if data['code'] == '200' and data['location']:
+            return data['location'][0]['id']
+        else:
+            return None
+    else:
+        return None
 
+
+def get_weather_info(config, city=None):
+    # 获取当天天气
+    api_key = config['key']
+    weather_base_url = config['weather_base_url']
+    geoapi_url = config['geo_base_url']
+
+    if city:
+        city_id = get_city_id(city, geoapi_url, api_key)
+    else:
+        city_id = get_city_id("北京", geoapi_url, api_key)
+
+    if city_id:
+        url = f"{weather_base_url}?key={api_key}&location={city_id}"
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            data = json.loads(response.content)
+            if 'daily' in data and data['daily']:
+                today_weather = data['daily'][0]
+                formatted_weather = (f"今日{city if city else '北京'}天气{today_weather['textDay']}，"
+                                     f"最高温度{today_weather['tempMax']}度，"
+                                     f"最低温度{today_weather['tempMin']}度，"
+                                     f"风力{today_weather['windScaleDay']}级，"
+                                     f"紫外线强度指数{today_weather['uvIndex']}，"
+                                     f"湿度{today_weather['humidity']}%，"
+                                     f"降水量{today_weather['precip']}mm，"
+                                     f"气压{today_weather['pressure']}hPa，"
+                                     f"能见度{today_weather['vis']}km。")
+                return formatted_weather
+            else:
+                return "无"
+        else:
+            return "无"
+    else:
+        return "无"
+
+
+def determine_recent_solar_terms():
+    date = datetime.now()
+    lunar = Lunar.fromDate(date)
+
+    # 获取当天的节气
+    current_jieqi = lunar.getCurrentJieQi()
+    if current_jieqi:
+        return f"{current_jieqi.getSolar().toYmd()} {current_jieqi.getName()}"
+
+    # 获取下一个节气
+    next_jieqi = lunar.getNextJieQi(True)
+    if next_jieqi:
+        next_jieqi_solar = next_jieqi.getSolar()
+        next_jieqi_date = datetime(next_jieqi_solar.getYear(), next_jieqi_solar.getMonth(), next_jieqi_solar.getDay())
+        delta_days = (next_jieqi_date - date).days
+        if delta_days <= 7:
+            return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
+
+    return "无"
+
+
+def get_festivals_and_other_festivals():
+    # 获取当天的节日和纪念日
+    date = datetime.now()
+    year, month, day = date.year, date.month, date.day
+    solar = Solar.fromYmd(year, month, day)
+
+    festivals = solar.getFestivals()
+    other_festivals = solar.getOtherFestivals()
+
+    all_festivals = []
+    if festivals:
+        all_festivals.extend(festivals)
+    if other_festivals:
+        all_festivals.extend(other_festivals)
+
+    return ','.join(all_festivals) if all_festivals else "无"
+
+
+def generate_daily_schedule(schedule):
+    """
+    生成当日剩余日程的格式化字符串
+    schedule: list of dicts, 每个字典包含时间和事件，例如：[{'time': '13:00', 'event': '吃火锅'}, {'time': '16:00', 'event': '复诊'}, {'time': '20:00', 'event': '服药'}]
+    """
+    schedule_str = ""
+    for item in schedule:
+        schedule_str += f"{item['time']} {item['event']}\n"
+    return schedule_str
+
+
+def generate_key_indicators(data):
+    """
+    生成关键指标的表格字符串
+    data: list of dicts, 每个字典包含标准格式的日期时间、收缩压、舒张压和单位，例如：[{'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'}]
+    """
+    table_str = ""
+    table_str += "| date       | time       | 收缩压 | 舒张压 | 单位      |\n"
+    table_str += "|------------|------------|-------|-------|-----------|\n"
+    for item in data:
+        datetime_str = item['datetime']
+        date_str, time_str = datetime_str.split()
+        date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
+        table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
+    return table_str
 
 
 if __name__ == "__main__":

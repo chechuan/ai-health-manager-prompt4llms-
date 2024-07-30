@@ -73,6 +73,7 @@ USER_PROFILE_KEY_MAP = {
     "gender": "性别",
     "height": "身高",
     "weight": "体重",
+    "weight_evaluation": "体重评价",
     "disease_history": "疾病史",
     "allergic_history": "过敏史",
     "surgery_history": "手术史",
@@ -117,7 +118,9 @@ USER_PROFILE_KEY_MAP = {
     "standard_body_fat_rate": "标准体脂率",
     "bmr": "基础代谢",
     "recommended_caloric_intake": "保持当前体重推荐摄入热量值",
-    "weight_status": "体重状态"
+    "weight_status": "体重状态",
+    "preferred_name": "用户期望称呼",
+    "city": "所在城市"
 }
 
 
@@ -218,6 +221,8 @@ class UserProfile(BaseModel):
     emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
     weight_status: Optional[str] = Field(None, description="体重状态", example=["偏低", "正常", "超重", "肥胖"])
     recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
+    preferred_name: Optional[str] = Field(None, description="用户期望称呼", example=["张叔叔"])
+    city: Optional[str] = Field(None, description="所在城市", example=["张叔叔"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -760,6 +765,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_recommended_meal_plan_with_recipes",
         "aigc_functions_generate_related_questions",
         "aigc_functions_guide_user_back_to_consultation",
+        "aigc_functions_generate_greeting",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -785,7 +791,6 @@ class SanJiKangYangRequest(BaseModel):
             }
         ],
     )
-
     messages: Optional[List[ChatMessage]] = Field(
         None,
         description="对话历史",
@@ -804,7 +809,6 @@ class SanJiKangYangRequest(BaseModel):
         description="模型参数",
         examples=[[{"stream": False}]],
     )
-
     food_principle: Union[str, None] = Field(
         None,
         description="饮食调理原则",
@@ -1056,6 +1060,27 @@ class SanJiKangYangRequest(BaseModel):
                 {"role": "user", "content": "同时出现，没有别的症状"},
             ]
         ],
+    )
+    daily_schedule: Union[None, List[dict]] = Field(
+        None,
+        description="当日剩余日程",
+        examples=[{'time': '13:00', 'event': '吃火锅'}, {'time': '16:00', 'event': '复诊'}, {'time': '20:00', 'event': '服药'}],
+    )
+    key_indicators: Union[None, List[dict]] = Field(
+        None,
+        description="关键指标",
+        examples=[
+                    {'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-20 20:34:35', 'sbp': 118, 'dbp': 86, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-21 08:24:34', 'sbp': 132, 'dbp': 86, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-21 21:05:46', 'sbp': 121, 'dbp': 78, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-22 09:01:09', 'sbp': 128, 'dbp': 86, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-22 20:25:21', 'sbp': 123, 'dbp': 80, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-23 09:11:41', 'sbp': 128, 'dbp': 92, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-23 19:32:18', 'sbp': 117, 'dbp': 88, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-24 08:05:12', 'sbp': 132, 'dbp': 85, 'unit': 'mmHg'},
+                    {'datetime': '2024-07-24 20:07:05', 'sbp': 134, 'dbp': 86, 'unit': 'mmHg'}
+            ],
     )
 
 
