@@ -766,12 +766,12 @@ class JiaheExpertModel:
     @staticmethod
     async def child_dish_rec(userInfo, cur_date, location, ref_dish, dish_principle):
         # 1. 生成菜品、功效
-        userInfo = get_userInfo(userInfo)
+        userInfo_str = get_userInfo(userInfo)
         messages = [
             {
                 "role": "user",
                 "content": jiahe_child_dish_effect.format(
-                    userInfo, cur_date, location, ref_dish, dish_principle
+                    userInfo_str, cur_date, location, ref_dish, dish_principle
                 ),
             }
         ]
