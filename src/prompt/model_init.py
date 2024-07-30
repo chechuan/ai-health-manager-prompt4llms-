@@ -113,25 +113,25 @@ def callLLM(
                 h = history
         kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
-        retry = True
-        while retry:
+        retry = 0
+        while retry <= 3:
             try:
                 completion = client.chat.completions.create(**kwds)
-                retry = False
+                break
             except Exception as e:
-                retry = True
+                retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
         if stream:
             return completion
         while not completion.choices:
-            retry = True
-            while retry:
+            retry = 0
+            while retry <= 3:
                 try:
                     completion = client.chat.completions.create(**kwds)
-                    retry = False
+                    break
                 except Exception as e:
-                    retry = True
+                    retry += 1
                     logger.info(f"request llm model error, retry to request")
                     continue
             logger.info(f"Model generate completion:{repr(completion)}")
@@ -229,25 +229,26 @@ async def acallLLM(
             else:
                 h = history
         kwds["messages"] = h
-        retry = True
-        while retry:
+        retry = 0
+        while retry <= 3:
             try:
                 completion = await aclient.chat.completions.create(**kwds)
-                retry = False
+                break
             except Exception as e:
-                retry = True
+                retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
         logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
             return completion
         while not completion.choices:
-            while retry:
+            retry = 0
+            while retry <= 3:
                 try:
                     completion = await aclient.chat.completions.create(**kwds)
-                    retry = False
+                    break
                 except Exception as e:
-                    retry = True
+                    retry += 1
                     logger.info(f"request llm model error, retry to request")
                     continue
             logger.info(f"Model generate completion:{repr(completion)}")
