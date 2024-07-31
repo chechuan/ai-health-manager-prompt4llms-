@@ -71,6 +71,7 @@ local:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -106,11 +107,6 @@ dev:
         aigc_functions_mental_principle_new: 0.0.1
         aigc_functions_chinese_therapy_new: 0.0.1
         aigc_functions_drug_recommendation: 0.0.2
-        sanji_assess_keyword_classification: 0.0.1
-        sanji_assess_literature_classification: 0.0.1
-        sanji_assess_3d_classification: 0.0.1
-        sanji_assess_3health_classification: 0.0.1
-        sanji_intervene_goal_classification: 0.0.1
         aigc_functions_food_principle: 0.0.1
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
@@ -145,49 +141,7 @@ dev:
         aigc_functions_recommended_meal_plan_with_recipes: 0.0.1
         aigc_functions_generate_related_questions: 0.0.1
         aigc_functions_guide_user_back_to_consultation: 0.0.1
-        glucose_consultation: 0.0.1
-        blood_interact: 0.0.1
-        conversation_deal: 0.0.1
-    character:
-    tool:
-        创建日程: 0.2.0
-        查询日程: 0.1.0
-    intent:
-test:
-    event:
-        other: 1.1.0
-        drug_rec: 0.1.0
-        sport_rec: 0.1.0
-        chronic_qa: 0.1.0
-        schedule_qry_up: 0.1.1
-        schedule_manager: 0.1.0
-        nutri_knowledge_rec: 0.1.0
-        auxiliary_diagnosis: 1.1.0
-        auxiliary_diagnosis_summary_diet_rec: 1.0.0
-        auxiliary_diagnosis_with_doctor_recommend: 1.1.0
-        assert_whether_contact_family_doctor: 0.0.1
-        call_schedule_create_reply: 0.1.1
-        warning_solutions_early_continuous: 0.1.0
-        warning_solutions_early_not_continuous: 0.1.0
-        reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.2
-        report_interpretation_chat_with_doctor_recommend: 0.0.1
-        aigc_functions_single_choice: 0.0.2
-        aigc_functions_consultation_summary: 0.0.1
-        aigc_functions_consultation_summary_to_group: 0.0.2
-        aigc_functions_consultation_summary_chief_disease: 0.0.1
-        aigc_functions_diagnosis: 0.0.1
-        aigc_functions_diagnosis_result: 0.0.1
-        aigc_functions_drug_recommendation: 0.0.2
-        aigc_functions_food_principle: 0.0.1
-        aigc_functions_sport_principle: 0.0.1
-        aigc_functions_mental_principle: 0.0.1
-        aigc_functions_chinese_therapy: 0.0.1
-        aigc_functions_food_principle_new: 0.0.1
-        aigc_functions_sport_principle_new: 0.0.1
-        aigc_functions_mental_principle_new: 0.0.1
-        aigc_functions_chinese_therapy_new: 0.0.1
-        aigc_functions_reason_for_care_plan: 0.0.1
+        aigc_functions_generate_greeting: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
@@ -196,38 +150,7 @@ test:
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
-    character:
-    tool:
-        创建日程: 0.2.0
-        查询日程: 0.1.0
-    intent:
-fat:
-    event:
-        other: 1.1.0
-        drug_rec: 0.1.0
-        sport_rec: 0.1.0
-        chronic_qa: 0.1.0
-        schedule_qry_up: 0.1.1
-        schedule_manager: 0.1.0
-        nutri_knowledge_rec: 0.1.0
-        auxiliary_diagnosis: 1.1.0
-        auxiliary_diagnosis_summary_diet_rec: 1.0.0
-        call_schedule_create_reply: 0.1.1
-        warning_solutions_early_continuous: 0.1.0
-        warning_solutions_early_not_continuous: 0.1.0
-        reunion_meals_restaurant_selection: 1.0.0
-        report_interpretation_chat: 0.0.1
-        aigc_functions_single_choice: 0.0.2
-        aigc_functions_consultation_summary: 0.0.1
-        aigc_functions_consultation_summary_chief_disease: 0.0.1
-        aigc_functions_diagnosis: 0.0.1
-        aigc_functions_diagnosis_result: 0.0.1
-        aigc_functions_drug_recommendation: 0.0.1
-        aigc_functions_food_principle: 0.0.1
-        aigc_functions_sport_principle: 0.0.1
-        aigc_functions_mental_principle: 0.0.1
-        aigc_functions_chinese_therapy: 0.0.1
-        aigc_functions_reason_for_care_plan: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -271,9 +194,20 @@ prod:
         aigc_functions_generate_allergic_history: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
+        aigc_functions_physician_consultation_decision_support_v2: 0.0.1
+        aigc_functions_food_principle_new: 0.0.1
+        aigc_functions_sport_principle_new: 0.0.1
+        aigc_functions_mental_principle_new: 0.0.1
+        aigc_functions_chinese_therapy_new: 0.0.1
+        sanji_assess_keyword_classification: 0.0.1
+        sanji_assess_literature_classification: 0.0.1
+        sanji_assess_3d_classification: 0.0.1
+        sanji_assess_3health_classification: 0.0.1
+        sanji_intervene_goal_classification: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
+        chat_start_with_weather: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
