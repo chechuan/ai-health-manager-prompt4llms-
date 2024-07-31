@@ -1438,11 +1438,11 @@ def get_weather_info(config, city=None):
                                      f"能见度{today_weather['vis']}km。")
                 return formatted_weather
             else:
-                return "无"
+                return None
         else:
-            return "无"
+            return None
     else:
-        return "无"
+        return None
 
 
 def determine_recent_solar_terms():
@@ -1463,7 +1463,7 @@ def determine_recent_solar_terms():
         if delta_days <= 7:
             return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
 
-    return "无"
+    return None
 
 
 def get_festivals_and_other_festivals():
@@ -1481,7 +1481,7 @@ def get_festivals_and_other_festivals():
     if other_festivals:
         all_festivals.extend(other_festivals)
 
-    return ','.join(all_festivals) if all_festivals else "无"
+    return ','.join(all_festivals) if all_festivals else None
 
 
 def generate_daily_schedule(schedule):
@@ -1501,13 +1501,14 @@ def generate_key_indicators(data):
     data: list of dicts, 每个字典包含标准格式的日期时间、收缩压、舒张压和单位，例如：[{'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'}]
     """
     table_str = ""
-    table_str += "| date       | time       | 收缩压 | 舒张压 | 单位      |\n"
-    table_str += "|------------|------------|-------|-------|-----------|\n"
-    for item in data:
-        datetime_str = item['datetime']
-        date_str, time_str = datetime_str.split()
-        date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
-        table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
+    if data:
+        table_str += "| date       | time       | 收缩压 | 舒张压 | 单位      |\n"
+        table_str += "|------------|------------|-------|-------|-----------|\n"
+        for item in data:
+            datetime_str = item['datetime']
+            date_str, time_str = datetime_str.split()
+            date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
+            table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
     return table_str
 
 
