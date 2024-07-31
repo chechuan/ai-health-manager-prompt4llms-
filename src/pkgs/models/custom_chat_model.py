@@ -124,7 +124,7 @@ class CustomChatAuxiliary(CustomChatModel):
             if thought_index == -1 :
                 doctor_index = text.find(s2)
                 if doctor_index != -1:
-                    return "None", text[doctor_index + l2 :].strip()
+                    return "None", text[doctor_index + l2+1 :].strip()
                 else:
                     return "None", text 
             doctor_index = text.find("\n"+s2)
@@ -133,9 +133,9 @@ class CustomChatAuxiliary(CustomChatModel):
             thought = text[thought_index + l1 : doctor_index].strip()
             thought_index2=find_second_occurrence(text, "\n"+s1)
             if thought_index2 !=-1:
-                doctor = text[doctor_index + l2 :thought_index2].strip()
+                doctor = text[doctor_index + l2+1 :thought_index2].strip()
             else:
-                doctor = text[doctor_index + l2 :].strip()
+                doctor = text[doctor_index + l2+1 :].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
