@@ -91,6 +91,7 @@ def callLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
+    completion=""
     if not history:
         if "qwen1.5" in model.lower():
             query = apply_chat_template(query)
@@ -221,6 +222,7 @@ async def acallLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
+    completion =""
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
