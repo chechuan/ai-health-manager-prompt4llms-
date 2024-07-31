@@ -4034,29 +4034,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
