@@ -1577,6 +1577,13 @@ async def parse_generic_content(content):
     except json.JSONDecodeError:
         pass
 
+    try:
+        # 尝试将 content 解析为一个 JSON 对象
+        content_obj = json.loads(content)
+        return content_obj
+    except json.JSONDecodeError:
+        pass
+
     # 如果所有尝试都失败，返回空列表
     return []
 

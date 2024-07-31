@@ -4030,33 +4030,12 @@ class Agents:
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-        )
+        # content: str = await self.aaigc_functions_general(
+        #     _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        # )
+        content = '```\n[\n  {\n    "meal": "早餐",\n    "foods": [\n      {\n        "recipe": "燕麦粥",\n        "recommended_amount": "100g",\n        "calories": {\n          "value": 300,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "水煮蛋",\n        "recommended_amount": "2个",\n        "calories": {\n          "value": 180,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "新鲜水果",\n        "recommended_amount": "200g",\n        "calories": {\n          "value": 150,\n          "unit": "kcal"\n        }\n      }\n    ]\n  },\n  {\n    "meal": "加餐",\n    "foods": [\n      {\n        "recipe": "无糖酸奶",\n        "recommended_amount": "125g",\n        "calories": {\n          "value": 120,\n          "unit": "kcal"\n        }\n      }\n    ]\n  },\n  {\n    "meal": "午餐",\n    "foods": [\n      {\n        "recipe": "鸡胸肉蔬菜沙拉",\n        "recommended_amount": "100g",\n        "calories": {\n          "value": 200,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "全麦面包",\n        "recommended_amount": "2片",\n        "calories": {\n          "value": 240,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "煮西兰花",\n        "recommended_amount": "200g",\n        "calories": {\n          "value": 60,\n          "unit": "kcal"\n        }\n      }\n    ]\n  },\n  {\n    "meal": "下午加餐",\n    "foods": [\n      {\n        "recipe": "坚果混合",\n        "recommended_amount": "30g",\n        "calories": {\n          "value": 150,\n          "unit": "kcal"\n        }\n      }\n    ]\n  },\n  {\n    "meal": "晚餐",\n    "foods": [\n      {\n        "recipe": "清蒸鱼",\n        "recommended_amount": "100g",\n        "calories": {\n          "value": 180,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "五谷杂粮饭",\n        "recommended_amount": "100g",\n        "calories": {\n          "value": 250,\n          "unit": "kcal"\n        }\n      },\n      {\n        "recipe": "蒸蔬菜",\n        "recommended_amount": "200g",\n        "calories": {\n          "value": 80,\n          "unit": "kcal"\n        }\n      }\n    ]\n  }\n]\n```'
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
