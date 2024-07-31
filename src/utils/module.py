@@ -42,6 +42,7 @@ from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
 )
+import re
 
 try:
     from src.utils.Logger import logger
@@ -1497,6 +1498,66 @@ def generate_key_indicators(data):
         date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
         table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
     return table_str
+
+
+async def parse_generic_content(content):
+    """异步解析内容为 JSON 对象，如果解析失败则返回一个空列表"""
+
+    if isinstance(content, openai.AsyncStream):
+        return content
+
+    try:
+        # 直接尝试解析为 JSON
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 移除换行符
+        content = content.replace('\n', '')
+        # 在减号后面添加空格
+        content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
+        # 再次尝试解析
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理JSON代码块
+        content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+        if content_json:
+            return json.loads(content_json[0])
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理Python代码块
+        content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+        if content_python:
+            # 假设Python代码块中包含的是JSON字符串
+            return json.loads(content_python[0].strip())
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'{.*}', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(0)
+            return json.loads(json_data)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 移除三个反引号
+        content = re.sub(r'^```|```$', '', content, flags=re.MULTILINE)
+        # 尝试解析去除了三个反引号的内容
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    # 如果所有尝试都失败，返回空列表
+    return []
 
 
 if __name__ == "__main__":
