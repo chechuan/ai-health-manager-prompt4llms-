@@ -1584,6 +1584,41 @@ async def parse_generic_content(content):
     except json.JSONDecodeError:
         pass
 
+    try:
+        # 使用正则表达式精确移除最外层的反引号
+        content = re.sub(r'^```(?P<content>.*)```$', r'\g<content>', content, flags=re.DOTALL)
+
+        # 移除最后一个逗号（如果有）
+        content = re.sub(r',\s*\]', r']', content)
+
+        # 尝试解析去除了反引号和多余逗号的内容
+        return json.loads(content.strip())
+    except json.JSONDecodeError as e:
+        # 记录错误日志
+        pass
+
+    try:
+        # 使用正则表达式来查找并提取JSON数据
+        json_match = re.search(r'\[(.*?)\]', content, re.DOTALL)
+
+        if json_match:
+            # 提取JSON字符串
+            json_data_str = json_match.group(0)
+
+            # 清理JSON数据，移除可能的换行符和多余空格
+            cleaned_json_data = json_data_str.replace('\n', '').replace('\t', '').strip()
+
+            # 尝试解析JSON数据
+            parsed_data = json.loads(cleaned_json_data)
+
+            return parsed_data
+        # 如果没有找到匹配的JSON数据，抛出异常
+        pass
+    except json.JSONDecodeError as e:
+        # 如果解析失败，记录错误并返回空列表
+        pass
+        # logger.error(f"Failed to parse JSON: {e}")
+
     # 如果所有尝试都失败，返回空列表
     return []
 
