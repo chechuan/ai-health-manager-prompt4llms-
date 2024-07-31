@@ -850,11 +850,11 @@ class JiaheExpertModel:
         yield {"message": {"dish_name": name, "dish_effect": effect, "image": image,
                            "nutrient_elements": [
                                {"nutrient_name": "碳水化合物", "content": round(float(carbon_water), 2),
-                                "caloric_ratio": round(float(carbon_water_ratio), 2)},
+                                "caloric_ratio": round(float(carbon_water_ratio) * 100, 2)},
                                {"nutrient_name": "蛋白质", "content": round(float(protein), 2),
-                                "caloric_ratio": round(float(protein_ratio), 2)},
+                                "caloric_ratio": round(float(protein_ratio) * 100, 2)},
                                {"nutrient_name": "脂肪", "content": round(float(fat), 2),
-                                "caloric_ratio": round(float(fat_ratio), 2)}
+                                "caloric_ratio": round(float(fat_ratio) * 100, 2)}
                            ]}, "end": True}
 
 
