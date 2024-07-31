@@ -10,6 +10,7 @@
 from typing import List
 from src.utils.module import async_clock
 
+
 class ParamTools:
 
     @classmethod
@@ -31,7 +32,7 @@ class ParamTools:
 
         async def add_missing(field, prefix=""):
             _prefix = prefix.rstrip(".")
-            missing.append(f"{_prefix} 缺少 {field}")
+            missing.append({"loc": [_prefix, field], "msg": f"缺少 {_prefix} {field}", "type": "missing_field"})
 
         async def recursive_check(current_params, current_fields, prefix=""):
             """
@@ -45,7 +46,7 @@ class ParamTools:
             _prefix = prefix.rstrip(".")
             if not current_params:
                 if _prefix not in at_least_one:
-                    raise ValueError(f"{_prefix} 不能为空")
+                    await add_missing("", prefix)
 
             if isinstance(current_fields, dict):
                 for param, fields in current_fields.items():
@@ -69,7 +70,7 @@ class ParamTools:
         # 检查至少一项参数存在的条件
         if at_least_one and not any(params.get(p) for p in at_least_one):
             # 打印执行时间日志
-            raise ValueError(f"至少需要提供以下一项参数：{', '.join(at_least_one)}")
+            await add_missing("at_least_one", "")
         # 检查所有必填字段
         for key, fields in required_fields.items():
             if key in params:
@@ -78,8 +79,9 @@ class ParamTools:
                 await add_missing(key)
 
         # 如果有缺失的必填字段，抛出错误
+        # print(missing)
         if missing:
-            raise ValueError(f"缺少必要的字段：{'; '.join(missing)}")
+            raise ValueError(missing)
 
     @classmethod
     async def check_aigc_functions_body_fat_weight_management_consultation(

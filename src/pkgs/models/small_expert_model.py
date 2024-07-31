@@ -70,7 +70,13 @@ from src.utils.module import (
     convert_meal_plan_to_text,
     calculate_standard_weight,
     calculate_and_format_diet_plan,
-    format_historical_meal_plans
+    format_historical_meal_plans,
+    curr_time,
+    get_weather_info,
+    determine_recent_solar_terms,
+    get_festivals_and_other_festivals,
+    generate_daily_schedule,
+    generate_key_indicators
 )
 
 
@@ -3532,7 +3538,7 @@ class Agents:
 
         # 组装用户信息和关键指标字符串
         user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
-        key_indicators_str = self.__compose_user_msg__("key_indicators", key_indicators=kwargs["key_indicators"])
+        key_indicators_str = self.__compose_user_msg__("key_indicators", key_indicators=kwargs.get("key_indicators", None))
 
         # 组装提示变量并包含体重状态和目标消息
         prompt_vars = {
@@ -3758,13 +3764,35 @@ class Agents:
             return content
         try:
             content = json5.loads(content)
+
         except Exception as e:
             try:
-                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
+                # 移除换行符
+                content = content.replace('\n', '')
+
+                # 在减号后面添加空格
+                content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
+
+                # 尝试使用 json5 解析
                 content = dumpJS(json5.loads(content))
             except Exception as e:
                 logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
-                content = dumpJS([])
+
+                # 如果解析失败，尝试使用正则表达式查找 JSON 数据
+                try:
+                    matches = re.findall("```json(.*?)```", content, re.DOTALL)
+                    if matches:
+                        # 尝试解析第一个匹配到的 JSON 数据
+                        content = dumpJS(json5.loads(matches[0]))
+                    else:
+                        # 如果没有匹配到 JSON 数据，记录错误并设置为空列表
+                        logger.error("No JSON content found in the string.")
+                        content = dumpJS([])
+                except Exception as e:
+                    logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
+                    content = dumpJS([])
+
+
         content = await parse_examination_plan(content)
         return content
 
@@ -3931,23 +3959,34 @@ class Agents:
             content = json5.loads(content)
         except Exception as e:
             try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
+                # 移除换行符
+                content = content.replace('\n', '')
+
+                # 在减号后面添加空格
+                content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
+
+                # 尝试使用 json5 解析
+                content = dumpJS(json5.loads(content))
             except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
+                try:
+                    # 处理JSON代码块
+                    content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+                    if content_json:
+                        content = dumpJS(json5.loads(content_json[0]))
+                    else:
+                        # 处理Python代码块
+                        content_python = re.findall(
+                            r"```python(.*?)```", content, re.DOTALL
+                        )
+                        if content_python:
+                            content = content_python[0].strip()
+                        else:
+                            raise ValueError("No matching code block found")
+                except Exception as e:
+                    logger.error(f"AIGC Functions process_content json5.loads error: {e}")
+                    content = dumpJS([])
         content = await parse_examination_plan(content)
+
         return content
 
     async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
@@ -4065,7 +4104,6 @@ class Agents:
         返回:
             List[str]: 用户可能提问的三个相关问题
         """
-
         _event = "猜你想问"
 
         # 获取用户提问信息
@@ -4107,79 +4145,66 @@ class Agents:
         content = await parse_examination_plan(content)
         return content
 
-    # async def aigc_functions_generate_greeting(self, **kwargs) -> str:
-    #     """
-    #     生成每日问候开场白
-    #
-    #     需求文档：<https://alidocs.dingtalk.com/i/nodes/amweZ92PV6BD4ZlzHvbOD3xzVxEKBD6p?utm_scene=team_space&iframeQuery=anchorId%3Duu_lyz717o1dw4tnoeoiqa>
-    #
-    #     根据用户画像、当日剩余日程、关键指标、当日相关信息等生成每日问候开场白。
-    #
-    #     参数:
-    #         kwargs (dict): 包含用户画像、当日剩余日程、关键指标、当日相关信息的参数字典
-    #
-    #     返回:
-    #         str: 每日问候开场白文本
-    #     """
-    #
-    #     _event = "生成每日问候开场白"
-    #
-    #     # 必填字段和至少需要一项的参数列表
-    #     required_fields = {
-    #         "user_profile": ["age", "gender", "management_goals", "weight_status", "medical_history", "city",
-    #                          "user_preference_name"],
-    #         "daily_schedule": ["events"],
-    #         "key_indicators": ["data"],
-    #         "daily_info": ["current_datetime", "weather", "jieqi", "festival"]
-    #     }
-    #
-    #     # 验证必填字段
-    #     await ParamTools.check_required_fields(kwargs, required_fields)
-    #
-    #     # 获取用户画像信息
-    #     user_profile = kwargs.get("user_profile", {})
-    #
-    #     # 拼接用户画像信息字符串
-    #     user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
-    #
-    #     # 获取当日剩余日程信息
-    #     daily_schedule = kwargs.get("daily_schedule", {}).get("events", [])
-    #
-    #     # 拼接当日剩余日程信息字符串
-    #     daily_schedule_str = self.__compose_user_msg__("daily_schedule", events=daily_schedule)
-    #
-    #     # 获取关键指标信息
-    #     key_indicators = kwargs.get("key_indicators", {}).get("data", [])
-    #
-    #     # 拼接关键指标信息字符串
-    #     key_indicators_str = self.__compose_user_msg__("key_indicators", data=key_indicators)
-    #
-    #     # 获取当日相关信息
-    #     daily_info = kwargs.get("daily_info", {})
-    #
-    #     # 拼接当日相关信息字符串
-    #     daily_info_str = self.__compose_user_msg__("daily_info", **daily_info)
-    #
-    #     # 组合消息字符串
-    #     messages_str = f"{user_profile_str}\n{daily_schedule_str}\n{key_indicators_str}\n{daily_info_str}"
-    #
-    #     # 构建提示变量
-    #     prompt_vars = {
-    #         "user_profile": user_profile_str,
-    #         "daily_schedule": daily_schedule_str,
-    #         "key_indicators": key_indicators_str,
-    #         "daily_info": daily_info_str,
-    #         "datetime": datetime.today().strftime("%Y-%m-%d %H:%M:%S")
-    #     }
-    #
-    #     # 更新模型参数
-    #     model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
-    #
-    #     # 调用通用的 AIGC 函数并返回内容
-    #     content: str = await self.aaigc_functions_general(
-    #         _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-    #     )
-    #     return content
+    async def aigc_functions_generate_greeting(self, **kwargs) -> str:
+        """
+        生成每日问候开场白
+
+        需求文档：<https://alidocs.dingtalk.com/i/nodes/amweZ92PV6BD4ZlzHvbOD3xzVxEKBD6p?utm_scene=team_space&iframeQuery=anchorId%3Duu_lyz717o1dw4tnoeoiqa>
+
+        根据用户画像、当日剩余日程、关键指标、当日相关信息等生成每日问候开场白。
+
+        参数:
+            kwargs (dict): 包含用户画像、当日剩余日程、关键指标、当日相关信息的参数字典
+
+        返回:
+            str: 每日问候开场白文本
+        """
+
+        _event = "生成每日问候开场白"
+
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
+        city = user_profile.get("city", None)
+
+        # 拼接用户画像信息字符串
+        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+
+        # 获取当日剩余日程信息
+        daily_schedule = kwargs.get("daily_schedule", [])
+        daily_schedule_str = generate_daily_schedule(daily_schedule)
+
+        # 获取关键指标信息
+        key_indicators = kwargs.get("key_indicators", [])
+        key_indicators_str = generate_key_indicators(key_indicators)
+
+        # 获取当天天气
+        today_weather = get_weather_info(self.gsr.weather_api_config, city)
+
+        # 获取最近节气
+        recent_solar_terms = determine_recent_solar_terms()
+
+        # 获取当日节日
+        today_festivals = get_festivals_and_other_festivals()
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile_str,
+            "daily_schedule": daily_schedule_str,
+            "key_indicators": key_indicators_str,
+            "today_weather": today_weather,
+            "recent_solar_terms": recent_solar_terms,
+            "today_festivals": today_festivals,
+            "datetime": curr_time()
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
 
     async def aigc_functions_guide_user_back_to_consultation(self, **kwargs) -> str:
         """
