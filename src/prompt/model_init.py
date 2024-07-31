@@ -236,6 +236,7 @@ async def acallLLM(
                 break
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
         
@@ -248,6 +249,7 @@ async def acallLLM(
                 retry += 1
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
             logger.info(f"Model generate completion:{repr(completion)}")
