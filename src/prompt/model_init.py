@@ -91,7 +91,7 @@ def callLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
-    completion=""
+    
     if not history:
         if "qwen1.5" in model.lower():
             query = apply_chat_template(query)
@@ -116,7 +116,6 @@ def callLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-            logger.info(f"Model generate completion:{repr(completion)}")
         
         ret = completion.choices[0].text
     else:
@@ -222,7 +221,7 @@ async def acallLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
-    completion =""
+    
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
@@ -236,7 +235,7 @@ async def acallLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-        logger.info(f"Model generate completion:{repr(completion)}")
+        
         if stream:
             return completion
         retry = 0
