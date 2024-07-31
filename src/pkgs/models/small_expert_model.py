@@ -76,7 +76,8 @@ from src.utils.module import (
     determine_recent_solar_terms,
     get_festivals_and_other_festivals,
     generate_daily_schedule,
-    generate_key_indicators
+    generate_key_indicators,
+    parse_generic_content
 )
 
 
@@ -3953,39 +3954,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 移除换行符
-                content = content.replace('\n', '')
-
-                # 在减号后面添加空格
-                content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
-
-                # 尝试使用 json5 解析
-                content = dumpJS(json5.loads(content))
-            except Exception as e:
-                try:
-                    # 处理JSON代码块
-                    content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                    if content_json:
-                        content = dumpJS(json5.loads(content_json[0]))
-                    else:
-                        # 处理Python代码块
-                        content_python = re.findall(
-                            r"```python(.*?)```", content, re.DOTALL
-                        )
-                        if content_python:
-                            content = content_python[0].strip()
-                        else:
-                            raise ValueError("No matching code block found")
-                except Exception as e:
-                    logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                    content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
 
         return content
 
