@@ -97,14 +97,15 @@ def callLLM(
             query = apply_chat_template(query)
         kwds["prompt"] = query
         retry = 0
-        while retry <= retry_times:
-            try:
-                completion = client.chat.completions.create(**kwds)
-                break
-            except Exception as e:
-                retry += 1
-                logger.info(f"request llm model error, retry to request")
-                continue
+        # while retry <= retry_times:
+        #     try:
+        #         completion = client.chat.completions.create(**kwds)
+        #         break
+        #     except Exception as e:
+        #         retry += 1
+        #         logger.info(f"request llm model error, retry to request")
+        #         continue
+        completion = client.chat.completions.create(**kwds)
         if stream:
             return completion
         retry = 0
@@ -227,15 +228,15 @@ async def acallLLM(
             query = apply_chat_template(query)
         kwds["prompt"] = query
         retry = 0
-        while retry <= retry_times:
-            try:
-                completion = await aclient.chat.completions.create(**kwds)
-                break
-            except Exception as e:
-                retry += 1
-                logger.info(f"request llm model error, retry to request")
-                continue
-        
+        # while retry <= retry_times:
+        #     try:
+        #         completion = await aclient.chat.completions.create(**kwds)
+        #         break
+        #     except Exception as e:
+        #         retry += 1
+        #         logger.info(f"request llm model error, retry to request")
+        #         continue
+        completion = await aclient.chat.completions.create(**kwds)
         if stream:
             return completion
         retry = 0
