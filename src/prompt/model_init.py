@@ -91,16 +91,33 @@ def callLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
+    
     if not history:
         if "qwen1.5" in model.lower():
             query = apply_chat_template(query)
         kwds["prompt"] = query
-        completion = client.completions.create(**kwds)
+        retry = 0
+        while retry <= retry_times:
+            try:
+                completion = client.completions.create(**kwds)
+                break
+            except Exception as e:
+                retry += 1
+                logger.info(f"request llm model error, retry to request")
+                continue
+        
         if stream:
             return completion
-        while not completion.choices:
-            completion = client.completions.create(**kwds)
-            logger.info(f"Model generate completion:{repr(completion)}")
+        retry = 0
+        while not completion.choices and retry <= retry_times:
+            try:
+                completion = client.completions.create(**kwds)
+                retry += 1
+            except Exception as e:
+                retry += 1
+                logger.info(f"request llm model error, retry to request")
+                continue
+        
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
@@ -122,6 +139,7 @@ def callLLM(
                 break
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
         if stream:
@@ -133,6 +151,7 @@ def callLLM(
                 retry += 1
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
             logger.info(f"Model generate completion:{repr(completion)}")
@@ -205,16 +224,34 @@ async def acallLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
+    
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
         kwds["prompt"] = query
-        completion = await aclient.completions.create(**kwds)
-        logger.info(f"Model generate completion:{repr(completion)}")
+        retry = 0
+        while retry <= retry_times:
+            try:
+                completion = await aclient.completions.create(**kwds)
+                break
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
+        
         if stream:
             return completion
-        while not completion.choices:
-            completion = await aclient.completions.create(**kwds)
+        retry = 0
+        while not completion.choices and retry <= retry_times:
+            try:
+                completion = await aclient.completions.create(**kwds)
+                retry += 1
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
             logger.info(f"Model generate completion:{repr(completion)}")
 
         ret = completion.choices[0].text
@@ -237,6 +274,7 @@ async def acallLLM(
                 break
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
         logger.info(f"Model generate completion:{repr(completion)}")
@@ -249,6 +287,7 @@ async def acallLLM(
                 retry += 1
             except Exception as e:
                 retry += 1
+                logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
             logger.info(f"Model generate completion:{repr(completion)}")

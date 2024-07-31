@@ -76,7 +76,8 @@ from src.utils.module import (
     determine_recent_solar_terms,
     get_festivals_and_other_festivals,
     generate_daily_schedule,
-    generate_key_indicators
+    generate_key_indicators,
+    parse_generic_content
 )
 
 
@@ -3953,39 +3954,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 移除换行符
-                content = content.replace('\n', '')
-
-                # 在减号后面添加空格
-                content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
-
-                # 尝试使用 json5 解析
-                content = dumpJS(json5.loads(content))
-            except Exception as e:
-                try:
-                    # 处理JSON代码块
-                    content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                    if content_json:
-                        content = dumpJS(json5.loads(content_json[0]))
-                    else:
-                        # 处理Python代码块
-                        content_python = re.findall(
-                            r"```python(.*?)```", content, re.DOTALL
-                        )
-                        if content_python:
-                            content = content_python[0].strip()
-                        else:
-                            raise ValueError("No matching code block found")
-                except Exception as e:
-                    logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                    content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
 
         return content
 
@@ -4065,29 +4034,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
@@ -4166,19 +4113,21 @@ class Agents:
         user_profile = kwargs.get("user_profile", {})
         city = user_profile.get("city", None)
 
-        # 拼接用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
-
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
         daily_schedule_str = generate_daily_schedule(daily_schedule)
+        daily_schedule_section = f"## 当日剩余日程\n{daily_schedule_str}" if daily_schedule_str else ""
 
         # 获取关键指标信息
         key_indicators = kwargs.get("key_indicators", [])
         key_indicators_str = generate_key_indicators(key_indicators)
+        key_indicators_section = f"## 关键指标\n{key_indicators_str}" if key_indicators_str else ""
 
         # 获取当天天气
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
+        if not today_weather:
+            # 如果没有天气信息，删除城市信息
+            user_profile.pop("city", None)
 
         # 获取最近节气
         recent_solar_terms = determine_recent_solar_terms()
@@ -4186,15 +4135,27 @@ class Agents:
         # 获取当日节日
         today_festivals = get_festivals_and_other_festivals()
 
+        # 构建当日相关信息
+        daily_info = [f"### 当前日期和时间\n{curr_time()}"]
+        if today_weather:
+            daily_info.append(f"### 当日天气\n{today_weather}")
+        if recent_solar_terms:
+            daily_info.append(f"### 最近节气\n{recent_solar_terms}")
+        if today_festivals:
+            daily_info.append(f"### 当日节日\n{today_festivals}")
+
+        daily_info_str = "\n".join(daily_info).strip()
+
+        # 拼接用户画像信息字符串
+        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
+
         # 构建提示变量
         prompt_vars = {
-            "user_profile": user_profile_str,
-            "daily_schedule": daily_schedule_str,
-            "key_indicators": key_indicators_str,
-            "today_weather": today_weather,
-            "recent_solar_terms": recent_solar_terms,
-            "today_festivals": today_festivals,
-            "datetime": curr_time()
+            "user_profile": user_profile_section,
+            "daily_schedule": daily_schedule_section,
+            "key_indicators": key_indicators_section,
+            "daily_info": daily_info_str
         }
 
         # 更新模型参数

@@ -42,6 +42,7 @@ from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice,
     CompletionStreamResponse,
 )
+import re
 
 try:
     from src.utils.Logger import logger
@@ -1437,11 +1438,11 @@ def get_weather_info(config, city=None):
                                      f"能见度{today_weather['vis']}km。")
                 return formatted_weather
             else:
-                return "无"
+                return None
         else:
-            return "无"
+            return None
     else:
-        return "无"
+        return None
 
 
 def determine_recent_solar_terms():
@@ -1462,7 +1463,7 @@ def determine_recent_solar_terms():
         if delta_days <= 7:
             return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
 
-    return "无"
+    return None
 
 
 def get_festivals_and_other_festivals():
@@ -1480,7 +1481,7 @@ def get_festivals_and_other_festivals():
     if other_festivals:
         all_festivals.extend(other_festivals)
 
-    return ','.join(all_festivals) if all_festivals else "无"
+    return ','.join(all_festivals) if all_festivals else None
 
 
 def generate_daily_schedule(schedule):
@@ -1500,14 +1501,91 @@ def generate_key_indicators(data):
     data: list of dicts, 每个字典包含标准格式的日期时间、收缩压、舒张压和单位，例如：[{'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'}]
     """
     table_str = ""
-    table_str += "| date       | time       | 收缩压 | 舒张压 | 单位      |\n"
-    table_str += "|------------|------------|-------|-------|-----------|\n"
-    for item in data:
-        datetime_str = item['datetime']
-        date_str, time_str = datetime_str.split()
-        date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
-        table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
+    if data:
+        table_str += "| date       | time       | 收缩压 | 舒张压 | 单位      |\n"
+        table_str += "|------------|------------|-------|-------|-----------|\n"
+        for item in data:
+            datetime_str = item['datetime']
+            date_str, time_str = datetime_str.split()
+            date_str = date_str.replace('-', '/')  # 将日期格式转换为 yyyy/mm/dd
+            table_str += f"| {date_str}  | {time_str}   | {item['sbp']}   | {item['dbp']}   | {item['unit']} |\n"
     return table_str
+
+
+async def parse_generic_content(content):
+    """异步解析内容为 JSON 对象，如果解析失败则返回一个空列表"""
+
+    if isinstance(content, openai.AsyncStream):
+        return content
+
+    try:
+        # 直接尝试解析为 JSON
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 移除换行符
+        content = content.replace('\n', '')
+        # 在减号后面添加空格
+        content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
+        # 再次尝试解析
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理JSON代码块
+        content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+        if content_json:
+            return json.loads(content_json[0])
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理Python代码块
+        content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+        if content_python:
+            # 假设Python代码块中包含的是JSON字符串
+            return json.loads(content_python[0].strip())
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'{.*}', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(0)
+            return json.loads(json_data)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'```\s*(.*)```', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(1).strip()
+            return json.loads(json_data)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 移除三个反引号
+        content = re.sub(r'^```|```$', '', content, flags=re.MULTILINE)
+        # 尝试解析去除了三个反引号的内容
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        # 尝试将 content 解析为一个 JSON 对象
+        content_obj = json.loads(content)
+        return content_obj
+    except json.JSONDecodeError:
+        pass
+
+    # 如果所有尝试都失败，返回空列表
+    return []
 
 
 if __name__ == "__main__":
