@@ -344,9 +344,10 @@ def mount_aigc_functions(app: FastAPI):
         request: Request, exc: RequestValidationError
     ):
         # 提取并格式化错误信息
+        errors = exc.errors()
         return JSONResponse(
             status_code=500,
-            content={"head": 500, "items": None, "msg": exc.errors()},
+            content={"head": 500, "items": None, "msg": errors},
         )
 
     async def _async_aigc_functions(
