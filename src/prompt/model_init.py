@@ -105,13 +105,14 @@ def callLLM(
         #         retry += 1
         #         logger.info(f"request llm model error, retry to request")
         #         continue
-        completion = client.chat.completions.create(**kwds)
+        completion = client.completions.create(**kwds)
+       
         if stream:
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
             try:
-                completion = client.chat.completions.create(**kwds)
+                completion = client.completions.create(**kwds)
                 retry += 1
             except Exception as e:
                 retry += 1
@@ -236,13 +237,13 @@ async def acallLLM(
         #         retry += 1
         #         logger.info(f"request llm model error, retry to request")
         #         continue
-        completion = await aclient.chat.completions.create(**kwds)
+        completion = await aclient.completions.create(**kwds)
         if stream:
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
             try:
-                completion = await aclient.chat.completions.create(**kwds)
+                completion = await aclient.completions.create(**kwds)
                 retry += 1
             except Exception as e:
                 retry += 1
