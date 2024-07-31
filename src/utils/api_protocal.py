@@ -152,13 +152,16 @@ class JiaheUserProfile(BaseModel):
     special_diet: str = Field("未知", description="特殊饮食习惯")
     allergy_food: str = Field("未知", description="过敏食物")
     taste_preference: str = Field("未知", description="口味偏好")
+    taste_taboo: str = Field("未知", description="口味禁忌")
     is_specific_menstrual_period: str = Field("未知", description="是否特殊生理期")
     constitution: str = Field("未知", description="中医体质")
 
 
 class UserProfile(BaseModel):
-    age: int = Field(None, description="年龄", ge=0, le=200)
-    gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    # age: int = Field(None, description="年龄", ge=0, le=200)
+    # gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
+    age: Optional[int] = None
+    gender: Optional[str] = None
     height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
     weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
     target_weight: str = Field(None, description="目标体重", examples=["65kg", "90斤"])
@@ -359,6 +362,11 @@ class AigcFunctionsRequest(BaseModel):
         description="诊断结果",
         examples=["急性肠胃炎"],
     )
+    symptom: Union[str, List, None] = Field(
+        None,
+        description="诊断疾病结果",
+        examples=["急性肠胃炎"],
+    )
     food_principle: Union[str, None] = Field(
         None,
         description="饮食原则",
@@ -456,6 +464,11 @@ class AigcSanjiRequest(BaseModel):
     diagnosis: Union[str, None] = Field(
         None,
         description="诊断结果",
+        examples=["急性肠胃炎"],
+    )
+    symptom: Union[str, List, None] = Field(
+        None,
+        description="诊断疾病结果",
         examples=["急性肠胃炎"],
     )
 
@@ -663,6 +676,17 @@ class OutpatientSupportRequest(BaseModel):
                 "past_history_of_present_illness": "糖尿病",
                 "allergic_history": ["无"],
                 "diagnosis_list": ["无"],
+            }
+        ],
+    )
+    physician_info: Optional[PhysicianInfo] = Field(
+        None,
+        description="接诊医师信息",
+        examples=[
+            {
+                "name": "李医生",
+                "department": "心内科",
+                "description": "主任医师"
             }
         ],
     )

@@ -10,7 +10,6 @@ local:
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
         - blood_pressure_trend_analysis # 血压心率趋势分析
-        - blood_glucose_trend_analysis # 血糖趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
         - assert_diet_suggest_in_content # 内容中提供饮食建议
@@ -36,6 +35,7 @@ local:
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
         - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
     Qwen2-7B-Instruct:
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_chief_complaint_generation # 2024年6月24日 西医决策-主诉生成
         - aigc_functions_diagnosis_generation # 2024年6月25日 西医决策-诊断生成
         - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
@@ -58,11 +58,11 @@ local:
         - aigc_functions_body_fat_weight_data_analysis_1day # 2024年7月12日 体重及体脂数据分析-1日数据
         - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
         - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_recommended_daily_calorie_intake # 2024年7月24日 推荐每日饮食摄入热量值（B端）
         - aigc_functions_recommended_macro_nutrient_ratios # 2024年7月25日 推荐三大产能营养素能量占比（B端）
         - aigc_functions_recommended_meal_plan # 2024年7月25日 推荐餐次及每餐能量占比（B端）
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
-        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
         - aigc_functions_generate_greeting # 2024年7月29日 开场白生成
     Qwen2-72B-Instruct:
@@ -80,7 +80,6 @@ dev:
         - call_schedule_create_reply # 创建日程的回复
         - call_llm_with_search_engine # 与搜索引擎对话
         - blood_pressure_trend_analysis # 血压心率趋势分析
-        - blood_glucose_trend_analysis # 血糖趋势分析
         - health_warning_solutions_early # 预警解决方案
         - reunion_meals_restaurant_selection # 共策决策
         - assert_diet_suggest_in_content # 内容中提供饮食建议
@@ -106,6 +105,7 @@ dev:
         - aigc_functions_plan_adjustment_suggestion # 2024年04月19日 方案调整建议生成
         - aigc_functions_doctor_recommend # 2024年4月22日 医生推荐
     Qwen2-7B-Instruct:
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_chief_complaint_generation # 2024年6月24日 西医决策-主诉生成
         - aigc_functions_diagnosis_generation # 2024年6月25日 西医决策-诊断生成
         - aigc_functions_generate_present_illness # 2024年6月25日 西医决策-现病史生成
@@ -128,11 +128,11 @@ dev:
         - aigc_functions_body_fat_weight_data_analysis_1day # 2024年7月12日 体重及体脂数据分析-1日数据
         - aigc_functions_body_fat_weight_data_analysis_2day # 2024年7月12日 体重及体脂数据分析-2日数据
         - aigc_functions_body_fat_weight_data_analysis_multiday # 2024年7月12日 体重及体脂数据分析-多日数据
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_recommended_daily_calorie_intake # 2024年7月24日 推荐每日饮食摄入热量值（B端）
         - aigc_functions_recommended_macro_nutrient_ratios # 2024年7月25日 推荐三大产能营养素能量占比（B端）
         - aigc_functions_recommended_meal_plan # 2024年7月25日 推荐餐次及每餐能量占比（B端）
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
-        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
         - aigc_functions_generate_greeting # 2024年7月29日 开场白生成
     Qwen2-72B-Instruct:
@@ -159,7 +159,6 @@ prod:
         - custom_chat_auxiliary_diagnosis_summary_diet_rec # 自定义对话辅助诊断-汇总-饮食建议
         - custom_chat_gaily_assistant # 自定义对话-闲聊
         - aigc_functions_single_choice # 单选题
-        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_report_interpretation_text_classify # 报告解读文本分组
         - aigc_functions_consultation_summary # 2024年04月20日 问诊摘要
         - aigc_functions_diagnosis # 2024年04月20日 诊断
@@ -183,4 +182,5 @@ prod:
         - aigc_functions_generate_medication_plan # 2024年6月25日 西医决策-用药方案生成
         - aigc_functions_generate_examination_plan # 2024年6月25日 西医决策-检查检验医嘱生成
     Qwen2-7B-Instruct:
+        - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2

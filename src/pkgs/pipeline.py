@@ -1137,7 +1137,7 @@ class Chat_v2:
 
             level = ""
             tool = "askHuman" if weight_res["scene_ending"] == False else "convComplete"
-        elif intentCode == "blood_meas":
+        elif intentCode  =="blood_meas":
             blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
             content = blood_res["contents"][0]
             conts = blood_res["contents"][1:]
@@ -1174,6 +1174,12 @@ class Chat_v2:
                 tool = "askHuman"
             else:
                 conts=[]
+        elif intentCode =="chat_start_with_weather":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
         # elif intentCode == "blood_meas_with_doctor_recommend":
         #     blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
         #     content = blood_res["contents"][0]

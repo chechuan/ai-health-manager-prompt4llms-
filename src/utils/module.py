@@ -223,8 +223,17 @@ class InitAllResource:
         self.__info_config__(model_config)
 
     def __info_config__(self, model_config):
+        logger.debug(f"Initialize api config ...")
         for key, value in self.api_config.items():
-            logger.debug(f"Initialize api config: {key}: {value}")
+            if key == "model_supply":
+                value_list = [f"default: {value['default']}"]
+                for k, v in value.items():
+                    if isinstance(v, dict):
+                        api_base = v["api_base"]
+                        support_models = v["support_models"]
+                        value_list.append(f"[{k}]: api_base: {api_base}, support_models: {support_models}")
+                value = ", ".join(value_list)
+            logger.debug(f"[{key:^16}]: {value}")
         logger.debug(
             f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}"
         )
@@ -914,7 +923,8 @@ def accept_stream_response(response, verbose=True) -> str:
     content = ""
     tst = time.time()
     for chunk in response:
-        if chunk.object == "text_completion":
+        # if chunk.object == "text_completion":
+        if not chunk.object or "chat" not in chunk.object:
             if hasattr(chunk.choices[0], "text"):
                 chunk_text = chunk.choices[0].text
                 if chunk_text:
@@ -981,7 +991,8 @@ async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """
     if not error:
         async for chunk in response:
-            if chunk.object == "text_completion":
+            # if chunk.object == "text_completion":
+            if not chunk.object or "chat" not in chunk.object:
                 content = chunk.choices[0].text
             else:
                 content = chunk.choices[0].delta.content

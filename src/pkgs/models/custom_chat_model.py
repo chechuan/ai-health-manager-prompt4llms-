@@ -16,8 +16,8 @@ from data.constrant import (
     CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT,
 )
 from src.pkgs.models.small_expert_model import expertModel
-from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM
-from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt
+from src.prompt.model_init import ChatMessage, DeltaMessage, callLLM, acallLLM
+from src.test.exp.data.prompts import _auxiliary_diagnosis_judgment_repetition_prompt,_auxiliary_diagnosis_system_prompt_v7
 from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
@@ -34,7 +34,6 @@ class CustomChatModel:
             "blood_meas": expertModel.tool_rules_blood_pressure_level_2,
             "weight_meas": expertModel.fat_reduction,
             "pressure_meas": expertModel.emotions,
-            # "glucose_consultation": expertModel.tool_rules_glucose_level
             # "blood_meas_with_doctor_recommend": expertModel.tool_rules_blood_pressure_level_doctor_rec,
         }
 
@@ -70,6 +69,7 @@ class CustomChatModel:
 class CustomChatAuxiliary(CustomChatModel):
     def __init__(self, gsr: InitAllResource):
         super().__init__(gsr)
+        self.code_func_map["chat_start_with_weather"] = self.__chat_start_with_weather__
         self.code_func_map["glucose_consultation"] = self.__chat_glucose_consultation__
         self.code_func_map["blood_interact"] = self.__chat_blood_interact__
         self.code_func_map["3d_interact"] = self.__chat_3d_interact__
@@ -80,13 +80,62 @@ class CustomChatAuxiliary(CustomChatModel):
 
     def __parse_response__(self, text):
         # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
+        def find_second_occurrence(s, char):
+            first_index = s.find(char)
+            if first_index == -1:
+                return -1
+            second_index = s.find(char, first_index + 1)
+            return second_index
         try:
+            text =text.replace('：',':')
+            text =text.replace('doctor','Doctor')
+            text =text.replace('Question:','')
             thought_index = text.find("Thought:")
             doctor_index = text.find("\nDoctor:")
-            if thought_index == -1 or doctor_index == -1:
+            thought_index2=find_second_occurrence(text, '\nThought:')
+            if thought_index != -1 and doctor_index == -1:
+                return "None", text[thought_index + 8 : doctor_index].strip()
+            if thought_index == -1 and doctor_index != -1:
+                return "None", text[doctor_index + 8 :].strip()
+            if thought_index == -1 and doctor_index == -1:
                 return "None", text
             thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 :].strip()
+            doctor = text[doctor_index + 8 :thought_index2].strip()
+            return thought, doctor
+        except Exception as err:
+            logger.error(text)
+            return "None", text
+        
+    def __parse_diff_response__(self, text,s1,s2):
+        # text = """Thought: 我对问题的回复\nDoctor: 这里是医生的问题或者给出最终的结论"""
+        def find_second_occurrence(s, char):
+            first_index = s.find(char)
+            if first_index == -1:
+                return -1
+            second_index = s.find(char, first_index + 1)
+            return second_index
+        try:
+            l1=len(s1)
+            l2=len(s2)
+            text =text.replace('：',':')
+            text =text.replace('doctor','Doctor')
+            text =text.replace('Question:','')
+            thought_index = text.find(s1)
+            if thought_index == -1 :
+                doctor_index = text.find(s2)
+                if doctor_index != -1:
+                    return "None", text[doctor_index + l2 :].strip()
+                else:
+                    return "None", text 
+            doctor_index = text.find("\n"+s2)
+            if doctor_index == -1:
+                return "None", text[thought_index + l1 :].strip()
+            thought = text[thought_index + l1 : doctor_index].strip()
+            thought_index2=find_second_occurrence(text, "\n"+s1)
+            if thought_index2 !=-1:
+                doctor = text[doctor_index + l2 :thought_index2].strip()
+            else:
+                doctor = text[doctor_index + l2 :].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -107,8 +156,9 @@ class CustomChatAuxiliary(CustomChatModel):
         self, history: List[Dict[str, str]]
     ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
-        event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
-        sys_prompt = event["description"] + "\n" + event["process"]
+        # event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
+        # sys_prompt = event["description"] + "\n" + event["process"]
+        sys_prompt = _auxiliary_diagnosis_system_prompt_v7
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -155,6 +205,7 @@ class CustomChatAuxiliary(CustomChatModel):
             "2.我会提供近一周血糖数据, 请你根据自身经验分析,针对我的个人情况提出相应的问题，每次最多提出两个问题。\n"
             "3.问题关键点可以包括: 是否出现不适症状，症状的持续时间及严重程度，用药情况，饮食情况，血压波动的诱因等,同类问题可以总结在一起问。\n"
             "4.最后请你结合获取到的信息给出结论分析，并解释患者症状可能的原因，如果患者存在饮食和运动不规律、治疗依从性差、情绪应激、睡眠障碍、酗酒、感染、胰岛素不规范注射等情况，给出合理建议。多轮问诊最多3轮，不要打招呼，不要输出列表，只输出问题，不要输出其他内容，直接开始问诊。每轮输出不超过250字。\n"
+            "5.输出结论和建议时，不要带小标题，直接输出结论和建议内容。\n"
         )
 
         pro = kwargs.get("promptParam", {})
@@ -167,7 +218,8 @@ class CustomChatAuxiliary(CustomChatModel):
             result += '|' + time + '|'
             for date in data.keys():
                 t_e = slot_dict[time]
-                result += data[date][t_e] + '|'
+                if t_e in data[date]:
+                    result += data[date][t_e] + '|'
             result += '\n'
         
         prompt_vars = {
@@ -260,7 +312,7 @@ class CustomChatAuxiliary(CustomChatModel):
         event = self.__extract_event_from_gsr__(
             self.gsr, "auxiliary_diagnosis_summary_diet_rec"
         )
-        prompt_template_str = event['description']+event["process"]
+        prompt_template_str = event["process"]
         compose_message = ""
         for i in history:
             role, content = i["role"], i["content"]
@@ -292,43 +344,47 @@ class CustomChatAuxiliary(CustomChatModel):
     async def __chat_auxiliary_diagnosis__(self, **kwargs) -> ChatMessage:
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
-        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        model = "Qwen1.5-72B-Chat"
         history = [
             i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
         ]
         messages = self.__compose_auxiliary_diagnosis_message__(history)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
-        for _ in range(2):
-            content = callLLM(
+        # for _ in range(2):
+        content = callLLM(
                 model=model,
                 history=messages,
-                temperature=0,
-                max_tokens=1024,
-                top_p=0.8,
+                temperature=0.7,
+                max_tokens=2048,
+                top_p=0.5,
                 n=1,
                 presence_penalty=0,
-                frequency_penalty=0.5,
-                stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
+                frequency_penalty=0,
+                # stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
                 stream=False,
             )
 
-            logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-            thought, doctor = self.__parse_response__(content)
-            is_repeat = self.judge_repeat(history, doctor, model)
-            logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
-            if is_repeat:
-                valid = False
-                continue
-            else:
-                valid = True
-                break
+        logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
+        thought, doctor = self.__parse_response__(content)
+            # is_repeat = self.judge_repeat(history, doctor, model)
+            # logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
+            # if is_repeat:
+            #     valid = False
+            #     continue
+            # else:
+            #     valid = True
+            #     break
         conts = []
-        if thought == "None" or doctor == "None":
+        if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        elif not doctor:
-            doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+        # elif not doctor or "问诊Finished" in doctor:
+        elif '?' not in doctor and '？' not in doctor and '有没有' not in doctor:
+            # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             conts = [
+                sug,
                 "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？"
             ]
         else:
@@ -342,15 +398,77 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         return mid_vars, conts, (thought, doctor)
     
+    async def chat_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
+    ):
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = "Qwen1.5-32B-Chat"
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 0.7,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        des = self.gsr.prompt_meta_data["event"][event]["description"] 
+        prompt_template: str = prompt_template if prompt_template else des
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        content = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+        return content
+    
+    async def __chat_start_with_weather__(self, **kwargs) -> ChatMessage:
+        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        pro = kwargs.get("promptParam", {}) 
+        if_entropy= pro.get("withEntropy") 
+        prompt_vars = {"date": pro.get('currentDate','')}
+        content: str = await self.chat_general(
+            _event='节气问询',
+            prompt_vars=prompt_vars,
+            **kwargs,
+        )
+        thought, output = self.__parse_diff_response__(content,'thought:','output:')
+        # 用if_entropy字段来控制不同的场景
+        if if_entropy=='0':
+            result = output+'基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:'
+        elif if_entropy=='1':
+            if '；' in output:
+                output=output.split('；',1)[0]
+            entropy = pro.get('askEntropy','')
+            result = '叔叔，您的生命熵为'+entropy+'，主要问题是血压不稳定，需要重点控制血压。'+output+'血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。'
+        else:
+            result = '基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:'
+
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"],
+            input_text='',
+            output_text=content,
+            model=model,
+            key="自定义辅助诊断对话",
+        )          
+        return mid_vars, [], (thought, result)
+    
     async def __chat_blood_interact__(self, **kwargs) -> ChatMessage:
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
         intentCode = kwargs.get("intentCode")
         pro = kwargs.get("promptParam", {})   
         messages = self.__compose_blood_interact_message__(**kwargs)
-        logger.info(f"Custom Chat 血压初问诊 LLM Input: {dumpJS(messages)}")
-        
+        logger.info(f"Custom Chat 血压初问诊 LLM Input: {dumpJS(messages)}")       
         valid = True
-
         content = callLLM(
                 model=model,
                 history=messages,
@@ -494,7 +612,7 @@ class CustomChatAuxiliary(CustomChatModel):
             )
 
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
-        thought, doctor = self.__parse_response__(content)
+        thought, doctor = self.__parse_diff_response__(content,'Thought:','Doctor:')
           
         conts = []
         
