@@ -1560,6 +1560,15 @@ async def parse_generic_content(content):
         pass
 
     try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'```\s*(.*)```', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(1).strip()
+            return json.loads(json_data)
+    except json.JSONDecodeError:
+        pass
+
+    try:
         # 移除三个反引号
         content = re.sub(r'^```|```$', '', content, flags=re.MULTILINE)
         # 尝试解析去除了三个反引号的内容
