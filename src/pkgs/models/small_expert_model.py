@@ -1326,7 +1326,7 @@ class expertModel:
                 result = "没有对应时段或血糖"
             return result
 
-        model = self.gsr.model_config["blood_glucose_trend_analysis"]
+        model = "Qwen1.5-32B-Chat"
         pro = param
         data = pro.get("glucose", {})
         gl = pro.get("gl", "")
