@@ -843,18 +843,21 @@ class JiaheExpertModel:
             protein_ratio = 0
             fat_ratio = 0
         else:
-            carbon_water_ratio = carbon_water * 4 / caloric
-            protein_ratio = protein * 4 / caloric
-            fat_ratio = fat * 9 / caloric
+            carbon_water_ratio = round(float(carbon_water * 4 / caloric) * 100, 2)
+            protein_ratio  = round(float(protein * 4 / caloric) * 100, 2)
+            fat_ratio = round(float(fat * 9 / caloric) * 100, 2)
+
+        if carbon_water_ratio + protein_ratio + fat_ratio > 1:
+            carbon_water_ratio = 0.995 - protein_ratio - fat_ratio
 
         yield {"message": {"dish_name": name, "dish_effect": effect, "image": image,
                            "nutrient_elements": [
                                {"nutrient_name": "碳水化合物", "content": round(float(carbon_water), 2),
-                                "caloric_ratio": round(float(carbon_water_ratio) * 100, 2)},
+                                "caloric_ratio": carbon_water_ratio},
                                {"nutrient_name": "蛋白质", "content": round(float(protein), 2),
-                                "caloric_ratio": round(float(protein_ratio) * 100, 2)},
+                                "caloric_ratio": protein_ratio},
                                {"nutrient_name": "脂肪", "content": round(float(fat), 2),
-                                "caloric_ratio": round(float(fat_ratio) * 100, 2)}
+                                "caloric_ratio": fat_ratio}
                            ]}, "end": True}
 
 
