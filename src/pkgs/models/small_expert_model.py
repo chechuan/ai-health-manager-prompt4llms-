@@ -1390,7 +1390,7 @@ class expertModel:
                 "## 需要分析的血糖状况\n"
                 "{glucose_message}\n"
                 "# 任务描述\n"
-                "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段的最高血糖值、最低血糖值、波动趋势，只分析需要分析的血糖状况里面的时段\\n"
+                "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段的最高血糖值、最低血糖值、波动趋势，只分析需要分析的血糖状况里面的时段，字数少于50\\n"
             )
             prompt_vars = {"glucose_message": result_2, "glucose_3": glucose_3}
             sys_prompt = prompt_template.format(**prompt_vars)
