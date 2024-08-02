@@ -186,6 +186,10 @@ prod:
         aigc_functions_sport_principle: 0.0.1
         aigc_functions_mental_principle: 0.0.1
         aigc_functions_chinese_therapy: 0.0.1
+        aigc_functions_food_principle_new: 0.0.1
+        aigc_functions_sport_principle_new: 0.0.1
+        aigc_functions_mental_principle_new: 0.0.1
+        aigc_functions_chinese_therapy_new: 0.0.1
         aigc_functions_reason_for_care_plan: 0.0.1
         aigc_functions_chief_complaint_generation: 0.0.1
         aigc_functions_diagnosis_generation: 0.0.1
@@ -194,11 +198,29 @@ prod:
         aigc_functions_generate_allergic_history: 0.0.1
         aigc_functions_generate_medication_plan: 0.0.1
         aigc_functions_generate_examination_plan: 0.0.1
+        aigc_functions_sjkyn_guideline_generation: 0.0.1
+        aigc_functions_sanji_plan_exercise_regimen: 0.0.1
+        aigc_functions_sanji_plan_exercise_plan: 0.0.1
+        aigc_functions_dietary_guidelines_generation: 0.0.1
+        aigc_functions_dietary_details_generation: 0.0.1
+        aigc_functions_meal_plan_generation: 0.0.1
+        aigc_functions_generate_food_quality_guidance: 0.0.1
+        aigc_functions_body_fat_weight_management_consultation: 0.0.1
+        aigc_functions_body_fat_weight_management_consultation_suggestions: 0.0.1
+        aigc_functions_weight_data_analysis_1day: 0.0.1
+        aigc_functions_weight_data_analysis_2day: 0.0.1
+        aigc_functions_weight_data_analysis_multiday: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_1day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_2day: 0.0.1
+        aigc_functions_body_fat_weight_data_analysis_multiday: 0.0.1
         aigc_functions_physician_consultation_decision_support_v2: 0.0.1
-        aigc_functions_food_principle_new: 0.0.1
-        aigc_functions_sport_principle_new: 0.0.1
-        aigc_functions_mental_principle_new: 0.0.1
-        aigc_functions_chinese_therapy_new: 0.0.1
+        aigc_functions_recommended_daily_calorie_intake: 0.0.1
+        aigc_functions_recommended_macro_nutrient_ratios: 0.0.1
+        aigc_functions_recommended_meal_plan: 0.0.1
+        aigc_functions_recommended_meal_plan_with_recipes: 0.0.1
+        aigc_functions_generate_related_questions: 0.0.1
+        aigc_functions_guide_user_back_to_consultation: 0.0.1
+        aigc_functions_generate_greeting: 0.0.1
         sanji_assess_keyword_classification: 0.0.1
         sanji_assess_literature_classification: 0.0.1
         sanji_assess_3d_classification: 0.0.1
