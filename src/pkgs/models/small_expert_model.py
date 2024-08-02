@@ -1326,7 +1326,7 @@ class expertModel:
                 result = "没有对应时段或血糖"
             return result
 
-        model = self.gsr.model_config["blood_glucose_trend_analysis"]
+        model = "Qwen1.5-32B-Chat"
         pro = param
         data = pro.get("glucose", {})
         gl = pro.get("gl", "")
@@ -1390,7 +1390,7 @@ class expertModel:
                 "## 需要分析的血糖状况\n"
                 "{glucose_message}\n"
                 "# 任务描述\n"
-                "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段的最高血糖值、最低血糖值、波动趋势，只分析需要分析的血糖状况里面的时段\\n"
+                "你是一个血糖分析助手，请分别按顺序输出近7天不同的血糖测量阶段的最高血糖值、最低血糖值、波动趋势，只分析需要分析的血糖状况里面的时段，字数少于50\\n"
             )
             prompt_vars = {"glucose_message": result_2, "glucose_3": glucose_3}
             sys_prompt = prompt_template.format(**prompt_vars)
@@ -2589,7 +2589,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -2670,7 +2670,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_generate_allergic_history(self, **kwargs) -> str:
@@ -2700,7 +2700,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -2737,30 +2737,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -2797,30 +2774,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_physician_consultation_decision_support_v2(self, **kwargs) -> str:
@@ -2884,7 +2838,7 @@ class Agents:
         )
 
         # 解析生成的问诊问题
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -3069,18 +3023,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                content = re.findall("```json(.*?)```", content, re.DOTALL)[0]
-                content = dumpJS(json5.loads(content))
-            except Exception as e:
-                logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
@@ -3156,29 +3099,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-        except Exception as e:
-            try:
-                # 处理JSON代码块
-                content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
-                if content_json:
-                    content = dumpJS(json5.loads(content_json[0]))
-                else:
-                    # 处理Python代码块
-                    content_python = re.findall(
-                        r"```python(.*?)```", content, re.DOTALL
-                    )
-                    if content_python:
-                        content = content_python[0].strip()
-                    else:
-                        raise ValueError("No matching code block found")
-            except Exception as e:
-                logger.error(f"AIGC Functions process_content json5.loads error: {e}")
-                content = dumpJS([])
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     @async_clock
@@ -3239,33 +3160,8 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
-        if isinstance(content, openai.AsyncStream):
-            return content
-
-        # 尝试直接解析content
-        try:
-            # 预处理数据，去除可能的多余字符
-            cleaned_content = re.sub(r'```.*?```', '', content, flags=re.MULTILINE).strip()
-            # 再次尝试解析
-            parsed_data = json.loads(cleaned_content)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON data: {e}")
-            # 检查是否存在json代码块
-            match = re.search(r"```json(.*?)```", content, re.DOTALL)
-            if match:
-                json_block = match.group(1).strip()
-                try:
-                    parsed_data = json.loads(json_block)
-                except json.JSONDecodeError as inner_e:
-                    logger.error(f"Failed to parse JSON from code block: {inner_e}")
-                    parsed_data = []
-            else:
-                logger.error("No matching JSON code block found in the content.")
-                parsed_data = []
-
-        # 返回解析后的数据
-        return parsed_data
+        content = await parse_generic_content(content)
+        return content
 
     async def aigc_functions_sanji_plan_exercise_regimen(self, **kwargs) -> str:
         """三济康养方案-运动-运动调理原则
@@ -3397,13 +3293,8 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         # 输出格式是```json{}```, 需要正则提取其中的json数据
-        try:
-            content = re.search(r"```json(.*?)```", content, re.S).group(1)
-            data = json.loads(content)
-        except Exception as err:
-            logger.error(f"{_event} json解析失败, {err}")
-            data = []
-        return data
+        content = await parse_generic_content(content)
+        return content
 
     async def aigc_functions_body_fat_weight_management_consultation(
         self, **kwargs
@@ -3760,41 +3651,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
-        if isinstance(content, openai.AsyncStream):
-            return content
-        try:
-            content = json5.loads(content)
-
-        except Exception as e:
-            try:
-                # 移除换行符
-                content = content.replace('\n', '')
-
-                # 在减号后面添加空格
-                content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
-
-                # 尝试使用 json5 解析
-                content = dumpJS(json5.loads(content))
-            except Exception as e:
-                logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
-
-                # 如果解析失败，尝试使用正则表达式查找 JSON 数据
-                try:
-                    matches = re.findall("```json(.*?)```", content, re.DOTALL)
-                    if matches:
-                        # 尝试解析第一个匹配到的 JSON 数据
-                        content = dumpJS(json5.loads(matches[0]))
-                    else:
-                        # 如果没有匹配到 JSON 数据，记录错误并设置为空列表
-                        logger.error("No JSON content found in the string.")
-                        content = dumpJS([])
-                except Exception as e:
-                    logger.error(f"AIGC Functions {_event} json5.loads error: {e}")
-                    content = dumpJS([])
-
-
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_recommended_macro_nutrient_ratios(self, **kwargs) -> Dict[str, List[Dict[str, float]]]:
@@ -4067,7 +3924,7 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        content = await parse_examination_plan(content)
+        content = await parse_generic_content(content)
         return content
 
     async def aigc_functions_generate_greeting(self, **kwargs) -> str:
