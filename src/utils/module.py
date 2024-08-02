@@ -1619,6 +1619,29 @@ async def parse_generic_content(content):
         pass
         # logger.error(f"Failed to parse JSON: {e}")
 
+    try:
+        json_string = content
+        # 使用正则表达式找到所有的数学表达式
+        expressions = re.findall(r'\d+\s*[+\-*/]\s*\d+', json_string)
+
+        # 如果没有找到任何表达式，则直接解析JSON
+        if not expressions:
+            return json.loads(json_string)
+
+        # 计算表达式并将结果放回原字符串
+        for expr in expressions:
+            # 使用eval()计算表达式的值
+            # 注意：eval()可能有安全风险，这里假设表达式是安全的
+            result = str(eval(expr))
+            # 替换字符串中的表达式为计算后的结果
+            json_string = json_string.replace(expr, result)
+
+        # 解析修正后的JSON字符串
+        parsed_json = json.loads(json_string)
+        return parsed_json
+    except Exception as e:
+        pass
+
     # 如果所有尝试都失败，返回空列表
     return []
 
