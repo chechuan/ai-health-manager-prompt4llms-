@@ -1525,6 +1525,16 @@ async def parse_generic_content(content):
         pass
 
     try:
+        # 将单引号替换为双引号
+        corrected_content = content.replace("'", '"')
+
+        # 解析 JSON
+        parsed_data = json.loads(corrected_content)
+        return parsed_data
+    except json.JSONDecodeError:
+        pass
+
+    try:
         # 移除换行符
         content = content.replace('\n', '')
         # 在减号后面添加空格
