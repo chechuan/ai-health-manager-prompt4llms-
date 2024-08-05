@@ -477,7 +477,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
 
 
 def load_yaml(path: Union[Path, str]):
-    return yaml.load(open(path, "r"), Loader=yaml.FullLoader)
+    return yaml.load(open(path, "r", encoding="utf-8"), Loader=yaml.FullLoader)
 
 
 def handle_error(func):
