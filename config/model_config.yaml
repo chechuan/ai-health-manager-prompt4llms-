@@ -65,6 +65,7 @@ local:
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
         - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
         - aigc_functions_generate_greeting # 2024年7月29日 开场白生成
+        - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
 
@@ -135,6 +136,7 @@ dev:
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
         - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
         - aigc_functions_generate_greeting # 2024年7月29日 开场白生成
+        - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
 
@@ -205,5 +207,6 @@ prod:
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
         - aigc_functions_generate_related_questions # 2024年7月26日 猜你想问
         - aigc_functions_generate_greeting # 2024年7月29日 开场白生成
+        - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
