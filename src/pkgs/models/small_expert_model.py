@@ -77,7 +77,8 @@ from src.utils.module import (
     get_festivals_and_other_festivals,
     generate_daily_schedule,
     generate_key_indicators,
-    parse_generic_content
+    parse_generic_content,
+    remove_empty_dicts
 )
 
 
@@ -3870,6 +3871,7 @@ class Agents:
         )
 
         content = await parse_generic_content(content)
+        content = remove_empty_dicts(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
