@@ -69,6 +69,7 @@ local:
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
 
+
 dev:
     Qwen1.5-32B-Chat:
         - general_react_model # react模型

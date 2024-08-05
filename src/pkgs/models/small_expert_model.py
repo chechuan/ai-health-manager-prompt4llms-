@@ -58,7 +58,7 @@ from src.utils.module import (InitAllResource, accept_stream_response,
                               generate_daily_schedule, generate_key_indicators,
                               get_festivals_and_other_festivals,
                               get_weather_info, param_check,
-                              parse_examination_plan, parse_generic_content)
+                              parse_generic_content, remove_empty_dicts)
 
 # from PIL import Image, ImageDraw, ImageFont
 # from rapidocr_onnxruntime import RapidOCR
@@ -3854,6 +3854,7 @@ class Agents:
         )
 
         content = await parse_generic_content(content)
+        content = remove_empty_dicts(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
