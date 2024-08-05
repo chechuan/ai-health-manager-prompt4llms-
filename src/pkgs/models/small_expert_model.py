@@ -12,35 +12,29 @@ import re
 import sys
 import time
 from copy import deepcopy
+from json.decoder import JSONDecodeError
 from os.path import basename
 from pathlib import Path
-from json.decoder import JSONDecodeError
 
 import json5
 import openai
 from fastapi.exceptions import ValidationException
 from requests import Session
 
-from src.utils.api_protocal import (
-    USER_PROFILE_KEY_MAP,
-    DoctorInfo,
-    DrugPlanItem,
-    KeyIndicators,
-    UserProfile,
-    bloodPressureLevelResponse,
-    PhysicianInfo
-)
+from src.utils.api_protocal import (USER_PROFILE_KEY_MAP, DoctorInfo,
+                                    DrugPlanItem, KeyIndicators, PhysicianInfo,
+                                    UserProfile, bloodPressureLevelResponse)
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 import datetime
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import datetime as dt
+from datetime import timedelta
 from string import Template
-from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
+from typing import (AsyncGenerator, Dict, Generator, List, Literal, Optional,
+                    Union)
 
 from langchain.prompts.prompt import PromptTemplate
-# from PIL import Image, ImageDraw, ImageFont
-# from rapidocr_onnxruntime import RapidOCR
 
 from chat.qwen_chat import Chat
 from data.constrant import *
@@ -52,33 +46,23 @@ from src.pkgs.models.utils import ParamTools
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    accept_stream_response,
-    async_clock,
-    calculate_bmr,
-    clock,
-    compute_blood_pressure_level,
-    construct_naive_response_generator,
-    convert_meal_plan_to_text,
-    download_from_oss,
-    dumpJS,
-    param_check,
-    parse_examination_plan,
-    format_historical_meal_plans_v2,
-    async_clock,
-    convert_meal_plan_to_text,
-    calculate_standard_weight,
-    calculate_and_format_diet_plan,
-    format_historical_meal_plans,
-    curr_time,
-    get_weather_info,
-    determine_recent_solar_terms,
-    get_festivals_and_other_festivals,
-    generate_daily_schedule,
-    generate_key_indicators,
-    parse_generic_content
-)
+from src.utils.module import (InitAllResource, accept_stream_response,
+                              async_clock, calculate_and_format_diet_plan,
+                              calculate_bmr, calculate_standard_weight, clock,
+                              compute_blood_pressure_level,
+                              construct_naive_response_generator,
+                              convert_meal_plan_to_text, curr_time,
+                              determine_recent_solar_terms, download_from_oss,
+                              dumpJS, format_historical_meal_plans,
+                              format_historical_meal_plans_v2,
+                              generate_daily_schedule, generate_key_indicators,
+                              get_festivals_and_other_festivals,
+                              get_weather_info, param_check,
+                              parse_examination_plan, parse_generic_content)
+
+# from PIL import Image, ImageDraw, ImageFont
+# from rapidocr_onnxruntime import RapidOCR
+
 
 
 class expertModel:
@@ -4164,12 +4148,8 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        # lines = content.split('\n')
-        # data={}
-        # l=['one','two','three','four']
-        # for i in range(len(lines)):
-        #     data[l[i]]=lines[i]
-
+        # res = json5.loads(content)
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
         return content
 
     # @param_check(check_params=["messages"])
