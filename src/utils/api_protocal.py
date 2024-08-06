@@ -790,6 +790,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_related_questions",
         "aigc_functions_guide_user_back_to_consultation",
         "aigc_functions_generate_greeting",
+        "aigc_functions_generate_food_calories",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1105,6 +1106,20 @@ class SanJiKangYangRequest(BaseModel):
                     {'datetime': '2024-07-24 08:05:12', 'sbp': 132, 'dbp': 85, 'unit': 'mmHg'},
                     {'datetime': '2024-07-24 20:07:05', 'sbp': 134, 'dbp': 86, 'unit': 'mmHg'}
             ],
+    )
+    food_name: Union[str, None] = Field(
+        None,
+        description="食物名称",
+        examples=[
+            '全麦面包'
+        ],
+    )
+    food_quantity: Union[str, None] = Field(
+        None,
+        description="食物质量",
+        examples=[
+            '2片'
+        ],
     )
 
 

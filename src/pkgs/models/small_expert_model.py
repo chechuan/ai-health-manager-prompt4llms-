@@ -3992,6 +3992,7 @@ class Agents:
         问诊意图返回引导
 
         根据主线和支线会话记录，生成引导用户返回主线问诊的引导话术。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/YndMj49yWjwlLv9jfrYkQQOBV3pmz5aA?cid=56272080423&utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dim_card%26utm_source%3Dim&utm_medium=im_group_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
 
         参数:
             kwargs (dict): 包含以下键的参数字典：
@@ -4027,6 +4028,42 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        return content
+
+    async def aigc_functions_generate_food_calories(self, **kwargs) -> dict:
+        """
+        智能生成对应质量的食物热量值，单位为kcal。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygukmscz3ob4lgrij7
+
+        参数:
+            kwargs (dict): 包含食物名称和食物质量的参数字典
+
+        返回:
+            dict: 对应质量的食物热量值
+        """
+        _event = "生成对应质量的食物热量值"
+
+        # 获取食物名称和质量
+        food_name = kwargs.get("food_name", "")
+        food_quantity = kwargs.get("food_quantity", "")
+
+        if not food_name or not food_quantity:
+            raise ValueError("food_name和food_quantity不能为空")
+
+        # 构建提示变量
+        prompt_vars = {
+            "food_name": food_name,
+            "food_quantity": food_quantity
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = await parse_generic_content(content)
         return content
 
     # @param_check(check_params=["messages"])
