@@ -4078,7 +4078,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = await parse_generic_content(content)
-        content = handle_calories(content)
+        content = await handle_calories(content, **kwargs)
         return content
 
     # @param_check(check_params=["messages"])

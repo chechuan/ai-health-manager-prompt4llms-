@@ -1667,15 +1667,23 @@ def remove_empty_dicts(data):
         return data
 
 
-def handle_calories(content: dict) -> dict:
+async def handle_calories(content: dict, **kwargs) -> dict:
     """
     如果 'calories' 不是数字类型，将其设置为 0。
     如果 content 不是字典，返回一个包含错误信息的字典。
+    处理字典中的 'calories' 字段，并更新 'food_name' 和 'quantity' 字段。
     """
     if not isinstance(content, dict):
         return {"error": "Invalid content format"}
     if not isinstance(content.get("calories"), (int, float)):
         content["calories"] = 0
+    # 更新 'food_name' 字段
+    if "food_name" in kwargs and kwargs["food_name"]:
+        content["food_name"] = kwargs["food_name"]
+
+    # 更新 'quantity' 字段
+    if "food_quantity" in kwargs and kwargs["food_quantity"]:
+        content["quantity"] = kwargs["food_quantity"]
     return content
 
 
