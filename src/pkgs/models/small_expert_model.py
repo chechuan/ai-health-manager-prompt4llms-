@@ -58,7 +58,8 @@ from src.utils.module import (InitAllResource, accept_stream_response,
                               generate_daily_schedule, generate_key_indicators,
                               get_festivals_and_other_festivals,
                               get_weather_info, param_check,
-                              parse_generic_content, remove_empty_dicts)
+                              parse_generic_content, remove_empty_dicts,
+                              handle_calories)
 
 # from PIL import Image, ImageDraw, ImageFont
 # from rapidocr_onnxruntime import RapidOCR
@@ -4064,6 +4065,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = await parse_generic_content(content)
+        content = await handle_calories(content, **kwargs)
         return content
 
     # @param_check(check_params=["messages"])
