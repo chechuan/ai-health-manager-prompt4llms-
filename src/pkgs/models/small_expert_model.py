@@ -55,16 +55,12 @@ from src.utils.Logger import logger
 from src.utils.module import (
     InitAllResource,
     accept_stream_response,
-    async_clock,
-    calculate_bmr,
     clock,
     compute_blood_pressure_level,
     construct_naive_response_generator,
-    convert_meal_plan_to_text,
     download_from_oss,
     dumpJS,
     param_check,
-    parse_examination_plan,
     format_historical_meal_plans_v2,
     async_clock,
     convert_meal_plan_to_text,
@@ -78,7 +74,8 @@ from src.utils.module import (
     generate_daily_schedule,
     generate_key_indicators,
     parse_generic_content,
-    remove_empty_dicts
+    remove_empty_dicts,
+    handle_calories
 )
 
 
@@ -4081,6 +4078,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = await parse_generic_content(content)
+        content = handle_calories(content)
         return content
 
     # @param_check(check_params=["messages"])
