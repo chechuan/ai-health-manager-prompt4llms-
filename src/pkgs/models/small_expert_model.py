@@ -1317,7 +1317,7 @@ class expertModel:
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code", "")
         user_info = pro.get("user_info", {})
-        recent_time = pro.get("currentGlSolt", "")
+        recent_time = pro.get("current_gl_solt", "")
         # 组装步骤2
         result = "|血糖测量时段|"
         for date in data.keys():
@@ -1443,7 +1443,7 @@ class expertModel:
             result += "\n"
         prompt_template_suggest = (
             "# 任务描述\n"
-            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：①测量建议；②饮食建议；③运动建议。建议的字数控制在250字以内\n\n"
+            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：测量建议；饮食建议；运动建议。建议的字数控制在250字以内\n\n"
             "# 已知信息\n"
             "## 用户信息\n"
             "年龄：{age}\n"
@@ -1476,6 +1476,7 @@ class expertModel:
         compose_message3 = accept_stream_response(response_, verbose=False)
 
         logger.debug(f"血糖趋势分析 Output: {compose_message2}")
+        compose_message3 = compose_message3.replace("**","")
         all_message = compose_message1 + "\n" + compose_message2 + "\n" + compose_message3
         return all_message
 
