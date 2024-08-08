@@ -12,35 +12,29 @@ import re
 import sys
 import time
 from copy import deepcopy
+from json.decoder import JSONDecodeError
 from os.path import basename
 from pathlib import Path
-from json.decoder import JSONDecodeError
 
 import json5
 import openai
 from fastapi.exceptions import ValidationException
 from requests import Session
 
-from src.utils.api_protocal import (
-    USER_PROFILE_KEY_MAP,
-    DoctorInfo,
-    DrugPlanItem,
-    KeyIndicators,
-    UserProfile,
-    bloodPressureLevelResponse,
-    PhysicianInfo
-)
+from src.utils.api_protocal import (USER_PROFILE_KEY_MAP, DoctorInfo,
+                                    DrugPlanItem, KeyIndicators, PhysicianInfo,
+                                    UserProfile, bloodPressureLevelResponse)
 
 sys.path.append(Path(__file__).parents[4].as_posix())
 import datetime
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import datetime as dt
+from datetime import timedelta
 from string import Template
-from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
+from typing import (AsyncGenerator, Dict, Generator, List, Literal, Optional,
+                    Union)
 
 from langchain.prompts.prompt import PromptTemplate
-# from PIL import Image, ImageDraw, ImageFont
-# from rapidocr_onnxruntime import RapidOCR
 
 from chat.qwen_chat import Chat
 from data.constrant import *
@@ -52,33 +46,24 @@ from src.pkgs.models.utils import ParamTools
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-    accept_stream_response,
-    async_clock,
-    calculate_bmr,
-    clock,
-    compute_blood_pressure_level,
-    construct_naive_response_generator,
-    convert_meal_plan_to_text,
-    download_from_oss,
-    dumpJS,
-    param_check,
-    parse_examination_plan,
-    format_historical_meal_plans_v2,
-    async_clock,
-    convert_meal_plan_to_text,
-    calculate_standard_weight,
-    calculate_and_format_diet_plan,
-    format_historical_meal_plans,
-    curr_time,
-    get_weather_info,
-    determine_recent_solar_terms,
-    get_festivals_and_other_festivals,
-    generate_daily_schedule,
-    generate_key_indicators,
-    parse_generic_content
-)
+from src.utils.module import (InitAllResource, accept_stream_response,
+                              async_clock, calculate_and_format_diet_plan,
+                              calculate_bmr, calculate_standard_weight, clock,
+                              compute_blood_pressure_level,
+                              construct_naive_response_generator,
+                              convert_meal_plan_to_text, curr_time,
+                              determine_recent_solar_terms, download_from_oss,
+                              dumpJS, format_historical_meal_plans,
+                              format_historical_meal_plans_v2,
+                              generate_daily_schedule, generate_key_indicators,
+                              get_festivals_and_other_festivals,
+                              get_weather_info, param_check,
+                              parse_generic_content, remove_empty_dicts,
+                              handle_calories)
+
+# from PIL import Image, ImageDraw, ImageFont
+# from rapidocr_onnxruntime import RapidOCR
+
 
 
 class expertModel:
@@ -3870,6 +3855,7 @@ class Agents:
         )
 
         content = await parse_generic_content(content)
+        content = remove_empty_dicts(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
@@ -4007,6 +3993,7 @@ class Agents:
         问诊意图返回引导
 
         根据主线和支线会话记录，生成引导用户返回主线问诊的引导话术。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/YndMj49yWjwlLv9jfrYkQQOBV3pmz5aA?cid=56272080423&utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dim_card%26utm_source%3Dim&utm_medium=im_group_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
 
         参数:
             kwargs (dict): 包含以下键的参数字典：
@@ -4042,6 +4029,43 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        return content
+
+    async def aigc_functions_generate_food_calories(self, **kwargs) -> dict:
+        """
+        智能生成对应质量的食物热量值，单位为kcal。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygukmscz3ob4lgrij7
+
+        参数:
+            kwargs (dict): 包含食物名称和食物质量的参数字典
+
+        返回:
+            dict: 对应质量的食物热量值
+        """
+        _event = "生成对应质量的食物热量值"
+
+        # 获取食物名称和质量
+        food_name = kwargs.get("food_name", "")
+        food_quantity = kwargs.get("food_quantity", "")
+
+        if not food_name or not food_quantity:
+            raise ValueError("food_name和food_quantity不能为空")
+
+        # 构建提示变量
+        prompt_vars = {
+            "food_name": food_name,
+            "food_quantity": food_quantity
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = await handle_calories(content, **kwargs)
         return content
 
     # @param_check(check_params=["messages"])
@@ -4164,12 +4188,8 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        # lines = content.split('\n')
-        # data={}
-        # l=['one','two','three','four']
-        # for i in range(len(lines)):
-        #     data[l[i]]=lines[i]
-
+        # res = json5.loads(content)
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
         return content
 
     # @param_check(check_params=["messages"])

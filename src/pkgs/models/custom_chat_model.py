@@ -634,13 +634,7 @@ class CustomChatAuxiliary(CustomChatModel):
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         if "？" not in content and "?" not in content:
             conts = ["血糖问诊结束"]
-        # elif not doctor:
-        #     doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
-        #     conts = [
-        #         "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？"
-        # ]
-        # else:
-        #     ...
+
         mid_vars = update_mid_vars(
             kwargs["mid_vars"],
             input_text=messages,
