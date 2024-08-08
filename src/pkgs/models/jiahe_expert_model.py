@@ -228,7 +228,7 @@ class JiaheExpertModel:
             family_principle,
             history=[],
             requirements=[],
-            reference_diet="",
+            reference_diet=[],
             days=1,
     ):
         """出具家庭N日饮食计划"""
