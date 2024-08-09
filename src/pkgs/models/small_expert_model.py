@@ -58,7 +58,8 @@ from src.utils.module import (InitAllResource, accept_stream_response,
                               generate_daily_schedule, generate_key_indicators,
                               get_festivals_and_other_festivals,
                               get_weather_info, param_check,
-                              parse_examination_plan, parse_generic_content)
+                              parse_generic_content, remove_empty_dicts,
+                              handle_calories)
 
 # from PIL import Image, ImageDraw, ImageFont
 # from rapidocr_onnxruntime import RapidOCR
@@ -1316,7 +1317,7 @@ class expertModel:
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code", "")
         user_info = pro.get("user_info", {})
-        recent_time = pro.get("currentGlSolt", "")
+        recent_time = pro.get("current_gl_solt", "")
         # 组装步骤2
         result = "|血糖测量时段|"
         for date in data.keys():
@@ -1442,7 +1443,7 @@ class expertModel:
             result += "\n"
         prompt_template_suggest = (
             "# 任务描述\n"
-            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：①测量建议；②饮食建议；③运动建议。建议的字数控制在250字以内\n\n"
+            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：测量建议；饮食建议；运动建议。建议的字数控制在250字以内\n\n"
             "# 已知信息\n"
             "## 用户信息\n"
             "年龄：{age}\n"
@@ -1475,6 +1476,7 @@ class expertModel:
         compose_message3 = accept_stream_response(response_, verbose=False)
 
         logger.debug(f"血糖趋势分析 Output: {compose_message2}")
+        compose_message3 = compose_message3.replace("**","")
         all_message = compose_message1 + "\n" + compose_message2 + "\n" + compose_message3
         return all_message
 
@@ -3854,6 +3856,7 @@ class Agents:
         )
 
         content = await parse_generic_content(content)
+        content = remove_empty_dicts(content)
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
@@ -3991,6 +3994,7 @@ class Agents:
         问诊意图返回引导
 
         根据主线和支线会话记录，生成引导用户返回主线问诊的引导话术。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/YndMj49yWjwlLv9jfrYkQQOBV3pmz5aA?cid=56272080423&utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dim_card%26utm_source%3Dim&utm_medium=im_group_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
 
         参数:
             kwargs (dict): 包含以下键的参数字典：
@@ -4026,6 +4030,43 @@ class Agents:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
+        return content
+
+    async def aigc_functions_generate_food_calories(self, **kwargs) -> dict:
+        """
+        智能生成对应质量的食物热量值，单位为kcal。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygukmscz3ob4lgrij7
+
+        参数:
+            kwargs (dict): 包含食物名称和食物质量的参数字典
+
+        返回:
+            dict: 对应质量的食物热量值
+        """
+        _event = "生成对应质量的食物热量值"
+
+        # 获取食物名称和质量
+        food_name = kwargs.get("food_name", "")
+        food_quantity = kwargs.get("food_quantity", "")
+
+        if not food_name or not food_quantity:
+            raise ValueError("food_name和food_quantity不能为空")
+
+        # 构建提示变量
+        prompt_vars = {
+            "food_name": food_name,
+            "food_quantity": food_quantity
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = await handle_calories(content, **kwargs)
         return content
 
     # @param_check(check_params=["messages"])
