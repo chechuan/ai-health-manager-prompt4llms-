@@ -190,6 +190,7 @@ prod:
         - aigc_functions_generate_food_quality_guidance # 2024年6月27日 三济康养方案-饮食-带量食谱-生成食物质量指导
         - aigc_functions_sanji_plan_exercise_plan # 2024年6月27日 三济康养方案-运动-运动计划
         - aigc_functions_recommended_meal_plan_with_recipes # 2024年7月25日 推荐餐次及每餐能量占比和食谱
+        - aigc_functions_generate_food_calories # 2024年8月6日 生成对应质量的食物热量值
         - aigc_functions_sjkyn_guideline_generation # 2024年6月27日 三济康养方案总则
         - aigc_functions_dietary_guidelines_generation # 2024年6月27日 三济康养方案-饮食-饮食调理原则
         - aigc_functions_sanji_plan_exercise_regimen # 2024年6月27日 三济康养方案-运动-运动调理原则
