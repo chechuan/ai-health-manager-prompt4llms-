@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, Union
 from click import File
 from fastapi import Body
 from pydantic import BaseModel, Field
-
+from src.pkgs.models.utils import (determine_blood_pressure_level)
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
 
@@ -609,6 +609,65 @@ class MedicalRecords(BaseModel):
     diagnosis_list: Optional[List[str]] = Field(None, description="诊断")
 
 
+class MedPrescription(BaseModel):
+    drug_name: str  # 药品名称
+    dosage: str  # 剂量
+    frequency: str  # 频次
+    usage: str  # 用法
+
+    def __str__(self):
+        return f"{self.drug_name} {self.dosage} {self.frequency} {self.usage}"
+
+
+class CurrentBloodPressure(BaseModel):
+    """
+    当前血压情况
+    """
+    time: str  # 测量时间或当前时间
+    sbp: float  # 收缩压
+    dbp: float  # 舒张压
+
+    def determine_level(self):
+        """根据当前血压情况判断血压等级"""
+        return determine_blood_pressure_level(self.sbp, self.dbp)
+
+    def formatted_sbp(self):
+        try:
+            return int(self.sbp)
+        except (TypeError, ValueError):
+            return None  # 或者返回一个默认值，例如 0 或者 "N/A"
+
+    def formatted_dbp(self):
+        try:
+            return int(self.dbp)
+        except (TypeError, ValueError):
+            return None  # 或者返回一个默认值，例如 0 或者 "N/A"
+
+class BloodPressureRecord(BaseModel):
+    """
+    近5天血压数据
+    """
+    date: str  # 测量日期时间（字符串）
+    sbp: float  # 收缩压
+    dbp: float  # 舒张压
+
+    def determine_level(self):
+        """根据血压记录判断血压等级"""
+        return determine_blood_pressure_level(self.sbp, self.dbp)
+
+    def formatted_sbp(self):
+        try:
+            return int(self.sbp)
+        except (TypeError, ValueError):
+            return None  # 或者返回一个默认值，例如 0 或者 "N/A"
+
+    def formatted_dbp(self):
+        try:
+            return int(self.dbp)
+        except (TypeError, ValueError):
+            return None  # 或者返回一个默认值，例如 0 或者 "N/A"
+
+
 # 西医决策支持
 class OutpatientSupportRequest(BaseModel):
     intentCode: Literal[
@@ -620,6 +679,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_generate_medication_plan",
         "aigc_functions_generate_examination_plan",
         "aigc_functions_physician_consultation_decision_support_v2",
+        "aigc_functions_bp_warning_generation",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -727,6 +787,40 @@ class OutpatientSupportRequest(BaseModel):
                 },
                 {"role": "user", "content": "同时出现，没有别的症状"},
             ]
+        ],
+    )
+    med_prescription: Optional[MedPrescription] = Field(
+        None,
+        description="现用药品处方信息",
+        examples=[
+            {
+                "drug_name": "非洛地平缓释片",
+                "dosage": "5mg",
+                "frequency": "一天一次",
+                "usage": "口服"
+            }
+        ],
+    )
+    current_bp: Optional[CurrentBloodPressure] = Field(
+        None,
+        description="当前血压数据",
+        examples=[
+            {
+                "time": "2024-08-30 20:11:19",
+                "sbp": 135.0,
+                "dbp": 79.0
+            }
+        ],
+    )
+    recent_bp_data: Optional[List[BloodPressureRecord]] = Field(
+        None,
+        description="近5天血压数据",
+        examples=[
+            {"date": "2024-08-26 19:11:31", "sbp": 145.0, "dbp": 83.0},
+            {"date": "2024-08-27 12:01:01", "sbp": 130.0, "dbp": 81.0},
+            {"date": "2024-08-28 20:11:31", "sbp": 147.0, "dbp": 84.0},
+            {"date": "2024-08-28 22:11:31", "sbp": 137.0, "dbp": 80.0},
+            {"date": "2024-08-29 19:11:31", "sbp": 145.0, "dbp": 83.0}
         ],
     )
 
