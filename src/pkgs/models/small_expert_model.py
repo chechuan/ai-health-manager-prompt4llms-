@@ -60,6 +60,7 @@ from src.utils.module import (InitAllResource, accept_stream_response,
                               get_weather_info, param_check,
                               parse_generic_content, remove_empty_dicts,
                               handle_calories)
+from src.pkgs.models.utils import get_latest_data_per_day,check_consecutive_days
 
 # from PIL import Image, ImageDraw, ImageFont
 # from rapidocr_onnxruntime import RapidOCR
@@ -1317,7 +1318,7 @@ class expertModel:
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code", "")
         user_info = pro.get("user_info", {})
-        recent_time = pro.get("currentGlSolt", "")
+        recent_time = pro.get("current_gl_solt", "")
         # 组装步骤2
         result = "|血糖测量时段|"
         for date in data.keys():
@@ -1443,7 +1444,7 @@ class expertModel:
             result += "\n"
         prompt_template_suggest = (
             "# 任务描述\n"
-            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：①测量建议；②饮食建议；③运动建议。建议的字数控制在250字以内\n\n"
+            "# 你是一位经验丰富的医师，请你根据已知信息，针对用户一周的血糖情况，给出合理建议，只提供原则性的建议，包含3个方面：测量建议；饮食建议；运动建议。建议的字数控制在250字以内\n\n"
             "# 已知信息\n"
             "## 用户信息\n"
             "年龄：{age}\n"
@@ -1476,6 +1477,7 @@ class expertModel:
         compose_message3 = accept_stream_response(response_, verbose=False)
 
         logger.debug(f"血糖趋势分析 Output: {compose_message2}")
+        compose_message3 = compose_message3.replace("**","")
         all_message = compose_message1 + "\n" + compose_message2 + "\n" + compose_message3
         return all_message
 
@@ -4068,6 +4070,105 @@ class Agents:
         content = await handle_calories(content, **kwargs)
         return content
 
+    async def aigc_functions_bp_warning_generation(self, **kwargs) -> str:
+        """血压医师端预警
+
+        分析患者的血压数据，提供合理建议。支持以下几种类型的能力：
+        - 连续5天血压数据分析
+        - 非连续当前血压数据分析
+        需求文档：https://alidocs.dingtalk.com/i/nodes/6LeBq413JA19EGl2t6vmyYDlJDOnGvpb?utm_medium=wiki_feed_notification&utm_source=im_SYSTEM
+
+        - Args
+            1. 患者基本情况
+                - 年龄（必填）
+                - 性别（必填）
+                - 现用药处方（非必填）
+            2. 当前血压情况
+            3. 近5天血压数据（仅连续数据）
+        - Return
+            建议: str
+        """
+
+        _event = "血压预警生成"
+
+        # 获取用户画像
+        user_profile = kwargs.get("user_profile", {})
+        med_prescription = kwargs.get("med_prescription", "")
+
+        # 必填字段检查
+        if "age" not in user_profile or "gender" not in user_profile:
+            raise ValueError("缺少必填字段：年龄或性别")
+
+        # 获取当前血压和近5天血压数据
+        current_bp_data = kwargs.get("current_bp", {})
+        recent_bp_data = kwargs.get("recent_bp_data", [])
+
+        # 检查 current_bp_data 和 recent_bp_data 是否为空
+        if not current_bp_data:
+            raise ValueError("缺少必填字段：当前血压数据")
+        if not recent_bp_data:
+            raise ValueError("缺少必填字段：近5天血压数据")
+
+        # 初始化当前血压模型
+        current_bp = CurrentBloodPressure(**current_bp_data)
+
+        # 获取最近5天每天的最新血压记录
+        recent_bp_data = get_latest_data_per_day(recent_bp_data)
+
+        # 更新每条记录的血压等级
+        for record in recent_bp_data:
+            record['level'] = BloodPressureRecord(**record).determine_level()
+            record['sbp'] = BloodPressureRecord(**record).formatted_sbp()
+            record['dbp'] = BloodPressureRecord(**record).formatted_dbp()
+
+        # 判断5天数据是否连续
+        is_consecutive = check_consecutive_days(recent_bp_data)
+
+        # 拼接用户画像信息字符串
+        user_profile = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+
+        # 拼接当前血压情况字符串
+        current_bp = "|当前时间|收缩压|舒张压|单位|血压等级|\n|{time}|{sbp}|{dbp}|{unit}|{level}".format(
+            time=current_bp.time, sbp=current_bp.formatted_sbp(), dbp=current_bp.formatted_dbp(),
+            unit="mmHg", level=current_bp.determine_level()
+        )
+
+        # 拼接近5天连续血压数据
+        recent_bp_data = "|测量时间|收缩压|舒张压|单位|血压等级|\n" + "\n".join([
+            "|{date}|{sbp}|{dbp}|{unit}|{level}|".format(
+                date=record['date'], sbp=record['sbp'], dbp=record['dbp'], unit="mmHg", level=record['level']
+            ) for record in recent_bp_data
+        ])
+
+        # 根据连续性更新 intent_code
+        if is_consecutive:
+            kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_continuous"
+            prompt_vars_format = {
+                "user_profile": user_profile,
+                "med_prescription": MedPrescription(**med_prescription),
+                "current_bp": current_bp,
+                "recent_bp_data": recent_bp_data
+            }
+        else:
+            kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_non_continuous"
+            prompt_vars_format = {
+                "user_profile": user_profile,
+                "med_prescription": med_prescription,
+                "current_bp": current_bp
+            }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars_format, model_args=model_args, **kwargs
+        )
+
+        return content
+
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy(self, **kwargs) -> str:
         """中医调理"""
@@ -4808,7 +4909,7 @@ class Agents:
         logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
