@@ -7,7 +7,8 @@
 """
 
 
-from typing import List
+from typing import Dict, List
+from datetime import datetime
 
 class ParamTools:
 
@@ -276,3 +277,75 @@ class ParamTools:
                 raise ValueError("未知的身高单位")
         else:
             raise ValueError("未知的测量类型")
+
+def get_latest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
+    """
+    从给定的血压数据列表中获取每一天最近的一条数据。
+
+    Args:
+        blood_pressure_data: 包含日期和血压数据的字典列表。
+
+    Returns:
+        List[Dict]: 每天最新的一条血压数据列表。
+    """
+    latest_data_per_day = {}
+
+    for entry in blood_pressure_data:
+        date = entry['date'].split(' ')[0]  # 仅获取日期部分（字符串）
+        if date not in latest_data_per_day or entry['date'] > latest_data_per_day[date]['date']:
+            latest_data_per_day[date] = entry  # 如果当前记录更晚，则替换
+
+    # 返回按日期排序后的列表
+    return sorted(latest_data_per_day.values(), key=lambda x: x['date'])
+
+
+def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
+    """
+    判断给定的血压数据是否是连续5天的数据。
+
+    Args:
+        blood_pressure_data: 包含日期和血压数据的字典列表，每天可能有多条数据。
+
+    Returns:
+        bool: 如果数据是连续5天的，返回True；否则返回False。
+    """
+    # 获取每一天最近的一条数据
+    blood_pressure_data = get_latest_data_per_day(blood_pressure_data)
+
+    # 提取日期并排序
+    dates = sorted(set([entry['date'].split(' ')[0] for entry in blood_pressure_data]))
+    if len(dates) < 5:
+        return False
+
+    for i in range(4):
+        if (datetime.strptime(dates[i + 1], '%Y-%m-%d') - datetime.strptime(dates[i], '%Y-%m-%d')).days != 1:
+            return False
+
+    return True
+
+
+# 工具函数：判断血压等级
+def determine_blood_pressure_level(sbp: float, dbp: float) -> str:
+    """
+    根据收缩压和舒张压判断血压等级。
+
+    Args:
+        sbp: 收缩压值
+        dbp: 舒张压值
+
+    Returns:
+        str: 血压等级（如"正常血压", "1级高血压"等）
+    """
+    if sbp < 120 and dbp < 80:
+        return "正常血压"
+    elif 120 <= sbp < 140 or 80 <= dbp < 90:
+        return "正常高值"
+    elif 140 <= sbp < 160 or 90 <= dbp < 100:
+        return "1级高血压"
+    elif 160 <= sbp < 180 or 100 <= dbp < 110:
+        return "2级高血压"
+    elif sbp >= 180 or dbp >= 110:
+        return "3级高血压"
+    elif sbp >= 140 and dbp < 90:
+        return "单纯收缩期高血压"
+    return ""  # 默认返回空字符串

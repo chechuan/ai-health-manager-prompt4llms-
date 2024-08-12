@@ -71,12 +71,13 @@ def get_familyInfo_history(familyInfo, history):
         for i in userInfo:
             if userInfo[i]:
                 user_info[i] = userInfo[i]
-        info = f'{user.get("family_role", "")}的健康标签\n'
+        info = f'## {user.get("family_role", "")}的健康标签\n'
         roles = roles + user.get("family_role", "") + '，'
         for i in user_info.keys():
             if user_info[i] and user_info[i] != '未知':
                 info += f'{jiahe_userInfo_map[i]}：{user_info[i]}\n'
         infos = infos + '\n' + info
+    import pdb; pdb.set_trace()
     roles = roles[:-1] if roles[-1] == '，' else roles
     history = [
         {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
