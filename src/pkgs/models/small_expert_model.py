@@ -60,7 +60,7 @@ from src.utils.module import (InitAllResource, accept_stream_response,
                               get_weather_info, param_check,
                               parse_generic_content, remove_empty_dicts,
                               handle_calories)
-from src.pkgs.models.utils import get_latest_data_per_day,check_consecutive_days
+from src.pkgs.models.utils import get_highest_data_per_day,check_consecutive_days
 
 # from PIL import Image, ImageDraw, ImageFont
 # from rapidocr_onnxruntime import RapidOCR
@@ -4112,8 +4112,8 @@ class Agents:
         # 初始化当前血压模型
         current_bp = CurrentBloodPressure(**current_bp_data)
 
-        # 获取最近5天每天的最新血压记录
-        recent_bp_data = get_latest_data_per_day(recent_bp_data)
+        # 获取最近5天每天的血压最高的一条数据
+        recent_bp_data = get_highest_data_per_day(recent_bp_data)
 
         # 更新每条记录的血压等级
         for record in recent_bp_data:

@@ -278,25 +278,35 @@ class ParamTools:
         else:
             raise ValueError("未知的测量类型")
 
-def get_latest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
+
+def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
     """
-    从给定的血压数据列表中获取每一天最近的一条数据。
+    从给定的血压数据列表中获取每一天血压最高的一条数据。
+
+    优先考虑收缩压最高的记录，如果收缩压相同，则选择舒张压最高的记录。
 
     Args:
         blood_pressure_data: 包含日期和血压数据的字典列表。
 
     Returns:
-        List[Dict]: 每天最新的一条血压数据列表。
+        List[Dict]: 每天血压最高的一条数据列表。
     """
-    latest_data_per_day = {}
+    highest_data_per_day = {}
 
     for entry in blood_pressure_data:
         date = entry['date'].split(' ')[0]  # 仅获取日期部分（字符串）
-        if date not in latest_data_per_day or entry['date'] > latest_data_per_day[date]['date']:
-            latest_data_per_day[date] = entry  # 如果当前记录更晚，则替换
+
+        if date not in highest_data_per_day:
+            highest_data_per_day[date] = entry  # 初始赋值
+        else:
+            current_record = highest_data_per_day[date]
+            # 比较当前记录与已有记录的收缩压和舒张压值，优先选择收缩压高的记录
+            if (entry['sbp'] > current_record['sbp']) or (
+                entry['sbp'] == current_record['sbp'] and entry['dbp'] > current_record['dbp']):
+                highest_data_per_day[date] = entry
 
     # 返回按日期排序后的列表
-    return sorted(latest_data_per_day.values(), key=lambda x: x['date'])
+    return sorted(highest_data_per_day.values(), key=lambda x: x['date'])
 
 
 def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
@@ -310,7 +320,7 @@ def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
         bool: 如果数据是连续5天的，返回True；否则返回False。
     """
     # 获取每一天最近的一条数据
-    blood_pressure_data = get_latest_data_per_day(blood_pressure_data)
+    blood_pressure_data = get_highest_data_per_day(blood_pressure_data)
 
     # 提取日期并排序
     dates = sorted(set([entry['date'].split(' ')[0] for entry in blood_pressure_data]))
@@ -336,7 +346,9 @@ def determine_blood_pressure_level(sbp: float, dbp: float) -> str:
     Returns:
         str: 血压等级（如"正常血压", "1级高血压"等）
     """
-    if sbp < 120 and dbp < 80:
+    if sbp < 90 or dbp < 60:
+        return "低血压"
+    elif 90 <= sbp < 120 and 60 <= dbp < 80:
         return "正常血压"
     elif 120 <= sbp < 140 or 80 <= dbp < 90:
         return "正常高值"
@@ -346,6 +358,4 @@ def determine_blood_pressure_level(sbp: float, dbp: float) -> str:
         return "2级高血压"
     elif sbp >= 180 or dbp >= 110:
         return "3级高血压"
-    elif sbp >= 140 and dbp < 90:
-        return "单纯收缩期高血压"
     return ""  # 默认返回空字符串
