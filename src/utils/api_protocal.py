@@ -623,7 +623,7 @@ class CurrentBloodPressure(BaseModel):
     """
     当前血压情况
     """
-    time: str  # 测量时间或当前时间
+    date: str  # 测量时间或当前时间
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
@@ -806,7 +806,7 @@ class OutpatientSupportRequest(BaseModel):
         description="当前血压数据",
         examples=[
             {
-                "time": "2024-08-30 20:11:19",
+                "date": "2024-08-30 20:11:19",
                 "sbp": 135.0,
                 "dbp": 79.0
             }
