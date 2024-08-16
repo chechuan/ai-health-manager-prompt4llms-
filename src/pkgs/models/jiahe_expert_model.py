@@ -363,7 +363,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen1.5-32B-Chat",
+            model="Qwen2-7B-Instruct",
         )
         logger.debug("猜你想问问题模型输出： " + generate_text.replace("\n", " "))
 
