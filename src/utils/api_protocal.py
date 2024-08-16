@@ -610,10 +610,10 @@ class MedicalRecords(BaseModel):
 
 
 class MedPrescription(BaseModel):
-    drug_name: str  # 药品名称
-    dosage: str  # 剂量
-    frequency: str  # 频次
-    usage: str  # 用法
+    drug_name: str = Field(None) # 药品名称
+    dosage: str = Field(None) # 剂量
+    frequency: str = Field(None) # 频次
+    usage: str = Field(None)  # 用法
 
     def __str__(self):
         return f"{self.drug_name} {self.dosage} {self.frequency} {self.usage}"
