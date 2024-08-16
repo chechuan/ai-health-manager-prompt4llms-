@@ -4092,7 +4092,7 @@ class Agents:
 
         # 获取用户画像
         user_profile = kwargs.get("user_profile", {})
-        med_prescription = kwargs.get("med_prescription", "")
+        med_prescription = kwargs.get("med_prescription", {})
 
         # 必填字段检查
         if "age" not in user_profile or "gender" not in user_profile:
