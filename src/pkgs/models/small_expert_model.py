@@ -2116,12 +2116,12 @@ class Agents:
             if medical_records:
                 for key, value in medical_records.items():
                     if value and USER_PROFILE_KEY_MAP.get(key):
-                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "ietary_guidelines":
             if ietary_guidelines:
                 for key, value in ietary_guidelines.items():
                     if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
-                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "key_indicators":
             # 创建一个字典来存储按日期聚合的数据
             aggregated_data = {}
@@ -4093,7 +4093,7 @@ class Agents:
 
         # 获取用户画像
         user_profile = kwargs.get("user_profile", {})
-        med_prescription = kwargs.get("med_prescription", "")
+        med_prescription = kwargs.get("med_prescription", {})
 
         # 必填字段检查
         if "age" not in user_profile or "gender" not in user_profile:
@@ -4128,8 +4128,8 @@ class Agents:
         user_profile = self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 拼接当前血压情况字符串
-        current_bp = "|当前时间|收缩压|舒张压|单位|血压等级|\n|{time}|{sbp}|{dbp}|{unit}|{level}".format(
-            time=current_bp.time, sbp=current_bp.formatted_sbp(), dbp=current_bp.formatted_dbp(),
+        current_bp = "|当前时间|收缩压|舒张压|单位|血压等级|\n|{date}|{sbp}|{dbp}|{unit}|{level}".format(
+            date=current_bp.date, sbp=current_bp.formatted_sbp(), dbp=current_bp.formatted_dbp(),
             unit="mmHg", level=current_bp.determine_level()
         )
 
