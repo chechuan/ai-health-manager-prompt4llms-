@@ -610,10 +610,10 @@ class MedicalRecords(BaseModel):
 
 
 class MedPrescription(BaseModel):
-    drug_name: str  # 药品名称
-    dosage: str  # 剂量
-    frequency: str  # 频次
-    usage: str  # 用法
+    drug_name: str = Field(None) # 药品名称
+    dosage: str = Field(None) # 剂量
+    frequency: str = Field(None) # 频次
+    usage: str = Field(None)  # 用法
 
     def __str__(self):
         return f"{self.drug_name} {self.dosage} {self.frequency} {self.usage}"
@@ -623,7 +623,7 @@ class CurrentBloodPressure(BaseModel):
     """
     当前血压情况
     """
-    time: str  # 测量时间或当前时间
+    date: str  # 测量时间或当前时间
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
@@ -806,7 +806,7 @@ class OutpatientSupportRequest(BaseModel):
         description="当前血压数据",
         examples=[
             {
-                "time": "2024-08-30 20:11:19",
+                "date": "2024-08-30 20:11:19",
                 "sbp": 135.0,
                 "dbp": 79.0
             }
