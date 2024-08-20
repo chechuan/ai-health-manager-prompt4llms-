@@ -43,6 +43,7 @@ from src.utils.openai_api_protocal import (
     CompletionStreamResponse,
 )
 import re
+import ast
 
 try:
     from src.utils.Logger import logger
@@ -1518,11 +1519,13 @@ async def parse_generic_content(content):
     if isinstance(content, openai.AsyncStream):
         return content
 
+    errors = []  # 用于存储所有捕获的异常信息
+
     try:
         # 直接尝试解析为 JSON
         return json.loads(content)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Direct JSON parsing failed: {e}")
 
     try:
         # 将单引号替换为双引号
@@ -1531,8 +1534,8 @@ async def parse_generic_content(content):
         # 解析 JSON
         parsed_data = json.loads(corrected_content)
         return parsed_data
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after replacing single quotes: {e}")
 
     try:
         # 移除换行符
@@ -1541,25 +1544,29 @@ async def parse_generic_content(content):
         content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
         # 再次尝试解析
         return json.loads(content)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after removing newlines and adjusting hyphens: {e}")
 
     try:
         # 处理JSON代码块
         content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
         if content_json:
             return json.loads(content_json[0])
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for JSON code block: {e}")
 
     try:
         # 处理Python代码块
         content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
         if content_python:
             # 假设Python代码块中包含的是JSON字符串
-            return json.loads(content_python[0].strip())
-    except json.JSONDecodeError:
-        pass
+            # 获取第一个匹配项并去掉首尾的空白字符
+            python_code = content_python[0].strip()
+            # 将单引号转换为双引号
+            corrected_content = python_code.replace("'", '"')
+            return json.loads(corrected_content)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for Python code block: {e}")
 
     try:
         # 处理自由文本中嵌入的JSON数据
@@ -1567,8 +1574,8 @@ async def parse_generic_content(content):
         if json_match:
             json_data = json_match.group(0)
             return json.loads(json_data)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for embedded JSON in free text: {e}")
 
     try:
         # 处理自由文本中嵌入的JSON数据
@@ -1576,23 +1583,23 @@ async def parse_generic_content(content):
         if json_match:
             json_data = json_match.group(1).strip()
             return json.loads(json_data)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for embedded code block: {e}")
 
     try:
         # 移除三个反引号
         content = re.sub(r'^```|```$', '', content, flags=re.MULTILINE)
         # 尝试解析去除了三个反引号的内容
         return json.loads(content)
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after removing triple backticks: {e}")
 
     try:
         # 尝试将 content 解析为一个 JSON 对象
         content_obj = json.loads(content)
         return content_obj
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Final direct JSON parsing failed: {e}")
 
     try:
         # 使用正则表达式精确移除最外层的反引号
@@ -1605,7 +1612,7 @@ async def parse_generic_content(content):
         return json.loads(content.strip())
     except json.JSONDecodeError as e:
         # 记录错误日志
-        pass
+        errors.append(f"Parsing failed after removing extra commas and backticks: {e}")
 
     try:
         # 使用正则表达式来查找并提取JSON数据
@@ -1625,9 +1632,7 @@ async def parse_generic_content(content):
         # 如果没有找到匹配的JSON数据，抛出异常
         pass
     except json.JSONDecodeError as e:
-        # 如果解析失败，记录错误并返回空列表
-        pass
-        # logger.error(f"Failed to parse JSON: {e}")
+        errors.append(f"Parsing failed for JSON array in content: {e}")
 
     try:
         json_string = content
@@ -1650,9 +1655,11 @@ async def parse_generic_content(content):
         parsed_json = json.loads(json_string)
         return parsed_json
     except Exception as e:
-        pass
+        errors.append(f"Parsing failed after evaluating expressions: {e}")
 
     # 如果所有尝试都失败，返回空列表
+    # 如果所有尝试都失败，并且返回的内容为空，则记录错误日志
+    logger.error(f"Failed to parse content. Errors encountered: {errors}")
 
     return []
 

@@ -24,6 +24,7 @@ sys.path.append(str(Path(__file__).parent.parent.absolute()))
 from chat.qwen_chat import Chat
 from src.pkgs.models.small_expert_model import Agents, expertModel
 from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
+from src.pkgs.models.health_expert_module import HealthExpertModule
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
@@ -444,7 +445,7 @@ def mount_aigc_functions(app: FastAPI):
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/outpatient_support"
             )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
@@ -473,7 +474,7 @@ def mount_aigc_functions(app: FastAPI):
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/sanji/kangyang"
             )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
@@ -1102,7 +1103,7 @@ def create_app():
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/weight_management"
             )
-            response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 _return: AsyncGenerator = response_generator(response)
             else:
@@ -1138,6 +1139,7 @@ def prepare_for_all():
     global expert_model
     global gsr
     global agents
+    global health
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1145,6 +1147,7 @@ def prepare_for_all():
     chat_v2 = Chat_v2(gsr)
     expert_model = expertModel(gsr)
     agents = Agents(gsr)
+    health = HealthExpertModule(gsr)
 
 
 # app = create_app()
