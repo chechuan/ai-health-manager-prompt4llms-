@@ -32,38 +32,15 @@ from datetime import timedelta
 from string import Template
 from typing import (AsyncGenerator, Dict, Generator, List, Literal, Optional,
                     Union)
-
 from langchain.prompts.prompt import PromptTemplate
-
-from chat.qwen_chat import Chat
-from data.constrant import *
-from data.constrant import DEFAULT_RESTAURANT_MESSAGE, HOSPITAL_MESSAGE
-from data.jiahe_prompt import *
 from data.jiahe_util import *
 from data.test_param.test import testParam
-from src.pkgs.models.utils import ParamTools
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response,
-                              calculate_and_format_diet_plan,
-                              calculate_standard_weight, clock,
-                              compute_blood_pressure_level,
-                              construct_naive_response_generator,
-                              convert_meal_plan_to_text, curr_time,
-                              determine_recent_solar_terms, download_from_oss,
-                              dumpJS, format_historical_meal_plans,
-                              format_historical_meal_plans_v2,
-                              generate_daily_schedule, generate_key_indicators,
-                              get_festivals_and_other_festivals,
-                              get_weather_info, param_check,
-                              parse_generic_content, remove_empty_dicts,
-                              handle_calories)
-from src.pkgs.models.utils import get_highest_data_per_day, check_consecutive_days
-
-# from PIL import Image, ImageDraw, ImageFont
-# from rapidocr_onnxruntime import RapidOCR
-
+from src.utils.module import (InitAllResource, accept_stream_response, clock,
+                              compute_blood_pressure_level, construct_naive_response_generator,
+                              download_from_oss, dumpJS, param_check)
 
 
 class expertModel:
