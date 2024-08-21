@@ -8,7 +8,7 @@
 import sys
 from random import choice
 
-from src.pkgs.models.small_expert_model import Agents
+from src.pkgs.models.agents import Agents
 from src.utils.api_protocal import AigcFunctionsDoctorRecommendRequest
 
 sys.path.append(".")
@@ -40,8 +40,8 @@ from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
 from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
+from src.utils.resources import InitAllResource
 from src.utils.module import (
-    InitAllResource,
     curr_time,
     date_after,
     get_doc_role,

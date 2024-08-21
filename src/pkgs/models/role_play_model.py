@@ -12,8 +12,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parents[4].as_posix()))
 
-from src.utils.module import InitAllResource
-
+from src.utils.resources import InitAllResource
 
 class rolePlayModel:
     def __init__(self, gsr: InitAllResource):

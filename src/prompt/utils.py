@@ -12,11 +12,10 @@ import sys
 from typing import Dict
 
 import openai
-
+from src.utils.resources import InitAllResource
 from src.utils.module import (
     accept_stream_response,
-    parse_latest_plugin_call,
-    InitAllResource,
+    parse_latest_plugin_call
 )
 
 sys.path.append(".")

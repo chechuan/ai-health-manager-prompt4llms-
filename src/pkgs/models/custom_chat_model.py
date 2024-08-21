@@ -8,25 +8,23 @@
 from typing import Any, AnyStr, Dict, List
 
 from requests import Session
-from sqlalchemy.engine import base
 
 from data.constrant import (
     CUSTOM_CHAT_REPOR_TINTERPRETATION_ANSWER_SYS_PROMPT,
-    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY,
-    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_INIT,
+    CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY
 )
-from src.pkgs.models.small_expert_model import expertModel
+from src.pkgs.models.expert_model import expertModel
 from src.prompt.model_init import ChatMessage, DeltaMessage, acallLLM, callLLM
 from src.test.exp.data.prompts import (
     _auxiliary_diagnosis_judgment_repetition_prompt,
     _auxiliary_diagnosis_system_prompt_v7,
 )
 from src.utils.Logger import logger
+from src.utils.resources import InitAllResource
 from src.utils.module import (
-    InitAllResource,
     accept_stream_response,
     dumpJS,
-    update_mid_vars,
+    update_mid_vars
 )
 
 
