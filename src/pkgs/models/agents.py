@@ -1063,6 +1063,7 @@ class Agents:
         result = content.split('\n')
         result_=[]
         for i in result:
+            i = i.replace('-','')
             question_marks = i.count('？')
             if question_marks>1:
                 last_question_mark_index = i.rfind('？')

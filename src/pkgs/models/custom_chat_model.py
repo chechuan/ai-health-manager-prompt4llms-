@@ -437,7 +437,7 @@ class CustomChatAuxiliary(CustomChatModel):
         return content
 
     async def __chat_start_with_weather__(self, **kwargs) -> ChatMessage:
-        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+        model = 'Qwen1.5-72B-Chat'
         pro = kwargs.get("promptParam", {})
         if_entropy = pro.get("withEntropy")
         prompt_vars = {"date": pro.get("currentDate", "")}
