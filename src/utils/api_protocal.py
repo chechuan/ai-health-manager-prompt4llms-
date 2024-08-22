@@ -624,7 +624,7 @@ class CurrentBloodPressure(BaseModel):
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
-    def determine_blood_pressure_level(sbp: float, dbp: float) -> str:
+    def determine_blood_pressure_level(self, sbp: float, dbp: float) -> str:
         """
         根据收缩压和舒张压判断血压等级。
 
@@ -651,7 +651,7 @@ class CurrentBloodPressure(BaseModel):
 
     def determine_level(self):
         """根据当前血压情况判断血压等级"""
-        return determine_blood_pressure_level(self.sbp, self.dbp)
+        return self.determine_blood_pressure_level(self.sbp, self.dbp)
 
     def formatted_sbp(self):
         try:
@@ -673,7 +673,7 @@ class BloodPressureRecord(BaseModel):
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
-    def determine_blood_pressure_level(sbp: float, dbp: float) -> str:
+    def determine_blood_pressure_level(self, sbp: float, dbp: float) -> str:
         """
         根据收缩压和舒张压判断血压等级。
 
@@ -700,7 +700,7 @@ class BloodPressureRecord(BaseModel):
 
     def determine_level(self):
         """根据血压记录判断血压等级"""
-        return determine_blood_pressure_level(self.sbp, self.dbp)
+        return self.determine_blood_pressure_level(self.sbp, self.dbp)
 
     def formatted_sbp(self):
         try:

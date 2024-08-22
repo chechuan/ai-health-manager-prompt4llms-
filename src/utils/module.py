@@ -970,6 +970,7 @@ def get_city_id(city_name, geoapi_url, api_key):
 
 def get_weather_info(config, city=None):
     # 获取当天天气
+    default_city = "北京"
     api_key = config['key']
     weather_base_url = config['weather_base_url']
     geoapi_url = config['geo_base_url']
@@ -977,7 +978,7 @@ def get_weather_info(config, city=None):
     if city:
         city_id = get_city_id(city, geoapi_url, api_key)
     else:
-        city_id = get_city_id("北京", geoapi_url, api_key)
+        city_id = get_city_id(default_city, geoapi_url, api_key)
 
     if city_id:
         url = f"{weather_base_url}?key={api_key}&location={city_id}"
@@ -987,7 +988,7 @@ def get_weather_info(config, city=None):
             data = json.loads(response.content)
             if 'daily' in data and data['daily']:
                 today_weather = data['daily'][0]
-                formatted_weather = (f"今日{city if city else '北京'}天气{today_weather['textDay']}，"
+                formatted_weather = (f"今日{city if city else default_city}天气{today_weather['textDay']}，"
                                      f"最高温度{today_weather['tempMax']}度，"
                                      f"最低温度{today_weather['tempMin']}度，"
                                      f"风力{today_weather['windScaleDay']}级，"
@@ -1031,17 +1032,8 @@ def get_festivals_and_other_festivals():
     date = datetime.now()
     year, month, day = date.year, date.month, date.day
     solar = Solar.fromYmd(year, month, day)
-
     festivals = solar.getFestivals()
-    other_festivals = solar.getOtherFestivals()
-
-    all_festivals = []
-    if festivals:
-        all_festivals.extend(festivals)
-    if other_festivals:
-        all_festivals.extend(other_festivals)
-
-    return ','.join(all_festivals) if all_festivals else None
+    return ','.join(festivals) if festivals else None
 
 
 def generate_daily_schedule(schedule):
