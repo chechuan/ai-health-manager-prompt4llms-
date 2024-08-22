@@ -1070,7 +1070,7 @@ class Agents:
             else:
                 j=i
             result_.append(j)
-        return result_
+        return {'ques':result_}
 
     async def sanji_assess_3d_classification(self, **kwargs) -> str:
         """"""
