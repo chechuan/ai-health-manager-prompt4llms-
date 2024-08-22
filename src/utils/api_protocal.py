@@ -414,7 +414,7 @@ class AigcSanjiRequest(BaseModel):
         "sanji_assess_3health_classification",
         "sanji_assess_literature_classification",
         "sanji_intervene_goal_classification",
-        # "sanji_intervene_literature_classification",
+        "sanji_questions_generate",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -470,6 +470,12 @@ class AigcSanjiRequest(BaseModel):
         None,
         description="诊断疾病结果",
         examples=["急性肠胃炎"],
+    )
+
+    content_all: Union[str, List, None] = Field(
+        None,
+        description="所有内容",
+        examples="急性肠胃炎",
     )
 
     health_goal: Union[str, None] = Field(
