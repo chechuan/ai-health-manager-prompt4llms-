@@ -1040,6 +1040,37 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
+    
+    async def sanji_questions_generate(self, **kwargs) -> str:
+        _event = "猜你想问"
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs["user_profile"]
+        )
+       
+        prompt_vars = {
+            "user_profile": user_profile,
+            "content_all": kwargs["content_all"],
+        }
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.sanji_general(
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
+        )
+        result = content.split('\n')
+        result_=[]
+        for i in result:
+            question_marks = i.count('？')
+            if question_marks>1:
+                last_question_mark_index = i.rfind('？')
+                j = i[:last_question_mark_index].replace('？', '。') + i[last_question_mark_index:]
+            else:
+                j=i
+            result_.append(j)
+        return result_
 
     async def sanji_assess_3d_classification(self, **kwargs) -> str:
         """"""
