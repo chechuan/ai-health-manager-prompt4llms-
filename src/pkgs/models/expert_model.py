@@ -5,42 +5,31 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import asyncio
-import json
+
+# 标准库导入
 import random
 import re
 import sys
-import time
-from copy import deepcopy
-from json.decoder import JSONDecodeError
-from os.path import basename
 from pathlib import Path
-
-import json5
-import openai
-from fastapi.exceptions import ValidationException
-from requests import Session
-
-from src.utils.api_protocal import (USER_PROFILE_KEY_MAP, DoctorInfo,
-                                    DrugPlanItem, KeyIndicators, PhysicianInfo,
-                                    UserProfile, bloodPressureLevelResponse)
-
-sys.path.append(Path(__file__).parents[4].as_posix())
 import datetime
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from string import Template
-from typing import (AsyncGenerator, Dict, Generator, List, Literal, Optional,
-                    Union)
+from typing import Dict, Generator, List
+
+# 第三方库导入
 from langchain.prompts.prompt import PromptTemplate
+
+# 本地模块导入
+sys.path.append(Path(__file__).parents[4].as_posix())
 from data.jiahe_util import *
 from data.test_param.test import testParam
-from src.prompt.model_init import ChatMessage, acallLLM, callLLM
+from src.prompt.model_init import acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, accept_stream_response, clock,
-                              compute_blood_pressure_level, construct_naive_response_generator,
-                              download_from_oss, dumpJS, param_check)
+from src.utils.module import (
+    accept_stream_response, clock, compute_blood_pressure_level, dumpJS
+)
+from src.utils.resources import InitAllResource
 
 
 class expertModel:
@@ -88,12 +77,12 @@ class expertModel:
         assert type(weight) is float or int, "type `weight` must be a number"
         assert type(height) is float or int, "type `height` must be a number"
         assert (
-            weight > 0 and weight < 300
+                weight > 0 and weight < 300
         ), f"value `weigth`={weight} is not valid ∈ (0, 300)"
         assert (
-            height > 0 and height < 2.5
+                height > 0 and height < 2.5
         ), f"value `height`={height} is not valid ∈ (0, 2.5)"
-        bmi = round(weight / height**2, 1)
+        bmi = round(weight / height ** 2, 1)
         return bmi
 
     @staticmethod
@@ -207,7 +196,7 @@ class expertModel:
             "thought": thought,
             "scheme_gen": 0,
             "content": content
-            + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
+                       + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
             "scene_ending": True,
         }
 
@@ -539,15 +528,15 @@ class expertModel:
             2. 出具血压风险播报以及出具生活改善建议
             """
             t = Template(blood_1)
-            pro =kwargs.get("promptParam",{})
+            pro = kwargs.get("promptParam", {})
             prompt = t.substitute(
                 bp_msg=bp_msg,
-                age=pro.get("askAge",''),
-                sex=pro.get("askSix",''),
-                height=pro.get("askHeight",''),
-                weight=pro.get("askWeight",''),
-                disease=pro.get("askDisease",''),
-                family_med_history=pro.get("askFamilyHistory",''),
+                age=pro.get("askAge", ''),
+                sex=pro.get("askSix", ''),
+                height=pro.get("askHeight", ''),
+                weight=pro.get("askWeight", ''),
+                disease=pro.get("askDisease", ''),
+                family_med_history=pro.get("askFamilyHistory", ''),
             )
             msg2 = [
                 {
@@ -612,16 +601,16 @@ class expertModel:
                 days.append(d)
             if len(history) >= iq_n:  # 通过总轮数控制结束
                 t = Template(blood_2)
-                pro =kwargs.get("promptParam",{})
+                pro = kwargs.get("promptParam", {})
                 prompt = t.substitute(
-                bp_msg=bp_msg,
-                history=hist_s,
-                age=pro.get("askAge",''),
-                sex=pro.get("askSix",''),
-                height=pro.get("askHeight",''),
-                weight=pro.get("askWeight",''),
-                disease=pro.get("askDisease",''),
-                family_med_history=pro.get("askFamilyHistory",''),
+                    bp_msg=bp_msg,
+                    history=hist_s,
+                    age=pro.get("askAge", ''),
+                    sex=pro.get("askSix", ''),
+                    height=pro.get("askHeight", ''),
+                    weight=pro.get("askWeight", ''),
+                    disease=pro.get("askDisease", ''),
+                    family_med_history=pro.get("askFamilyHistory", ''),
                 )
                 messages = [
                     {
@@ -720,7 +709,7 @@ class expertModel:
                 content = content
             else:
                 while content.find("？") != -1:
-                    content = content[content.find("？") + 1 :]
+                    content = content[content.find("？") + 1:]
                 content = (
                     content
                     if content
@@ -732,20 +721,20 @@ class expertModel:
             if len(history) < 2:
                 return False
             if (
-                "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门"
-                in history[-2]["content"]
+                    "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门"
+                    in history[-2]["content"]
             ):
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
                 messages = [{"role": "user", "content": prompt}]
                 if (
-                    "是的" in history[-1]["content"]
-                    or "好的" in history[-1]["content"]
-                    or (
+                        "是的" in history[-1]["content"]
+                        or "好的" in history[-1]["content"]
+                        or (
                         "需要" in history[-1]["content"]
                         and "不需要" not in history[-1]["content"]
-                    )
-                    or "嗯" in history[-1]["content"]
-                    or "可以" in history[-1]["content"]
+                )
+                        or "嗯" in history[-1]["content"]
+                        or "可以" in history[-1]["content"]
                 ):
                     return True
                 text = callLLM(
@@ -768,7 +757,7 @@ class expertModel:
                 1
                 for i in history
                 if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门"
-                in i["content"]
+                   in i["content"]
             ]
             return True if sum(r) > 0 else False
 
@@ -912,13 +901,14 @@ class expertModel:
                         ],
                         thought=thought,
                     ).model_dump()
+
         temp = kwargs.get("promptParam", {}).get("temp", '')
-        blood_1 =blood_pressure_risk_advise_prompt
-        blood_2 =blood_pressure_scheme_prompt
-        if temp=='1':
+        blood_1 = blood_pressure_risk_advise_prompt
+        blood_2 = blood_pressure_scheme_prompt
+        if temp == '1':
             blood_1 = blood_pressure_risk_advise_prompt_tem
             blood_2 = blood_pressure_scheme_prompt_tem
-            
+
         bps = kwargs.get("promptParam", {}).get("blood_pressure", [])
         bp_msg = ""
         ihm_health_sbp_list = []
@@ -1020,7 +1010,6 @@ class expertModel:
                 return bloodPressureLevelResponse(
                     level=level, contents=[content], thought=thought, scene_ending=True
                 ).model_dump()
-
 
     @clock
     def rec_diet_eval(self, param):
@@ -1303,7 +1292,7 @@ class expertModel:
         time_periods = ["空腹", "早餐后2h", "午餐后2h", "晚餐后2h"]
 
         # 组装步骤1
-        compose_message1 = f"当前血糖{gl},{glucose_type(recent_time,float(gl))}。"
+        compose_message1 = f"当前血糖{gl},{glucose_type(recent_time, float(gl))}。"
         time_deal = []
         period_content = {}
         for time_period in time_periods:
@@ -1313,7 +1302,7 @@ class expertModel:
             message_f = ""
             for date in data.keys():
                 t_e = slot_dict[time_period]
-                glucose_val = data[date].get(t_e,'')
+                glucose_val = data[date].get(t_e, '')
                 if glucose_val != "":
                     glucose_val = float(glucose_val)
                     if 3.9 <= glucose_val < 7.0 and time_period == "空腹":
@@ -1325,13 +1314,13 @@ class expertModel:
                         g_t = glucose_type(time_period, glucose_val)
                         message_f += f"血糖{glucose_val},{g_t}。"
                     count += 1
-            if 0<count < 3:
+            if 0 < count < 3:
                 message_ = (
-                    f"血糖{count}天的记录中，{t_g}天血糖正常，{f_g}天血糖异常。"
-                    + message_f
+                        f"血糖{count}天的记录中，{t_g}天血糖正常，{f_g}天血糖异常。"
+                        + message_f
                 )
                 period_content[time_period] = message_
-            if count>3:
+            if count > 3:
                 time_deal.append(time_period)
         glucose_3 = ""
         for i in period_content.keys():
@@ -1339,12 +1328,12 @@ class expertModel:
 
         result_2 = result
         compose_message2 = glucose_3
-        if len(time_deal)>0:
+        if len(time_deal) > 0:
             for time in time_deal:
                 result_2 += "|" + time + "|"
                 for date in data.keys():
                     t_e = slot_dict[time]
-                    result_2 += data[date].get(t_e,'') + "|"
+                    result_2 += data[date].get(t_e, '') + "|"
                 result_2 += "\n"
 
             prompt_template = (
@@ -1364,15 +1353,14 @@ class expertModel:
                 history=history, temperature=0.8, top_p=1, model=model, stream=True
             )
             content = accept_stream_response(response, verbose=False)
-            compose_message2 = glucose_3+content
-            
+            compose_message2 = glucose_3 + content
 
         if gl_code == "gl_2_pc":
             for time in time_periods:
                 result += "|" + time + "|"
                 for date in data.keys():
                     t_e = slot_dict[time]
-                    result += data[date].get(t_e,'') + "|"
+                    result += data[date].get(t_e, '') + "|"
                 result += "\n"
             prompt_template_pc = (
                 "# 任务描述\n"
@@ -1416,7 +1404,7 @@ class expertModel:
             result += "|" + time + "|"
             for date in data.keys():
                 t_e = slot_dict[time]
-                result += data[date].get(t_e,'') + "|"
+                result += data[date].get(t_e, '') + "|"
             result += "\n"
         prompt_template_suggest = (
             "# 任务描述\n"
@@ -1453,12 +1441,12 @@ class expertModel:
         compose_message3 = accept_stream_response(response_, verbose=False)
 
         logger.debug(f"血糖趋势分析 Output: {compose_message2}")
-        compose_message3 = compose_message3.replace("**","")
+        compose_message3 = compose_message3.replace("**", "")
         all_message = compose_message1 + "\n" + compose_message2 + "\n" + compose_message3
         return all_message
 
     def __health_warning_solutions_early_continuous_check__(
-        self, indicatorData: List[Dict]
+            self, indicatorData: List[Dict]
     ) -> bool:
         """判断指标数据近五天是否连续"""
 
@@ -1481,7 +1469,7 @@ class expertModel:
         return True
 
     def __health_warning_update_blood_pressure_level__(
-        self, vars: List[int], value_list: List[int] = [], return_str: bool = False
+            self, vars: List[int], value_list: List[int] = [], return_str: bool = False
     ):
         """更新血压水平
 
@@ -1692,7 +1680,7 @@ class expertModel:
         return ret
 
     def food_purchasing_list_generate_by_content(
-        self, query: str, *args, **kwargs
+            self, query: str, *args, **kwargs
     ) -> Dict:
         """根据用户输入内容生成食材采购清单"""
         if not query:
@@ -1739,7 +1727,7 @@ class expertModel:
         return purchasing_list
 
     def rec_diet_reunion_meals_restaurant_selection(
-        self, history=[], backend_history: List = [], **kwds
+            self, history=[], backend_history: List = [], **kwds
     ) -> Generator:
         """聚餐场景
         提供各餐厅信息
@@ -1849,6 +1837,7 @@ class expertModel:
             yield make_ret_item(repr(err), True, [])
 
 
+<<<<<<< HEAD:src/pkgs/models/small_expert_model.py
 class Agents:
     session = Session()
     # ocr = RapidOCR()
@@ -3387,9 +3376,10 @@ class Agents:
         return answer
 
 
+=======
+>>>>>>> de41c3119a847eda5776acd6c40995d27de18844:src/pkgs/models/expert_model.py
 if __name__ == "__main__":
     gsr = InitAllResource()
     expert_model = expertModel(gsr)
-    agents = Agents(gsr)
     param = testParam.param_dev_report_interpretation
-    agents.call_function(**param)
+    # agents.call_function(**param)

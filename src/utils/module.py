@@ -4,46 +4,34 @@
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
 """
-import argparse
+
+# 标准库导入
 import functools
 import json
-import pickle
-import os
 import sys
 import time
-import oss2
-from lunar_python import Lunar, Solar
-from collections import defaultdict
+import re
+import yaml
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import (
-    Any,
-    AnyStr,
-    AsyncGenerator,
-    Dict,
-    Generator,
-    List,
-    Tuple,
-    Union,
+    Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional
 )
-from urllib import parse
-from fastapi import FastAPI, Request, Response
-from fastapi.responses import StreamingResponse
+
+# 第三方库导入
+import oss2
 import numpy as np
 import openai
-import pandas as pd
 import requests
-import yaml
-from sqlalchemy import MetaData, Table, create_engine
-from typing import Optional
-from data.constrant import CACHE_DIR
+from lunar_python import Lunar, Solar
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import StreamingResponse
+
+# 本地模块导入
 from src.utils.api_protocal import AigcFunctionsResponse
 from src.utils.openai_api_protocal import (
-    CompletionResponseStreamChoice,
-    CompletionStreamResponse,
+    CompletionResponseStreamChoice, CompletionStreamResponse
 )
-import re
-import ast
 
 try:
     from src.utils.Logger import logger
@@ -102,350 +90,6 @@ def update_mid_vars(
         }
     )
     return mid_vars
-
-
-class InitAllResource:
-    def __init__(self) -> None:
-        """初始化公共资源"""
-        self.__parse_args__()
-        self.session = requests.Session()
-        self.cache_dir = Path(CACHE_DIR)
-        if not self.cache_dir.exists():
-            self.cache_dir.mkdir()
-
-        self.__load_config__()
-        self.__knowledge_connect_check__()
-
-        self.prompt_meta_data = self.req_prompt_data_from_mysql()
-
-        self.__init_model_supplier__()
-        self.client = openai.OpenAI()
-        self.aclient = openai.AsyncOpenAI()
-
-        self.weather_api_config = self.__load_weather_api_config__()
-
-    def __parse_args__(
-        self,
-    ) -> None:
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--env",
-            type=str,
-            default=os.environ.get("ENV", "local"),
-            help="env: local, dev, test, prod",
-        )
-        parser.add_argument("--ip", type=str, default="0.0.0.0", help="ip")
-        parser.add_argument("--port", type=int, default=6500, help="port")
-        parser.add_argument(
-            "--use_proxy", action="store_true", help="whether use proxy"
-        )
-        parser.add_argument(
-            "--use_cache", action="store_true", help="是否使用缓存, Default为False"
-        )
-        parser.add_argument(
-            "--special_prompt_version",
-            action="store_true",
-            help="是否使用指定的prompt版本, Default为False,都使用lastest",
-        )
-        self.args = parser.parse_args()
-        # os.environ["env"] = self.args.env
-        logger.info(f"Initialize args: {self.args}")
-
-    def __init_model_supplier__(self) -> None:
-        """初始化模型供应商"""
-        for supplier_name, supplier_config in self.api_config["model_supply"].items():
-            if not isinstance(supplier_config, dict):
-                continue
-            client = openai.OpenAI(
-                base_url=supplier_config["api_base"] + "/v1",
-                api_key=supplier_config.get("api_key"),
-            )
-            models = ",".join([i.id for i in client.models.list().data])
-            logger.info(f"Supplier [{supplier_name:^6}] support models: {models:<15}")
-        default_supplier = self.api_config["model_supply"].get("default", "vllm")
-        os.environ["OPENAI_BASE_URL"] = (
-            self.api_config["model_supply"][default_supplier]["api_base"] + "/v1"
-        )
-        os.environ["OPENAI_API_KEY"] = self.api_config["model_supply"][
-            default_supplier
-        ]["api_key"]
-        self.default_model = "Qwen1.5-32B-Chat"
-        logger.info(
-            f"Set default supplier [{default_supplier}], default model: {self.default_model}"
-        )
-
-    def __knowledge_connect_check__(self) -> None:
-        """检查知识库服务连接"""
-        try:
-            response = self.session.get(
-                self.api_config["langchain"] + "/knowledge_base/list_knowledge_bases",
-                timeout=10,
-            )
-            if response.status_code == 200:
-                support_knowledge_list = response.json()["data"]
-                logger.success(f"Support knowledge list: {support_knowledge_list}")
-            else:
-                raise Exception(f"Knowledge connect error: {response.status_code}")
-        except Exception as err:
-            logger.error(f"Knowledge connect error: {err}")
-            sys.exit(1)
-
-    def __load_config__(self) -> None:
-        """指定env加载配置"""
-        self.api_config = load_yaml(Path("config", "api_config.yaml"))[self.args.env]
-        self.mysql_config = load_yaml(Path("config", "mysql_config.yaml"))[
-            self.args.env
-        ]
-        self.prompt_version = load_yaml(Path("config", "prompt_version.yaml"))[
-            self.args.env
-        ]
-        model_config = load_yaml(Path("config", "model_config.yaml"))[self.args.env]
-        self.model_config = {
-            event: model
-            for model, event_list in model_config.items()
-            for event in event_list
-        }
-        intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
-
-        self.intent_aigcfunc_map = {}
-        _tmp_dict = {}
-        for aigcFuncCode, detail in intent_aigcfunc_map.items():
-            _intent_code_list = [
-                i.strip() for i in detail["intent_code_list"].split(",")
-            ]
-            for intentCode in _intent_code_list:
-                if _tmp_dict.get(intentCode):
-                    logger.warning(
-                        f"intent_code {intentCode} has been used by {aigcFuncCode} and {_tmp_dict[intentCode]}"
-                    )
-                else:
-                    _tmp_dict[intentCode] = aigcFuncCode
-                self.intent_aigcfunc_map[intentCode] = aigcFuncCode
-        self.__info_config__(model_config)
-
-    def __info_config__(self, model_config):
-        logger.debug(f"Initialize api config ...")
-        for key, value in self.api_config.items():
-            if key == "model_supply":
-                value_list = [f"default: {value['default']}"]
-                for k, v in value.items():
-                    if isinstance(v, dict):
-                        api_base = v["api_base"]
-                        support_models = v["support_models"]
-                        value_list.append(f"[{k}]: api_base: {api_base}, support_models: {support_models}")
-                value = ", ".join(value_list)
-            logger.debug(f"[{key:^16}]: {value}")
-        logger.debug(
-            f"Initialize mysql config: {self.mysql_config['user']}@{self.mysql_config['ip']}:{self.mysql_config['port']} {self.mysql_config['db_name']}"
-        )
-        for key, value in self.prompt_version.items():
-            if not value:
-                continue
-            for ik, iv in value.items():
-                logger.debug(f"Initialize prompt version {key} - {ik} - {iv}")
-        for key, model_list in model_config.items():
-            logger.debug(f"Model Usage: {key} - {model_list}")
-
-    def __load_weather_api_config__(self) -> dict:
-        """加载天气 API 配置"""
-        weather_api = load_yaml(Path("config", "weather_config.yaml"))["weather_api"]
-        return weather_api
-
-    @clock
-    def req_prompt_data_from_mysql(self) -> Dict:
-        """从mysql中请求prompt meta data"""
-
-        def filter_format(obj, splited=False):
-            """格式化对象数据，处理换行符并可选地分割事件"""
-            obj_str = json.dumps(obj, ensure_ascii=False).replace("\\r\\n", "\\n")
-            obj_rev = json.loads(obj_str)
-            if splited:
-                for obj_rev_item in obj_rev:
-                    if obj_rev_item.get("event"):
-                        obj_rev_item["event"] = obj_rev_item["event"].split("\n")
-            return obj_rev
-
-        def search_target_version_item(item_list, ikey, curr_item_id, version):
-            """从列表中返回指定version的item, 默认未指定则为latest"""
-            try:
-                # 获取指定的版本，如果没有则为None
-                spec_version = version.get(curr_item_id, None)
-                latest_item = None
-
-                if spec_version:
-                    # 查找指定版本的item
-                    for item in item_list:
-                        if item.get(ikey) == curr_item_id:
-                            if item.get("version") == spec_version:
-                                logger.debug(
-                                    f"load spec version {ikey} - {curr_item_id} - {spec_version}"
-                                )
-                                return item
-                            else:
-                                # 如果不是指定版本，则记录为最新版本
-                                latest_item = item
-                        else:
-                            continue
-                else:
-                    # 如果没有指定版本，查找最新版本的item
-                    latest_item = next(
-                        (i for i in item_list if i.get(ikey) == curr_item_id and i.get("version") == "latest"),
-                        None
-                    )
-
-                # 返回找到的最新版本item
-                if latest_item:
-                    return latest_item
-                else:
-                    return None
-            except IndexError as e:
-                logger.error(
-                    f"IndexError: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
-            except KeyError as e:
-                logger.error(
-                    f"KeyError: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
-            except Exception as e:
-                logger.error(
-                    f"Unexpected error: {e}. item_list: {item_list}, ikey: {ikey}, curr_item_id: {curr_item_id}, version: {version}")
-
-            return None
-
-        data_cache_file = self.cache_dir.joinpath("prompt_meta_data.pkl")
-
-        # 检查是否使用缓存数据
-        if not self.args.use_cache or not data_cache_file.exists():
-            # 从数据库中查询数据
-            mysql_conn = MysqlConnector(**self.mysql_config)
-            prompt_meta_data = defaultdict(dict)
-
-            # 查询各类prompt数据
-            prompt_character = mysql_conn.query("select * from ai_prompt_character")
-            prompt_event = mysql_conn.query("select * from ai_prompt_event")
-            prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
-            prompt_intent = mysql_conn.query("select * from ai_prompt_intent")
-
-            # 格式化查询结果
-            prompt_character = filter_format(prompt_character, splited=True)
-            prompt_event = filter_format(prompt_event)
-            prompt_tool = filter_format(prompt_tool)
-            prompt_intent = filter_format(prompt_intent)
-
-            # 根据指定的版本构建prompt meta data
-            if self.args.special_prompt_version:
-                for key, v in self.prompt_version.items():
-                    if not v:
-                        if key == "character":
-                            prompt_meta_data["character"] = {
-                                i["name"]: i for i in prompt_character
-                            }
-                        elif key == "event":
-                            prompt_meta_data["event"] = {
-                                i["intent_code"]: i for i in prompt_event
-                            }
-                        elif key == "tool":
-                            prompt_meta_data["tool"] = {
-                                i["name"]: i for i in prompt_tool
-                            }
-                        elif key == "intent":
-                            prompt_meta_data["intent"] = {
-                                i["name"]: i for i in prompt_intent
-                            }
-                    else:
-                        if key == "character":
-                            for i in prompt_character:
-                                if prompt_meta_data[key].get(i["name"]):
-                                    continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_character, "name", i["name"], v
-                                )
-                        elif key == "event":
-                            for i in prompt_event:
-                                if prompt_meta_data[key].get(i["intent_code"]):
-                                    continue
-                                prompt_meta_data[key][i["intent_code"]] = search_target_version_item(
-                                    prompt_event, "intent_code", i["intent_code"], v
-                                )
-                        elif key == "tool":
-                            for i in prompt_tool:
-                                if prompt_meta_data[key].get(i["name"]):
-                                    continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_tool, "name", i["name"], v
-                                )
-                        elif key == "intent":
-                            for i in prompt_intent:
-                                if prompt_meta_data[key].get(i["name"]):
-                                    continue
-                                prompt_meta_data[key][i["name"]] = search_target_version_item(
-                                    prompt_intent, "name", i["name"], v
-                                )
-            else:
-                # 默认情况下构建prompt meta data
-                prompt_meta_data["character"] = {
-                    i["name"]: i for i in prompt_character if i["type"] == "event"
-                }
-                prompt_meta_data["role_play"] = {
-                    i["name"]: i for i in prompt_character if i["type"] == "role_play"
-                }
-                prompt_meta_data["event"] = {i["intent_code"]: i for i in prompt_event}
-                prompt_meta_data["tool"] = {
-                    i["name"]: i for i in prompt_tool if i["in_used"] == 1
-                }
-                prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
-
-            # 初始化intent和tool的映射关系
-            prompt_meta_data["init_intent"] = {
-                i["code"]: True for i in prompt_tool if i["init_intent"] == 1
-            }
-            prompt_meta_data["rollout_tool"] = {
-                i["code"]: 1 for i in prompt_tool if i["requirement"] == "rollout"
-            }
-            prompt_meta_data["rollout_tool_after_complete"] = {
-                i["code"]: 1 for i in prompt_tool if i["requirement"] == "complete_rollout"
-            }
-            prompt_meta_data["prompt_tool_code_map"] = {
-                i["code"]: i["name"] for i in prompt_tool if i["code"]
-            }
-
-            # 将数据缓存到本地文件
-            pickle.dump(prompt_meta_data, open(data_cache_file, "wb"))
-            logger.debug(f"dump prompt_meta_data to {data_cache_file}")
-            del mysql_conn
-        else:
-            # 从本地缓存文件中加载数据
-            prompt_meta_data = pickle.load(open(data_cache_file, "rb"))
-            logger.debug(f"load prompt_meta_data from {data_cache_file}")
-
-        # 处理tool的参数
-        for name, func in prompt_meta_data["tool"].items():
-            func["params"] = json.loads(func["params"]) if func["params"] else func["params"]
-
-        # 构建intent描述的映射关系
-        intent_desc_map = {
-            code: item.get("intent_desc", "") for code, item in prompt_meta_data["event"].items() if item is not None
-        }
-        default_desc_map = loadJS(Path("data", "intent_desc_map.json"))
-        # 以intent_desc_map.json定义的intent_desc优先
-        self.intent_desc_map = {**intent_desc_map, **default_desc_map}
-        return prompt_meta_data
-
-    def get_model(self, event: str) -> str:
-        """根据事件获取模型"""
-        try:
-            assert (
-                isinstance(event, str) and event in self.model_config
-            ), f"event {event} not in model_config"
-        except Exception as err:
-            logger.critical(err)
-        return self.model_config.get(event, self.default_model)
-
-    def get_event_item(self, event: str) -> Dict:
-        """根据事件获取对应item"""
-        assert isinstance(event, str) and self.prompt_meta_data["event"].get(
-            event
-        ), f"event {event} not in prompt_meta_data"
-        prompt_item = self.prompt_meta_data["event"][event]
-        return prompt_item
 
 
 def make_meta_ret(
@@ -792,91 +436,6 @@ def parse_latest_plugin_call(text: str, plugin_name: str = "AskHuman"):
         plugin_thought = text[len("\nThought: ") : m].strip()
         plugin_args = text[m + len("\nAnswer: ") : n].strip()
     return [plugin_thought, plugin_name, plugin_args]
-
-
-class MysqlConnector:
-    def __init__(
-        self,
-        user: str = None,
-        passwd: str = None,
-        ip: str = "0.0.0.0",
-        port: int = 3306,
-        db_name: str = "localhost",
-    ) -> None:
-        """
-        user: 用户名
-        passwd: 密码
-        ip: 目标ip
-        port: mysql端口
-        db_name: 目标库名
-        """
-        passwd = parse.quote_plus(passwd)
-        self.url = f"mysql+pymysql://{user}:{passwd}@{ip}:{port}/{db_name}"
-        self.engine = create_engine(self.url)
-        self.metadata = MetaData(self.engine)
-        self.connect = self.engine.connect()
-
-    def reconnect(self):
-        """
-        mysql重连
-        """
-        self.engine = create_engine(self.url)
-        self.metadata = MetaData(self.engine)
-        self.connect = self.engine.connect()
-
-    def insert(self, table_name, datas):
-        """
-        表插入接口
-        table_name: 指定表名
-        datas: 要插入的数据 形如 [{col1:d1, col2:d2}, {col1:d1, col2:d2}] 字段名和表列名保持一致
-        """
-        table_obj = Table(table_name, self.metadata, autoload=True)
-        try:
-            self.connect.execute(table_obj.insert(), datas)
-        except Exception as error:
-            try:
-                self.reconnect()
-                self.connect.execute(table_obj.insert(), datas)
-            except Exception as error:
-                print(error)
-        finally:
-            self.engine.dispose()
-        print(table_name, "\tinsert ->\t", len(datas))
-
-    def query(self, sql, orient="records"):
-        """
-        pd.read_sql_query
-        sql: sql查询语句
-        orient: 默认"orient" 返回的数据格式 [{col1:d1, col2:d2},{}]
-        """
-        try:
-            # res = self.engine.connect().execute(sql)
-            res = pd.read_sql_query(sql, self.connect).to_dict(orient=orient)
-        except Exception as error:
-            try:
-                self.reconnect()
-                res = pd.read_sql_query(sql, self.connect).to_dict(orient=orient)
-            except Exception as error:
-                print(error)
-        finally:
-            self.engine.dispose()
-        return res
-
-    def execute(self, sql):
-        """
-        执行sql语句
-        """
-        try:
-            res = self.connect.execute(sql)
-        except Exception as error:
-            try:
-                self.reconnect()
-                res = self.connect.execute(sql)
-            except Exception as error:
-                print(error)
-        finally:
-            self.engine.dispose()
-        return res
 
 
 def curr_time():
@@ -1411,6 +970,7 @@ def get_city_id(city_name, geoapi_url, api_key):
 
 def get_weather_info(config, city=None):
     # 获取当天天气
+    default_city = "北京"
     api_key = config['key']
     weather_base_url = config['weather_base_url']
     geoapi_url = config['geo_base_url']
@@ -1418,7 +978,7 @@ def get_weather_info(config, city=None):
     if city:
         city_id = get_city_id(city, geoapi_url, api_key)
     else:
-        city_id = get_city_id("北京", geoapi_url, api_key)
+        city_id = get_city_id(default_city, geoapi_url, api_key)
 
     if city_id:
         url = f"{weather_base_url}?key={api_key}&location={city_id}"
@@ -1428,7 +988,7 @@ def get_weather_info(config, city=None):
             data = json.loads(response.content)
             if 'daily' in data and data['daily']:
                 today_weather = data['daily'][0]
-                formatted_weather = (f"今日{city if city else '北京'}天气{today_weather['textDay']}，"
+                formatted_weather = (f"今日{city if city else default_city}天气{today_weather['textDay']}，"
                                      f"最高温度{today_weather['tempMax']}度，"
                                      f"最低温度{today_weather['tempMin']}度，"
                                      f"风力{today_weather['windScaleDay']}级，"
@@ -1472,17 +1032,8 @@ def get_festivals_and_other_festivals():
     date = datetime.now()
     year, month, day = date.year, date.month, date.day
     solar = Solar.fromYmd(year, month, day)
-
     festivals = solar.getFestivals()
-    other_festivals = solar.getOtherFestivals()
-
-    all_festivals = []
-    if festivals:
-        all_festivals.extend(festivals)
-    if other_festivals:
-        all_festivals.extend(other_festivals)
-
-    return ','.join(all_festivals) if all_festivals else None
+    return ','.join(festivals) if festivals else None
 
 
 def generate_daily_schedule(schedule):
@@ -1694,11 +1245,268 @@ async def handle_calories(content: dict, **kwargs) -> dict:
     return content
 
 
-if __name__ == "__main__":
-    InitAllResource()
+async def check_required_fields(params: dict, required_fields: dict, at_least_one: list = []):
+    """
+    检查参数中的必填字段，包括多层嵌套和“或”的逻辑。
+
+    参数:
+        params (dict): 参数字典。
+        required_fields (dict): 必填字段字典，键为参数名，值为该参数的必填字段列表、字典或元组（表示“或”逻辑）。
+        field_names (dict): 字段中文释义字典。
+        at_least_one (list): 至少需要有一项的参数列表（可选）。
+
+    抛出:
+        ValueError: 如果必填字段缺失或至少一项参数缺失，抛出错误。
+    """
+    missing = []
+
+    async def add_missing(field, prefix=""):
+        _prefix = prefix.rstrip(".")
+        missing.append(f"{_prefix} 缺少 {field}")
+
+    async def recursive_check(current_params, current_fields, prefix=""):
+        """
+        递归检查参数中的必填字段。
+
+        参数:
+            current_params (dict): 当前层级的参数字典。
+            current_fields (dict or list): 当前层级的必填字段字典或列表。
+            prefix (str): 当前字段的前缀，用于构建错误信息中的完整路径。
+        """
+        _prefix = prefix.rstrip(".")
+        if not current_params:
+            if _prefix not in at_least_one:
+                raise AssertionError(f"{_prefix} 不能为空")
+
+        if isinstance(current_fields, dict):
+            for param, fields in current_fields.items():
+                if param not in current_params or not current_params[param]:
+                    # 如果参数不存在或为空，则记录缺失的参数
+                    await add_missing(param, prefix)
+                elif isinstance(fields, (dict, list)):
+                    await recursive_check(current_params[param], fields, prefix=f"{prefix}{param}.")
+        elif isinstance(current_fields, list):
+            for field in current_fields:
+                if isinstance(field, tuple):
+                    # 如果字段是元组，表示“或”的逻辑，检查至少一个字段存在
+                    if not any(f in current_params and current_params[f] is not None for f in field):
+                        field_names_str = '或'.join(field for field in field)
+                        await add_missing(field_names_str, prefix)
+                elif isinstance(field, str):
+                    if field not in current_params or current_params[field] is None:
+                        # 如果必填字段不存在或为空，则记录缺失的字段
+                        await add_missing(field, prefix)
+
+    # 检查至少一项参数存在的条件
+    if at_least_one and not any(params.get(p) for p in at_least_one):
+        # 打印执行时间日志
+        raise AssertionError(f"至少需要提供以下一项参数：{', '.join(at_least_one)}")
+    # 检查所有必填字段
+    for key, fields in required_fields.items():
+        if key in params:
+            await recursive_check(params[key], fields, prefix=f"{key}.")
+        else:
+            await add_missing(key)
+
+    # 如果有缺失的必填字段，抛出错误
+    # print(missing)
+    if missing:
+        raise AssertionError(f"缺少必要的字段：{'; '.join(missing)}")
 
 
+async def check_aigc_functions_body_fat_weight_management_consultation(params: dict
+) -> List:
+    """检查参数是否满足需求
 
+- Args
+    intentCode: str
+        - aigc_functions_body_fat_weight_management_consultation
+        - aigc_functions_weight_data_analysis
+        - aigc_functions_body_fat_weight_data_analysis
+"""
+    stats_records = {"user_profile": [], "key_indicators": []}
+    intentCode = params.get("intentCode")
+    if intentCode == "aigc_functions_body_fat_weight_management_consultation":
+        # 用户画像
+        if (
+                not params.get("user_profile")
+                or not params["user_profile"].get("age")
+                or not params["user_profile"].get("gender")
+                or not params["user_profile"].get("height")
+        ):
+            stats_records["user_profile"].append("用户画像必填项缺失")
+            if not params["user_profile"].get("age"):
+                stats_records["user_profile"].append("age")
+            if not params["user_profile"].get("gender"):
+                stats_records["user_profile"].append("gender")
+            if not params["user_profile"].get("height"):
+                stats_records["user_profile"].append("height")
+        if not params.get("key_indicators"):
+            stats_records["key_indicators"].append("缺少关键指标数据")
+        else:
+            key_list = [i["key"] for i in params["key_indicators"]]
+            if "体重" not in key_list:
+                stats_records["key_indicators"].append("体重")
+            if "bmi" not in key_list:
+                stats_records["key_indicators"].append("bmi")
+            for item in params["key_indicators"]:
+                if item["key"] == "体重":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("体重数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("体重数据格式不符")
+                elif item["key"] == "bmi":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("BMI数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("BMI数据格式不符")
+
+    elif intentCode == "aigc_functions_weight_data_analysis":
+        # 用户画像检查
+        if (
+                not params.get("user_profile")
+                or not params["user_profile"].get("age")
+                or not params["user_profile"].get("gender")
+                or not params["user_profile"].get("height")
+                or not params["user_profile"].get("bmi")
+        ):
+            stats_records["user_profile"].append("用户画像必填项缺失")
+            if not params["user_profile"].get("age"):
+                stats_records["user_profile"].append("age")
+            if not params["user_profile"].get("gender"):
+                stats_records["user_profile"].append("gender")
+            if not params["user_profile"].get("height"):
+                stats_records["user_profile"].append("height")
+            if not params["user_profile"].get("bmi"):
+                stats_records["user_profile"].append("bmi")
+        if not params.get("key_indicators"):
+            stats_records["key_indicators"].append("缺少关键指标数据")
+        else:
+            key_list = [i["key"] for i in params["key_indicators"]]
+            if "体重" not in key_list:
+                stats_records["key_indicators"].append("体重")
+            if "bmi" not in key_list:
+                stats_records["key_indicators"].append("bmi")
+            for item in params["key_indicators"]:
+                if item["key"] == "体重":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("体重数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("体重数据格式不符")
+                elif item["key"] == "bmi":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("BMI数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("BMI数据格式不符")
+
+    elif intentCode == "aigc_functions_body_fat_weight_data_analysis":
+        if (
+                not params.get("user_profile")
+                or not params["user_profile"].get("gender")
+        ):
+            stats_records["user_profile"].append("用户画像必填项缺失")
+            if not params["user_profile"].get("gender"):
+                stats_records["user_profile"].append("gender")
+
+        if not params.get("key_indicators"):
+            stats_records["key_indicators"].append("缺少关键指标数据")
+        else:
+            key_list = [i["key"] for i in params["key_indicators"]]
+            if "体脂率" not in key_list:
+                stats_records["key_indicators"].append("体脂率")
+            for item in params["key_indicators"]:
+                if item["key"] == "体脂率":
+                    if not item.get("data"):
+                        stats_records["key_indicators"].append("体脂率数据缺失")
+                    elif not isinstance(item["data"], list):
+                        stats_records["key_indicators"].append("体脂率数据格式不符")
+
+    for k, v in stats_records.items():
+        if v:
+            raise AssertionError(", ".join(v))
+
+
+async def check_and_calculate_bmr(user_profile: dict) -> float:
+    """
+    检查计算基础代谢率（BMR）所需的数据是否存在，并计算BMR
+
+    参数:
+        user_profile (dict): 包含用户画像信息的字典
+        field_names (dict): 字段中文释义字典
+
+    返回:
+        float: 计算出的基础代谢率
+
+    抛出:
+        ValueError: 如果缺少必要的数据，抛出错误
+    """
+    required_fields = ["weight", "height", "age", "gender"]
+    missing_fields = [field for field in required_fields if field not in user_profile]
+    if missing_fields:
+        raise ValueError(
+            f"缺少计算基础代谢率所需的数据 (missing data to calculate BMR): {', '.join(missing_fields)}")
+
+    weight = parse_measurement(user_profile["weight"], "weight")
+    height = parse_measurement(user_profile["height"], "height")
+    age = int(user_profile["age"])
+    gender = user_profile["gender"]
+
+    return calculate_bmr(weight, height, age, gender)
+
+
+def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
+    """
+    从给定的血压数据列表中获取每一天血压最高的一条数据。
+
+    优先考虑收缩压最高的记录，如果收缩压相同，则选择舒张压最高的记录。
+
+    Args:
+        blood_pressure_data: 包含日期和血压数据的字典列表。
+
+    Returns:
+        List[Dict]: 每天血压最高的一条数据列表。
+    """
+    highest_data_per_day = {}
+
+    for entry in blood_pressure_data:
+        date = entry['date'].split(' ')[0]  # 仅获取日期部分（字符串）
+
+        if date not in highest_data_per_day:
+            highest_data_per_day[date] = entry  # 初始赋值
+        else:
+            current_record = highest_data_per_day[date]
+            # 比较当前记录与已有记录的收缩压和舒张压值，优先选择收缩压高的记录
+            if (entry['sbp'] > current_record['sbp']) or (
+                entry['sbp'] == current_record['sbp'] and entry['dbp'] > current_record['dbp']):
+                highest_data_per_day[date] = entry
+
+    # 返回按日期排序后的列表
+    return sorted(highest_data_per_day.values(), key=lambda x: x['date'])
+
+
+def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
+    """
+    判断给定的血压数据是否是连续5天的数据。
+
+    Args:
+        blood_pressure_data: 包含日期和血压数据的字典列表，每天可能有多条数据。
+
+    Returns:
+        bool: 如果数据是连续5天的，返回True；否则返回False。
+    """
+    # 获取每一天最近的一条数据
+    blood_pressure_data = get_highest_data_per_day(blood_pressure_data)
+
+    # 提取日期并排序
+    dates = sorted(set([entry['date'].split(' ')[0] for entry in blood_pressure_data]))
+    if len(dates) < 5:
+        return False
+
+    for i in range(4):
+        if (datetime.strptime(dates[i + 1], '%Y-%m-%d') - datetime.strptime(dates[i], '%Y-%m-%d')).days != 1:
+            return False
+
+    return True
 
 
 

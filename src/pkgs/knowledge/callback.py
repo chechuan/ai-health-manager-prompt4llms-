@@ -36,8 +36,8 @@ from src.pkgs.knowledge.utils import (
 )
 from src.prompt.model_init import ChatMessage, callLLM
 from src.utils.Logger import logger
+from src.utils.resources import InitAllResource
 from src.utils.module import (
-    InitAllResource,
     accept_stream_response,
     clock,
     curr_time,

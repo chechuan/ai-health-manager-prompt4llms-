@@ -20,7 +20,9 @@ from src.prompt.factory import baseVarsForPromptEngine, promptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.task_schedule_manager import taskSchedulaManager
 from src.utils.Logger import logger
-from src.utils.module import (InitAllResource, MysqlConnector, _parse_latest_plugin_call, clock,
+from src.utils.resources import InitAllResource
+from src.utils.database import MysqlConnector
+from src.utils.module import (_parse_latest_plugin_call, clock,
                               get_doc_role, get_intent, make_meta_ret)
 
 
