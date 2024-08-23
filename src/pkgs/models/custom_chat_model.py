@@ -24,7 +24,9 @@ from src.utils.resources import InitAllResource
 from src.utils.module import (
     accept_stream_response,
     dumpJS,
-    update_mid_vars
+    update_mid_vars,
+    get_weather_info,
+    determine_recent_solar_terms
 )
 
 
@@ -440,29 +442,34 @@ class CustomChatAuxiliary(CustomChatModel):
         model = 'Qwen1.5-72B-Chat'
         pro = kwargs.get("promptParam", {})
         if_entropy = pro.get("withEntropy")
-        prompt_vars = {"date": pro.get("currentDate", "")}
+        
+        city = pro.get("city", None)
+        today_weather = get_weather_info(self.gsr.weather_api_config, city)
+         # 获取最近节气
+        recent_solar_terms = determine_recent_solar_terms()
+        prompt_vars = {"recent_solar_terms": recent_solar_terms}
         content: str = await self.chat_general(
             _event="节气问询",
             prompt_vars=prompt_vars,
             **kwargs,
         )
-        thought, output = self.__parse_diff_response__(content, "thought:", "output:")
+        # thought, output = self.__parse_diff_response__(content, "thought:", "output:")
         # 用if_entropy字段来控制不同的场景
         if if_entropy == "0":
             result = (
-                output
+                content + today_weather
                 + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
             )
         elif if_entropy == "1":
-            if "；" in output:
-                output = output.split("；", 1)[0]
+            if "；" in content:
+                 content = content.split("；", 1)[0]
             entropy = pro.get("askEntropy", "")
             result = (
                 "叔叔，您的生命熵为"
                 + entropy
                 + "，主要问题是血压不稳定，需要重点控制血压。"
-                + output
-                + "血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
+                + content
+                + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
             )
         else:
             result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
@@ -474,7 +481,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             key="自定义辅助诊断对话",
         )
-        return mid_vars, [], (thought, result)
+        return mid_vars, [], ('', result)
 
     async def __chat_blood_interact__(self, **kwargs) -> ChatMessage:
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
