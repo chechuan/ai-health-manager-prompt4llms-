@@ -11,6 +11,7 @@ import json
 import sys
 import time
 import re
+from sympy import true
 import yaml
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -1025,6 +1026,36 @@ def determine_recent_solar_terms():
             return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
 
     return None
+
+def determine_recent_solar_terms_sanji():
+    date = datetime.now()
+    lunar = Lunar.fromDate(date)
+
+    # 获取当天的节气
+    current_jieqi = lunar.getCurrentJieQi()
+    if current_jieqi:
+        return f"{current_jieqi.getSolar().toYmd()} {current_jieqi.getName()}"
+
+    # 获取下一个节气
+    next_jieqi = lunar.getNextJieQi(True)
+    pre_jieqi = lunar.getPrevJieQi(True)
+    if next_jieqi:
+        next_jieqi_solar = next_jieqi.getSolar()
+        
+        next_jieqi_date = datetime(next_jieqi_solar.getYear(), next_jieqi_solar.getMonth(), next_jieqi_solar.getDay())
+        delta_days = (next_jieqi_date - date).days
+
+        if pre_jieqi:
+            pre_jieqi_solar = pre_jieqi.getSolar()
+            pre_jieqi_date = datetime(pre_jieqi_solar.getYear(), pre_jieqi_solar.getMonth(), pre_jieqi_solar.getDay())
+            pre_delta_days = (date-pre_jieqi_date).days
+            if pre_delta_days<delta_days:
+                return f"{pre_jieqi_date.strftime('%Y-%m-%d')} {pre_jieqi.getName()}"
+        return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
+
+    pre_jieqi_solar = pre_jieqi.getSolar()
+    pre_jieqi_date = datetime(pre_jieqi_solar.getYear(), pre_jieqi_solar.getMonth(), pre_jieqi_solar.getDay())  
+    return pre_jieqi_date
 
 
 def get_festivals_and_other_festivals():

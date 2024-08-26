@@ -23,6 +23,7 @@ from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
     accept_stream_response,
+    determine_recent_solar_terms_sanji,
     dumpJS,
     update_mid_vars,
     get_weather_info,
@@ -446,7 +447,7 @@ class CustomChatAuxiliary(CustomChatModel):
         city = pro.get("city", None)
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
          # 获取最近节气
-        recent_solar_terms = determine_recent_solar_terms()
+        recent_solar_terms = determine_recent_solar_terms_sanji()
         prompt_vars = {"recent_solar_terms": recent_solar_terms}
         content: str = await self.chat_general(
             _event="节气问询",
