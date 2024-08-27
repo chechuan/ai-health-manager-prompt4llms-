@@ -444,7 +444,7 @@ class CustomChatAuxiliary(CustomChatModel):
         pro = kwargs.get("promptParam", {})
         if_entropy = pro.get("withEntropy")
         
-        city = pro.get("city", None)
+        city = "廊坊"
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
          # 获取最近节气
         recent_solar_terms = determine_recent_solar_terms_sanji()
