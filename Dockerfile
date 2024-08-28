@@ -4,4 +4,4 @@ COPY requirements.txt ./
 RUN pip install -r requirements.txt -i https://repo.huaweicloud.com/repository/pypi/simple -U
 RUN opentelemetry-bootstrap -a install
 COPY . .
-CMD ["sh","doc/deploy_proj/run_dev.sh"]
+CMD ["sh","doc/deploy_proj/run_prod.sh"]
