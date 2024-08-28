@@ -607,7 +607,7 @@ class Agents:
             "diagnosis": kwargs.get("diagnosis", "无"),
         }
         model_args = await self.__update_model_args__(
-            kwargs, temperature=0, top_p=1, repetition_penalty=1.0
+            kwargs, temperature=0, top_p=0.9, repetition_penalty=1.0
         )
         response: Union[str, AsyncGenerator] = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
