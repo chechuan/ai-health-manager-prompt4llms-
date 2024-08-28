@@ -849,7 +849,7 @@ class Chat_v2:
         return content
 
     def get_reminder_tips(
-        self, prompt, history, intentCode, model="Baichuan2-7B-Chat", mid_vars=None
+        self, prompt, history, intentCode, model="Qwen2-7B-Instruct", mid_vars=None
     ):
         logger.debug("remind prompt: " + prompt)
         content = callLLM(
