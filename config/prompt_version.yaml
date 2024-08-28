@@ -234,6 +234,7 @@ prod:
         sanji_assess_3d_classification: 0.0.1
         sanji_assess_3health_classification: 0.0.1
         sanji_intervene_goal_classification: 0.0.1
+        sanji_questions_generate: 0.0.1
         glucose_consultation: 0.0.1
         blood_interact: 0.0.1
         conversation_deal: 0.0.1
