@@ -1431,7 +1431,7 @@ class HealthExpertModel:
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
-        city = user_profile.get("city", None)
+        city = user_profile.get("city", "北京")
 
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])

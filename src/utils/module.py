@@ -969,41 +969,40 @@ def get_city_id(city_name, geoapi_url, api_key):
         return None
 
 
-def get_weather_info(config, city=None):
-    # 获取当天天气
-    default_city = "北京"
-    api_key = config['key']
-    weather_base_url = config['weather_base_url']
-    geoapi_url = config['geo_base_url']
+def get_weather_info(config, city):
+    try:
+        # 获取 API 配置信息
+        api_key = config['key']
+        weather_base_url = config['weather_base_url']
+        geoapi_url = config['geo_base_url']
 
-    if city:
+        # 获取城市 ID
         city_id = get_city_id(city, geoapi_url, api_key)
-    else:
-        city_id = get_city_id(default_city, geoapi_url, api_key)
+        if not city_id:
+            return None
 
-    if city_id:
+        # 请求天气数据
         url = f"{weather_base_url}?key={api_key}&location={city_id}"
         response = requests.get(url)
+        response.raise_for_status()  # 检查请求是否成功
 
-        if response.status_code == 200:
-            data = json.loads(response.content)
-            if 'daily' in data and data['daily']:
-                today_weather = data['daily'][0]
-                formatted_weather = (f"今日{city if city else default_city}天气{today_weather['textDay']}，"
-                                     f"最高温度{today_weather['tempMax']}度，"
-                                     f"最低温度{today_weather['tempMin']}度，"
-                                     f"风力{today_weather['windScaleDay']}级，"
-                                     f"紫外线强度指数{today_weather['uvIndex']}，"
-                                     f"湿度{today_weather['humidity']}%，"
-                                     f"降水量{today_weather['precip']}mm，"
-                                     f"气压{today_weather['pressure']}hPa，"
-                                     f"能见度{today_weather['vis']}km。")
-                return formatted_weather
-            else:
-                return None
-        else:
-            return None
-    else:
+        data = json.loads(response.content)
+        if 'daily' in data and data['daily']:
+            today_weather = data['daily'][0]
+            formatted_weather = (
+                f"今日{city}天气{today_weather['textDay']}，"
+                f"最高温度{today_weather['tempMax']}度，"
+                f"最低温度{today_weather['tempMin']}度，"
+                f"风力{today_weather['windScaleDay']}级，"
+                f"紫外线强度指数{today_weather['uvIndex']}，"
+                f"湿度{today_weather['humidity']}%，"
+                f"降水量{today_weather['precip']}mm，"
+                f"气压{today_weather['pressure']}hPa，"
+                f"能见度{today_weather['vis']}km。"
+            )
+            return formatted_weather
+    except (requests.exceptions.RequestException, KeyError, json.JSONDecodeError):
+        # 捕获网络请求错误，KeyError 或 JSON 解码错误
         return None
 
 
