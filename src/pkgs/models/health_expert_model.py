@@ -1642,7 +1642,7 @@ class HealthExpertModel:
             kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_continuous"
             prompt_vars_format = {
                 "user_profile": user_profile,
-                "med_prescription": MedPrescription(**med_prescription),
+                "med_prescription": MedPrescription(**med_prescription) if med_prescription else "",
                 "current_bp": current_bp,
                 "recent_bp_data": recent_bp_data
             }
@@ -1650,7 +1650,7 @@ class HealthExpertModel:
             kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_non_continuous"
             prompt_vars_format = {
                 "user_profile": user_profile,
-                "med_prescription": med_prescription,
+                "med_prescription": MedPrescription(**med_prescription) if med_prescription else "",
                 "current_bp": current_bp
             }
 
@@ -1694,7 +1694,7 @@ class HealthExpertModel:
         logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
