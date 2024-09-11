@@ -6,13 +6,10 @@
 @Contact :   1627635056@qq.com
 """
 
-from datetime import date
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
-from click import File
 from fastapi import Body
 from pydantic import BaseModel, Field
-from src.pkgs.models.utils import (determine_blood_pressure_level)
 BaseModel.model_config["protected_namespaces"] = ("model_config",)
 
 
@@ -414,7 +411,7 @@ class AigcSanjiRequest(BaseModel):
         "sanji_assess_3health_classification",
         "sanji_assess_literature_classification",
         "sanji_intervene_goal_classification",
-        # "sanji_intervene_literature_classification",
+        "sanji_questions_generate",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -470,6 +467,12 @@ class AigcSanjiRequest(BaseModel):
         None,
         description="诊断疾病结果",
         examples=["急性肠胃炎"],
+    )
+
+    content_all: Union[str, List, None] = Field(
+        None,
+        description="所有内容",
+        examples="急性肠胃炎",
     )
 
     health_goal: Union[str, None] = Field(
@@ -627,9 +630,34 @@ class CurrentBloodPressure(BaseModel):
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
+    def determine_blood_pressure_level(self, sbp: float, dbp: float) -> str:
+        """
+        根据收缩压和舒张压判断血压等级。
+
+        Args:
+            sbp: 收缩压值
+            dbp: 舒张压值
+
+        Returns:
+            str: 血压等级（如"正常血压", "1级高血压"等）
+        """
+        if sbp >= 180 or dbp >= 110:
+            return "3级高血压"
+        elif 160 <= sbp < 180 or 100 <= dbp < 110:
+            return "2级高血压"
+        elif 140 <= sbp < 160 or 90 <= dbp < 100:
+            return "1级高血压"
+        elif 120 <= sbp < 140 or 80 <= dbp < 90:
+            return "正常高值"
+        elif 90 <= sbp < 120 and 60 <= dbp < 80:
+            return "正常血压"
+        elif sbp < 90 or dbp < 60:
+            return "低血压"
+        return ""  # 默认返回空字符串
+
     def determine_level(self):
         """根据当前血压情况判断血压等级"""
-        return determine_blood_pressure_level(self.sbp, self.dbp)
+        return self.determine_blood_pressure_level(self.sbp, self.dbp)
 
     def formatted_sbp(self):
         try:
@@ -651,9 +679,34 @@ class BloodPressureRecord(BaseModel):
     sbp: float  # 收缩压
     dbp: float  # 舒张压
 
+    def determine_blood_pressure_level(self, sbp: float, dbp: float) -> str:
+        """
+        根据收缩压和舒张压判断血压等级。
+
+        Args:
+            sbp: 收缩压值
+            dbp: 舒张压值
+
+        Returns:
+            str: 血压等级（如"正常血压", "1级高血压"等）
+        """
+        if sbp >= 180 or dbp >= 110:
+            return "3级高血压"
+        elif 160 <= sbp < 180 or 100 <= dbp < 110:
+            return "2级高血压"
+        elif 140 <= sbp < 160 or 90 <= dbp < 100:
+            return "1级高血压"
+        elif 120 <= sbp < 140 or 80 <= dbp < 90:
+            return "正常高值"
+        elif 90 <= sbp < 120 and 60 <= dbp < 80:
+            return "正常血压"
+        elif sbp < 90 or dbp < 60:
+            return "低血压"
+        return ""  # 默认返回空字符串
+
     def determine_level(self):
         """根据血压记录判断血压等级"""
-        return determine_blood_pressure_level(self.sbp, self.dbp)
+        return self.determine_blood_pressure_level(self.sbp, self.dbp)
 
     def formatted_sbp(self):
         try:

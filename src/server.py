@@ -1,55 +1,43 @@
 # -*- encoding: utf-8 -*-
 """
-@Time    :   2023-11-14 17:38:45
-@desc    :   server
-@Author  :   宋昊阳
-@Contact :   1627635056@qq.com
+@Time    :   2024-08-20 17:17:57
+@desc    :   健康模块功能实现
+@Author  :   车川
+@Contact :   chechuan1204@gmail.com
 """
-import asyncio
-import json
-import sys
-import traceback
+
+# 标准库导入
+import asyncio, json, sys, traceback
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Union
 
+# 第三方库导入
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
+# 本地模块导入
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from chat.qwen_chat import Chat
-from src.pkgs.models.small_expert_model import Agents, expertModel
+from src.pkgs.models.agents import Agents
+from src.pkgs.models.expert_model import expertModel
 from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
-from src.pkgs.models.health_expert_module import HealthExpertModule
+from src.pkgs.models.health_expert_model import HealthExpertModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
-    AigcFunctionsCompletionResponse,
-    AigcFunctionsDoctorRecommendRequest,
-    AigcFunctionsRequest,
-    AigcFunctionsResponse,
-    AigcSanjiRequest,
-    BaseResponse,
-    BodyFatWeightManagementRequest,
-    OutpatientSupportRequest,
-    RolePlayRequest,
-    SanJiKangYangRequest,
-    TestRequest,
+    AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
+    AigcFunctionsResponse, AigcSanjiRequest, BaseResponse, BodyFatWeightManagementRequest,
+    OutpatientSupportRequest, RolePlayRequest, SanJiKangYangRequest, TestRequest
 )
 from src.utils.Logger import logger
+from src.utils.resources import InitAllResource
 from src.utils.module import (
-    InitAllResource,
-    MakeFastAPIOffline,
-    NpEncoder,
-    build_aigc_functions_response,
-    construct_naive_response_generator,
-    curr_time,
-    dumpJS,
-    format_sse_chat_complete,
-    response_generator,
+    MakeFastAPIOffline, NpEncoder, build_aigc_functions_response, curr_time,
+    dumpJS, format_sse_chat_complete, response_generator
 )
 
 
@@ -445,7 +433,7 @@ def mount_aigc_functions(app: FastAPI):
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/outpatient_support"
             )
-            response: Union[str, AsyncGenerator] = await health.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
@@ -474,7 +462,7 @@ def mount_aigc_functions(app: FastAPI):
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/sanji/kangyang"
             )
-            response: Union[str, AsyncGenerator] = await health.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
@@ -1103,7 +1091,7 @@ def create_app():
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/weight_management"
             )
-            response: Union[str, AsyncGenerator] = await health.call_function(**param)
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 _return: AsyncGenerator = response_generator(response)
             else:
@@ -1139,7 +1127,7 @@ def prepare_for_all():
     global expert_model
     global gsr
     global agents
-    global health
+    global health_expert_model
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1147,7 +1135,7 @@ def prepare_for_all():
     chat_v2 = Chat_v2(gsr)
     expert_model = expertModel(gsr)
     agents = Agents(gsr)
-    health = HealthExpertModule(gsr)
+    health_expert_model = HealthExpertModel(gsr)
 
 
 # app = create_app()

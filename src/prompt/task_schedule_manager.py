@@ -25,8 +25,8 @@ from data.constrant_for_task_schedule import (
 from src.prompt.model_init import ChatCompletionRequest, ChatMessage, callLLM
 from src.prompt.qwen_openai_api import create_chat_completion
 from src.utils.Logger import logger
+from src.utils.resources import InitAllResource
 from src.utils.module import (
-    InitAllResource,
     accept_stream_response,
     clock,
     curr_time,

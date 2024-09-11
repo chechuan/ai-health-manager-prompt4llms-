@@ -1,5 +1,5 @@
 export ENV=dev
-export LOG_CONSOLE_LEVEL=TRACE
+export LOG_CONSOLE_LEVEL=TRACE5
 export LOG_FILE_LEVEL=TRACE
 
 export OTEL_SERVICE_NAME=ai-health-manager-prompt4llms-dev

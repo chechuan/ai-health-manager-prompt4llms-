@@ -4,13 +4,10 @@ from string import Template
 from data.jiahe_prompt import *
 from data.jiahe_util import *
 
-from src.pkgs.models.utils import ParamTools
 from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
-from src.utils.module import (
-    InitAllResource,
-)
+from src.utils.resources import InitAllResource
 
 class JiaheExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:

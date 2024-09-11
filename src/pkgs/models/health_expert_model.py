@@ -6,30 +6,34 @@
 @Contact :   chechuan1204@gmail.com
 """
 
+# 标准库导入
 import asyncio
 import json
-import json5
 from copy import deepcopy
 from datetime import datetime
-from typing import AsyncGenerator, Dict, Generator, List, Literal, Optional, Union
+from typing import Generator
 
-from src.pkgs.models.utils import (
-    ParamTools,
-    get_highest_data_per_day,
-    check_consecutive_days
+# 第三方库导入
+import json5
+
+# 本地模块导入
+from data.test_param.test import testParam
+from src.utils.module import (
+    check_required_fields, check_aigc_functions_body_fat_weight_management_consultation,
+    check_and_calculate_bmr, get_highest_data_per_day, check_consecutive_days,
+    calculate_and_format_diet_plan, calculate_standard_weight, convert_meal_plan_to_text,
+    curr_time, determine_recent_solar_terms, format_historical_meal_plans,
+    format_historical_meal_plans_v2, generate_daily_schedule, generate_key_indicators,
+    get_festivals_and_other_festivals, get_weather_info, parse_generic_content,
+    remove_empty_dicts, handle_calories
 )
-from src.prompt.model_init import ChatMessage, acallLLM, callLLM
+from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
-from src.utils.module import (InitAllResource, calculate_and_format_diet_plan, calculate_standard_weight,
-                              convert_meal_plan_to_text, curr_time, determine_recent_solar_terms,
-                              format_historical_meal_plans, format_historical_meal_plans_v2,
-                              generate_daily_schedule, generate_key_indicators,
-                              get_festivals_and_other_festivals, get_weather_info,
-                              parse_generic_content, remove_empty_dicts, handle_calories)
+from src.utils.resources import InitAllResource
 
 
-class HealthExpertModule:
+class HealthExpertModel:
 
     def __init__(self, gsr: InitAllResource) -> None:
         # 初始化实例属性
@@ -47,7 +51,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "messages", "medical_records"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+        await check_required_fields(kwargs, {}, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -84,7 +88,7 @@ class HealthExpertModule:
         required_fields = {"messages": []}
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -109,7 +113,7 @@ class HealthExpertModule:
         required_fields = {"messages": []}
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -135,7 +139,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+        await check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -165,7 +169,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+        await check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -195,7 +199,7 @@ class HealthExpertModule:
         at_least_one = ["messages", "medical_records"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+        await check_required_fields(kwargs, {}, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -232,7 +236,7 @@ class HealthExpertModule:
         at_least_one = ["messages", "medical_records"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, {}, at_least_one)
+        await check_required_fields(kwargs, {}, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -353,7 +357,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+        await check_required_fields(kwargs, required_fields, at_least_one)
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
@@ -364,7 +368,7 @@ class HealthExpertModule:
         )
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
@@ -410,7 +414,7 @@ class HealthExpertModule:
         )
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
@@ -456,13 +460,13 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         user_profile = kwargs.get("user_profile", {})
 
         try:
             # 使用工具类方法检查并计算基础代谢率（BMR）
-            bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+            bmr = await check_and_calculate_bmr(user_profile)
             if bmr:
                 user_profile["bmr"] = f"{bmr}kcal"
         except ValueError as e:
@@ -523,7 +527,7 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         user_profile = kwargs.get("user_profile", {})
 
@@ -533,7 +537,7 @@ class HealthExpertModule:
         )
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}kcal\n"
 
         # 组合病历信息字符串
@@ -605,7 +609,7 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         user_profile = kwargs.get("user_profile", {})
 
@@ -615,7 +619,7 @@ class HealthExpertModule:
         )
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         basic_nutritional_needs = kwargs.get("ietary_guidelines").get(
@@ -680,7 +684,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+        await check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", {})
@@ -746,7 +750,7 @@ class HealthExpertModule:
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields, at_least_one)
+        await check_required_fields(kwargs, required_fields, at_least_one)
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", {})
@@ -801,7 +805,7 @@ class HealthExpertModule:
         """
         _event, kwargs = "体脂体重管理-问诊", deepcopy(kwargs)
         # 参数检查
-        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(
+        await check_aigc_functions_body_fat_weight_management_consultation(
             kwargs
         )
 
@@ -866,7 +870,7 @@ class HealthExpertModule:
         }
 
         # 参数检查
-        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
+        await check_aigc_functions_body_fat_weight_management_consultation(kwargs)
 
         # 获取并排序体重数据
         weight_data = next((item["data"] for item in kwargs.get("key_indicators", []) if item["key"] == "体重"), [])
@@ -961,7 +965,7 @@ class HealthExpertModule:
         key_indicators = kwargs.get("key_indicators", [])
 
         # 参数检查
-        await ParamTools.check_aigc_functions_body_fat_weight_management_consultation(kwargs)
+        await check_aigc_functions_body_fat_weight_management_consultation(kwargs)
 
         body_fat_data = next((item["data"] for item in key_indicators if item["key"] == "体脂率"), [])
         days_count = len(body_fat_data)
@@ -1095,13 +1099,13 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile["bmr"] = f"{bmr}kcal"
 
         # 组合用户画像信息字符串
@@ -1160,13 +1164,13 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
-        bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+        bmr = await check_and_calculate_bmr(user_profile)
         user_profile["bmr"] = f"{bmr}kcal"
 
         # 组合用户画像信息字符串
@@ -1227,14 +1231,14 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
 
         try:
             # 使用工具类方法检查并计算基础代谢率（BMR）
-            bmr = await ParamTools.check_and_calculate_bmr(user_profile)
+            bmr = await check_and_calculate_bmr(user_profile)
             if bmr:
                 user_profile["bmr"] = f"{bmr}kcal"
         except ValueError as e:
@@ -1299,7 +1303,7 @@ class HealthExpertModule:
         }
 
         # 验证必填字段
-        await ParamTools.check_required_fields(kwargs, required_fields)
+        await check_required_fields(kwargs, required_fields)
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
@@ -1427,7 +1431,7 @@ class HealthExpertModule:
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
-        city = user_profile.get("city", None)
+        city = user_profile.get("city", "北京")
 
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
@@ -1638,7 +1642,7 @@ class HealthExpertModule:
             kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_continuous"
             prompt_vars_format = {
                 "user_profile": user_profile,
-                "med_prescription": MedPrescription(**med_prescription),
+                "med_prescription": MedPrescription(**med_prescription) if med_prescription else "",
                 "current_bp": current_bp,
                 "recent_bp_data": recent_bp_data
             }
@@ -1646,7 +1650,7 @@ class HealthExpertModule:
             kwargs['intentCode'] = "aigc_functions_blood_pressure_alert_non_continuous"
             prompt_vars_format = {
                 "user_profile": user_profile,
-                "med_prescription": med_prescription,
+                "med_prescription": MedPrescription(**med_prescription) if med_prescription else "",
                 "current_bp": current_bp
             }
 
@@ -1690,7 +1694,7 @@ class HealthExpertModule:
         logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -1840,3 +1844,9 @@ class HealthExpertModule:
             ) and not self.funcmap.get(obj_str):
                 self.funcmap[obj_str] = getattr(self, obj_str)
 
+
+if __name__ == "__main__":
+    gsr = InitAllResource()
+    agents = HealthExpertModel(gsr)
+    param = testParam.param_dev_report_interpretation
+    agents.call_function(**param)
