@@ -182,3 +182,10 @@ def get_sub_scene_intent(prompt_tool_data, scene_code, parant_intent):
         if prompt_tool_data[i]['scene'] and prompt_tool_data[i]['hierarchy'] == 1 and parant_intent == prompt_tool_data[i]['paternal_intent'] and scene_code in prompt_tool_data[i]['scene'].split(','):
             res.append(i + ':' + prompt_tool_data[i]['description'])
     return '\n'.join(res)
+
+def get_sub_scene_intent_v2(prompt_tool_data, scene_code, parant_intent):
+    res = []
+    for i in prompt_tool_data.keys():
+        if prompt_tool_data[i]['scene'] and prompt_tool_data[i]['hierarchy'] > 0 and parant_intent == prompt_tool_data[i]['paternal_intent'] and scene_code in prompt_tool_data[i]['scene'].split(','):
+            res.append(i + ':' + prompt_tool_data[i]['description'])
+    return '\n'.join(res)
