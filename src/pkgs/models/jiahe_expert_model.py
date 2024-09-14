@@ -840,11 +840,11 @@ class JiaheExpertModel:
             fat_ratio = 0
         else:
             carbon_water_ratio = round(float(carbon_water * 4 / caloric) * 100, 2)
-            protein_ratio  = round(float(protein * 4 / caloric) * 100, 2)
+            protein_ratio = round(float(protein * 4 / caloric) * 100, 2)
             fat_ratio = round(float(fat * 9 / caloric) * 100, 2)
 
         if carbon_water_ratio + protein_ratio + fat_ratio > 100:
-            carbon_water_ratio = round(float(99.5 - protein_ratio - fat_ratio), 2)
+            carbon_water_ratio = max(round(0.0, 1), round(float(99.5 - protein_ratio - fat_ratio), 2))
 
         yield {"message": {"dish_name": name, "dish_effect": effect, "image": image,
                            "nutrient_elements": [
