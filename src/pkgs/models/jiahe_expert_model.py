@@ -229,8 +229,7 @@ class JiaheExpertModel:
             days=1,
     ):
         """出具家庭N日饮食计划"""
-        roles, familyInfo, his_prompt = get_familyInfo_history(users, history)
-        temp = Template(jiahe_family_diet_prompt)
+        roles, familyInfo, his_prompt = get_familyInfo_history_0914(users, history)
         diet_cont = []
         if reference_diet:
             diet_cont.extend(reference_diet)
@@ -239,7 +238,7 @@ class JiaheExpertModel:
             # cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
 
-            prompt = temp.substitute(
+            prompt = jiahe_family_diet_prompt.format(
                 num=len(users),
                 roles=roles,
                 requirements="，".join(requirements),
@@ -268,7 +267,7 @@ class JiaheExpertModel:
                 temperature=0.8,
                 do_sample=True,
                 # stream=True,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen2-72B-Instruct",
             )
             diet_cont.append(generate_text)
             print(f"latency {time.time() - start_time:.2f} s -> response")
