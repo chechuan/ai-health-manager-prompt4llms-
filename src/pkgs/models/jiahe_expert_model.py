@@ -1041,6 +1041,7 @@ class JiaheExpertModel:
         content = await parse_generic_content(generate_text)
         return content
 
+
     async def aigc_jiahe_ingredient_pairing_taboo(self, **kwargs):
         """
         判断食材搭配禁忌，结合食材的营养属性与搭配的禁忌。
@@ -1128,6 +1129,118 @@ class JiaheExpertModel:
         # 没有禁忌时返回"空"
         else:
             return None
+
+
+    async def aigc_jiahe_ingredient_selection_guide(self, **kwargs):
+        """
+        根据食材名称生成挑选方法，分别从外观、手感和气味等方面提供详细挑选方法
+
+        需求文档地址：: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 食材名称，用户输入的必填项。
+
+        返回:
+        - 生成关于该食材挑选方法的文本，包括外观、手感和气味方面的详细说明。
+        """
+
+        # 校验必填项
+        ingredient_name = kwargs.get('ingredient_name', '')
+        if not ingredient_name:
+            raise ValueError("食材名称为必填项，不能为空！")
+
+        # 拼接提示词
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        messages = [
+            {
+                "role": "user",
+                "content": ingredient_selection_prompt.format(
+                    ingredient_name=ingredient_name
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        logger.debug("食材挑选方法模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成挑选方法建议
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("食材挑选方法模型输出latency： " + str(time.time() - start_time))
+
+        # 解析并返回生成的结果
+        content = generate_text
+        return content
+
+
+    async def aigc_jiahe_ingredient_taboo_groups(self, **kwargs):
+        """
+        输入食材名称，智能助手告知该食材的禁忌人群，如特定疾病患者、特殊体质等，并提供替代食材建议，确保饮食既健康又安全。
+
+        需求文档地址: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 食材名称，用户输入的必填项。
+
+        返回:
+        - 生成关于该食材禁忌人群的文本，列出禁忌人群及替代食材建议。
+        """
+
+        # 校验必填项
+        ingredient_name = kwargs.get('ingredient_name', '')
+        if not ingredient_name:
+            raise ValueError("食材名称为必填项，不能为空！")
+
+        # 拼接提示词
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        messages = [
+            {
+                "role": "user",
+                "content": ingredient_taboo_groups_prompt.format(
+                    ingredient_name=ingredient_name
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        logger.debug("食材禁忌人群模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成禁忌人群说明
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,
+            model="Qwen1.5-72B-Chat",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("食材禁忌人群模型输出latency： " + str(time.time() - start_time))
+
+        # 解析并返回生成的结果
+        content = generate_text
+        return content
+
+
 
 
 
