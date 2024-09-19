@@ -459,9 +459,10 @@ class FuncCall:
 
         dataSource = None
         url = self.api_config["langchain"] + called_method
+        logger.debug(f"Call 知识库问答 with url\n{url}")
         try:
             logger.debug(f"Call 知识库问答 with payload\n{payload}")
-            response = self.session.post(url, json=payload, headers=self.headers)
+            response = self.session.post(url, json=payload, headers=self.headers, timeout=10)
             msg = eval(response.text)
             logger.debug(f"知识库问答 Response\n{msg}")
         except Exception as e:
