@@ -1537,13 +1537,3 @@ def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
             return False
 
     return True
-
-
-
-
-
-
-
-
-
-
