@@ -1,5 +1,8 @@
 import json
 import time
+from datetime import datetime
+import asyncio
+from typing import Generator
 from string import Template
 from data.jiahe_prompt import *
 from data.jiahe_util import *
@@ -8,6 +11,7 @@ from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
+from src.utils.module import parse_generic_content
 
 class JiaheExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
@@ -871,3 +875,371 @@ class JiaheExpertModel:
         # logger.debug(
         #     "bce embedding模型输出： " + json.dumps(generate_text, ensure_ascii=False)
         # )
+
+
+    async def call_function(self, **kwargs) -> Union[str, Generator]:
+        """调用函数
+        - Args:
+            intentCode (str): 意图代码
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            Union[str, AsyncGenerator]: 返回字符串或异步生成器
+        """
+        intent_code = kwargs.get("intentCode")
+        try:
+            # 使用 getattr 获取类中的方法
+            func = getattr(self, intent_code)
+        except AttributeError:
+            raise ValueError(f"Code '{intent_code}' does not对应一个有效的异步函数.")
+
+        try:
+            # 调用异步或同步函数
+            if asyncio.iscoroutinefunction(func):
+                content = await func(**kwargs)
+            else:
+                content = func(**kwargs)
+
+        except Exception as e:
+            logger.exception(f"call_function {intent_code} error: {e}")
+            raise e
+
+        return content
+
+
+    async def aigc_jiahe_seasonal_ingredients_generation(self, **kwargs):
+        """
+        推荐时令食材，结合节气、地域和营养管理目标
+
+        需求文档地址: https://your-document-link.com
+
+        参数:
+        - cur_date (str): 当前日期，系统自动获取，格式为"YYYY年MM月DD日"。
+        - location (str): 用户所在的地域信息，如"北京"。若未知，则不拼入提示词。
+        - nutrition_goal (str): 营养管理目标，如"控制血糖"、"维持心脏健康"等。若未知，则不拼入提示词。
+
+        返回:
+        - 生成符合时令的食材名称及其营养价值列表，格式为List[Dict]，包括20种食材及其营养描述。
+        """
+        # 当前日期，传递则使用，未传递则自动获取
+        cur_date = kwargs.get('cur_date', '') or datetime.now().strftime("%Y年%m月%d日")
+
+        # 其他参数
+        location = kwargs.get('location', '')
+        nutrition_goal = kwargs.get('nutrition_goal', '')
+
+        # 拼接用户和历史数据
+        userInfo, his_prompt = get_userInfo_history({}, [])
+
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        # 构建提示词，基于当前日期、地域和营养目标
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_seasonal_ingredients_prompt.format(
+                    cur_date=cur_date,
+                    location=location,
+                    nutrition_goal=nutrition_goal
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        # logger.debug("时令食材推荐模型输入： " + json.dumps(messages, ensure_ascii=False))
+        logger.debug("时令食材推荐模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成推荐食材及其营养价值
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=2048,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,  # 如果需要流式输出可以启用
+            model="Qwen2-7B-Instruct",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("时令食材推荐模型输出latency： " + str(time.time() - start_time))
+        # logger.debug("时令食材推荐模型输出： " + generate_text)
+        # 返回生成的推荐结果
+        content = await parse_generic_content(generate_text)
+        return content
+
+
+    async def aigc_jiahe_ingredient_pairing_suggestion(self, **kwargs):
+        """
+        根据已知食材生成搭配建议，输出搭配后的营养价值
+
+        需求文档地址: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 已知食材名称，用户输入的必填项。
+        - cur_date (str): 当前日期，系统自动获取，格式为"YYYY年MM月DD日"。若未知，则不拼入提示词。
+        - location (str): 用户所在的地域信息，如"北京"。若未知，则不拼入提示词。
+        - nutrition_goal (str): 营养管理目标，如"控制血糖"、"维持心脏健康"等。若未知，则不拼入提示词。
+
+        返回:
+        - 生成最多3个与已知食材完美搭配的家常菜肴组合及其营养价值。
+        """
+        # 获取传递的参数
+        ingredient_name = kwargs.get('ingredient_name', '')
+
+        # 校验必填项
+        if not ingredient_name:
+            raise ValueError("食材名称为必填项，不能为空！")
+
+        cur_date = kwargs.get('cur_date', '') or datetime.now().strftime("%Y年%m月%d日")
+        location = kwargs.get('location', '')
+        nutrition_goal = kwargs.get('nutrition_goal', '')
+
+        # 拼接用户和历史数据
+        # userInfo, his_prompt = get_userInfo_history({}, [])
+
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        # 构建提示词，基于食材、日期、地域和营养目标
+        messages = [
+            {
+                "role": "user",
+                "content": jiahe_ingredient_pairing_prompt.format(
+                    ingredient_name=ingredient_name,
+                    cur_date=cur_date,
+                    location=location,
+                    nutrition_goal=nutrition_goal
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        logger.debug("食材搭配建议模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成食材搭配建议
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=2048,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,  # 如果需要流式输出可以启用
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("食材搭配建议模型输出latency： " + str(time.time() - start_time))
+
+        # 返回生成的推荐结果
+        content = await parse_generic_content(generate_text)
+        return content
+
+
+    async def aigc_jiahe_ingredient_pairing_taboo(self, **kwargs):
+        """
+        判断食材搭配禁忌，结合食材的营养属性与搭配的禁忌。
+
+        需求文档地址: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 食材名称，必填字段。
+
+        返回:
+        - 返回搭配禁忌事项，或者返回"空"。
+        """
+        _event1 = "判断食材是否有禁忌"
+        _event2 = "食材搭配禁忌事项"
+        # 获取食材名称参数，校验是否为空
+
+        ingredient_name = kwargs.get('ingredient_name')
+        if not ingredient_name:
+            raise ValueError("食材名称不能为空")
+
+        # 模型参数
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        # 判断是否存在搭配禁忌的提示词
+        taboo_check_prompt = jiahe_ingredient_taboo_existence_prompt.format(ingredient_name=ingredient_name)
+
+        # 日志记录输入提示词
+        logger.debug(f"AIGC JIAHE Functions {_event1} LLM Input: {(taboo_check_prompt)}")
+
+        # 记录开始时间
+        start_time = time.time()
+
+        # 调用大模型判断是否存在搭配禁忌
+        has_taboo_pairing: Union[str, Generator] = await acallLLM(
+            history=[{"role": "user", "content": taboo_check_prompt}],
+            max_tokens=2048,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,
+            model="Qwen1.5-32B-Chat",
+        )
+
+        # 记录模型响应时间
+        logger.info(f"AIGC JIAHE Functions {_event1} LLM Output: {(has_taboo_pairing)}")
+
+        # 记录模型响应时间
+        logger.debug(f"{_event1}模型输出时间: {time.time() - start_time}秒")
+
+        # 解析判断结果
+        has_taboo_pairing_dict = await parse_generic_content(has_taboo_pairing)
+
+        # 判断是否有禁忌
+        if has_taboo_pairing_dict.get("has_taboo_pairing") == "是":
+            # 如果存在禁忌，生成详细的搭配禁忌信息
+            taboo_details_prompt = jiahe_ingredient_taboo_details_prompt.format(ingredient_name=ingredient_name)
+
+            # 日志记录详细禁忌提示词
+            logger.debug(f"AIGC JIAHE Functions {_event1} LLM Input: {(taboo_details_prompt)}")
+
+            # 记录生成禁忌搭配详情开始时间
+            start_time = time.time()
+
+            # 调用大模型获取禁忌搭配详情
+            taboo_details: Union[str, Generator] = await acallLLM(
+                history=[{"role": "user", "content": taboo_details_prompt}],
+                max_tokens=2048,
+                top_p=0.9,
+                temperature=0.8,
+                do_sample=True,
+                stream=stream,
+                model="Qwen1.5-32B-Chat",
+            )
+
+            logger.info(f"AIGC JIAHE Functions {_event2} LLM Output: {(taboo_details)}")
+
+            logger.debug(f"{_event2}模型输出时间: {time.time() - start_time}秒")
+
+            # 解析禁忌搭配详情
+            taboo_details_content = await parse_generic_content(taboo_details)
+
+            return taboo_details_content
+
+        # 没有禁忌时返回"空"
+        else:
+            return None
+
+
+    async def aigc_jiahe_ingredient_selection_guide(self, **kwargs):
+        """
+        根据食材名称生成挑选方法，分别从外观、手感和气味等方面提供详细挑选方法
+
+        需求文档地址：: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 食材名称，用户输入的必填项。
+
+        返回:
+        - 生成关于该食材挑选方法的文本，包括外观、手感和气味方面的详细说明。
+        """
+
+        # 校验必填项
+        ingredient_name = kwargs.get('ingredient_name', '')
+        if not ingredient_name:
+            raise ValueError("食材名称为必填项，不能为空！")
+
+        # 拼接提示词
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        messages = [
+            {
+                "role": "user",
+                "content": ingredient_selection_prompt.format(
+                    ingredient_name=ingredient_name
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        logger.debug("食材挑选方法模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成挑选方法建议
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("食材挑选方法模型输出latency： " + str(time.time() - start_time))
+
+        # 解析并返回生成的结果
+        content = generate_text
+        return content
+
+
+    async def aigc_jiahe_ingredient_taboo_groups(self, **kwargs):
+        """
+        输入食材名称，智能助手告知该食材的禁忌人群，如特定疾病患者、特殊体质等，并提供替代食材建议，确保饮食既健康又安全。
+
+        需求文档地址: https://your-document-link.com
+
+        参数:
+        - ingredient_name (str): 食材名称，用户输入的必填项。
+
+        返回:
+        - 生成关于该食材禁忌人群的文本，列出禁忌人群及替代食材建议。
+        """
+
+        # 校验必填项
+        ingredient_name = kwargs.get('ingredient_name', '')
+        if not ingredient_name:
+            raise ValueError("食材名称为必填项，不能为空！")
+
+        # 拼接提示词
+        model_args = kwargs.get("model_args", {})
+        stream = model_args.get("stream", False)
+
+        messages = [
+            {
+                "role": "user",
+                "content": ingredient_taboo_groups_prompt.format(
+                    ingredient_name=ingredient_name
+                ),
+            }
+        ]
+
+        # 日志记录模型输入
+        logger.debug("食材禁忌人群模型输入：" + repr(messages[0]['content']))
+
+        start_time = time.time()
+
+        # 调用大语言模型生成禁忌人群说明
+        generate_text: Union[str, Generator] = await acallLLM(
+            history=messages,
+            max_tokens=1024,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            stream=stream,
+            model="Qwen1.5-72B-Chat",  # 指定使用的模型
+        )
+
+        # 日志记录模型响应延迟和结果
+        logger.debug("食材禁忌人群模型输出latency： " + str(time.time() - start_time))
+
+        # 解析并返回生成的结果
+        content = generate_text
+        return content
+
+
+
+
+

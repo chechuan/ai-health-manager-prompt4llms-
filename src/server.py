@@ -942,6 +942,42 @@ def create_app():
         finally:
             return result
 
+    @app.route("/aigc/jiahe/food_recommendation", methods=["post"])
+    async def _recommend_seasonal_ingredients(request: Request):
+        """家和V930-食材/菜品推荐"""
+        try:
+            # 获取请求参数
+            param = await async_accept_param_purge(request, endpoint="/aigc/jiahe/food_recommendation")
+
+            # 调用大模型处理
+            response: Union[str, AsyncGenerator] = await jiahe_expert.call_function(**param)
+            # 判断是否需要流式输出
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 流式响应处理，构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
+            else:
+                # 非流式响应，构造标准的JSON字符串
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=200, items=response
+                )
+                _return: str = ret.model_dump_json(exclude_unset=False)
+
+        except Exception as err:
+            msg = repr(err)
+            # 处理错误的流式响应
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return: AsyncGenerator = response_generator(msg, error=True)
+            else:
+                # 处理错误的普通JSON响应
+                ret: BaseModel = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=None
+                )
+                _return: str = ret.model_dump_json(exclude_unset=True)
+
+        finally:
+            # 返回构造的响应
+            return build_aigc_functions_response(_return)
+
     @app.route("/chat_gen", methods=["post"])
     async def get_chat_gen(request: Request):
         global chat
@@ -1128,6 +1164,7 @@ def prepare_for_all():
     global gsr
     global agents
     global health_expert_model
+    global jiahe_expert
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1136,6 +1173,7 @@ def prepare_for_all():
     expert_model = expertModel(gsr)
     agents = Agents(gsr)
     health_expert_model = HealthExpertModel(gsr)
+    jiahe_expert = JiaheExpertModel(gsr)
 
 
 # app = create_app()
