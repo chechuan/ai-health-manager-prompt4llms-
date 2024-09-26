@@ -18,6 +18,7 @@ from src.prompt.model_init import ChatMessage, DeltaMessage, acallLLM, callLLM
 from src.test.exp.data.prompts import (
     _auxiliary_diagnosis_judgment_repetition_prompt,
     _auxiliary_diagnosis_system_prompt_v7,
+    _chat_start_with_weather_v2
 )
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
@@ -159,12 +160,20 @@ class CustomChatAuxiliary(CustomChatModel):
             return "None"
 
     def __compose_auxiliary_diagnosis_message__(
-        self, history: List[Dict[str, str]]
+        self, **kwargs
     ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
         # event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
         # sys_prompt = event["description"] + "\n" + event["process"]
+        history = [
+            i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
+        ]
         sys_prompt = _auxiliary_diagnosis_system_prompt_v7
+        pro = kwargs.get("promptParam", {})
+        
+        user_profile = pro.get('user_profile','')
+        
+        sys_prompt = sys_prompt.replace("{user_profile}", user_profile)
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -307,7 +316,7 @@ class CustomChatAuxiliary(CustomChatModel):
         return messages
 
     def __chat_auxiliary_diagnosis_summary_diet_rec__(
-        self, history: List[Dict]
+        self, **kwargs
     ) -> AnyStr:
         """辅助诊断总结、饮食建议
 
@@ -317,6 +326,9 @@ class CustomChatAuxiliary(CustomChatModel):
         Returns:
             AnyStr: 辅助诊断总结、饮食建议
         """
+        history = [
+            i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
+        ]
         event = self.__extract_event_from_gsr__(
             self.gsr, "auxiliary_diagnosis_summary_diet_rec"
         )
@@ -329,6 +341,12 @@ class CustomChatAuxiliary(CustomChatModel):
             elif role == "user":
                 compose_message += f"用户: {content}\n"
         prompt = prompt_template_str.replace("{MESSAGE}", compose_message)
+        pro = kwargs.get("promptParam", {})
+        symptom = pro.get('symptom','')
+        user_profile = pro.get('user_profile','')
+        prompt = prompt.replace("{symptom}", symptom)
+        prompt = prompt.replace("{user_profile}", user_profile)
+
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get(
@@ -354,10 +372,8 @@ class CustomChatAuxiliary(CustomChatModel):
         # 过滤掉辅助诊断之外的历史消息
         # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
         model = "Qwen1.5-72B-Chat"
-        history = [
-            i for i in kwargs["history"] if i.get("intentCode") == "auxiliary_diagnosis"
-        ]
-        messages = self.__compose_auxiliary_diagnosis_message__(history)
+
+        messages = self.__compose_auxiliary_diagnosis_message__(**kwargs)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
         # for _ in range(2):
@@ -390,7 +406,7 @@ class CustomChatAuxiliary(CustomChatModel):
         # elif not doctor or "问诊Finished" in doctor:
         elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor:
             # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
-            sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(**kwargs)
             conts = [
                 sug,
                 "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？",
@@ -442,38 +458,67 @@ class CustomChatAuxiliary(CustomChatModel):
     async def __chat_start_with_weather__(self, **kwargs) -> ChatMessage:
         model = 'Qwen1.5-72B-Chat'
         pro = kwargs.get("promptParam", {})
-        if_entropy = pro.get("withEntropy")
+        if_entropy = pro.get("withEntropy",'')
+        conts=[]
         
         city = "廊坊"
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
-         # 获取最近节气
-        recent_solar_terms = determine_recent_solar_terms_sanji()
-        prompt_vars = {"recent_solar_terms": recent_solar_terms}
-        content: str = await self.chat_general(
-            _event="节气问询",
-            prompt_vars=prompt_vars,
-            **kwargs,
-        )
-        # thought, output = self.__parse_diff_response__(content, "thought:", "output:")
+        if if_entropy == "2" or if_entropy == "3":
+            prompt_vars = {"today_weather": today_weather}
+            prompt_template =_chat_start_with_weather_v2.replace('today_weather',today_weather)
+            content: str = await self.chat_general(
+                            _event="节气问询",
+                            prompt_template=prompt_template,
+                            prompt_vars=prompt_vars,
+                            **kwargs)
+            if if_entropy=='2':
+                result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
+            else:
+                from datetime import datetime
+                now = datetime.now()  
+  
+                # 格式化当前时间，仅保留小时和分钟  
+                current_time_str = now.strftime("%H:%M")  
+                
+                # 提取小时部分  
+                hour = int(current_time_str.split(':')[0])  
+                
+                # 根据小时判断时段  
+                if hour < 11:  
+                    t="上午" 
+                elif 11 <= hour < 13:  
+                    t="中午"  
+                else:  
+                    t="下午" 
+                result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
+                # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
+
         # 用if_entropy字段来控制不同的场景
-        if if_entropy == "0":
-            result = (
-                content + today_weather
-                + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
-            )
-        elif if_entropy == "1":
-            if "；" in content:
-                 content = content.split("；", 1)[0]
-            entropy = pro.get("askEntropy", "")
-            result = (
-                "叔叔，您的生命熵为"
-                + entropy
-                + "，主要问题是血压不稳定，需要重点控制血压。"
-                + content
-                + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
-            )
         else:
-            result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
+            recent_solar_terms = determine_recent_solar_terms_sanji()
+            prompt_vars = {"recent_solar_terms": recent_solar_terms}
+            content: str = await self.chat_general(
+                            _event="节气问询",
+                            prompt_vars=prompt_vars,
+                            **kwargs)
+            if if_entropy == "0":
+                result = (
+                    content + today_weather
+                    + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
+                )
+            elif if_entropy == "1":
+                if "；" in content:
+                    content = content.split("；", 1)[0]
+                entropy = pro.get("askEntropy", "")
+                result = (
+                    "叔叔，您的生命熵为"
+                    + entropy
+                    + "，主要问题是血压不稳定，需要重点控制血压。"
+                    + content
+                    + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
+                )
+            else:
+                result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
 
         mid_vars = update_mid_vars(
             kwargs["mid_vars"],
@@ -482,7 +527,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             key="自定义辅助诊断对话",
         )
-        return mid_vars, [], ('', result)
+        return mid_vars, conts, ('', result)
 
     async def __chat_blood_interact__(self, **kwargs) -> ChatMessage:
         model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
