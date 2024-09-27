@@ -1112,7 +1112,7 @@ class Chat_v2:
                     await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
                 )
                 tool = "askHuman"
-            if conts:
+            if conts and len(conts)>0:
                 intentCode = "assert_whether_contact_family_doctor"
                 tool = "convComplete"
                 # content = content+conts[0]
