@@ -462,7 +462,7 @@ class FuncCall:
         logger.debug(f"Call 知识库问答 with url\n{url}")
         try:
             logger.debug(f"Call 知识库问答 with payload\n{payload}")
-            response = self.session.post(url, json=payload, headers=self.headers, timeout=10)
+            response = self.session.post(url, json=payload, headers=self.headers, timeout=300)
             msg = eval(response.text)
             logger.debug(f"知识库问答 Response\n{msg}")
         except Exception as e:
