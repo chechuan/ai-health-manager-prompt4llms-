@@ -276,7 +276,19 @@ class JiaheExpertModel:
             diet_cont.append(generate_text)
             print(f"latency {time.time() - start_time:.2f} s -> response")
             logger.debug("出具家庭一日饮食计划模型输出： " + generate_text)
-            yield {"message": generate_text, "end": True}
+
+            tmp = [i.strip() for i in generate_text.split('\n') if i.strip()]
+            l = len(tmp)
+            while not tmp[-2].startswith('## 晚餐'):
+                tmp = tmp[:-1]
+            if not len(tmp) == l:
+                generate_text = ''
+                for i, x in enumerate(tmp):
+                    if x.startswith('##'):
+                        generate_text = generate_text + x + '\n'
+                    else:
+                        generate_text = generate_text + x + '\n\n'
+            yield {"message": generate_text.strip(), "end": True}
 
     @staticmethod
     async def gen_nutrious_principle(cur_date, location, history=[], userInfo={}):
