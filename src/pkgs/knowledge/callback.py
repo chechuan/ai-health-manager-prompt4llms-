@@ -462,8 +462,14 @@ class FuncCall:
         logger.debug(f"Call 知识库问答 with url\n{url}")
         try:
             logger.debug(f"Call 知识库问答 with payload\n{payload}")
-            response = self.session.post(url, json=payload, headers=self.headers, timeout=300)
-            msg = eval(response.text)
+            response = self.session.post(url, json=payload, headers=self.headers)
+
+            # 移除前缀 'data: ' 并解析
+            response_text = response.text.strip()
+            if response_text.startswith("data:"):
+                response_text = response_text[5:].strip()  # 移除 'data:'
+
+            msg = json.loads(response_text)  # 使用 json.loads() 解析 JSON
             logger.debug(f"知识库问答 Response\n{msg}")
         except Exception as e:
             logger.error(e)
