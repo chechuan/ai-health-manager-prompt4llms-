@@ -27,6 +27,7 @@ from src.pkgs.models.agents import Agents
 from src.pkgs.models.expert_model import expertModel
 from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.models.health_expert_model import HealthExpertModel
+from src.pkgs.models.itinerary_model import ItineraryGenerator
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
@@ -483,6 +484,13 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+    async def _aigc_generate_itinerary(request: Request):
+        # 这里调用生成行程的逻辑
+        user_data = await request.json()
+        generator = ItineraryGenerator()
+        response = generator.generate(user_data)
+        return response
+
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
@@ -492,6 +500,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
+
+    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_generate_itinerary)
 
 
 def create_app():
