@@ -484,11 +484,18 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
-    async def _aigc_generate_itinerary(request: Request):
+    async def _aigc_functions_generate_itinerary(request: Request):
         # 这里调用生成行程的逻辑
         user_data = await request.json()
         generator = ItineraryGenerator()
         response = generator.generate(user_data)
+        return response
+
+    async def _aigc_functions_generate_bath_plan(request: Request):
+        user_data = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        generator = ItineraryGenerator()
+        response = generator.generate_bath_plan(user_data)
         return response
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
@@ -501,7 +508,10 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
 
-    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_generate_itinerary)
+    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
+
+    app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
+
 
 
 def create_app():
