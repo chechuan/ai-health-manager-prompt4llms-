@@ -975,12 +975,16 @@ def create_app():
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 流式响应处理，构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
+            elif param.get("intentCode") in ["aigc_jiahe_ingredient_pairing_suggestion", "aigc_jiahe_ingredient_selection_guide", "aigc_jiahe_ingredient_taboo_groups"]:
+                # 流式响应处理，构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
             else:
                 # 非流式响应，构造标准的JSON字符串
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=200, items=response
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
+
 
         except Exception as err:
             msg = repr(err)

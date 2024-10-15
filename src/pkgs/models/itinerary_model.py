@@ -310,4 +310,4 @@ generator = ItineraryGenerator()
 recommended_itinerary = generator.generate(input_data)
 
 # 打印推荐结果
-print(recommended_itinerary)
+# print(recommended_itinerary)
