@@ -1,6 +1,6 @@
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 from typing import Generator
 from string import Template
@@ -508,20 +508,17 @@ class JiaheExpertModel:
             reference_daily_diets,
             days,
             history=[],
-            userInfo={},
+            userInfo={}
     ):
-        """个人N日饮食计划"""
+        """生成N日饮食计划"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
         diet_cont = []
         if reference_daily_diets:
             diet_cont.extend(reference_daily_diets)
-        import datetime
 
-        for i in range(days):
-            cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime(
-                "%Y-%m-%d"
-            )
-            # 生成一日食谱
+        # 生成每日饮食计划的异步函数
+        async def generate_day_plan(i):
+            cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
             messages = [
                 {
@@ -536,62 +533,33 @@ class JiaheExpertModel:
                     ),
                 }
             ]
-            logger.debug(
-                "一日饮食计划模型输入： " + json.dumps(messages, ensure_ascii=False)
-            )
+            logger.debug(f"生成第 {i + 1} 天饮食计划输入： " + json.dumps(messages, ensure_ascii=False))
             start_time = time.time()
             generate_text = await acallLLM(
                 history=messages,
                 max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
-                do_sample=True,
-                # stream=True,
                 model="Qwen1.5-32B-Chat",
             )
-            logger.info("一日饮食计划模型生成时间：" + str(time.time() - start_time))
+            logger.info(f"第 {i + 1} 天饮食计划生成时间：{time.time() - start_time} 秒")
             diet_cont.append(generate_text)
-            yield {"message": generate_text, "end": False}
+            return {"day": i + 1, "plan": generate_text}
 
-            # logger.debug(
-            #     "一日饮食计划模型输出： " + generate_text
-            # )
-            # messages = [
-            #     {
-            #         "role": "user",
-            #         "content": jiahe_physical_efficacy_prompt.format(generate_text),
-            #     }
-            # ]
-            # logger.debug(
-            #     "一日食物功效模型输入： " + json.dumps(messages, ensure_ascii=False)
-            # )
-            # start_time = time.time()
-            # generate_text = callLLM(
-            #     history=messages,
-            #     max_tokens=2048,
-            #     top_p=0.9,
-            #     temperature=0.8,
-            #     do_sample=True,
-            #     stream=True,
-            #     model="Qwen1.5-72B-Chat",
-            # )
+        if days == 1:
+            # 如果只需要生成一天，直接生成，不并行处理
+            result = await generate_day_plan(0)
+            yield {"message": result["plan"], "end": False}
+        else:
+            # 并行生成多个日计划，且按顺序逐个输出
+            tasks = [generate_day_plan(i) for i in range(days)]
 
-        #     response_time = time.time()
-        #     print(f"latency {response_time - start_time:.2f} s -> response")
-        #     content = ""
-        #     printed = False
-        #     for i in generate_text:
-        #         t = time.time()
-        #         msg = i.choices[0].delta.to_dict()
-        #         text_stream = msg.get("content")
-        #         if text_stream:
-        #             if not printed:
-        #                 print(f"latency first token {t - start_time:.2f} s")
-        #                 printed = True
-        #             content += text_stream
-        #             yield {'message': text_stream, 'end': False}
-        #     logger.debug("一日食谱模型输出： " + content)
-        #     diet_cont.append(content)
+            # 使用 asyncio.as_completed() 逐步输出完成的计划
+            for task in asyncio.as_completed(tasks):
+                result = await task
+                yield {"message": result["plan"], "end": False}
+
+        # 输出结束标记
         yield {"message": "", "end": True}
 
     @staticmethod
@@ -1041,7 +1009,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=stream,  # 如果需要流式输出可以启用
+            stream=True,  # 如果需要流式输出可以启用
             model="Qwen1.5-32B-Chat",  # 指定使用的模型
         )
 
@@ -1185,7 +1153,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=stream,
+            stream=True,
             model="Qwen1.5-32B-Chat",  # 指定使用的模型
         )
 
@@ -1240,7 +1208,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            stream=stream,
+            stream=True,
             model="Qwen1.5-72B-Chat",  # 指定使用的模型
         )
 
