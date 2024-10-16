@@ -2,37 +2,10 @@ from fastapi import FastAPI, Request
 from typing import List, Optional
 import random
 from datetime import datetime, timedelta
+import pandas as pd
+import re
 
 app = FastAPI()
-
-# 数据部分 - 每种问题对应的池子方案及时长（10-15分钟）
-bath_plan_data = {
-    "skin_problems": [
-        {"name": "硫磺泉", "time": random.randint(10, 15), "type": "主池"},
-        {"name": "铁泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "通络泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "气血泉", "time": random.randint(10, 15), "type": "副池"},
-    ],
-    "pain_problems": [
-        {"name": "碳酸泉", "time": random.randint(10, 15), "type": "主池"},
-        {"name": "富氢泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "铁泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "疼痛调理泉", "time": random.randint(10, 15), "type": "副池"},
-    ],
-    "fatigue_problems": [
-        {"name": "碳酸泉", "time": random.randint(10, 15), "type": "主池"},
-        {"name": "健脾泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "气血泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "温补泉", "time": random.randint(10, 15), "type": "副池"},
-    ],
-    "sleep_problems": [
-        {"name": "富氢泉", "time": random.randint(10, 15), "type": "主池"},
-        {"name": "睡眠调理泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "通络泉", "time": random.randint(10, 15), "type": "副池"},
-        {"name": "温补泉", "time": random.randint(10, 15), "type": "副池"},
-    ]
-}
-
 
 class ItineraryGenerator:
     def __init__(self):
@@ -253,40 +226,116 @@ class ItineraryGenerator:
       else:
         return [{"period": "全天", "activities": [{"name": "自由活动", "location": "酒店", "extra_info": {}}]}]
 
+    # 读取温泉方案 Excel 文件
+    import pandas as pd
+
+    def load_bath_plan_data(self):
+        # 文件路径
+        file_path = 'doc/bath_plan/温泉方案_updated.xlsx'  # 更新为你的文件路径
+
+        # 读取泡浴方案和温泉作用
+        df_bath_plan = pd.read_excel(file_path, sheet_name='温泉方案')
+        df_spring_effects = pd.read_excel(file_path, sheet_name='温泉作用')
+
+        # 创建一个字典来存储问题组合和方案
+        bath_plan_data = {}
+        # 创建一个字典来存储温泉作用
+        spring_effects_data = {}
+
+        # 遍历温泉作用数据，存储每个温泉的作用
+        for index, row in df_spring_effects.iterrows():
+            spring_name = row['分类']  # 温泉名称
+            effect = row['作用']  # 温泉的作用
+            if pd.notna(spring_name) and pd.notna(effect):
+                spring_effects_data[spring_name] = effect
+
+        # 遍历泡浴方案数据，存储每个问题组合对应的泡浴方案
+        for index, row in df_bath_plan.iterrows():
+            question_combination = row['问题组合']  # 确保 Excel 中这一列是问题组合
+            bath_plan = row['泡浴方案']  # 确保 Excel 中这一列是泡浴方案
+
+            # 只处理非空组合和方案
+            if pd.notna(question_combination) and pd.notna(bath_plan):
+                bath_plan_data[question_combination] = bath_plan
+
+        return bath_plan_data, spring_effects_data
+
+    def parse_bath_plan(self, bath_plan_string, spring_effects_data):
+        # 固定主池和副池的时间
+        main_pool_time = "15-20分钟"
+        secondary_pool_time = "10-15分钟"
+
+        # 使用正则表达式提取温泉名和主池标记
+        bath_plan = []
+        pattern = r'(\w+泉)(?:（(主池)）)?'
+        matches = re.findall(pattern, bath_plan_string)
+
+        # 遍历匹配到的温泉名和池类型
+        for match in matches:
+            spring_name = match[0]
+            pool_type = "主池" if match[1] == '主池' else "副池"
+
+            # 设置固定的时间
+            suggested_time = main_pool_time if pool_type == "主池" else secondary_pool_time
+
+            # 获取温泉的作用
+            effect = spring_effects_data.get(spring_name, "未知作用")
+
+            # 构建温泉对象，包含作用
+            bath_plan.append({
+                "spring_name": spring_name,
+                "pool_type": pool_type,
+                "suggested_time": suggested_time,
+                "effect": effect
+            })
+
+        return bath_plan
+
     def generate_bath_plan(self, user_data):
-        """
-        生成泡浴方案
-        :param intentcode: 用于区分用户请求类型的意图码 aigc_functions_generate_bath_plan
-        :param user_data: 用户的健康问题数据
-        :return: 泡浴方案
-        """
+        bath_plan_data, spring_effects_data = self.load_bath_plan_data()
+
         full_plan = []
+        user_problems = []
+
+        # 根据用户健康问题生成组合
         if user_data.get('skin_problems'):
-            skin_plan = random.sample(bath_plan_data["skin_problems"], len(bath_plan_data["skin_problems"]))
-            full_plan.extend(skin_plan)
+            user_problems.append('皮肤问题')
 
         if user_data.get('pain_problems'):
-            pain_plan = random.sample(bath_plan_data["pain_problems"], len(bath_plan_data["pain_problems"]))
-            full_plan.extend(pain_plan)
+            user_problems.append('疼痛问题')
 
         if user_data.get('fatigue_problems'):
-            fatigue_plan = random.sample(bath_plan_data["fatigue_problems"], len(bath_plan_data["fatigue_problems"]))
-            full_plan.extend(fatigue_plan)
+            user_problems.append('疲劳问题')
 
         if user_data.get('sleep_problems'):
-            sleep_plan = random.sample(bath_plan_data["sleep_problems"], len(bath_plan_data["sleep_problems"]))
-            full_plan.extend(sleep_plan)
+            user_problems.append('睡眠问题')
 
-        random.shuffle(full_plan)
+        # 生成问题组合的键
+        if len(user_problems) == 1:
+            combination_key = user_problems[0]
+        elif len(user_problems) > 1:
+            combination_key = '+'.join(user_problems)
+        else:
+            return {"msg": "无健康问题数据"}
+
+        # 根据组合键查找方案
+        if combination_key in bath_plan_data:
+            bath_plan_string = bath_plan_data[combination_key]
+            # 解析泡浴方案字符串并关联温泉作用
+            full_plan = self.parse_bath_plan(bath_plan_string, spring_effects_data)
+        else:
+            return {"msg": "未找到匹配的泡浴方案"}
 
         return {
             "head": 200,
             "item": {
-                "bath_plan": full_plan
+                "bath_plan": full_plan,
+                "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
+                "output_basis": "根据您的问卷结果，结合特色温泉的不同功效，从整体有效性、合理性、提升效果的角度为您推荐以下泡浴方案，仅供参考",
+                "health_analysis": "待定"
             },
             "msg": ""
         }
-
 
 # 测试输入数据
 input_data = {
