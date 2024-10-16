@@ -155,20 +155,29 @@ class JiaheExpertModel:
         yield {"message": generate_text, "end": True}
 
     @staticmethod
-    async def gen_diet_principle(cur_date, location, history=[], userInfo={}):
+    async def gen_diet_principle(cur_date, location, personal_dietary_requirements,history=[], userInfo={}):
         """出具饮食调理原则"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
         messages = [
             {
                 "role": "user",
                 "content": jiahe_daily_diet_principle_prompt.format(
-                    userInfo, cur_date, location, his_prompt
+                    userInfo, cur_date, location, his_prompt, personal_dietary_requirements
                 ),
             }
         ]
         logger.debug(
             "出具饮食调理原则模型输入： " + json.dumps(messages, ensure_ascii=False)
         )
+        # logger.debug(
+        #     "出具饮食调理原则模型输入：\n" + "\n".join(
+        #         [
+        #             f"{item['role']}: {item['content']}"
+        #             for item in messages
+        #         ]
+        #     )
+        # )
+
         start_time = time.time()
         generate_text = callLLM(
             history=messages,
@@ -204,8 +213,17 @@ class JiaheExpertModel:
                 "content": prompt,
             }
         ]
+        # logger.debug(
+        #     "出具家庭饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+        # )
+
         logger.debug(
-            "出具家庭饮食原则模型输入： " + json.dumps(messages, ensure_ascii=False)
+            "出具饮食调理原则模型输入：\n" + "\n".join(
+                [
+                    f"{item['role']}: {item['content']}"
+                    for item in messages
+                ]
+            )
         )
         start_time = time.time()
         generate_text = callLLM(
@@ -215,7 +233,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen1.5-32B-Chat",
+            model="Qwen1.5-72B-Chat",
         )
         print(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("出具家庭饮食原则模型输出： " + generate_text)
@@ -505,6 +523,7 @@ class JiaheExpertModel:
             cur_date,
             location,
             diet_principle,
+            personal_dietary_requirements,
             reference_daily_diets,
             days,
             history=[],
@@ -530,6 +549,8 @@ class JiaheExpertModel:
                         his_prompt,
                         diet_principle,
                         ref_diet_str,
+                        personal_dietary_requirements,
+
                     ),
                 }
             ]

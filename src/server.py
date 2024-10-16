@@ -642,8 +642,10 @@ def create_app():
             param = await accept_param(request, endpoint="/gen_diet_principle")
             generator: AsyncGenerator = JiaheExpertModel.gen_diet_principle(param.get('cur_date', ''),
                                                                        param.get('location', ''),
+                                                                       param.get('personal_dietary_requirements', ''),
                                                                        param.get('history', []),
-                                                                       param.get('userInfo', {}))
+                                                                       param.get('userInfo', {}),
+                                                                       )
             result = decorate_general_complete(
                 generator
             )
@@ -827,6 +829,7 @@ def create_app():
             generator: AsyncGenerator = JiaheExpertModel.gen_n_daily_diet(param.get('cur_date', ''),
                                                                      param.get('location', ''),
                                                                      param.get('diet_principle', ''),
+                                                                     param.get('personal_dietary_requirements', ''),
                                                                      param.get('reference_daily_diets', []),
                                                                      param.get('days', 0),
                                                                      param.get('history', []),
