@@ -13,6 +13,7 @@ from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import parse_generic_content
 
+
 class JiaheExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         self.gsr = gsr
@@ -550,7 +551,6 @@ class JiaheExpertModel:
                         diet_principle,
                         ref_diet_str,
                         personal_dietary_requirements,
-
                     ),
                 }
             ]
@@ -567,18 +567,13 @@ class JiaheExpertModel:
             diet_cont.append(generate_text)
             return {"day": i + 1, "plan": generate_text}
 
-        if days == 1:
-            # 如果只需要生成一天，直接生成，不并行处理
-            result = await generate_day_plan(0)
-            yield {"message": result["plan"], "end": False}
-        else:
-            # 并行生成多个日计划，且按顺序逐个输出
-            tasks = [generate_day_plan(i) for i in range(days)]
+        # 统一使用并发方式生成计划
+        tasks = [generate_day_plan(i) for i in range(days)]
 
-            # 使用 asyncio.as_completed() 逐步输出完成的计划
-            for task in asyncio.as_completed(tasks):
-                result = await task
-                yield {"message": result["plan"], "end": False}
+        # 使用 asyncio.as_completed() 逐步输出完成的计划
+        for task in asyncio.as_completed(tasks):
+            result = await task
+            yield {"message": result["plan"], "end": False}
 
         # 输出结束标记
         yield {"message": "", "end": True}
