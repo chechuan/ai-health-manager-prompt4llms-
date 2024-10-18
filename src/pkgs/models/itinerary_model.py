@@ -328,7 +328,7 @@ class ItineraryGenerator:
 
         return {
             "head": 200,
-            "item": {
+            "items": {
                 "bath_plan": full_plan,
                 "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
                 "output_basis": "根据您的问卷结果，结合特色温泉的不同功效，从整体有效性、合理性、提升效果的角度为您推荐以下泡浴方案，仅供参考",
