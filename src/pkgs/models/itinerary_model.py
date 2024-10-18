@@ -262,8 +262,8 @@ class ItineraryGenerator:
 
     def parse_bath_plan(self, bath_plan_string, spring_effects_data):
         # 固定主池和副池的时间
-        main_pool_time = "15-20分钟"
-        secondary_pool_time = "10-15分钟"
+        main_pool_time = "建议15-20分钟"
+        secondary_pool_time = "建议10-15分钟"
 
         # 使用正则表达式提取温泉名和主池标记
         bath_plan = []
@@ -332,7 +332,7 @@ class ItineraryGenerator:
                 "bath_plan": full_plan,
                 "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
                 "output_basis": "根据您的问卷结果，结合特色温泉的不同功效，从整体有效性、合理性、提升效果的角度为您推荐以下泡浴方案，仅供参考",
-                "health_analysis": "待定"
+                "health_analysis": "您可能存在阴阳失调、肝气郁结的问题，可能与情志不畅、长期久坐，压力大有关，建议注重情绪调节，保持心情舒畅，避免长期久坐，适度进行散步等放松运动"
             },
             "msg": ""
         }
