@@ -27,6 +27,7 @@ from src.pkgs.models.agents import Agents
 from src.pkgs.models.expert_model import expertModel
 from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.models.health_expert_model import HealthExpertModel
+from src.pkgs.models.itinerary_model import ItineraryGenerator
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
@@ -483,6 +484,20 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
+    async def _aigc_functions_generate_itinerary(request: Request):
+        # 这里调用生成行程的逻辑
+        user_data = await request.json()
+        generator = ItineraryGenerator()
+        response = generator.generate(user_data)
+        return response
+
+    async def _aigc_functions_generate_bath_plan(request: Request):
+        user_data = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        generator = ItineraryGenerator()
+        response = generator.generate_bath_plan(user_data)
+        return response
+
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
@@ -492,6 +507,12 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
+
+
+    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
+
+    app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
+
 
 
 def create_app():
@@ -621,8 +642,10 @@ def create_app():
             param = await accept_param(request, endpoint="/gen_diet_principle")
             generator: AsyncGenerator = JiaheExpertModel.gen_diet_principle(param.get('cur_date', ''),
                                                                        param.get('location', ''),
+                                                                       param.get('personal_dietary_requirements', ''),
                                                                        param.get('history', []),
-                                                                       param.get('userInfo', {}))
+                                                                       param.get('userInfo', {}),
+                                                                       )
             result = decorate_general_complete(
                 generator
             )
@@ -806,6 +829,7 @@ def create_app():
             generator: AsyncGenerator = JiaheExpertModel.gen_n_daily_diet(param.get('cur_date', ''),
                                                                      param.get('location', ''),
                                                                      param.get('diet_principle', ''),
+                                                                     param.get('personal_dietary_requirements', ''),
                                                                      param.get('reference_daily_diets', []),
                                                                      param.get('days', 0),
                                                                      param.get('history', []),
@@ -955,12 +979,16 @@ def create_app():
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 流式响应处理，构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
+            elif param.get("intentCode") in ["aigc_jiahe_ingredient_pairing_suggestion", "aigc_jiahe_ingredient_selection_guide", "aigc_jiahe_ingredient_taboo_groups"]:
+                # 流式响应处理，构造返回数据的AsyncGenerator
+                _return: AsyncGenerator = response_generator(response)
             else:
                 # 非流式响应，构造标准的JSON字符串
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=200, items=response
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
+
 
         except Exception as err:
             msg = repr(err)

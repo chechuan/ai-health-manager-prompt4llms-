@@ -1433,6 +1433,10 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
         city = user_profile.get("city", "")
 
+        # 移除性别和年龄信息
+        user_profile.pop("gender", None)
+        user_profile.pop("age", None)
+
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
         daily_schedule_str = generate_daily_schedule(daily_schedule)
