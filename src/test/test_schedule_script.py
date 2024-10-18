@@ -8,7 +8,7 @@
 
 
 import argparse
-import copy
+import copy_table
 import json
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
