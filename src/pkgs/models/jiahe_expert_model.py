@@ -246,17 +246,17 @@ class JiaheExpertModel:
             cur_date,
             location,
             family_principle,
+            days,
             history=[],
             requirements=[],
             reference_diet=[],
-            days=1,
     ):
         """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history_0914(users, history)
         diet_cont = []
         if reference_diet:
             diet_cont.extend(reference_diet)
-        days = 1
+        days_str = str(days) + "天"
         for i in range(days):
             # cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
@@ -270,7 +270,7 @@ class JiaheExpertModel:
                 location=location,
                 family_principle=family_principle,
                 reference_diet=ref_diet_str,
-                days="1天",
+                days=days_str,
             )
             messages = [
                 {
