@@ -257,8 +257,10 @@ class JiaheExpertModel:
         if reference_diet:
             diet_cont.extend(reference_diet)
         days_str = str(days) + "天"
-        for i in range(days):
-            # cur_date = (datetime.datetime.now() + datetime.timedelta(days=+i)).strftime("%Y-%m-%d")
+
+        # 生成家庭每日饮食计划的异步函数
+        async def generate_day_plan(i):
+            cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
 
             prompt = jiahe_family_diet_prompt.format(
@@ -279,7 +281,7 @@ class JiaheExpertModel:
                 }
             ]
             logger.debug(
-                "出具家庭一日饮食计划模型输入： "
+                f"出具家庭第{i + 1}日饮食计划模型输入： "
                 + json.dumps(messages, ensure_ascii=False)
             )
             start_time = time.time()
@@ -289,25 +291,35 @@ class JiaheExpertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                # stream=True,
                 model="Qwen2-72B-Instruct",
             )
             diet_cont.append(generate_text)
-            print(f"latency {time.time() - start_time:.2f} s -> response")
-            logger.debug("出具家庭一日饮食计划模型输出： " + generate_text)
+            logger.debug(f"出具家庭第{i + 1}日饮食计划模型输出：{generate_text}耗时: {time.time() - start_time:.2f} s")
 
-            tmp = [i.strip() for i in generate_text.split('\n') if i.strip()]
-            l = len(tmp)
-            while not tmp[-2].startswith('## 晚餐'):
-                tmp = tmp[:-1]
-            if not len(tmp) == l:
-                generate_text = ''
-                for i, x in enumerate(tmp):
-                    if x.startswith('##'):
-                        generate_text = generate_text + x + '\n'
-                    else:
-                        generate_text = generate_text + x + '\n\n'
-            yield {"message": generate_text.strip(), "end": True}
+            # # 简化并格式化输出
+            # tmp = [i.strip() for i in generate_text.split('\n') if i.strip()]
+            # l = len(tmp)
+            # while not tmp[-2].startswith('## 晚餐'):
+            #     tmp = tmp[:-1]
+            # if not len(tmp) == l:
+            #     generate_text = ''
+            #     for i, x in enumerate(tmp):
+            #         if x.startswith('##'):
+            #             generate_text = generate_text + x + '\n'
+            #         else:
+            #             generate_text = generate_text + x + '\n\n'
+            return {"day": i + 1, "plan": generate_text}
+
+        # 创建并发任务列表
+        tasks = [generate_day_plan(i) for i in range(days)]
+
+        # 使用 asyncio.as_completed() 逐步输出完成的计划
+        for task in asyncio.as_completed(tasks):
+            result = await task
+            yield {"message": result["plan"], "end": False}
+
+        # 输出结束标记
+        yield {"message": "", "end": True}
 
     @staticmethod
     async def gen_nutrious_principle(cur_date, location, history=[], userInfo={}):
