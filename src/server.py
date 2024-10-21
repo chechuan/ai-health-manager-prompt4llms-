@@ -753,10 +753,11 @@ def create_app():
                                                                     param.get('cur_date', ''),
                                                                     param.get('location', ''),
                                                                     param.get('family_diet_principle', ''),
+                                                                    param.get('days'),
                                                                     param.get('history', []),
                                                                     param.get('requirements', []),
                                                                     param.get('reference_diet', []),
-                                                                    param.get('days', 1))
+                                                                    )
             result = decorate_general_complete(
                 generator
             )
