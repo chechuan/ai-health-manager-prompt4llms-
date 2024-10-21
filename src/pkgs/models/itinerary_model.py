@@ -8,6 +8,8 @@ from src.utils.resources import InitAllResource
 from src.utils.database import MysqlConnector
 from typing import Generator
 from src.utils.Logger import logger
+import json
+import math
 
 
 
@@ -34,67 +36,6 @@ class ItineraryModel:
         ]
         data = {table: self.mysql_conn.query(f"select * from {table}") for table in tables}
         return data
-
-    def is_within_time_range(self, service_time, best_time, duration, opening_hours):
-        """
-        检查活动的时间段和时长是否在用户的服务时间范围内，并根据活动开放时间筛选
-        :param service_time: 用户输入的服务时间范围
-        :param best_time: 活动的最佳时段
-        :param duration: 活动的时长
-        :param opening_hours: 活动的开放时间 (weekday_opening_hours, saturday_opening_hours, sunday_opening_hours)
-        :return: 是否符合时间要求
-        """
-        start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-        end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
-
-        # 解析活动的开放时间段
-        def get_open_hours(day_of_week):
-            if day_of_week < 5:  # 周一到周五
-                return opening_hours.get("weekday_opening_hours")
-            elif day_of_week == 5:  # 周六
-                return opening_hours.get("saturday_opening_hours")
-            else:  # 周日
-                return opening_hours.get("sunday_opening_hours")
-
-        # 检查多个日期范围内的开放时间
-        current_date = start_date
-        while current_date <= end_date:
-            day_of_week = current_date.weekday()
-            open_hours = get_open_hours(day_of_week)
-
-            if open_hours:
-                open_start_str, open_end_str = open_hours.split('-')
-                open_start_time = datetime.strptime(open_start_str, "%H:%M")
-                open_end_time = datetime.strptime(open_end_str, "%H:%M")
-
-                # 处理活动时长
-                if '-' in duration:
-                    min_duration = float(duration.split('-')[0])  # 最短时长
-                else:
-                    min_duration = float(duration)  # 单一时长
-
-                # 检查活动的时段 (best_time)，例如 "12:30-15:00" 或 "12:30,15:00"
-                time_slots = best_time.split(',')
-                for time_slot in time_slots:
-                    # 如果是范围，如 "12:30-15:00"
-                    if '-' in time_slot:
-                        slot_start_str, slot_end_str = time_slot.split('-')
-                        slot_start_time = datetime.strptime(slot_start_str, "%H:%M")
-                        slot_end_time = datetime.strptime(slot_end_str, "%H:%M")
-                    else:
-                        # 单个时间点，加上活动时长作为结束时间
-                        slot_start_time = datetime.strptime(time_slot, "%H:%M")
-                        slot_end_time = slot_start_time + timedelta(hours=min_duration)
-
-                    # 检查活动时间是否在开放时间内，并且时间段是否在用户的服务时间范围内
-                    if open_start_time <= slot_start_time <= open_end_time and open_start_time <= slot_end_time <= open_end_time:
-                        return True  # 如果某天的时段符合开放时间，返回 True
-
-            # 移动到下一天
-            current_date += timedelta(days=1)
-
-        # 如果没有任何一天符合时间段，返回 False
-        return False
 
     def matches_season(self, service_time, suitable_season):
         """
@@ -152,14 +93,17 @@ class ItineraryModel:
         # 1. 进行偏好、价格、季节、时间的初步筛选
         for activity in activities:
             activity_preferences = activity["preference"].split('、')
-            applicable_people = activity["applicable_people"]
+            applicable_people = json.loads(activity.get("applicable_people", []))
+
+            # 解析 price_info 字段
+            price_info = json.loads(activity.get("price_info", []))  # 将字符串转为字典
 
             # 1.1 筛选偏好匹配
             if not any(pref in activity_preferences for pref in preferences):
                 continue  # 如果偏好不匹配，跳过该活动
 
             # 1.2 获取活动价格
-            activity_price = self.get_activity_price(activity, service_time)
+            activity_price = self.get_activity_price(price_info, service_time, activity["duration"])
             if activity_price is not None and activity_price > budget:
                 continue  # 如果价格超过预算，跳过该活动
 
@@ -167,38 +111,214 @@ class ItineraryModel:
             if not self.matches_season(service_time, activity["suitable_season"]):
                 continue  # 如果季节不符合，跳过该活动
 
-            # 1.4 筛选时间和时长
-            if not self.is_within_time_range(service_time, activity["best_time"], activity["duration"]):
-                continue  # 如果时间和时长不符合，跳过该活动
+            start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
+            end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+
+            best_time = activity.get("best_time", "")
+            duration = activity.get("duration", "")
+            reservation_days = self.normalize_value(activity.get("reservation_days"))
+            opening_hours = {
+                "weekday": activity.get("weekday_opening_hours", None),
+                "saturday": activity.get("saturday_opening_hours", None),
+                "sunday": activity.get("sunday_opening_hours", None)
+            }
+
+            # 1. 检查是否在用户时间范围内开放
+            if not self.is_open_in_user_range(start_date, end_date, opening_hours):
+                continue  # 如果活动在用户提供的日期范围内没有开放，跳过
+
+            # 2. 检查最佳时段是否在开放时间内
+            if not self.is_best_time_available(best_time, opening_hours):
+                continue  # 如果活动的最佳时段不在开放时间内，跳过
+
+            # 3. 检查时长是否适合
+            if not self.check_reservation_requirements(reservation_days, start_date):
+                continue  # 如果活动有提前预约要求且不满足，跳过
 
             # 2. 检查适用人群
-            all_people_fit = True
-            for traveler in travelers:
-                traveler_age_group = traveler["age_group"]
-                traveler_gender = traveler["gender"]
-
-                # 检查每一个出行人员是否符合该活动的适用人群
-                if not any(
-                        person["age_group"] == traveler_age_group and
-                        (person["gender"] == "不限" or person["gender"] == traveler_gender)
-                        for person in applicable_people
-                ):
-                    all_people_fit = False
-                    break  # 如果有一个人不符合，跳出循环
-
-            if not all_people_fit:
-                continue  # 如果有不符合的出行人员，跳过该活动
+            if not self.is_applicable_for_travelers(travelers, applicable_people):
+                continue
 
             # 如果通过所有条件筛选，将活动添加到结果列表
             filtered_activities.append(activity)
 
         return filtered_activities
 
-    def get_activity_price(self, activity, service_time):
+    def is_applicable_for_travelers(self, travelers, applicable_people):
+        """
+        检查出行人员是否符合活动的适用人群
+        :param travelers: 出行人员列表，格式如 [{"age_group": "成人", "gender": "男"}, {"age_group": "儿童", "gender": "不限"}]
+        :param applicable_people: 活动的适用人群，格式如 [{"age_group": "成人", "gender": "女"}, {"age_group": "儿童", "gender": "不限"}]
+        :return: 如果所有出行人员符合条件，返回True；否则返回False
+        """
+        for traveler in travelers:
+            traveler_age_group = traveler["age_group"]
+            traveler_gender = traveler["gender"]
+
+            # 检查每一个出行人员是否符合该活动的适用人群
+            if not any(
+                    person["age_group"] == traveler_age_group and
+                    (person["gender"] == "不限" or person["gender"] == traveler_gender)
+                    for person in applicable_people
+            ):
+                return False  # 如果有一个人不符合，返回False
+        return True  # 如果所有出行人员都符合，返回True
+
+    def normalize_value(self, value):
+        """
+        通用方法，用于将 NaN、None 或无效值统一处理为 None。
+
+        :param value: 任意数据值，可能为 NaN 或其他类型
+        :return: 如果值为 NaN 或 None，返回 None；否则返回原值
+        """
+        if value is None:
+            return None
+        elif isinstance(value, float) and math.isnan(value):
+            return None
+        else:
+            return value
+
+    def is_duration_fitting(self, duration, opening_hours, start_date, end_date):
+        """
+        检查活动时长是否适合在用户的行程时间范围内的开放时间内完成
+        :param duration: 活动的时长
+        :param opening_hours: 活动的开放时间
+        :param start_date: 用户行程开始日期
+        :param end_date: 用户行程结束日期
+        :return: 是否符合时长要求
+        """
+        if not duration:
+            return True  # 如果没有时长限制，直接返回True
+
+        # 获取活动时长（如果是范围，取最短时长）
+        min_duration = float(duration.split('-')[0]) if '-' in duration else float(duration)
+
+        current_date = start_date
+        while current_date <= end_date:
+            day_of_week = current_date.weekday()
+
+            if day_of_week < 5:
+                open_hours_str = opening_hours["weekday"]
+            elif day_of_week == 5:
+                open_hours_str = opening_hours["saturday"]
+            else:
+                open_hours_str = opening_hours["sunday"]
+
+            if open_hours_str:
+                open_start_str, open_end_str = open_hours_str.split('-')
+                open_start_time = datetime.strptime(open_start_str, "%H:%M")
+                open_end_time = datetime.strptime(open_end_str, "%H:%M")
+
+                # 计算活动结束时间（假设活动从开放时间开始）
+                activity_end_time = open_start_time + timedelta(hours=min_duration)
+
+                # 检查活动是否能在开放时间内完成
+                if activity_end_time <= open_end_time:
+                    return True  # 如果某一天能完成活动，返回True
+
+            # 移动到下一天
+            current_date += timedelta(days=1)
+
+        return False  # 如果没有一天符合条件，返回False
+
+    def is_open_in_user_range(self, start_date, end_date, opening_hours):
+        """
+        检查活动是否在用户提供的时间范围内开放，并将行程的每一天与活动的开放时间比对
+        :param start_date: 用户行程开始日期
+        :param end_date: 用户行程结束日期
+        :param opening_hours: 活动的开放时间
+        :return: 是否在时间范围内开放
+        """
+        current_date = start_date
+
+        # 遍历从 start_date 到 end_date 的所有日期
+        while current_date <= end_date:
+            day_of_week = current_date.weekday()
+            # print(f"Current date: {current_date}, Day of week: {day_of_week}")  # 打印当前日期和对应的星期
+
+            # 判断当前日期的开放时间
+            if day_of_week < 5:
+                open_hours = opening_hours["weekday"]
+            elif day_of_week == 5:
+                open_hours = opening_hours["saturday"]
+            else:
+                open_hours = opening_hours["sunday"]
+
+            # 如果当天没有开放时间，跳过这个活动
+            if not open_hours:
+                # print(f"Activity is not open on {current_date}")
+                return False
+
+            # 移动到下一天
+            current_date += timedelta(days=1)
+
+        # 如果行程中的所有日期都能匹配开放时间，返回 True
+        return True
+
+    def is_within_opening_hours(self, slot_start_time, slot_end_time, opening_hours):
+        """
+        检查给定的时间段是否与活动的开放时间有重叠
+        :param slot_start_time: 活动开始时间
+        :param slot_end_time: 活动结束时间
+        :param opening_hours: 活动的开放时间 (weekday_opening_hours, saturday_opening_hours, sunday_opening_hours)
+        :return: 时间段是否在开放时间范围内
+        """
+        if slot_start_time.weekday() < 5:
+            open_hours_str = opening_hours["weekday"]
+        elif slot_start_time.weekday() == 5:
+            open_hours_str = opening_hours["saturday"]
+        else:
+            open_hours_str = opening_hours["sunday"]
+
+        if open_hours_str:
+            open_start_str, open_end_str = open_hours_str.split('-')
+            open_start_time = datetime.strptime(open_start_str, "%H:%M")
+            open_end_time = datetime.strptime(open_end_str, "%H:%M")
+            # print(open_start_time, slot_end_time, slot_start_time, open_end_time)
+            # 检查活动的时间是否与开放时间有重叠
+            if (open_start_time <= slot_end_time and slot_start_time <= open_end_time):
+                return True
+        return False
+
+    def is_best_time_available(self, best_time, opening_hours):
+        """
+        检查活动的最佳时段是否在开放时间内
+        :param best_time: 活动的最佳时段，如"12:30-15:00"
+        :param opening_hours: 活动的开放时间
+        :return: 是否符合最佳时段
+        """
+        if not best_time:
+            return True  # 如果没有最佳时段限制，直接返回True
+
+        time_slots = best_time.split(',')
+        for time_slot in time_slots:
+            if '-' in time_slot:
+                slot_start, slot_end = time_slot.split('-')
+                slot_start_time = datetime.strptime(slot_start, "%H:%M")
+                slot_end_time = datetime.strptime(slot_end, "%H:%M")
+                if self.is_within_opening_hours(slot_start_time, slot_end_time, opening_hours):
+                    return True  # 如果最佳时段符合开放时间，返回True
+        return False
+
+    def check_reservation_requirements(self, reservation_days, start_date):
+        """
+        检查活动是否满足提前预约要求
+        :param reservation_days: 预约要求的天数
+        :param start_date: 用户行程开始日期
+        :return: 是否符合预约要求
+        """
+        if reservation_days:
+            today = datetime.today()
+            delta_days = (start_date - today).days
+            return delta_days >= reservation_days  # 如果在预约期限内，返回True
+        return True  # 如果没有预约要求，返回True
+
+    def get_activity_price(self, price_info, service_time, duration):
         """
         根据活动的时间和套餐获取活动的价格（考虑跨越多个日期）
-        :param activity: 活动数据
+        :param price_info: 活动的价格信息
         :param service_time: 用户的服务时间（包含多个日期）
+        :param duration: 活动的时长（小时）
         :return: 活动的总价格
         """
         start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
@@ -209,24 +329,32 @@ class ItineraryModel:
 
         while current_date <= end_date:
             # 1. 判断当天是否免费
-            if activity["price_info"]["is_free"]:
+            if price_info["is_free"]:
                 # 免费的活动视为该天价格为0
                 day_price = 0
             else:
-                # 2. 判断当前日期是工作日还是周末
-                if current_date.weekday() < 5:  # 周一到周五是工作日
-                    day_prices = activity["price_info"].get("weekday", {})
-                else:  # 周末
-                    day_prices = activity["price_info"].get("weekend", {})
+                # 2. 优先使用 default 价格
+                if price_info["default"] is not None:
+                    day_price = price_info["default"]
+                else:
+                    # 3. 判断当前日期是工作日还是周末
+                    if current_date.weekday() < 5:  # 周一到周五是工作日
+                        day_prices = price_info.get("weekday", {})
+                    else:  # 周末
+                        day_prices = price_info.get("weekend", {})
 
-                # 3. 获取有无餐的价格，优先选择包含餐的价格
-                price_with_meal = day_prices.get("with_meal")
-                price_without_meal = day_prices.get("without_meal")
-                day_price = price_with_meal if price_with_meal is not None else price_without_meal
+                    # 4. 获取有无餐的价格，优先选择包含餐的价格
+                    price_with_meal = day_prices.get("with_meal")
+                    price_without_meal = day_prices.get("without_meal")
+                    day_price = price_with_meal if price_with_meal is not None else price_without_meal
 
-                # 如果当天的价格不存在（比如周末或工作日都没有设定），跳过该天
-                if day_price is None:
-                    day_price = 0
+                    # 如果当天的价格不存在（比如周末或工作日都没有设定），跳过该天
+                    if day_price is None:
+                        day_price = 0
+
+                # 5. 处理 `unit_price`，如果存在，需要按时长计算总价
+                if price_info["unit_price"] is not None:
+                    day_price += price_info["unit_price"]["amount"] * float(duration)
 
             # 累加每一天的价格
             total_price += day_price
