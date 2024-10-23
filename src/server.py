@@ -28,6 +28,7 @@ from src.pkgs.models.expert_model import expertModel
 from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.models.health_expert_model import HealthExpertModel
 from src.pkgs.models.itinerary_model import ItineraryModel
+from src.pkgs.models.bath_plan_model import BathPlanModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
@@ -487,13 +488,13 @@ def mount_aigc_functions(app: FastAPI):
     async def _aigc_functions_generate_itinerary(request: Request):
         # 这里调用生成行程的逻辑
         user_data = await request.json()
-        response = itinerary_model.generate(user_data)
+        response = itinerary_model.generate_itinerary(user_data)
         return response
 
     async def _aigc_functions_generate_bath_plan(request: Request):
         user_data = await request.json()
         # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = itinerary_model.generate_bath_plan(user_data)
+        response = bath_plan_model.generate_bath_plan(user_data)
         return response
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
@@ -1192,6 +1193,7 @@ def prepare_for_all():
     global health_expert_model
     global jiahe_expert
     global itinerary_model
+    global bath_plan_model
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1202,6 +1204,7 @@ def prepare_for_all():
     health_expert_model = HealthExpertModel(gsr)
     jiahe_expert = JiaheExpertModel(gsr)
     itinerary_model = ItineraryModel(gsr)
+    bath_plan_model = BathPlanModel(gsr)
 
 
 # app = create_app()
