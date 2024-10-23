@@ -262,7 +262,6 @@ class JiaheExpertModel:
         async def generate_day_plan(i):
             cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
-            print(ref_diet_str)
 
             prompt = jiahe_family_diet_prompt.format(
                 num=len(users),
@@ -294,17 +293,14 @@ class JiaheExpertModel:
                 do_sample=True,
                 model="Qwen2-72B-Instruct",
             )
+
+            # 打印生成的文本格式
+            logger.debug(f"生成的文本内容：\n{generate_text}")
+
             diet_cont.append(generate_text)
             logger.debug(f"出具家庭第{i + 1}日饮食计划模型输出：{generate_text}耗时: {time.time() - start_time:.2f} s")
 
-            # 确保标题和正文之间有换行符
-            tmp = [line.strip() for line in generate_text.split('\n') if line.strip()]
-            formatted_text = ''
-            for idx, line in enumerate(tmp):
-                if line.startswith('##'):  # 标题部分
-                    formatted_text += '\n' + line + '\n'  # 在标题前后加上换行符
-                else:
-                    formatted_text += line + '\n\n'  # 正文部分加上换行符
+            # 返回生成的文本
             return {"day": i + 1, "plan": generate_text}
 
         # 创建并发任务列表
