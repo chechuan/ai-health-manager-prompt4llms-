@@ -27,7 +27,6 @@ class ItineraryModel:
         self.gsr = gsr
         self.mysql_conn = MysqlConnector(**self.gsr.mysql_config)
         self.data = self.load_data()
-        logger.info("行程推荐模型已初始化，数据已加载。")
 
     def load_data(self):
         """
@@ -36,9 +35,10 @@ class ItineraryModel:
         """
         logger.info("正在从数据库加载数据...")
         tables = [
-            "cleaned_accommodation", "cleaned_activities", "cleaned_agricultural_products",
-            "cleaned_agricultural_services", "cleaned_dining", "cleaned_health_projects",
-            "cleaned_packages", "cleaned_secondary_products", "cleaned_study_tour_products"
+            "cleaned_accommodation", "cleaned_activities",
+            # "cleaned_agricultural_products",
+            # "cleaned_agricultural_services", "cleaned_dining", "cleaned_health_projects",
+            # "cleaned_packages", "cleaned_secondary_products", "cleaned_study_tour_products"
         ]
         data = {table: self.mysql_conn.query(f"select * from {table}") for table in tables}
         logger.info("所有表的数据加载成功。")
@@ -107,7 +107,7 @@ class ItineraryModel:
 
             # 1.1 筛选适用人群是否匹配
             if not self.is_applicable_for_travelers(travelers, applicable_people):
-                logger.debug(f"由于适用人群不匹配，跳过住宿 {accommodation['name']}")
+                logger.info(f"住宿 {accommodation['name']} 不符合适用人群。")
                 continue
 
             # # 1.2 计算住宿的总价格并筛选
@@ -118,7 +118,7 @@ class ItineraryModel:
 
             # 如果通过所有条件筛选，将住宿添加到结果列表
             filtered_accommodations.append(accommodation)
-            logger.info(f"住宿 {accommodation['name']} 通过所有检查。")
+            logger.info(f"住宿 {accommodation['name']} 符合用户条件。")
 
         return filtered_accommodations
 
@@ -145,7 +145,7 @@ class ItineraryModel:
 
             # 1.1 筛选偏好匹配
             if not any(pref in activity_preferences for pref in preferences):
-                logger.debug(f"由于偏好不匹配，跳过活动 {activity['activity_name']}")
+                logger.info(f"活动 {activity['activity_name']} 不符合用户偏好。")
                 continue
 
             # # 1.2 获取活动价格并筛选
@@ -156,7 +156,7 @@ class ItineraryModel:
 
             # 1.3 检查季节是否符合
             if not self.matches_season(service_time, activity["suitable_season"]):
-                logger.debug(f"由于季节不合适，跳过活动 {activity['activity_name']}")
+                logger.info(f"活动 {activity['activity_name']} 不适合当前季节。")
                 continue
 
             start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
@@ -191,7 +191,7 @@ class ItineraryModel:
 
             # 如果通过所有条件筛选，将活动添加到结果列表
             filtered_activities.append(activity)
-            logger.info(f"活动 {activity['activity_name']} 通过所有检查。")
+            logger.info(f"活动 {activity['activity_name']} 符合用户偏好和条件。")
 
         return filtered_activities
 
@@ -213,7 +213,6 @@ class ItineraryModel:
         }
 
         if suitable_season == "全年":
-            logger.debug("该活动适合全年。")
             return True
 
         suitable_seasons = suitable_season.split("、")
@@ -232,12 +231,18 @@ class ItineraryModel:
         for traveler in travelers:
             traveler_age_group = traveler.get("age_group", "")
             traveler_gender = traveler.get("gender", "")
+            count = traveler.get("count", "")
+
 
             # if not any(
             #         person["age_group"] == traveler_age_group and
             #         (person["gender"] == "不限" or person["gender"] == traveler_gender)
             #         for person in applicable_people
             # ):
+            # 如果count为0，跳过该出行人员
+            if not count:
+                continue
+
             if not any(person["age_group"] == traveler_age_group for person in applicable_people):
                 return False
         return True
@@ -360,7 +365,49 @@ class ItineraryModel:
 
         return total_price if total_price > 0 else None  # 返回总价或None
 
-    import random
+    def generate_recommendation_basis(self, user_data, selected_accommodation, spa_activities):
+        """
+        根据用户输入和推荐结果生成推荐依据
+        :param user_data: 用户输入的数据
+        :param selected_accommodation: 选中的酒店
+        :param spa_activities: 选中的温泉活动
+        :return: 推荐依据的描述
+        """
+        # 根据用户的偏好生成推荐依据的基础描述
+        preferences = user_data.get("service_preference", [])
+        travelers = user_data.get("travelers", [])
+        budget = user_data.get("budget", 0)
+
+        basis_parts = []
+
+        # 用户偏好描述
+        if preferences:
+            preferences_desc = "、".join(preferences)
+            basis_parts.append(f"用户的偏好包括{preferences_desc}")
+
+        # 检查是否选择了温泉活动
+        if spa_activities:
+            basis_parts.append("并且喜欢温泉活动")
+
+        # 检查用户的预算 (可选)
+        # if budget > 0:
+        #     basis_parts.append(f"推荐内容基于预算{budget}元")
+
+        # 检查出行人员的类型
+        if travelers:
+            traveler_types = set([traveler["age_group"] for traveler in travelers if traveler["count"] > 0])
+            traveler_types_desc = "、".join(traveler_types)
+            basis_parts.append(f"适合出行人员为{traveler_types_desc}")
+
+        # 使用选中的酒店信息
+        if selected_accommodation:
+            hotel_name = selected_accommodation.get("name", "默认酒店")
+            basis_parts.append(f"推荐入住的酒店为{hotel_name}")
+
+        # 拼接所有描述部分
+        basis = "，".join(basis_parts) + "。"
+
+        return basis
 
     def generate_itinerary(self, user_data):
         """
@@ -371,14 +418,21 @@ class ItineraryModel:
         # 1. 筛选符合条件的活动
         filtered_activities = self.filter_data("cleaned_activities", user_data)
 
+        # 筛选出温泉类的活动
+        spa_activities = [activity for activity in filtered_activities if
+                          "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]]
+
         # 2. 随机选择一个符合条件的酒店
         selected_accommodation = self.filter_data("cleaned_accommodation", user_data)
         hotel = self.select_random_hotel(selected_accommodation)
 
-        # 3. 创建行程，将选中的酒店作为参数传递
-        itinerary = self.create_itinerary(user_data, filtered_activities, hotel)
+        # 3. 创建行程，将选中的酒店和温泉活动作为参数传递
+        itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
 
-        # 4. 构建最终的响应结构
+        # 4. 生成推荐依据
+        recommendation_basis = self.generate_recommendation_basis(user_data, hotel, spa_activities)
+
+        # 5. 构建最终的响应结构
         response = {
             "head": 200,
             "items": {
@@ -387,7 +441,7 @@ class ItineraryModel:
                     "extra_info": hotel["extra_info"],
                     "activity_code": hotel["activity_code"]
                 },
-                "recommendation_basis": "推荐内容基于用户输入的健康状况、偏好及其他条件，匹配合适的酒店和行程方案。",
+                "recommendation_basis": recommendation_basis,
                 "itinerary": itinerary,
                 "msg": "行程生成成功"
             }
@@ -421,11 +475,12 @@ class ItineraryModel:
             }
         }
 
-    def create_itinerary(self, user_data, filtered_activities, selected_hotel):
+    def create_itinerary(self, user_data, filtered_activities, spa_activities, selected_hotel):
         """
         创建用户的行程安排，温泉活动随机出现并限制次数
         :param user_data: 用户输入的数据
         :param filtered_activities: 筛选后的活动列表
+        :param spa_activities: 筛选出的温泉类活动
         :param selected_hotel: 随机选择的酒店信息
         :return: 构建好的行程列表
         """
@@ -439,7 +494,7 @@ class ItineraryModel:
         current_date = start_date
 
         activity_index = 0
-        max_spa_activities = 2  # 限制每次行程推荐最多1-2个温泉体验
+        max_spa_activities = 2  # 整个行程中最多2次温泉活动
         spa_activity_count = 0  # 记录温泉体验的数量
         recent_activities = []  # 用于跟踪最近的活动，防止重复
 
@@ -480,17 +535,17 @@ class ItineraryModel:
             ]
         })
 
-        # 随机安排第一天下午的温泉体验（如有）
-        if spa_activity_count < max_spa_activities:
+        # 随机安排温泉体验（如果筛选出了温泉类活动并且温泉次数未达到上限）
+        if spa_activities and spa_activity_count < max_spa_activities:
             itinerary[-1]["time_slots"].append({
-                "period": "下午",
+                "period": "下午",  # 温泉活动只能安排在下午
                 "activities": [
                     {
-                        "name": "温泉体验",
+                        "name": spa_activities[spa_activity_count]["activity_name"],
                         "location": selected_hotel["name"],
-                        "activity_code": selected_hotel["activity_code"],
+                        "activity_code": spa_activities[spa_activity_count]["activity_code"],
                         "extra_info": {
-                            "description": "享受温泉泡浴，放松身心。",
+                            "description": spa_activities[spa_activity_count]["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
                         }
                     }
@@ -498,13 +553,14 @@ class ItineraryModel:
             })
             spa_activity_count += 1
 
-        # 跳过第一天的入住安排，继续安排接下来的活动
+        # 继续安排其他天的活动...
         current_date += timedelta(days=1)
 
         # 随机安排接下来的活动和温泉体验
         while current_date <= end_date and activity_index < len(filtered_activities):
             day_activities = []
             available_periods = ["上午", "下午"]  # 可用的时间段
+            daily_spa_activity_flag = False  # 标志是否当天安排了温泉活动
 
             # 随机选择当天的时间段数量和对应活动数量
             num_time_slots = random.randint(1, 2)  # 每天的时间段数量：1 到 2（上午、下午）
@@ -514,23 +570,24 @@ class ItineraryModel:
                     break  # 没有更多活动可用时停止安排
 
                 # 随机决定是否安排温泉活动，并检查温泉次数上限
-                if spa_activity_count < max_spa_activities and random.random() < 0.3:
-                    # 30% 概率安排温泉活动
+                if spa_activities and spa_activity_count < max_spa_activities and not daily_spa_activity_flag and period == "下午":
+                    # 只在下午安排温泉活动，并确保当天没有安排过温泉
                     day_activities.append({
-                        "period": period,
+                        "period": "下午",
                         "activities": [
                             {
-                                "name": "温泉体验",
-                                "location": selected_hotel.get("name", ""),
-                                "activity_code": selected_hotel["activity_code"],
+                                "name": spa_activities[spa_activity_count]["activity_name"],
+                                "location": spa_activities[spa_activity_count]["activity_category"],
+                                "activity_code": spa_activities[spa_activity_count]["activity_code"],
                                 "extra_info": {
-                                    "description": "享受温泉泡浴，放松身心。",
-                                    "operation_tips": "请提前预约，建议泡汤时间不超过30分钟。"
+                                    "description": spa_activities[spa_activity_count]["description"],
+                                    "operation_tips": "建议泡汤时间不超过30分钟。"
                                 }
                             }
                         ]
                     })
                     spa_activity_count += 1
+                    daily_spa_activity_flag = True  # 当天已安排温泉活动
                 else:
                     # 随机安排其他活动，确保没有短时间内的重复活动
                     num_activities_in_period = random.randint(1, 2)  # 每个时间段安排1到2个活动
@@ -562,26 +619,27 @@ class ItineraryModel:
                             "activities": activities_in_period
                         })
 
-            # 如果某一天没有任何活动，强制安排一个活动
+            # 如果某一天没有任何活动，强制补充一个随机非温泉活动
             if not day_activities:
-                if activity_index < len(filtered_activities):
-                    activity = filtered_activities[activity_index]
-                    day_activities.append({
-                        "period": "上午",  # 默认上午安排一个活动
-                        "activities": [
-                            {
-                                "name": activity.get("activity_name", ""),
-                                "location": activity.get("activity_category", ""),
-                                "activity_code": activity["activity_code"],
-                                "extra_info": {
-                                    "description": activity["description"],
-                                    "operation_tips": activity.get("reservation_note", "无")
+                for i in range(activity_index, len(filtered_activities)):
+                    activity = filtered_activities[i]
+                    if "温泉" not in activity["activity_name"]:  # 确保补充的不是温泉类活动
+                        day_activities.append({
+                            "period": "上午",
+                            "activities": [
+                                {
+                                    "name": activity.get("activity_name", ""),
+                                    "location": activity.get("activity_category", ""),
+                                    "activity_code": activity["activity_code"],
+                                    "extra_info": {
+                                        "description": activity["description"],
+                                        "operation_tips": activity.get("reservation_note", "无")
+                                    }
                                 }
-                            }
-                        ]
-                    })
-                    recent_activities.append({"name": activity["activity_name"], "date": current_date})
-                    activity_index += 1
+                            ]
+                        })
+                        activity_index = i + 1
+                        break
 
             itinerary.append({
                 "day": (current_date - start_date).days + 1,
