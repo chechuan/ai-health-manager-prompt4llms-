@@ -384,7 +384,8 @@ class ItineraryModel:
             "items": {
                 "hotel": {
                     "name": hotel["name"],
-                    "extra_info": hotel["extra_info"]
+                    "extra_info": hotel["extra_info"],
+                    "activity_code": hotel["activity_code"]
                 },
                 "recommendation_basis": "推荐内容基于用户输入的健康状况、偏好及其他条件，匹配合适的酒店和行程方案。",
                 "itinerary": itinerary,
@@ -404,6 +405,8 @@ class ItineraryModel:
             hotel = random.choice(selected_accommodation)
             return {
                 "name": hotel["name"],
+                "location": "待定",
+                "activity_code": hotel["activity_code"],
                 "extra_info": {
                     "description": hotel.get("hotel_description", "房型丰富、设施齐全、中医理疗特色"),
                     "room_description": hotel.get("room_description", "")
@@ -411,10 +414,10 @@ class ItineraryModel:
             }
         return {
             "name": "无合适酒店",
+            "location": "",
+            "activity_code": "",
             "extra_info": {
-                "location": "无",
-                "description": "无",
-                "link": "无"
+                "description": "无"
             }
         }
 
@@ -464,7 +467,8 @@ class ItineraryModel:
                     "activities": [
                         {
                             "name": "办理入住",
-                            "location": selected_hotel["name"],
+                            "location": selected_hotel.get("name", ""),
+                            "activity_code": selected_hotel["activity_code"],
                             "extra_info": {
                                 "description": selected_hotel["extra_info"].get("description", "房型丰富、设施齐全"),
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
@@ -484,6 +488,7 @@ class ItineraryModel:
                     {
                         "name": "温泉体验",
                         "location": selected_hotel["name"],
+                        "activity_code": selected_hotel["activity_code"],
                         "extra_info": {
                             "description": "享受温泉泡浴，放松身心。",
                             "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -516,7 +521,8 @@ class ItineraryModel:
                         "activities": [
                             {
                                 "name": "温泉体验",
-                                "location": selected_hotel["name"],
+                                "location": selected_hotel.get("name", ""),
+                                "activity_code": selected_hotel["activity_code"],
                                 "extra_info": {
                                     "description": "享受温泉泡浴，放松身心。",
                                     "operation_tips": "请提前预约，建议泡汤时间不超过30分钟。"
@@ -538,14 +544,12 @@ class ItineraryModel:
 
                         if not is_activity_recent(activity["activity_name"], recent_activities):
                             activities_in_period.append({
-                                "name": activity["activity_name"],
-                                "type": activity["activity_type"],
-                                "location": activity.get("location", ""),
+                                "name": activity.get("activity_name", ""),
+                                "location": activity.get("activity_category", ""),
                                 "activity_code": activity["activity_code"],
                                 "extra_info": {
                                     "description": activity["description"],
-                                    "operation_tips": activity.get("reservation_note", "无"),
-                                    "activity_link": "待定"
+                                    "operation_tips": activity.get("reservation_note", "无")
                                 }
                             })
                             # 记录活动安排时间，防止短时间重复
@@ -566,13 +570,12 @@ class ItineraryModel:
                         "period": "上午",  # 默认上午安排一个活动
                         "activities": [
                             {
-                                "name": activity.get("activity_type", ""),
-                                "location": activity.get("activity_name", ""),
+                                "name": activity.get("activity_name", ""),
+                                "location": activity.get("activity_category", ""),
                                 "activity_code": activity["activity_code"],
                                 "extra_info": {
                                     "description": activity["description"],
-                                    "operation_tips": activity.get("reservation_note", "无"),
-                                    "activity_link": "待定"
+                                    "operation_tips": activity.get("reservation_note", "无")
                                 }
                             }
                         ]
