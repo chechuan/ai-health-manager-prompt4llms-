@@ -262,6 +262,7 @@ class JiaheExpertModel:
         async def generate_day_plan(i):
             cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
             ref_diet_str = "\n".join(diet_cont[-2:])
+            print(ref_diet_str)
 
             prompt = jiahe_family_diet_prompt.format(
                 num=len(users),
@@ -296,18 +297,14 @@ class JiaheExpertModel:
             diet_cont.append(generate_text)
             logger.debug(f"出具家庭第{i + 1}日饮食计划模型输出：{generate_text}耗时: {time.time() - start_time:.2f} s")
 
-            # # 简化并格式化输出
-            # tmp = [i.strip() for i in generate_text.split('\n') if i.strip()]
-            # l = len(tmp)
-            # while not tmp[-2].startswith('## 晚餐'):
-            #     tmp = tmp[:-1]
-            # if not len(tmp) == l:
-            #     generate_text = ''
-            #     for i, x in enumerate(tmp):
-            #         if x.startswith('##'):
-            #             generate_text = generate_text + x + '\n'
-            #         else:
-            #             generate_text = generate_text + x + '\n\n'
+            # 确保标题和正文之间有换行符
+            tmp = [line.strip() for line in generate_text.split('\n') if line.strip()]
+            formatted_text = ''
+            for idx, line in enumerate(tmp):
+                if line.startswith('##'):  # 标题部分
+                    formatted_text += '\n' + line + '\n'  # 在标题前后加上换行符
+                else:
+                    formatted_text += line + '\n\n'  # 正文部分加上换行符
             return {"day": i + 1, "plan": generate_text}
 
         # 创建并发任务列表
