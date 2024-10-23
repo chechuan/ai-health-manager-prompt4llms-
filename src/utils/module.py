@@ -183,6 +183,12 @@ def get_intent(text):
     elif "运动咨询" in text:
         code = "sport_rec"
         desc = "运动咨询"
+    elif "行程" in text:
+        code = "route_rec"
+        desc = "行程推荐"
+    elif "温泉" in text:
+        code = "spa_rec"
+        desc = "温泉推荐"
     elif "页面" in text or "打开" in text:
         code = "open_Function"
         desc = "打开功能页面"
