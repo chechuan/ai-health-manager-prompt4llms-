@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
 
-import json
+import json, asyncio
 import sys
 
 sys.path.append('.')
@@ -19,6 +19,7 @@ from src.utils.resources import InitAllResource
 from src.utils.database import MysqlConnector
 from src.utils.module import (_parse_latest_plugin_call, clock,
                               get_doc_role, get_intent, make_meta_ret)
+from src.prompt.utils import ChatterGailyAssistant
 
 
 class Chat:
@@ -26,6 +27,7 @@ class Chat:
         global_share_resource.chat = self
         self.global_share_resource = global_share_resource
         self.env = global_share_resource.args.env
+        self.assistant = ChatterGailyAssistant(global_share_resource)
 
         self.mysql_conn = MysqlConnector(**global_share_resource.mysql_config)
         self.prompt_meta_data = global_share_resource.prompt_meta_data
@@ -536,11 +538,19 @@ class Chat:
         elif intent == 'remind_take_blood_pressure':
             out_text = {'message':'好的，已通知张叔叔测量血压', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
+        elif intent in ["route_rec", "spa_rec"]:
+            # 直接使用 history 中的内容生成 messages
+            messages = [
+                {"role": "user", "content": history[0]["content"]}
+            ]
+            # 调用 generate_chat_response 方法生成响应
+            content = self.assistant.generate_chat_response(messages)
+            out_text = {'message': content, 'intentCode': intent, 'processCode': 'alg', 'intentDesc': desc}
         else:
             out_text = {'message':'', 'intentCode':intent, 'processCode':'alg', 'intentDesc':desc}
         logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
         return out_text
-    
+
     def fetch_intent_code(self):
         """返回所有的intentCode"""
         intent_code_map = {
