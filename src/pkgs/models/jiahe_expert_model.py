@@ -967,7 +967,6 @@ class JiaheExpertModel:
 
         # 日志记录模型响应延迟和结果
         logger.debug("时令食材推荐模型输出latency： " + str(time.time() - start_time))
-        # logger.debug("时令食材推荐模型输出： " + generate_text)
         # 返回生成的推荐结果
         content = await parse_generic_content(generate_text)
         return content
