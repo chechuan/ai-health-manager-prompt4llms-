@@ -1436,6 +1436,7 @@ class HealthExpertModel:
         # 移除性别和年龄信息
         user_profile.pop("gender", None)
         user_profile.pop("age", None)
+        user_profile.pop("city", None)
 
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
@@ -1471,12 +1472,11 @@ class HealthExpertModel:
         daily_info_str = "\n".join(daily_info).strip()
 
         # 拼接用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
-        user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
+        # user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        # user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
 
         # 构建提示变量
         prompt_vars = {
-            "user_profile": user_profile_section,
             "daily_schedule": daily_schedule_section,
             "key_indicators": key_indicators_section,
             "daily_info": daily_info_str

@@ -119,7 +119,7 @@ class BathPlanModel:
             "items": {
                 "bath_plan": full_plan,
                 "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
-                "output_basis": "根据您的问卷结果，结合特色温泉的不同功效，从整体有效性、合理性、提升效果的角度为您推荐以下泡浴方案，仅供参考",
+                "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
                 "health_analysis": health_analysis
             },
             "msg": ""
@@ -157,7 +157,7 @@ class BathPlanModel:
                 "items": {
                     "bath_plan": default_plan,
                     "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
-                    "output_basis": "根据您的问卷结果，结合特色温泉的不同功效，从整体有效性、合理性、提升效果的角度为您推荐以下泡浴方案，仅供参考",
+                    "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
                     "health_analysis": health_analysis
                 },
                 "msg": ""

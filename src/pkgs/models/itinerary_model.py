@@ -384,6 +384,8 @@ class ItineraryModel:
         if preferences:
             preferences_desc = "、".join(preferences)
             basis_parts.append(f"用户的偏好包括{preferences_desc}")
+        else:
+            basis_parts.append("用户喜欢多样化的活动")
 
         # 检查是否选择了温泉活动
         if spa_activities:
@@ -398,6 +400,8 @@ class ItineraryModel:
             traveler_types = set([traveler["age_group"] for traveler in travelers if traveler["count"] > 0])
             traveler_types_desc = "、".join(traveler_types)
             basis_parts.append(f"适合出行人员为{traveler_types_desc}")
+        else:
+            basis_parts.append("适合全家出行")
 
         # 使用选中的酒店信息
         if selected_accommodation:
@@ -408,6 +412,154 @@ class ItineraryModel:
         basis = "，".join(basis_parts) + "。"
 
         return basis
+
+    def generate_default_itinerary(self, user_data, selected_hotel=None):
+        """
+        根据用户的服务时间，生成通用的行程方案，适合大多数人的默认安排。
+        所有活动都从现有的活动列表中选择，确保每一天都有安排。
+        :param user_data: 用户输入的数据
+        :return: 默认行程的列表
+        """
+        service_time = user_data.get("service_time", {})
+        start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
+        end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+
+        total_days = (end_date - start_date).days + 1
+        current_date = start_date
+        itinerary = []
+
+        # 如果没有提供酒店信息，使用默认的酒店
+        if not selected_hotel:
+            selected_hotel = {
+                "name": "汤泉逸墅 院线房",
+                "extra_info": {
+                    "description": None,
+                    "room_description": "院线房 61.66㎡-71.82㎡\n小院私汤，卧室有投影幕布，含双早"
+                },
+                "activity_code": "ACC992657"
+            }
+
+        # 已有的活动列表，用于随机选取
+        available_activities = [
+            {
+                "name": "盐房",
+                "location": "来康温泉",
+                "activity_code": "ACT173738",
+                "extra_info": {
+                    "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
+                    "operation_tips": "建议泡汤时间不超过30分钟。"
+                }
+            },
+            {
+                "name": "岩洞氧吧",
+                "location": "来康温泉",
+                "activity_code": "ACT268949",
+                "extra_info": {
+                    "description": "抗氧化防衰老,可促进人体新陈代谢,具有提神、消除疲劳、提高免疫力的功效,从而增强抗病能力。",
+                    "operation_tips": "体验时保持放松。"
+                }
+            },
+            {
+                "name": "香修体验",
+                "location": "七修书院",
+                "activity_code": "ACT698000",
+                "extra_info": {
+                    "description": "了解香学文化及制作合香香品",
+                    "operation_tips": "请在老师指导下操作。"
+                }
+            },
+            {
+                "name": "花修体验",
+                "location": "七修书院",
+                "activity_code": "ACT098692",
+                "extra_info": {
+                    "description": "学习中式插花，享受宁静时光",
+                    "operation_tips": "请提前预约花材。"
+                }
+            },
+            {
+                "name": "功修体验",
+                "location": "七修书院",
+                "activity_code": "ACT193928",
+                "extra_info": {
+                    "description": "导引养生功，讲解带练每一招式要点",
+                    "operation_tips": "适合所有年龄段，活动轻松。"
+                }
+            },
+            {
+                "name": "书修体验",
+                "location": "七修书院",
+                "activity_code": "ACT796407",
+                "extra_info": {
+                    "description": "拓印、静心抄经，体验传统书法的静心力量",
+                    "operation_tips": "建议提前预约，选择书法材料。"
+                }
+            },
+            {
+                "name": "食修体验",
+                "location": "七修书院",
+                "activity_code": "ACT875638",
+                "extra_info": {
+                    "description": "学习制作药食同源的小点心，了解传统健康饮食文化",
+                    "operation_tips": "活动时间约1.5小时，请提前预约。"
+                }
+            }
+        ]
+
+        # 为每一天生成行程
+        for day in range(1, total_days + 1):
+            if day == 1:
+                # 第一天下午安排温泉活动
+                day_activities = [
+                    {
+                        "period": "下午",
+                        "activities": [
+                            {
+                                "name": "办理入住",
+                                "location": selected_hotel.get("name", "汤泉逸墅 院线房"),
+                                "activity_code": selected_hotel.get("activity_code", "ACC992657"),
+                                "extra_info": {
+                                    "description": selected_hotel.get("extra_info", {}).get("description",
+                                                                                            "房型丰富、设施齐全"),
+                                    "room_description": selected_hotel.get("extra_info", {}).get("room_description",
+                                                                                                 ""),
+                                    "operation_tips": "请提前确认入住时间，提醒需要预约等"
+                                }
+                            },
+                            {
+                                "name": "盐房",
+                                "location": "来康温泉",
+                                "activity_code": "ACT173738",
+                                "extra_info": {
+                                    "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。",
+                                    "operation_tips": "建议泡汤时间不超过30分钟。"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            else:
+                # 每天上午和下午安排两个活动，随机从现有的活动中选择
+                day_activities = [
+                    {
+                        "period": "上午",
+                        "activities": [random.choice(available_activities)]
+                    },
+                    {
+                        "period": "下午",
+                        "activities": [random.choice(available_activities)]
+                    }
+                ]
+
+            itinerary.append({
+                "day": day,
+                "date": current_date.strftime("%Y-%m-%d"),
+                "time_slots": day_activities
+            })
+
+            current_date += timedelta(days=1)
+
+        return itinerary
 
     def generate_itinerary(self, user_data):
         """
@@ -427,8 +579,10 @@ class ItineraryModel:
         hotel = self.select_random_hotel(selected_accommodation)
 
         # 3. 创建行程，将选中的酒店和温泉活动作为参数传递
-        itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
-
+        if not filtered_activities:
+            itinerary = self.generate_default_itinerary(user_data, hotel)
+        else:
+            itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
         # 4. 生成推荐依据
         recommendation_basis = self.generate_recommendation_basis(user_data, hotel, spa_activities)
 
