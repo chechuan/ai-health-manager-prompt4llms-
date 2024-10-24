@@ -192,7 +192,7 @@ class UserProfile(BaseModel):
     past_history_of_present_illness: Optional[str] = None  # 既往史
     specialist_check: Optional[str] = None  # 专科检查
     disposal_plan: Optional[str] = None  # 处置方案
-    nation: str = Field(None, description="民族", example=["汉族"])
+    nation: Optional[str] = None #民族
     daily_physical_labor_intensity: Optional[str] = Field(
         None, description="日常体力劳动水平", examples=["中"]
     )

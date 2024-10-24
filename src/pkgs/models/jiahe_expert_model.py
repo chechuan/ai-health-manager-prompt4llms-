@@ -249,7 +249,7 @@ class JiaheExpertModel:
             days,
             history=[],
             requirements=[],
-            reference_diet=[],
+            reference_diet=[]
     ):
         """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history_0914(users, history)
@@ -257,7 +257,6 @@ class JiaheExpertModel:
         if reference_diet:
             diet_cont.extend(reference_diet)
         days_str = str(days) + "天"
-
         # 生成家庭每日饮食计划的异步函数
         async def generate_day_plan(i):
             cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
@@ -293,21 +292,14 @@ class JiaheExpertModel:
                 do_sample=True,
                 model="Qwen2-72B-Instruct",
             )
+
+            # 打印生成的文本格式
+            logger.debug(f"生成的文本内容：\n{generate_text}")
+
             diet_cont.append(generate_text)
             logger.debug(f"出具家庭第{i + 1}日饮食计划模型输出：{generate_text}耗时: {time.time() - start_time:.2f} s")
 
-            # # 简化并格式化输出
-            # tmp = [i.strip() for i in generate_text.split('\n') if i.strip()]
-            # l = len(tmp)
-            # while not tmp[-2].startswith('## 晚餐'):
-            #     tmp = tmp[:-1]
-            # if not len(tmp) == l:
-            #     generate_text = ''
-            #     for i, x in enumerate(tmp):
-            #         if x.startswith('##'):
-            #             generate_text = generate_text + x + '\n'
-            #         else:
-            #             generate_text = generate_text + x + '\n\n'
+            # 返回生成的文本
             return {"day": i + 1, "plan": generate_text}
 
         # 创建并发任务列表
@@ -974,7 +966,6 @@ class JiaheExpertModel:
 
         # 日志记录模型响应延迟和结果
         logger.debug("时令食材推荐模型输出latency： " + str(time.time() - start_time))
-        # logger.debug("时令食材推荐模型输出： " + generate_text)
         # 返回生成的推荐结果
         content = await parse_generic_content(generate_text)
         return content
