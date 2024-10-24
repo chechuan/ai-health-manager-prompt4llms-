@@ -489,22 +489,17 @@ class ItineraryModel:
         start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
         end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
 
-        # 将日期范围内的所有天数准备好
         total_days = (end_date - start_date).days + 1
         current_date = start_date
 
         activity_index = 0
         max_spa_activities = 2  # 整个行程中最多2次温泉活动
         spa_activity_count = 0  # 记录温泉体验的数量
-        recent_activities = []  # 用于跟踪最近的活动，防止重复
+        recent_activities = []  # 跟踪最近的活动，防止重复
 
         def is_activity_recent(activity_name, recent_activities, min_gap_days=7):
             """
             检查活动是否最近已经安排过
-            :param activity_name: 活动名称
-            :param recent_activities: 最近活动的记录
-            :param min_gap_days: 活动之间的最小间隔天数
-            :return: 是否最近安排过
             """
             for recent_activity in recent_activities:
                 if recent_activity["name"] == activity_name and (
@@ -512,12 +507,14 @@ class ItineraryModel:
                     return True
             return False
 
-        # 第一日安排办理入住
-        itinerary.append({
-            "day": 1,
-            "date": start_date.strftime("%Y-%m-%d"),
-            "time_slots": [
-                {
+        # 为每一天生成行程
+        for day in range(1, total_days + 1):
+            day_activities = []
+            daily_spa_activity_flag = False  # 每天是否安排了温泉活动
+
+            if day == 1:
+                # 第一日安排办理入住
+                day_activities.append({
                     "period": "下午",
                     "activities": [
                         {
@@ -531,16 +528,11 @@ class ItineraryModel:
                             }
                         }
                     ]
-                }
-            ]
-        })
+                })
 
-        # 随机安排温泉体验（如果筛选出了温泉类活动并且温泉次数未达到上限）
-        if spa_activities and spa_activity_count < max_spa_activities:
-            itinerary[-1]["time_slots"].append({
-                "period": "下午",  # 温泉活动只能安排在下午
-                "activities": [
-                    {
+                # 如果有温泉活动并且温泉次数未达到上限，安排温泉活动
+                if spa_activities and spa_activity_count < max_spa_activities:
+                    day_activities[-1]["activities"].append({
                         "name": spa_activities[spa_activity_count]["activity_name"],
                         "location": selected_hotel["name"],
                         "activity_code": spa_activities[spa_activity_count]["activity_code"],
@@ -548,101 +540,36 @@ class ItineraryModel:
                             "description": spa_activities[spa_activity_count]["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
                         }
-                    }
-                ]
-            })
-            spa_activity_count += 1
-
-        # 继续安排其他天的活动...
-        current_date += timedelta(days=1)
-
-        # 随机安排接下来的活动和温泉体验
-        while current_date <= end_date and activity_index < len(filtered_activities):
-            day_activities = []
-            available_periods = ["上午", "下午"]  # 可用的时间段
-            daily_spa_activity_flag = False  # 标志是否当天安排了温泉活动
-
-            # 随机选择当天的时间段数量和对应活动数量
-            num_time_slots = random.randint(1, 2)  # 每天的时间段数量：1 到 2（上午、下午）
-
-            for period in available_periods[:num_time_slots]:
-                if activity_index >= len(filtered_activities):
-                    break  # 没有更多活动可用时停止安排
-
-                # 随机决定是否安排温泉活动，并检查温泉次数上限
-                if spa_activities and spa_activity_count < max_spa_activities and not daily_spa_activity_flag and period == "下午":
-                    # 只在下午安排温泉活动，并确保当天没有安排过温泉
-                    day_activities.append({
-                        "period": "下午",
-                        "activities": [
-                            {
-                                "name": spa_activities[spa_activity_count]["activity_name"],
-                                "location": spa_activities[spa_activity_count]["activity_category"],
-                                "activity_code": spa_activities[spa_activity_count]["activity_code"],
-                                "extra_info": {
-                                    "description": spa_activities[spa_activity_count]["description"],
-                                    "operation_tips": "建议泡汤时间不超过30分钟。"
-                                }
-                            }
-                        ]
                     })
                     spa_activity_count += 1
-                    daily_spa_activity_flag = True  # 当天已安排温泉活动
-                else:
-                    # 随机安排其他活动，确保没有短时间内的重复活动
-                    num_activities_in_period = random.randint(1, 2)  # 每个时间段安排1到2个活动
-                    activities_in_period = []
 
-                    for _ in range(num_activities_in_period):
-                        if activity_index >= len(filtered_activities):
-                            break  # 没有更多活动可用时停止安排
-
+            else:
+                # 安排其他天的活动，确保活动不重复
+                available_periods = ["上午", "下午"]
+                for period in available_periods:
+                    if activity_index < len(filtered_activities):
+                        # 避免重复安排活动
                         activity = filtered_activities[activity_index]
-
                         if not is_activity_recent(activity["activity_name"], recent_activities):
-                            activities_in_period.append({
-                                "name": activity.get("activity_name", ""),
-                                "location": activity.get("activity_category", ""),
-                                "activity_code": activity["activity_code"],
-                                "extra_info": {
-                                    "description": activity["description"],
-                                    "operation_tips": activity.get("reservation_note", "无")
-                                }
-                            })
-                            # 记录活动安排时间，防止短时间重复
-                            recent_activities.append({"name": activity["activity_name"], "date": current_date})
-                            activity_index += 1  # 移动到下一个活动
-
-                    if activities_in_period:
-                        day_activities.append({
-                            "period": period,
-                            "activities": activities_in_period
-                        })
-
-            # 如果某一天没有任何活动，强制补充一个随机非温泉活动
-            if not day_activities:
-                for i in range(activity_index, len(filtered_activities)):
-                    activity = filtered_activities[i]
-                    if "温泉" not in activity["activity_name"]:  # 确保补充的不是温泉类活动
-                        day_activities.append({
-                            "period": "上午",
-                            "activities": [
-                                {
-                                    "name": activity.get("activity_name", ""),
-                                    "location": activity.get("activity_category", ""),
-                                    "activity_code": activity["activity_code"],
-                                    "extra_info": {
-                                        "description": activity["description"],
-                                        "operation_tips": activity.get("reservation_note", "无")
+                            day_activities.append({
+                                "period": period,
+                                "activities": [
+                                    {
+                                        "name": activity["activity_name"],
+                                        "location": activity["activity_category"],
+                                        "activity_code": activity["activity_code"],
+                                        "extra_info": {
+                                            "description": activity["description"],
+                                            "operation_tips": activity.get("reservation_note", "无")
+                                        }
                                     }
-                                }
-                            ]
-                        })
-                        activity_index = i + 1
-                        break
+                                ]
+                            })
+                            recent_activities.append({"name": activity["activity_name"], "date": current_date})
+                            activity_index += 1
 
             itinerary.append({
-                "day": (current_date - start_date).days + 1,
+                "day": day,
                 "date": current_date.strftime("%Y-%m-%d"),
                 "time_slots": day_activities
             })
