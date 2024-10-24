@@ -477,7 +477,7 @@ class ItineraryModel:
 
     def create_itinerary(self, user_data, filtered_activities, spa_activities, selected_hotel):
         """
-        创建用户的行程安排，温泉活动随机出现并限制次数
+        创建用户的行程安排，确保每天都有活动，不允许出现空白天
         :param user_data: 用户输入的数据
         :param filtered_activities: 筛选后的活动列表
         :param spa_activities: 筛选出的温泉类活动
@@ -495,11 +495,15 @@ class ItineraryModel:
         activity_index = 0
         max_spa_activities = 2  # 整个行程中最多2次温泉活动
         spa_activity_count = 0  # 记录温泉体验的数量
-        recent_activities = []  # 跟踪最近的活动，防止重复
+        recent_activities = []  # 用于跟踪最近的活动，防止重复
 
         def is_activity_recent(activity_name, recent_activities, min_gap_days=7):
             """
             检查活动是否最近已经安排过
+            :param activity_name: 活动名称
+            :param recent_activities: 最近活动的记录
+            :param min_gap_days: 活动之间的最小间隔天数
+            :return: 是否最近安排过
             """
             for recent_activity in recent_activities:
                 if recent_activity["name"] == activity_name and (
@@ -567,6 +571,24 @@ class ItineraryModel:
                             })
                             recent_activities.append({"name": activity["activity_name"], "date": current_date})
                             activity_index += 1
+
+                # 如果当日没有活动，随机安排一个非温泉类活动
+                if not day_activities:
+                    random_activity = random.choice(filtered_activities)
+                    day_activities.append({
+                        "period": "上午",
+                        "activities": [
+                            {
+                                "name": random_activity["activity_name"],
+                                "location": random_activity["activity_category"],
+                                "activity_code": random_activity["activity_code"],
+                                "extra_info": {
+                                    "description": random_activity["description"],
+                                    "operation_tips": random_activity.get("reservation_note", "无")
+                                }
+                            }
+                        ]
+                    })
 
             itinerary.append({
                 "day": day,
