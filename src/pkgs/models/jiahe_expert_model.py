@@ -249,7 +249,7 @@ class JiaheExpertModel:
             days,
             history=[],
             requirements=[],
-            reference_diet=[],
+            reference_diet=[]
     ):
         """出具家庭N日饮食计划"""
         roles, familyInfo, his_prompt = get_familyInfo_history_0914(users, history)
@@ -257,7 +257,6 @@ class JiaheExpertModel:
         if reference_diet:
             diet_cont.extend(reference_diet)
         days_str = str(days) + "天"
-
         # 生成家庭每日饮食计划的异步函数
         async def generate_day_plan(i):
             cur_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")

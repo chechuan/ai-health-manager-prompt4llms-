@@ -5,7 +5,7 @@
 @Author  :   ticoAg
 @Contact :   1627635056@qq.com
 """
-import copy
+import copy_table
 import json
 import os
 import subprocess
