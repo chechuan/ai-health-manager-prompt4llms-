@@ -96,6 +96,8 @@ class JiaheExpertModel:
                         return {"result": "terminal"}
                     else:
                         return {"result": "order"}
+            else:
+                return {"result": "terminal"}
         else:
             return {"result": "terminal"}
 
