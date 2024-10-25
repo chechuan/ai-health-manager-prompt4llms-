@@ -525,6 +525,15 @@ def create_app():
             content={"head": 500, "items": None, "msg": errors},
         )
 
+    # 全局异常处理器：用于处理其他未捕获的异常
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.exception(exc)  # 打印异常日志，便于调试
+        return JSONResponse(
+            status_code=200,  # 强制返回HTTP 200
+            content={"head": 500, "items": None, "msg": str(exc)},  # 自定义错误信息
+        )
+
     async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
     ) -> AsyncGenerator:
