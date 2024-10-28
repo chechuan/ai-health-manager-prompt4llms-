@@ -330,17 +330,6 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(
-        request: Request, exc: RequestValidationError
-    ):
-        # 提取并格式化错误信息
-        errors = exc.errors()
-        return JSONResponse(
-            status_code=500,
-            content={"head": 500, "items": None, "msg": errors},
-        )
-
     async def _async_aigc_functions(
         request_model: AigcFunctionsRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
@@ -525,12 +514,25 @@ def create_app():
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
-    # @app.exception_handler(ValidationError)
-    # async def validation_exception_handler(request: Request, exc: ValidationError):
-    #     error_messages = []
-    #     for error in exc.errors():
-    #         error_messages.append({'loc': error['loc'], 'msg': error['msg']})
-    #     return JSONResponse(content={'success': False, 'errors': error_messages}, status_code=422)
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+            request: Request, exc: RequestValidationError
+    ):
+        # 提取并格式化错误信息
+        errors = exc.errors()
+        return JSONResponse(
+            status_code=200,
+            content={"head": 500, "items": None, "msg": errors},
+        )
+
+    # 全局异常处理器：用于处理其他未捕获的异常
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.exception(exc)  # 打印异常日志，便于调试
+        return JSONResponse(
+            status_code=200,  # 强制返回HTTP 200
+            content={"head": 500, "items": None, "msg": str(exc)},  # 自定义错误信息
+        )
 
     async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
