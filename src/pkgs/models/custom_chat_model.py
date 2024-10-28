@@ -371,7 +371,7 @@ class CustomChatAuxiliary(CustomChatModel):
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        model = "Qwen1.5-32B-Chat"
+        model = "Qwen1.5-72B-Chat"
 
         messages = self.__compose_auxiliary_diagnosis_message__(**kwargs)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
@@ -381,7 +381,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             history=messages,
             temperature=0.7,
-            max_tokens=2048,
+            max_tokens=8192,
             top_p=0.5,
             n=1,
             presence_penalty=0,
