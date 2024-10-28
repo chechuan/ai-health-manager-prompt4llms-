@@ -381,7 +381,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             history=messages,
             temperature=0.7,
-            max_tokens=8192,
+            max_tokens=10000,
             top_p=0.5,
             n=1,
             presence_penalty=0,
