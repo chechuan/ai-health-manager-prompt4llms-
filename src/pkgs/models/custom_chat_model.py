@@ -474,23 +474,24 @@ class CustomChatAuxiliary(CustomChatModel):
             if if_entropy=='2':
                 result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
             else:
-                from datetime import datetime
-                now = datetime.now()  
+                # from datetime import datetime
+                # now = datetime.now()  
   
-                # 格式化当前时间，仅保留小时和分钟  
-                current_time_str = now.strftime("%H:%M")  
+                # # 格式化当前时间，仅保留小时和分钟  
+                # current_time_str = now.strftime("%H:%M")  
                 
-                # 提取小时部分  
-                hour = int(current_time_str.split(':')[0])  
+                # # 提取小时部分  
+                # hour = int(current_time_str.split(':')[0])  
                 
-                # 根据小时判断时段  
-                if hour < 11:  
-                    t="上午" 
-                elif 11 <= hour < 13:  
-                    t="中午"  
-                else:  
-                    t="下午" 
-                result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
+                # # 根据小时判断时段  
+                # if hour < 11:  
+                #     t="上午" 
+                # elif 11 <= hour < 13:  
+                #     t="中午"  
+                # else:  
+                #     t="下午" 
+                # result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
+                result =content
                 # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
 
         # 用if_entropy字段来控制不同的场景
