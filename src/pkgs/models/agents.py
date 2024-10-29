@@ -824,7 +824,9 @@ class Agents:
         )
         # res = json5.loads(content)
         # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
-        return content
+        pattern = r'(1\.|2\.|3\.)'  
+        filtered_string = re.sub(pattern, '', content) 
+        return filtered_string
 
     # @param_check(check_params=["messages"])
     async def aigc_functions_chinese_therapy_new(self, **kwargs) -> str:
