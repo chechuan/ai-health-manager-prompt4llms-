@@ -222,7 +222,7 @@ async def acallLLM(
         "max_tokens": max_tokens,
         "stop": stop,
         "stream": stream,
-        "timeout": 120,
+        "timeout": 240,
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")

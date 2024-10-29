@@ -1502,7 +1502,7 @@ class Agents:
                 "temperature": 0,
                 "top_p": 0.3,
                 "repetition_penalty": 1.0,
-                "max_tokens": 8192
+                "max_tokens": 12000
             }
             if not model_args
             else model_args
