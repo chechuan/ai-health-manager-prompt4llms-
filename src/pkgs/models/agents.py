@@ -824,6 +824,7 @@ class Agents:
         )
         # res = json5.loads(content)
         # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
+        import re
         pattern = r'(1\.|2\.|3\.)'  
         filtered_string = re.sub(pattern, '', content) 
         return filtered_string
