@@ -471,9 +471,9 @@ class CustomChatAuxiliary(CustomChatModel):
                             prompt_template=prompt_template,
                             prompt_vars=prompt_vars,
                             **kwargs)
-            if if_entropy=='2':
-                result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
-            else:
+            # if if_entropy=='2':
+            #     result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
+            # else:
                 # from datetime import datetime
                 # now = datetime.now()  
   
@@ -491,7 +491,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 # else:  
                 #     t="下午" 
                 # result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
-                result =content
+            result =content
                 # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
 
         # 用if_entropy字段来控制不同的场景
