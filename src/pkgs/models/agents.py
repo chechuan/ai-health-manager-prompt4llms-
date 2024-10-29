@@ -823,10 +823,8 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         # res = json5.loads(content)
-        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
-        import re
-        pattern = r'(1\.|2\.|3\.)'  
-        filtered_string = re.sub(pattern, '', content) 
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res]) 
+        filtered_string = content.replace('1.','').replace('2.','').replace('3.','')
         return filtered_string
 
     # @param_check(check_params=["messages"])
