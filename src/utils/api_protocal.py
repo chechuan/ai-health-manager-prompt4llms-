@@ -425,7 +425,7 @@ class AigcSanjiRequest(BaseModel):
         ],
     )
 
-    user_profile: UserProfile = Field(
+    user_profile: Union[Dict, None] = Field(
         {},
         description="用户基本信息",
         examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
