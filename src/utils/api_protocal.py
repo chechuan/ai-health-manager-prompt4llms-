@@ -938,6 +938,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_guide_user_back_to_consultation",
         "aigc_functions_generate_greeting",
         "aigc_functions_generate_food_calories",
+        "aigc_functions_diet_recommendation_summary"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1267,6 +1268,16 @@ class SanJiKangYangRequest(BaseModel):
         examples=[
             '2片'
         ],
+    )
+    diet_status: Union[str, None] = Field(
+        None,
+        description="饮食状态：吃得很棒/吃得一般/吃得很差",
+        examples=['吃得很棒']
+    )
+    diet_analysis: Union[str, None] = Field(
+        None,
+        description="营养师对饮食的分析建议",
+        examples=['主食摄入较多，蔬果较少']
     )
 
 
