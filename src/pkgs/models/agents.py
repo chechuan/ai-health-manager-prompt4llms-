@@ -823,7 +823,8 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         # res = json5.loads(content)
-        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res]) 
+        # filtered_string = content.replace('1.','').replace('2.','').replace('3.','')
         return content
 
     # @param_check(check_params=["messages"])
@@ -1125,10 +1126,10 @@ class Agents:
             "messages": messages,
         }
         model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0,max_tokens=8192
         )
         content: str = await self.sanji_general(
-            process=0,
+            # process=0,
             _event=_event,
             prompt_vars=prompt_vars,
             model_args=model_args,
@@ -1502,6 +1503,7 @@ class Agents:
                 "temperature": 0,
                 "top_p": 0.3,
                 "repetition_penalty": 1.0,
+                "max_tokens": 12000
             }
             if not model_args
             else model_args

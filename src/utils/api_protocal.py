@@ -117,7 +117,10 @@ USER_PROFILE_KEY_MAP = {
     "recommended_caloric_intake": "保持当前体重推荐摄入热量值",
     "weight_status": "体重状态",
     "preferred_name": "用户期望称呼",
-    "city": "所在城市"
+    "city": "所在城市",
+    "last_night_sleep_time":"昨晚睡眠时间",
+    "today_blood_sugar":"今日血糖",
+    "today_life_entropy":"今日生命熵"
 }
 
 
@@ -223,6 +226,9 @@ class UserProfile(BaseModel):
     recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
     preferred_name: Optional[str] = Field(None, description="用户期望称呼", example=["张叔叔"])
     city: Optional[str] = Field(None, description="所在城市", example=["张叔叔"])
+    last_night_sleep_time: Optional[str] = Field(None, description="昨晚睡眠时间", example=["120"])
+    today_blood_sugar: Optional[str] = Field(None, description="今日血糖", example=["5"])
+    today_life_entropy: Optional[str] = Field(None, description="今日生命熵", example=["53.45"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -419,7 +425,7 @@ class AigcSanjiRequest(BaseModel):
         ],
     )
 
-    user_profile: UserProfile = Field(
+    user_profile: Union[Dict, None] = Field(
         {},
         description="用户基本信息",
         examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
