@@ -40,6 +40,182 @@ class HealthExpertModel:
         self.gsr = gsr
         self.regist_aigc_functions()
 
+    async def aaigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        prompt_template: str = (
+            prompt_template
+            if prompt_template
+            else self.gsr.get_event_item(event)["description"]
+        )
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+
+        content: Union[str, Generator] = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+        return content
+
+    def __compose_user_msg__(
+        self,
+        mode: Literal[
+            "user_profile",
+            "messages",
+            "drug_plan",
+            "medical_records",
+            "ietary_guidelines",
+            "key_indicators",
+        ],
+        user_profile: UserProfile = None,
+        medical_records: MedicalRecords = None,
+        ietary_guidelines: DietaryGuidelinesDetails = None,
+        messages: List[ChatMessage] = [],
+        key_indicators: "List[KeyIndicators]" = "[]",
+        drug_plan: "List[DrugPlanItem]" = "[]",
+        role_map: Dict = {},
+    ) -> str:
+        content = ""
+        if mode == "user_profile":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "messages":
+            assert messages is not None, "messages can't be None"
+            assert messages is not [], "messages can't be empty list"
+            role_map = (
+                {"assistant": "医生", "user": "患者"} if not role_map else role_map
+            )
+            for message in messages:
+                if message.get("role", "other") == "other":
+                    content += f"other: {message['content']}\n"
+                elif role_map.get(message.get("role", "other")):
+                    content += f"{role_map[message['role']]}: {message['content']}\n"
+                else:
+                    content += f"{message['content']}\n"
+        elif mode == "drug_plan":
+            if drug_plan:
+                for item in json5.loads(drug_plan):
+                    content += (
+                        ", ".join(
+                            [
+                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                for k, v in item.items()
+                            ]
+                        )
+                        + "\n"
+                    )
+                content = content.strip()
+        elif mode == "medical_records":
+            if medical_records:
+                for key, value in medical_records.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "ietary_guidelines":
+            if ietary_guidelines:
+                for key, value in ietary_guidelines.items():
+                    if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
+                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "key_indicators":
+            # 创建一个字典来存储按日期聚合的数据
+            aggregated_data = {}
+
+            # 遍历数据并聚合
+            for item in key_indicators:
+                for entry in item["data"]:
+                    date, time = entry["time"].split(" ")
+                    value = entry["value"]
+                    if date not in aggregated_data:
+                        aggregated_data[date] = {}
+                    aggregated_data[date][item["key"]] = {"time": time, "value": value}
+
+            # 创建 Markdown 表格
+            content = "| 测量日期 | 测量时间 | 体重 | BMI | 体脂率 |\n"
+            content += "| ------ | ------ | ---- | ----- | ------ |\n"
+
+            # 填充表格
+            for date, measurements in aggregated_data.items():
+                time = measurements.get("体重", {}).get("time", "")
+                weight = measurements.get("体重", {}).get("value", "")
+                bmi = measurements.get("bmi", {}).get("value", "")
+                body_fat_rate = measurements.get("体脂率", {}).get("value", "")
+                row = f"| {date} | {time} | {weight} | {bmi} | {body_fat_rate} |\n"
+                content += row
+        else:
+            logger.error(f"Compose user profile error: mode {mode} not supported")
+        return content
+
+    async def __update_model_args__(self, kwargs, **args) -> Dict:
+        if "model_args" in kwargs:
+            if kwargs.get("model_args"):
+                args = {
+                    **args,
+                    **kwargs["model_args"],
+                }
+            del kwargs["model_args"]
+        return args
+
+    async def call_function(self, **kwargs) -> Union[str, Generator]:
+        """调用函数
+        - Args:
+            intentCode (str): 意图代码
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            str: 答案
+        """
+        intent_code = kwargs.get("intentCode")
+        # TODO intentCode -> funcCode
+        intent_code = (
+            self.gsr.intent_aigcfunc_map.get(intent_code)
+            if self.gsr.intent_aigcfunc_map.get(intent_code)
+            else intent_code
+        )
+        if not self.funcmap.get(intent_code):
+            logger.error(f"intentCode {intent_code} not found in funcmap")
+            raise RuntimeError(f"Code not supported.")
+
+        try:
+            func = self.funcmap.get(intent_code)
+            if asyncio.iscoroutinefunction(func):
+                content = await func(**kwargs)
+            else:
+                content = func(**kwargs)
+        except Exception as e:
+            logger.exception(f"call_function {intent_code} error: {e}")
+            raise e
+        return content
+
+    def regist_aigc_functions(self) -> None:
+        self.funcmap = {}
+        for obj_str in dir(self):
+            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+                self.funcmap[obj_str] = getattr(self, obj_str)
+
     # @param_check(check_params=["messages"])
     async def aigc_functions_diagnosis_generation(self, **kwargs) -> str:
         """西医决策-诊断生成"""
@@ -1670,183 +1846,55 @@ class HealthExpertModel:
 
         return content
 
-    async def aaigc_functions_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
+    async def aigc_functions_diet_recommendation_summary(
+            self, **kwargs
     ) -> Union[str, Generator]:
-        """通用生成"""
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        model_args: dict = (
-            {
-                "temperature": 0,
-                "top_p": 1,
-                "repetition_penalty": 1.0,
-            }
-            if not model_args
-            else model_args
-        )
-        prompt_template: str = (
-            prompt_template
-            if prompt_template
-            else self.gsr.get_event_item(event)["description"]
-        )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+        """生成每日饮食建议总结
 
-        prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
-
-        content: Union[str, Generator] = await acallLLM(
-            model=model,
-            query=prompt,
-            **model_args,
-        )
-        if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
-        return content
-
-    def __compose_user_msg__(
-        self,
-        mode: Literal[
-            "user_profile",
-            "messages",
-            "drug_plan",
-            "medical_records",
-            "ietary_guidelines",
-            "key_indicators",
-        ],
-        user_profile: UserProfile = None,
-        medical_records: MedicalRecords = None,
-        ietary_guidelines: DietaryGuidelinesDetails = None,
-        messages: List[ChatMessage] = [],
-        key_indicators: "List[KeyIndicators]" = "[]",
-        drug_plan: "List[DrugPlanItem]" = "[]",
-        role_map: Dict = {},
-    ) -> str:
-        content = ""
-        if mode == "user_profile":
-            if user_profile:
-                for key, value in user_profile.items():
-                    if value and USER_PROFILE_KEY_MAP.get(key):
-                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
-        elif mode == "messages":
-            assert messages is not None, "messages can't be None"
-            assert messages is not [], "messages can't be empty list"
-            role_map = (
-                {"assistant": "医生", "user": "患者"} if not role_map else role_map
-            )
-            for message in messages:
-                if message.get("role", "other") == "other":
-                    content += f"other: {message['content']}\n"
-                elif role_map.get(message.get("role", "other")):
-                    content += f"{role_map[message['role']]}: {message['content']}\n"
-                else:
-                    content += f"{message['content']}\n"
-        elif mode == "drug_plan":
-            if drug_plan:
-                for item in json5.loads(drug_plan):
-                    content += (
-                        ", ".join(
-                            [
-                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
-                                for k, v in item.items()
-                            ]
-                        )
-                        + "\n"
-                    )
-                content = content.strip()
-        elif mode == "medical_records":
-            if medical_records:
-                for key, value in medical_records.items():
-                    if value and USER_PROFILE_KEY_MAP.get(key):
-                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
-        elif mode == "ietary_guidelines":
-            if ietary_guidelines:
-                for key, value in ietary_guidelines.items():
-                    if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
-                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
-        elif mode == "key_indicators":
-            # 创建一个字典来存储按日期聚合的数据
-            aggregated_data = {}
-
-            # 遍历数据并聚合
-            for item in key_indicators:
-                for entry in item["data"]:
-                    date, time = entry["time"].split(" ")
-                    value = entry["value"]
-                    if date not in aggregated_data:
-                        aggregated_data[date] = {}
-                    aggregated_data[date][item["key"]] = {"time": time, "value": value}
-
-            # 创建 Markdown 表格
-            content = "| 测量日期 | 测量时间 | 体重 | BMI | 体脂率 |\n"
-            content += "| ------ | ------ | ---- | ----- | ------ |\n"
-
-            # 填充表格
-            for date, measurements in aggregated_data.items():
-                time = measurements.get("体重", {}).get("time", "")
-                weight = measurements.get("体重", {}).get("value", "")
-                bmi = measurements.get("bmi", {}).get("value", "")
-                body_fat_rate = measurements.get("体脂率", {}).get("value", "")
-                row = f"| {date} | {time} | {weight} | {bmi} | {body_fat_rate} |\n"
-                content += row
-        else:
-            logger.error(f"Compose user profile error: mode {mode} not supported")
-        return content
-
-    async def __update_model_args__(self, kwargs, **args) -> Dict:
-        if "model_args" in kwargs:
-            if kwargs.get("model_args"):
-                args = {
-                    **args,
-                    **kwargs["model_args"],
-                }
-            del kwargs["model_args"]
-        return args
-
-    async def call_function(self, **kwargs) -> Union[str, Generator]:
-        """调用函数
-        - Args:
-            intentCode (str): 意图代码
-            prompt (str): 问题
-            options (List[str]): 选项列表
-
-        - Returns:
-            str: 答案
+        需求文档: https://alidocs.dingtalk.com/i/nodes/EpGBa2Lm8aRZLvqyHLjY06mQWgN7R35y?utm_medium=wiki_feed_notification&utm_source=im_SYSTEM
         """
-        intent_code = kwargs.get("intentCode")
-        # TODO intentCode -> funcCode
-        intent_code = (
-            self.gsr.intent_aigcfunc_map.get(intent_code)
-            if self.gsr.intent_aigcfunc_map.get(intent_code)
-            else intent_code
+        kwargs = deepcopy(kwargs)
+
+        # 提取并校验饮食状态
+        diet_status = kwargs.get("diet_status", "")
+        if diet_status not in ["吃得很棒", "吃得一般", "吃得很差"]:
+            raise ValueError("Invalid diet status provided.")
+
+        # 提取并校验饮食分析内容
+        diet_analysis = kwargs.get("diet_analysis", "")
+        if not diet_analysis:
+            raise ValueError("Diet analysis is required.")
+
+        # 拼接初始话术内容
+        initial_summary = f"{diet_status}，"
+
+        # 调用模型生成饮食分析结果的精炼总结
+        diet_summary_model_output = await self.__call_model_summary__(**kwargs)
+
+        # 截取模型输出内容并拼接最终输出结果
+        truncated_summary = self.__truncate_to_limit(diet_summary_model_output, limit=15)
+        final_summary = f"{initial_summary}{truncated_summary}"
+
+        return final_summary
+
+    async def __call_model_summary__(self, **kwargs) -> str:
+        """调用模型生成饮食分析结果的精炼总结"""
+        diet_analysis = kwargs.pop("diet_analysis", "")
+        prompt_vars = {"diet_analysis": diet_analysis}
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0)
+
+        diet_summary_output = await self.aaigc_functions_general(
+            _event="饮食分析结果生成", prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-        if not self.funcmap.get(intent_code):
-            logger.error(f"intentCode {intent_code} not found in funcmap")
-            raise RuntimeError(f"Code not supported.")
+        return diet_summary_output
 
-        try:
-            func = self.funcmap.get(intent_code)
-            if asyncio.iscoroutinefunction(func):
-                content = await func(**kwargs)
-            else:
-                content = func(**kwargs)
-        except Exception as e:
-            logger.exception(f"call_function {intent_code} error: {e}")
-            raise e
-        return content
-
-    def regist_aigc_functions(self) -> None:
-        self.funcmap = {}
-        for obj_str in dir(self):
-            if (
-                obj_str.startswith("aigc_functions_") or obj_str.startswith("sanji_")
-            ) and not self.funcmap.get(obj_str):
-                self.funcmap[obj_str] = getattr(self, obj_str)
+    def __truncate_to_limit(self, text: str, limit: int) -> str:
+        """截取文本至指定字符限制，优先完整保留标点符号句尾"""
+        if len(text) <= limit:
+            return text
+        truncated = text[:limit]
+        last_punctuation = max(truncated.rfind(p) for p in "。，！？")
+        return truncated[:last_punctuation + 1] + "。" if last_punctuation != -1 else truncated.rstrip() + "。"
 
 
 if __name__ == "__main__":
