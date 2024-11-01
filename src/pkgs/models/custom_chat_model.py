@@ -163,7 +163,7 @@ class CustomChatAuxiliary(CustomChatModel):
     def __compose_auxiliary_diagnosis_message__(
         self, **kwargs
     ) -> List[DeltaMessage]:
-        """组装诊断消息"""
+        """组装辅助诊断消息"""
         # event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
         # sys_prompt = event["description"] + "\n" + event["process"]
         history = [
@@ -172,9 +172,11 @@ class CustomChatAuxiliary(CustomChatModel):
         sys_prompt = _auxiliary_diagnosis_system_prompt_v7
         pro = kwargs.get("promptParam", {})
         
-        user_profile = kwargs.get('user_profile',{})
+        user_profile = pro.get('user_profile','')
+        prompt_vars = {
+            "user_profile": pro}
         
-        sys_prompt = sys_prompt.replace("{user_profile}", user_profile)
+        sys_prompt = sys_prompt.format(**prompt_vars)
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -510,7 +512,7 @@ class CustomChatAuxiliary(CustomChatModel):
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        model = "Qwen1.5-72B-Chat"
+        model = "Qwen1.5-32B-Chat"
 
         messages = self.__compose_auxiliary_diagnosis_message__(**kwargs)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
