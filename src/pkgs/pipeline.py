@@ -705,7 +705,7 @@ class Chat_v2:
         if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
             "weight_meas",
             "blood_meas",
-            # "blood_meas_with_doctor_recommend",
+            "glucose_diagnosis",
         ]:
             logger.debug(
                 f"not support current event {intentCode}, change intentCode to other."
@@ -1174,6 +1174,12 @@ class Chat_v2:
                 tool = "askHuman"
             else:
                 conts=[]
+        elif intentCode == "sanji_glucose_diagnosis":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
         elif intentCode =="chat_start_with_weather":
             mid_vars, conts, (thought, content) = (
                     await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
