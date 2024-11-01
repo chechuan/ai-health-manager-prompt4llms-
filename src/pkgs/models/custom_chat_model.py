@@ -174,7 +174,7 @@ class CustomChatAuxiliary(CustomChatModel):
         
         user_profile = pro.get('user_profile','')
         prompt_vars = {
-            "user_profile": pro}
+            "user_profile": user_profile }
         
         sys_prompt = sys_prompt.format(**prompt_vars)
         system_message = DeltaMessage(role="system", content=sys_prompt)
@@ -521,8 +521,8 @@ class CustomChatAuxiliary(CustomChatModel):
         content = callLLM(
             model=model,
             history=messages,
-            temperature=0.7,
-            max_tokens=10000,
+            temperature=0.9,
+            max_tokens=16000,
             top_p=0.5,
             n=1,
             presence_penalty=0,
