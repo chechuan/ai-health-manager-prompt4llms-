@@ -15,6 +15,7 @@ from typing import Generator
 
 # 第三方库导入
 import json5
+import re
 
 # 本地模块导入
 from data.test_param.test import testParam
@@ -1586,7 +1587,19 @@ class HealthExpertModel:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         content = await parse_generic_content(content)
-        return content
+
+        # 新增逻辑：检查并调整问号数量
+        def format_question(question: str) -> str:
+            # 替换句中非句尾的问号为逗号，只保留句尾问号
+            question = re.sub(r"？(?!$)", "，", question)  # 替换句中问号为逗号
+            if not question.endswith("？"):
+                question += "？"  # 如果句末没有问号，添加一个问号
+            return question
+
+        # 格式化每个问题，确保符合要求
+        formatted_content = [format_question(question) for question in content]
+
+        return formatted_content
 
     async def aigc_functions_generate_greeting(self, **kwargs) -> str:
         """
