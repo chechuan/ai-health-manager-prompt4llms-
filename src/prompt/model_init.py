@@ -127,7 +127,7 @@ def callLLM(
         msg = ""
         for i, n in enumerate(list(reversed(history))):
             msg += n["content"]
-            if len(msg) > 1200:
+            if len(msg) > 12000:
                 h = history[-i:]
                 break
             else:

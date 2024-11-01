@@ -512,7 +512,7 @@ class CustomChatAuxiliary(CustomChatModel):
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        model = "Qwen1.5-32B-Chat"
+        model = "Qwen1.5-72B-Chat"
 
         messages = self.__compose_auxiliary_diagnosis_message__(**kwargs)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
@@ -522,7 +522,7 @@ class CustomChatAuxiliary(CustomChatModel):
             model=model,
             history=messages,
             temperature=0.9,
-            max_tokens=16000,
+            max_tokens=8192,
             top_p=0.5,
             n=1,
             presence_penalty=0,
@@ -603,7 +603,9 @@ class CustomChatAuxiliary(CustomChatModel):
         conts=[]
         
         city = "廊坊"
+        
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
+        logger.info(f"获取天气: {dumpJS(today_weather)}")
         if if_entropy == "2" or if_entropy == "3":
             prompt_vars = {"today_weather": today_weather}
             prompt_template =_chat_start_with_weather_v2.replace('today_weather',today_weather)
