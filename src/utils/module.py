@@ -351,6 +351,18 @@ def get_intent(text):
     elif "猜你想问" in text:
         code = "aigc_functions_generate_related_questions"
         desc = "猜你想问"
+    elif "健康宝" in text:
+        code = "hospital"
+        desc = "健康宝"
+    elif "医院预约" in text:
+        code = "hospital_appointment"
+        desc = "医院预约"
+    elif "检查结果查询" in text:
+        code = "exam_results"
+        desc = "检查结果查询"
+    elif "健康报告解读" in text:
+        code = "report_analysis"
+        desc = "健康报告解读"
     else:
         code = "other"
         desc = "日常对话"
