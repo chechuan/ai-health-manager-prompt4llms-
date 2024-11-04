@@ -228,23 +228,28 @@ class ItineraryModel:
         :param applicable_people: 活动的适用人群
         :return: 如果所有出行人员符合条件，返回True；否则返回False
         """
+        # 定义英文到中文的年龄组映射
+        age_group_translation = {
+            "elderly": "老人",
+            "adult": "成人",
+            "teenager": "青少年",
+            "children": "儿童"
+        }
+
         for traveler in travelers:
-            traveler_age_group = traveler.get("age_group", "")
+            traveler_age_group_en = traveler.get("age_group", "")
+            traveler_age_group = age_group_translation.get(traveler_age_group_en, "")
             traveler_gender = traveler.get("gender", "")
-            count = traveler.get("count", "")
+            count = traveler.get("count", 0)
 
-
-            # if not any(
-            #         person["age_group"] == traveler_age_group and
-            #         (person["gender"] == "不限" or person["gender"] == traveler_gender)
-            #         for person in applicable_people
-            # ):
             # 如果count为0，跳过该出行人员
-            if not count:
+            if count == 0:
                 continue
 
+            # 检查是否符合适用人群
             if not any(person["age_group"] == traveler_age_group for person in applicable_people):
                 return False
+
         return True
 
     def normalize_value(self, value):
@@ -519,8 +524,8 @@ class ItineraryModel:
                                 "location": selected_hotel.get("name", "汤泉逸墅 院线房"),
                                 "activity_code": selected_hotel.get("activity_code", "ACC992657"),
                                 "extra_info": {
-                                    "description": selected_hotel.get("extra_info", {}).get("description",
-                                                                                            "房型丰富、设施齐全"),
+                                    # "description": selected_hotel.get("extra_info", {}).get("description", "请提前确认入住时间，提醒需要预约等"),
+                                    "description": "请提前确认入住时间，提醒需要预约等",
                                     "room_description": selected_hotel.get("extra_info", {}).get("room_description",
                                                                                                  ""),
                                     "operation_tips": "请提前确认入住时间，提醒需要预约等"
@@ -680,7 +685,7 @@ class ItineraryModel:
                             "location": selected_hotel.get("name", ""),
                             "activity_code": selected_hotel["activity_code"],
                             "extra_info": {
-                                "description": selected_hotel["extra_info"].get("description", "房型丰富、设施齐全"),
+                                "description": "请提前确认入住时间，提醒需要预约等",
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
                                 "operation_tips": "请提前确认入住时间，提醒需要预约等"
                             }
