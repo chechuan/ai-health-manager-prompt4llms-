@@ -695,12 +695,13 @@ class ItineraryModel:
 
                 # 如果有温泉活动并且温泉次数未达到上限，安排温泉活动
                 if spa_activities and spa_activity_count < max_spa_activities:
+                    random_spa_activity = random.choice(spa_activities)
                     day_activities[-1]["activities"].append({
-                        "name": spa_activities[spa_activity_count]["activity_name"],
-                        "location": selected_hotel["name"],
-                        "activity_code": spa_activities[spa_activity_count]["activity_code"],
+                        "name": random_spa_activity["activity_name"],
+                        "location": random_spa_activity["activity_category"],
+                        "activity_code": random_spa_activity["activity_code"],
                         "extra_info": {
-                            "description": spa_activities[spa_activity_count]["description"],
+                            "description": random_spa_activity["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
                         }
                     })
