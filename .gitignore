@@ -7,4 +7,4 @@ doc/test/debug
 .vscode/
 .tmp
 .DS_Store
-test.py
+test.html
