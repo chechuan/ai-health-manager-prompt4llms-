@@ -30,10 +30,10 @@ class ItineraryModel:
 
     def load_data(self):
         """
-        从数据库中加载行程推荐相关的表格数据，存储在类属性中。
-        :return: 包含各表数据的数据字典
+        从数据库中加载多张表格的数据并存储在类属性中
+        :return: 各表数据字典
         """
-        logger.info("正在从数据库加载行程推荐数据...")
+        logger.info("正在从数据库加载数据...")
         tables = [
             "cleaned_accommodation", "cleaned_activities",
             # "cleaned_agricultural_products",
@@ -41,7 +41,7 @@ class ItineraryModel:
             # "cleaned_packages", "cleaned_secondary_products", "cleaned_study_tour_products"
         ]
         data = {table: self.mysql_conn.query(f"select * from {table}") for table in tables}
-        logger.info("行程推荐数据加载成功。")
+        logger.info("所有表的数据加载成功。")
         return data
 
     def filter_data(self, table_name, user_data):
@@ -228,28 +228,23 @@ class ItineraryModel:
         :param applicable_people: 活动的适用人群
         :return: 如果所有出行人员符合条件，返回True；否则返回False
         """
-        # 定义英文到中文的年龄组映射
-        age_group_translation = {
-            "elderly": "老人",
-            "adult": "成人",
-            "teenager": "青少年",
-            "children": "儿童"
-        }
-
         for traveler in travelers:
-            traveler_age_group_en = traveler.get("age_group", "")
-            traveler_age_group = age_group_translation.get(traveler_age_group_en, "")
+            traveler_age_group = traveler.get("age_group", "")
             traveler_gender = traveler.get("gender", "")
-            count = traveler.get("count", 0)
+            count = traveler.get("count", "")
 
+
+            # if not any(
+            #         person["age_group"] == traveler_age_group and
+            #         (person["gender"] == "不限" or person["gender"] == traveler_gender)
+            #         for person in applicable_people
+            # ):
             # 如果count为0，跳过该出行人员
-            if count == 0:
+            if not count:
                 continue
 
-            # 检查是否符合适用人群
             if not any(person["age_group"] == traveler_age_group for person in applicable_people):
                 return False
-
         return True
 
     def normalize_value(self, value):
@@ -378,14 +373,6 @@ class ItineraryModel:
         :param spa_activities: 选中的温泉活动
         :return: 推荐依据的描述
         """
-        # 用户偏好与年龄组的映射
-        age_group_translation = {
-            "elderly": "老人",
-            "adult": "成人",
-            "teenager": "青少年",
-            "children": "儿童"
-        }
-
         # 根据用户的偏好生成推荐依据的基础描述
         preferences = user_data.get("service_preference", [])
         travelers = user_data.get("travelers", [])
@@ -408,10 +395,9 @@ class ItineraryModel:
         # if budget > 0:
         #     basis_parts.append(f"推荐内容基于预算{budget}元")
 
-        # 检查出行人员的类型并翻译
+        # 检查出行人员的类型
         if travelers:
-            traveler_types = set([age_group_translation.get(traveler["age_group"], traveler["age_group"])
-                                  for traveler in travelers if traveler["count"] > 0])
+            traveler_types = set([traveler["age_group"] for traveler in travelers if traveler["count"] > 0])
             traveler_types_desc = "、".join(traveler_types)
             basis_parts.append(f"适合出行人员为{traveler_types_desc}")
         else:
@@ -419,7 +405,7 @@ class ItineraryModel:
 
         # 使用选中的酒店信息
         if selected_accommodation:
-            hotel_name = selected_accommodation.get("name", "温泉酒店")
+            hotel_name = selected_accommodation.get("name", "默认酒店")
             basis_parts.append(f"推荐入住的酒店为{hotel_name}")
 
         # 拼接所有描述部分
@@ -533,8 +519,8 @@ class ItineraryModel:
                                 "location": selected_hotel.get("name", "汤泉逸墅 院线房"),
                                 "activity_code": selected_hotel.get("activity_code", "ACC992657"),
                                 "extra_info": {
-                                    # "description": selected_hotel.get("extra_info", {}).get("description", "请提前确认入住时间，提醒需要预约等"),
-                                    "description": "请提前确认入住时间，提醒需要预约等",
+                                    "description": selected_hotel.get("extra_info", {}).get("description",
+                                                                                            "房型丰富、设施齐全"),
                                     "room_description": selected_hotel.get("extra_info", {}).get("room_description",
                                                                                                  ""),
                                     "operation_tips": "请提前确认入住时间，提醒需要预约等"
@@ -574,6 +560,48 @@ class ItineraryModel:
             current_date += timedelta(days=1)
 
         return itinerary
+
+    def generate_itinerary(self, user_data):
+        """
+        根据用户数据生成行程清单
+        :param user_data: 用户输入的数据，包括偏好、需求等
+        :return: 行程清单的响应字典
+        """
+        # 1. 筛选符合条件的活动
+        filtered_activities = self.filter_data("cleaned_activities", user_data)
+
+        # 筛选出温泉类的活动
+        spa_activities = [activity for activity in filtered_activities if
+                          "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]]
+
+        # 2. 随机选择一个符合条件的酒店
+        selected_accommodation = self.filter_data("cleaned_accommodation", user_data)
+        hotel = self.select_random_hotel(selected_accommodation)
+
+        # 3. 创建行程，将选中的酒店和温泉活动作为参数传递
+        if not filtered_activities:
+            itinerary = self.generate_default_itinerary(user_data, hotel)
+        else:
+            itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
+        # 4. 生成推荐依据
+        recommendation_basis = self.generate_recommendation_basis(user_data, hotel, spa_activities)
+
+        # 5. 构建最终的响应结构
+        response = {
+            "head": 200,
+            "items": {
+                "hotel": {
+                    "name": hotel["name"],
+                    "extra_info": hotel["extra_info"],
+                    "activity_code": hotel["activity_code"]
+                },
+                "recommendation_basis": recommendation_basis,
+                "itinerary": itinerary,
+                "msg": "行程生成成功"
+            }
+        }
+
+        return response
 
     def select_random_hotel(self, selected_accommodation):
         """
@@ -652,7 +680,7 @@ class ItineraryModel:
                             "location": selected_hotel.get("name", ""),
                             "activity_code": selected_hotel["activity_code"],
                             "extra_info": {
-                                "description": "请提前确认入住时间，提醒需要预约等",
+                                "description": selected_hotel["extra_info"].get("description", "房型丰富、设施齐全"),
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
                                 "operation_tips": "请提前确认入住时间，提醒需要预约等"
                             }
@@ -662,13 +690,12 @@ class ItineraryModel:
 
                 # 如果有温泉活动并且温泉次数未达到上限，安排温泉活动
                 if spa_activities and spa_activity_count < max_spa_activities:
-                    random_spa_activity = random.choice(spa_activities)
                     day_activities[-1]["activities"].append({
-                        "name": random_spa_activity["activity_name"],
-                        "location": random_spa_activity["activity_category"],
-                        "activity_code": random_spa_activity["activity_code"],
+                        "name": spa_activities[spa_activity_count]["activity_name"],
+                        "location": selected_hotel["name"],
+                        "activity_code": spa_activities[spa_activity_count]["activity_code"],
                         "extra_info": {
-                            "description": random_spa_activity["description"],
+                            "description": spa_activities[spa_activity_count]["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
                         }
                     })
@@ -726,49 +753,6 @@ class ItineraryModel:
             current_date += timedelta(days=1)
 
         return itinerary
-
-    def generate_itinerary(self, user_data):
-        """
-        根据用户数据生成行程清单
-        :param user_data: 用户输入的数据，包括偏好、需求等
-        :return: 行程清单的响应字典
-        """
-        # 1. 筛选符合条件的活动
-        filtered_activities = self.filter_data("cleaned_activities", user_data)
-
-        # 筛选出温泉类的活动
-        spa_activities = [activity for activity in filtered_activities if
-                          "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]]
-
-        # 2. 随机选择一个符合条件的酒店
-        selected_accommodation = self.filter_data("cleaned_accommodation", user_data)
-        hotel = self.select_random_hotel(selected_accommodation)
-
-        # 3. 创建行程，将选中的酒店和温泉活动作为参数传递
-        if not filtered_activities:
-            itinerary = self.generate_default_itinerary(user_data, hotel)
-        else:
-            itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
-        # 4. 生成推荐依据
-        recommendation_basis = self.generate_recommendation_basis(user_data, hotel, spa_activities)
-
-        # 5. 构建最终的响应结构
-        response = {
-            "head": 200,
-            "items": {
-                "hotel": {
-                    "name": hotel["name"],
-                    "extra_info": hotel["extra_info"],
-                    "activity_code": hotel["activity_code"]
-                },
-                "recommendation_basis": recommendation_basis,
-                "itinerary": itinerary,
-                "msg": "行程生成成功"
-            }
-        }
-
-        return response
-
 
 
 if __name__ == '__main__':
