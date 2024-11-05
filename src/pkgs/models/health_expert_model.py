@@ -444,6 +444,10 @@ class HealthExpertModel:
         """
         西医决策-医师问诊决策支持-v2
 
+        需求文档: https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lyfepraswhdngcyvjmp
+
+        能力说明：
+
         根据用户画像、医师信息、会话记录、预问诊会话记录等信息，生成问诊问题列表。
 
         参数:
@@ -1892,7 +1896,7 @@ class HealthExpertModel:
 
     async def __call_model_summary__(self, **kwargs) -> str:
         """调用模型生成饮食分析结果的精炼总结"""
-        diet_analysis = kwargs.pop("diet_analysis", "")
+        diet_analysis = kwargs.get("diet_analysis", "")
         prompt_vars = {"diet_analysis": diet_analysis}
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0)
 
@@ -1902,12 +1906,33 @@ class HealthExpertModel:
         return diet_summary_output
 
     def __truncate_to_limit(self, text: str, limit: int) -> str:
-        """截取文本至指定字符限制，优先完整保留标点符号句尾"""
+        """
+        截取文本至指定字符限制，若字符数超出限制则保留最后一个标点符号，或在句尾加上句号。
+        :param text: 原始文本
+        :param limit: 字符限制，默认为15个字符
+        :return: 处理后的文本
+        """
+        # 如果文本长度小于等于限制，直接返回
         if len(text) <= limit:
-            return text
+            return text if text.endswith("。") else text + "。"
+
+        # 截取前limit个字符
         truncated = text[:limit]
+
+        # 在截断文本中寻找最后一个标点符号
         last_punctuation = max(truncated.rfind(p) for p in "。，！？")
-        return truncated[:last_punctuation + 1] + "。" if last_punctuation != -1 else truncated.rstrip() + "。"
+
+        # 如果找到标点符号，将该标点转换为句号
+        if last_punctuation != -1:
+            truncated = truncated[:last_punctuation + 1]
+            # 如果标点不是句号，替换成句号
+            if truncated[-1] not in "。":
+                truncated = truncated[:-1] + "。"
+        else:
+            # 如果没有标点符号，直接在末尾加句号
+            truncated = truncated.rstrip() + "。"
+
+        return truncated
 
 
 if __name__ == "__main__":
