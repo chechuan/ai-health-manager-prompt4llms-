@@ -17,6 +17,7 @@ from src.utils.module import apply_chat_template, dumpJS
 
 from src.utils.Logger import logger
 from data.constrant import DEFAULT_MODEL
+import asyncio
 
 default_model = "Qwen1.5-32B-Chat"
 
@@ -126,7 +127,7 @@ def callLLM(
         msg = ""
         for i, n in enumerate(list(reversed(history))):
             msg += n["content"]
-            if len(msg) > 1200:
+            if len(msg) > 12000:
                 h = history[-i:]
                 break
             else:

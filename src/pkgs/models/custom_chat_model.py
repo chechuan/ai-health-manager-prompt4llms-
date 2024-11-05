@@ -76,6 +76,7 @@ class CustomChatAuxiliary(CustomChatModel):
         super().__init__(gsr)
         self.code_func_map["chat_start_with_weather"] = self.__chat_start_with_weather__
         self.code_func_map["glucose_consultation"] = self.__chat_glucose_consultation__
+        self.code_func_map["sanji_glucose_diagnosis"] = self.__chat_glucose_diagnosis__
         self.code_func_map["blood_interact"] = self.__chat_blood_interact__
         self.code_func_map["3d_interact"] = self.__chat_3d_interact__
         self.code_func_map["auxiliary_diagnosis"] = self.__chat_auxiliary_diagnosis__
@@ -172,8 +173,10 @@ class CustomChatAuxiliary(CustomChatModel):
         pro = kwargs.get("promptParam", {})
         
         user_profile = pro.get('user_profile','')
+        prompt_vars = {
+            "user_profile": user_profile }
         
-        sys_prompt = sys_prompt.replace("{user_profile}", user_profile)
+        sys_prompt = sys_prompt.format(**prompt_vars)
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
         for idx in range(len(history)):
@@ -274,6 +277,82 @@ class CustomChatAuxiliary(CustomChatModel):
         for idx, n in enumerate(messages):
             messages[idx] = n.dict()
         return messages
+    
+    def __compose_glucose_diagnosis_message__(self, **kwargs) -> List[DeltaMessage]:
+        """组装血糖波动问诊消息"""
+        history = [
+            i
+            for i in kwargs["history"]
+            if i.get("intentCode") == "sanji_glucose_diagnosis"
+        ]
+        prompt_template = (
+            "# 已知信息\n"
+            "## 用户画像\n"
+            "年龄：{age}\n"
+            "性别：{gender}\n"
+            "身高：{height}\n"
+            "体重：{weight}\n"
+            "现患病：{disease}\n"
+            "生活习惯：{habits}\n"
+            "用药情况：{medication}\n"
+            "## 7天血糖情况\n"
+            "{glucose_message}\n"
+            "## 当前日期、当前时段及当前血糖\n"
+            "当前日期：{recent_day}\n"
+            "当前时段以及血糖：{recent_gl}\n\n"
+            "# 任务描述\n"
+            "你扮演一个经验丰富的慢病管理专家以及家庭医生，你负责管理的客户血糖异常波动，近3天血糖高于控制目标，请你充分利用已知信息，遵守输出要求，对他血糖测量后的情况进行处理。\n"
+            "# 输出要求\n"
+            "1. 思考根据当前情况你需要做什么，例如可以收集信息，回答问题，出具建议等。\n"
+            "2. 如果你需要收集更多信息，则输出问诊问题，确保获取的信息尽可能详细和准确，这样能更准确地判断血糖波动的原因。每次只提出1-2个问题。\n"
+            "3. 如果客户向你发问，则解答用户疑问，保持专业性。\n"
+            "4. 如果你收集够足够的信息，则输出对客户的处理建议，包括向客户解释他当前情况的可能原因，可能需要调整高血压药物的剂量或类型，以控制血压。如果用户近7天血糖测量不够频繁，建议客户频繁监测血糖，尤其是在采取任何生活方式调整或药物调整后，以评估其对血糖的影响。教育患者如何识别和应对高血糖和低血糖，以及如何自我监测血糖。\n"
+            "5. 血糖波动可能给患者带来心理压力，提供情绪支持和鼓励非常重要。口语化表达，便于客户理解，每轮输出顺畅衔接历史会话记录，可以使用“请你先不要着急”、“我知道了”、“我非常理解你的心情”等。\n"
+            "6.每次输出不超过200字，不要输出列表。\n"
+            "# 输出格式要求：\n"
+            "请遵循以下格式回复：\n"
+            "Thought: 思考针对当前问题应该做什么\n"
+            "Doctor: 你作为一个慢病管理专家以及家庭医生,分析思考的内容,在此情况下你会对客户说：\n"
+        )
+
+        pro = kwargs.get("promptParam", {})
+        upro = kwargs.get("user_profile", {})
+        data = pro.get("glucose", {})
+
+        prompt_vars = {
+            "age": upro.get("age", ""),
+            "gender": upro.get("sex", ""),
+            "height": upro.get("height", ""),
+            "weight": upro.get("weight", ""),
+            "disease": upro.get("disease", ""),
+            "habits": upro.get("habits", ""),
+            "medication": upro.get("medication", ""),
+            "glucose_message": data,
+            "recent_day": pro.get("currentDate", ""),
+            "recent_gl": pro.get("recent_gl", {}),
+        }
+
+        sys_prompt = prompt_template.format(**prompt_vars)
+        system_message = DeltaMessage(role="system", content=sys_prompt)
+        messages = []
+        for idx in range(len(history)):
+            i = history[idx]
+            if i["role"] == "assistant":
+                if i.get("function_call"):
+                    content = f"Thought: {i['content']}\nDoctor: {i['function_call']['arguments']}"
+                else:
+                    content = f"Doctor: {i['content']}"
+                messages.append(DeltaMessage(role="assistant", content=content))
+            if i["role"] == "user":
+                if idx == 0:
+                    content = f"Question: {i['content']}"
+                else:
+                    content = f"Observation: {i['content']}"
+                messages.append(DeltaMessage(role="user", content=content))
+        messages = [system_message] + messages
+        for idx, n in enumerate(messages):
+            messages[idx] = n.dict()
+        return messages
 
     def __compose_blood_interact_message__(self, **kwargs):
         intentCode = kwargs.get("intentCode")
@@ -314,6 +393,68 @@ class CustomChatAuxiliary(CustomChatModel):
             messages[idx] = n.dict()
 
         return messages
+    
+    def __chat_sanji_glucose_diagnosis___(
+        self, **kwargs
+    ) -> AnyStr:
+        """辅助诊断总结、饮食建议
+
+        Args:
+            history (List[Dict]): 历史消息列表
+
+        Returns:
+            AnyStr: 辅助诊断总结、饮食建议
+        """
+        history = [
+            i for i in kwargs["history"] if i.get("intentCode") == "sanji_glucose_diagnosis"
+        ]
+        event = self.__extract_event_from_gsr__(
+            self.gsr, "sanji_glucose_diagnosis"
+        )
+        prompt_template_str = event["process"]
+        pro = kwargs.get("promptParam", {})
+        
+        user_profile = kwargs.get('user_profile',{})
+        recent_gl = pro.get('recent_gl',{})
+        if_glucose = pro.get('if_glucose','')
+        glucose_level = pro.get('glucose_level','')
+
+        compose_message = ""
+        for i in history:
+            role, content = i["role"], i["content"]
+            if role == "assistant":
+                compose_message += f"你: {content}\n"
+            elif role == "user":
+                compose_message += f"用户: {content}\n"
+        prompt_vars = {
+            "user_profile": user_profile,
+            "recent_gl": recent_gl,
+            "if_glucose": if_glucose,
+            "glucose_level": glucose_level,
+            "message":compose_message
+        }
+
+        prompt = prompt_template_str.format(**prompt_vars)
+
+        messages = [{"role": "user", "content": prompt}]
+        chat_response = callLLM(
+            model=self.gsr.model_config.get(
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+            ),
+            history=messages,
+            temperature=0,
+            max_tokens=512,
+            top_p=0.8,
+            n=1,
+            presence_penalty=0,
+            stream=True,
+        )
+        content = accept_stream_response(chat_response, verbose=True)
+        logger.info(f"Custom Chat 三济康养方案 LLM Output: \n{content}")
+        if "患者" in content:
+            logger.warning("Prohibited vocab: 患者 generated.")
+            content = content.replace("患者", "用户")
+        return content
 
     def __chat_auxiliary_diagnosis_summary_diet_rec__(
         self, **kwargs
@@ -380,8 +521,8 @@ class CustomChatAuxiliary(CustomChatModel):
         content = callLLM(
             model=model,
             history=messages,
-            temperature=0.7,
-            max_tokens=10000,
+            temperature=0.9,
+            max_tokens=8192,
             top_p=0.5,
             n=1,
             presence_penalty=0,
@@ -404,7 +545,7 @@ class CustomChatAuxiliary(CustomChatModel):
         if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
-        elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor:
+        elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
             # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(**kwargs)
             conts = [
@@ -462,7 +603,9 @@ class CustomChatAuxiliary(CustomChatModel):
         conts=[]
         
         city = "廊坊"
+        
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
+        logger.info(f"获取天气: {dumpJS(today_weather)}")
         if if_entropy == "2" or if_entropy == "3":
             prompt_vars = {"today_weather": today_weather}
             prompt_template =_chat_start_with_weather_v2.replace('today_weather',today_weather)
@@ -684,9 +827,52 @@ class CustomChatAuxiliary(CustomChatModel):
 
         if thought == "None" or doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
-        if "？" not in content and "?" not in content:
+        if "？" not in content and "?" not in content and '有没有' not in content and "吗" not in content:
             conts = ["血糖问诊结束"]
 
+        mid_vars = update_mid_vars(
+            kwargs["mid_vars"],
+            input_text=messages,
+            output_text=content,
+            model=model,
+            key="自定义辅助诊断对话",
+        )
+        return mid_vars, conts, (thought, doctor)
+    
+    async def __chat_glucose_diagnosis__(self, **kwargs) -> ChatMessage:
+        """血糖波动问诊"""
+        # 过滤掉辅助诊断之外的历史消息
+        model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
+
+        messages = self.__compose_glucose_diagnosis_message__(**kwargs)
+        logger.info(f"glucose_diagnosis 血糖波动问诊 LLM Input: {dumpJS(messages)}")
+        valid = True
+
+        content = callLLM(
+            model=model,
+            history=messages,
+            temperature=0,
+            max_tokens=1024,
+            top_p=0.8,
+            n=1,
+            presence_penalty=0,
+            frequency_penalty=0.5,
+            stream=False,
+        )
+
+        logger.info(f"glucose_diagnosis 血糖波动问诊 LLM Output: \n{content}")
+        thought, doctor = self.__parse_diff_response__(content, "Thought:", "Doctor:")
+
+        conts = []
+
+        if thought == "None" or doctor == "None":
+            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+        elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
+            # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+            sug = self.__chat_sanji_glucose_diagnosis___(**kwargs)
+            conts = [sug]
+        else:
+            ...
         mid_vars = update_mid_vars(
             kwargs["mid_vars"],
             input_text=messages,
