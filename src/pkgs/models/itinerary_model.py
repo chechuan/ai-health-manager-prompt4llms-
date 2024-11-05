@@ -232,7 +232,7 @@ class ItineraryModel:
         age_group_translation = {
             "elderly": "老人",
             "adult": "成人",
-            "teenager": "青少年",
+            "teenagers": "青少年",
             "children": "儿童"
         }
 
