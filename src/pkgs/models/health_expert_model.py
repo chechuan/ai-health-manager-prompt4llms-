@@ -1872,25 +1872,17 @@ class HealthExpertModel:
         """
         kwargs = deepcopy(kwargs)
 
-        # 提取并校验饮食状态
-        diet_status = kwargs.get("diet_status", "")
-        if diet_status not in ["吃得很棒", "吃得一般", "吃得很差"]:
-            raise ValueError("Invalid diet status provided.")
-
         # 提取并校验饮食分析内容
         diet_analysis = kwargs.get("diet_analysis", "")
         if not diet_analysis:
             raise ValueError("Diet analysis is required.")
 
-        # 拼接初始话术内容
-        initial_summary = f"{diet_status}，"
-
         # 调用模型生成饮食分析结果的精炼总结
         diet_summary_model_output = await self.__call_model_summary__(**kwargs)
 
         # 截取模型输出内容并拼接最终输出结果
-        truncated_summary = self.__truncate_to_limit(diet_summary_model_output, limit=15)
-        final_summary = f"{initial_summary}{truncated_summary}"
+        truncated_summary = self.__truncate_to_limit(diet_summary_model_output, limit=20)
+        final_summary = f"{truncated_summary}"
 
         return final_summary
 
@@ -1909,9 +1901,12 @@ class HealthExpertModel:
         """
         截取文本至指定字符限制，若字符数超出限制则保留最后一个标点符号，或在句尾加上句号。
         :param text: 原始文本
-        :param limit: 字符限制，默认为15个字符
+        :param limit: 字符限制，默认为20个字符
         :return: 处理后的文本
         """
+        # 去掉换行符
+        text = text.replace("\n", "")
+
         # 如果文本长度小于等于限制，直接返回
         if len(text) <= limit:
             return text if text.endswith("。") else text + "。"
