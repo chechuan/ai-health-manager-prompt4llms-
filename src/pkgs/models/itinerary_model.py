@@ -225,8 +225,8 @@ class ItineraryModel:
         """
         检查出行人员是否符合活动的适用人群
         :param travelers: 出行人员列表
-        :param applicable_people: 活动的适用人群
-        :return: 如果所有出行人员符合条件，返回True；否则返回False
+        :param applicable_people: 活动的适用人群，包含每个人群的 age_group, gender 和 required 字段
+        :return: 如果出行人员符合条件，返回True；否则返回False
         """
         # 定义英文到中文的年龄组映射
         age_group_translation = {
@@ -236,18 +236,43 @@ class ItineraryModel:
             "children": "儿童"
         }
 
+        # 提取适用人群中的年龄组和必需人群
+        required_age_groups = {person["age_group"] for person in applicable_people if person.get("required", False)}
+        applicable_age_groups = {person["age_group"] for person in applicable_people}
+
+        # 初始化字典以跟踪出行人员的年龄组
+        travelers_age_groups = {age_group: False for age_group in applicable_age_groups}
+
+        # 遍历出行人员，检查是否满足所需的每个年龄组要求
         for traveler in travelers:
             traveler_age_group_en = traveler.get("age_group", "")
             traveler_age_group = age_group_translation.get(traveler_age_group_en, "")
-            traveler_gender = traveler.get("gender", "")
             count = traveler.get("count", 0)
 
             # 如果count为0，跳过该出行人员
             if count == 0:
                 continue
 
-            # 检查是否符合适用人群
-            if not any(person["age_group"] == traveler_age_group for person in applicable_people):
+            # 标记该年龄组是否包含在出行人员中
+            if traveler_age_group in travelers_age_groups:
+                travelers_age_groups[traveler_age_group] = True
+
+        # 检查是否包含所有必需的年龄组
+        if not all(travelers_age_groups[age] for age in required_age_groups):
+            return False  # 必需的年龄组没有全部满足
+
+        # 确保出行人员中没有不在适用人群中的年龄组
+        for traveler in travelers:
+            traveler_age_group_en = traveler.get("age_group", "")
+            traveler_age_group = age_group_translation.get(traveler_age_group_en, "")
+            count = traveler.get("count", 0)
+
+            # 如果count为0，跳过该出行人员
+            if count == 0:
+                continue
+
+            # 如果出行人员包含不在适用人群中的年龄组，则不符合条件
+            if traveler_age_group not in applicable_age_groups:
                 return False
 
         return True
