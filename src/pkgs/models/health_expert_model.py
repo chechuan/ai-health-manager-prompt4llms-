@@ -1929,6 +1929,70 @@ class HealthExpertModel:
 
         return truncated
 
+    async def aigc_functions_tcm_consultation_decision_support(self, **kwargs) -> str:
+        """
+        中医决策-医师问诊决策支持
+
+        需求文档: https://alidocs.dingtalk.com/i/nodes/G1DKw2zgV26KNXoktzxNweoMVB5r9YAn?cid=2713422242%3A4589735565&utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dim_card%26utm_source%3Dim&utm_medium=im_single_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
+
+        能力说明：
+
+        根据患者提供的中医四诊信息（包括脉象采集、面象采集、舌象采集）以及其他相关信息，生成基于中医问诊的诊疗问题列表。
+
+        参数:
+            kwargs (dict): 包含以下键的参数字典：
+                - user_profile (dict): 用户画像（非必填）
+                - messages (list): 会话记录（必填）
+                - tcm_four_diagnoses (dict): 中医四诊信息（可选填），包含脉象采集、面象采集、舌象采集信息
+
+        返回:
+            str: 生成的中医问诊问题列表
+        """
+
+        _event = "中医决策-医师问诊决策支持"
+
+        # 获取会话记录（必填项）
+        messages = kwargs.get("messages", "")
+        if not messages:
+            raise ValueError("messages不能为空")
+
+        # 处理用户画像信息
+        user_profile: str = self.__compose_user_msg__(
+            "user_profile", user_profile=kwargs.get("user_profile", "")
+        )
+        # 拼接用户画像信息字符串
+        user_profile_str = f"## 用户画像\n{user_profile}" if user_profile else ""
+
+        # 处理会话记录
+        messages = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+
+        # 处理中医四诊信息
+        tcm_four_diagnoses_data = kwargs.get("tcm_four_diagnoses", {})
+
+        # 检查字典中是否至少有一个非空列表。如果至少有一个列表非空，则格式化输出。如果所有列表均为空，则输出为空字符串
+        tcm_four_diagnoses = f"## 中医四诊\n{TcmFourDiagnoses(**tcm_four_diagnoses_data).format_tcm_diagnosis()}" if any(tcm_four_diagnoses_data.values()) else ""
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile_str,
+            "messages": messages,
+            "tcm_four_diagnoses": tcm_four_diagnoses,
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        # 解析生成的问诊问题
+        content = await parse_generic_content(content)
+        return content
+
 
 if __name__ == "__main__":
     gsr = InitAllResource()
