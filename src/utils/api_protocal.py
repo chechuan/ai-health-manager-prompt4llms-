@@ -727,6 +727,40 @@ class BloodPressureRecord(BaseModel):
             return None  # 或者返回一个默认值，例如 0 或者 "N/A"
 
 
+class TcmFourDiagnoses(BaseModel):
+    face_diagnosis: Optional[List[str]] = Field(
+        None,
+        description="面象采集信息列表，包括面色、唇色等信息",
+        example=["面色红", "唇色白", "无光泽"]
+    )
+    tongue_diagnosis: Optional[List[str]] = Field(
+        None,
+        description="舌象采集信息列表，包括舌边尖红、舌色、舌胖瘦等信息",
+        example=["舌边尖红", "舌质淡", "舌胖"]
+    )
+    pulse_diagnosis: Optional[List[str]] = Field(
+        None,
+        description="脉象采集信息列表，包括脉象种类，如弦脉、弱脉等",
+        example=["弦脉", "弱脉"]
+    )
+
+    def format_tcm_diagnosis(self) -> str:
+        """
+        将面象、舌象和脉象信息格式化为中医四诊的输出格式。
+        :return: str, 格式化后的中医四诊信息
+        """
+        sections = []
+        if self.face_diagnosis:
+            sections.append(f"{len(sections) + 1}. 面象\n" + "\n".join(self.face_diagnosis))
+        if self.tongue_diagnosis:
+            sections.append(f"{len(sections) + 1}. 舌象\n" + "\n".join(self.tongue_diagnosis))
+        if self.pulse_diagnosis:
+            sections.append(f"{len(sections) + 1}. 脉象\n" + "\n".join(self.pulse_diagnosis))
+
+        tcm_diagnosis_formatted = "\n".join(sections)
+        return tcm_diagnosis_formatted
+
+
 # 西医决策支持
 class OutpatientSupportRequest(BaseModel):
     intentCode: Literal[
@@ -739,6 +773,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_generate_examination_plan",
         "aigc_functions_physician_consultation_decision_support_v2",
         "aigc_functions_bp_warning_generation",
+        "aigc_functions_tcm_consultation_decision_support",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -881,6 +916,16 @@ class OutpatientSupportRequest(BaseModel):
             {"date": "2024-08-28 22:11:31", "sbp": 137.0, "dbp": 80.0},
             {"date": "2024-08-29 19:11:31", "sbp": 145.0, "dbp": 83.0}
         ],
+    )
+
+    tcm_four_diagnoses: Optional[TcmFourDiagnoses] = Field(
+        None,
+        description="中医四诊信息，包括脉象采集、面象采集和舌象采集",
+        example={
+            "face_diagnosis": ["面色红", "唇色白"],
+            "tongue_diagnosis": ["舌边尖红"],
+            "pulse_diagnosis": ["弱脉"]
+        }
     )
 
 
