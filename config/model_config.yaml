@@ -69,9 +69,9 @@ local:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
+        - aigc_functions_tcm_consultation_decision_support # 2024年11月05日 中医决策-医师问诊决策支持
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
-        - aigc_functions_tcm_consultation_decision_support # 2024年11月05日 中医决策-医师问诊决策支持
     Qwen1.5-72B-Chat:
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 
@@ -146,9 +146,9 @@ dev:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
+        - aigc_functions_tcm_consultation_decision_support # 2024年11月05日 中医决策-医师问诊决策支持
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
-        - aigc_functions_tcm_consultation_decision_support # 2024年11月05日 中医决策-医师问诊决策支持
     Qwen1.5-72B-Chat:
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 
