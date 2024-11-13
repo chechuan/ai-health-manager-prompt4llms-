@@ -977,54 +977,145 @@ def format_historical_meal_plans(historical_meal_plans: list) -> str:
     return formatted_output.strip()
 
 
-def get_city_id(city_name, geoapi_url, api_key):
-    url = f"{geoapi_url}?location={city_name}&key={api_key}"
-    response = requests.get(url)
-    if response.status_code == 200:
-        data = json.loads(response.content)
-        if data['code'] == '200' and data['location']:
-            return data['location'][0]['id']
-        else:
-            return None
-    else:
-        return None
+TIMEOUT = 5  # 设置请求超时为5秒
 
-
-def get_weather_info(config, city):
+# 获取天气信息
+def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
     try:
         # 获取 API 配置信息
         api_key = config['key']
-        weather_base_url = config['weather_base_url']
-        geoapi_url = config['geo_base_url']
+        weather_base_url = config['weather_base_url']  # e.g., https://api.qweather.com/v7/weather/3
+        geoapi_url = config['geo_base_url']  # e.g., https://geoapi.qweather.com/v2/city/lookub
+
+        logger.info(f"Getting weather info for city: {city}")
 
         # 获取城市 ID
-        city_id = get_city_id(city, geoapi_url, api_key)
+        city_id = get_city_id(city, geoapi_url, api_key, logger)
         if not city_id:
+            logger.error(f"无法获取城市 {city} 的 ID.")
             return None
 
         # 请求天气数据
         url = f"{weather_base_url}?key={api_key}&location={city_id}"
-        response = requests.get(url)
+
+        logger.info(f"请求 URL: {url}")
+
+        try:
+            response = requests.get(url, timeout=TIMEOUT)
+            response.raise_for_status()  # 检查请求是否成功
+            data = response.json()
+
+            # 打印请求成功后的日志
+            logger.info(f"成功获取天气数据")
+
+            # 检查 API 错误码和返回数据
+            if response.status_code == 200:
+                if 'daily' in data and data['daily']:
+                    today_weather = data['daily'][0]
+                    formatted_weather = (
+                        f"今日{city}天气{today_weather['textDay']}，"
+                        f"最高温度{today_weather['tempMax']}度，"
+                        f"最低温度{today_weather['tempMin']}度，"
+                        f"风力{today_weather['windScaleDay']}级，"
+                        f"紫外线强度指数{today_weather['uvIndex']}，"
+                        f"湿度{today_weather['humidity']}%，"
+                        f"降水量{today_weather['precip']}mm，"
+                        f"气压{today_weather['pressure']}hPa，"
+                        f"能见度{today_weather['vis']}km。"
+                    )
+                    # 打印获取到的天气信息
+                    logger.info(f"今日天气：{formatted_weather}")
+                    return formatted_weather
+                else:
+                    logger.error("返回的天气数据无效或缺少 'daily' 字段.")
+                    return None
+            else:
+                # 处理错误码
+                handle_api_error(response.status_code, data, logger)
+                return None
+
+        except requests.exceptions.Timeout:
+            logger.error(f"请求 {url} 超时.")
+            return None
+        except requests.exceptions.RequestException as e:
+            logger.error(f"请求错误: {e}")
+            return None
+        except json.JSONDecodeError:
+            logger.error("解析返回的 JSON 数据失败.")
+            return None
+
+    except Exception as e:
+        logger.error(f"发生未知异常: {e}")
+        return None
+
+
+
+# 获取城市 ID
+def get_city_id(city_name, geoapi_url, api_key, logger):
+    url = f"{geoapi_url}?location={city_name}&key={api_key}"
+    logger.info(f"获取城市 ID 请求 URL: {url}")
+
+    try:
+        # 发起请求并设置超时
+        response = requests.get(url, timeout=TIMEOUT)
         response.raise_for_status()  # 检查请求是否成功
 
-        data = json.loads(response.content)
-        if 'daily' in data and data['daily']:
-            today_weather = data['daily'][0]
-            formatted_weather = (
-                f"今日{city}天气{today_weather['textDay']}，"
-                f"最高温度{today_weather['tempMax']}度，"
-                f"最低温度{today_weather['tempMin']}度，"
-                f"风力{today_weather['windScaleDay']}级，"
-                f"紫外线强度指数{today_weather['uvIndex']}，"
-                f"湿度{today_weather['humidity']}%，"
-                f"降水量{today_weather['precip']}mm，"
-                f"气压{today_weather['pressure']}hPa，"
-                f"能见度{today_weather['vis']}km。"
-            )
-            return formatted_weather
-    except (requests.exceptions.RequestException, KeyError, json.JSONDecodeError):
-        # 捕获网络请求错误，KeyError 或 JSON 解码错误
+        # 如果响应状态为 200，继续处理
+        if response.status_code == 200:
+            data = json.loads(response.content)
+
+            # 检查返回数据中的代码和城市信息
+            if data['code'] == '200' and data['location']:
+                city_id = data['location'][0]['id']
+                logger.info(f"成功获取城市 {city_name} 的 ID: {city_id}")
+                return city_id
+            else:
+                logger.error(f"城市 {city_name} 未找到或返回数据无效.")
+                return None
+        else:
+            handle_api_error(response.status_code, response.json(), logger)
+            logger.error(f"获取城市ID时遇到问题: HTTP {response.status_code}")
+            return None
+
+    except requests.exceptions.Timeout:
+        logger.error(f"请求 {url} 超时.")
         return None
+    except requests.exceptions.RequestException as e:
+        logger.error(f"请求错误: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"获取城市 ID 时发生异常: {e}")
+        return None
+
+
+def handle_api_error(status_code, data, logger):
+    """
+    根据 API 返回的状态码和错误信息进行处理
+    """
+    if status_code == 400:
+        # 和风天气 错误码处理
+        if 'error' in data:
+            error_title = data['error'].get('title', '未知错误')
+            error_detail = data['error'].get('detail', '无详细信息')
+            logger.error(f"错误码 400 - {error_title}: {error_detail}")
+        else:
+            logger.error("请求错误，可能包含错误的请求参数或缺少必选的请求参数。")
+    elif status_code == 401:
+        logger.error("认证失败，可能使用了错误的 API key 或 token。")
+    elif status_code == 403:
+        logger.error("请求被拒绝：权限问题，可能是余额不足、访问限制等。")
+    elif status_code == 404:
+        logger.error("未找到所请求的数据或资源。")
+    elif status_code == 429:
+        logger.error("请求过于频繁，已超过限制，请稍后再试。")
+    elif status_code == 500:
+        logger.error("服务器发生了未知错误，联系 API 提供商。")
+    elif status_code == 403:
+        if 'error' in data:
+            error_code = data['error'].get('code', 'UNKNOWN_ERROR')
+            logger.error(f"API 错误: {error_code}")
+    else:
+        logger.error(f"遇到未知错误，HTTP 状态码: {status_code}")
 
 
 def determine_recent_solar_terms():
