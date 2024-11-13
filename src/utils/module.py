@@ -1093,29 +1093,39 @@ def handle_api_error(status_code, data, logger):
     根据 API 返回的状态码和错误信息进行处理
     """
     if status_code == 400:
-        # 和风天气 错误码处理
+        # Bad request - INVALID PARAMETERS or MISSING PARAMETERS
         if 'error' in data:
-            error_title = data['error'].get('title', '未知错误')
-            error_detail = data['error'].get('detail', '无详细信息')
-            logger.error(f"错误码 400 - {error_title}: {error_detail}")
+            error_title = data['error'].get('title', 'Unknown error')
+            error_detail = data['error'].get('detail', 'No details available')
+            logger.error(f"Error 400 - {error_title}: {error_detail}")
         else:
-            logger.error("请求错误，可能包含错误的请求参数或缺少必选的请求参数。")
+            logger.error("Bad request: The request may contain invalid parameters or missing required parameters.")
+
     elif status_code == 401:
-        logger.error("认证失败，可能使用了错误的 API key 或 token。")
+        # Unauthorized - Authentication failure
+        logger.error("Error 401 - Unauthorized: Authentication failed, possibly due to incorrect API key or token.")
+
     elif status_code == 403:
-        logger.error("请求被拒绝：权限问题，可能是余额不足、访问限制等。")
+        # Forbidden - Access denied
+        logger.error(
+            "Error 403 - Forbidden: Access denied, possibly due to insufficient balance, access restrictions, or invalid credentials.")
+
     elif status_code == 404:
-        logger.error("未找到所请求的数据或资源。")
+        # Not Found - The requested data/resource was not found
+        logger.error("Error 404 - Not Found: The requested data or resource could not be found.")
+
     elif status_code == 429:
-        logger.error("请求过于频繁，已超过限制，请稍后再试。")
+        # Too Many Requests - Rate limit exceeded
+        logger.error("Error 429 - Too Many Requests: Rate limit exceeded, please try again later.")
+
     elif status_code == 500:
-        logger.error("服务器发生了未知错误，联系 API 提供商。")
-    elif status_code == 403:
-        if 'error' in data:
-            error_code = data['error'].get('code', 'UNKNOWN_ERROR')
-            logger.error(f"API 错误: {error_code}")
+        # Internal Server Error - Unknown server error
+        logger.error(
+            "Error 500 - Internal Server Error: An unknown error occurred on the server. Please contact the API provider.")
+
     else:
-        logger.error(f"遇到未知错误，HTTP 状态码: {status_code}")
+        # Unknown error
+        logger.error(f"Unknown error, HTTP Status Code: {status_code}")
 
 
 def determine_recent_solar_terms():
