@@ -1641,8 +1641,16 @@ class HealthExpertModel:
         key_indicators_str = generate_key_indicators(key_indicators)
         key_indicators_section = f"## 关键指标\n{key_indicators_str}" if key_indicators_str else ""
 
-        # 获取当天天气
-        today_weather = get_weather_info(self.gsr.weather_api_config, city)
+        # 将阻塞操作放入线程池
+        loop = asyncio.get_event_loop()
+
+        # 异步获取当天天气信息
+        today_weather = await loop.run_in_executor(
+            None, lambda: get_weather_info(self.gsr.weather_api_config, city)
+        )
+
+        # # 获取当天天气
+        # today_weather = get_weather_info(self.gsr.weather_api_config, city)
         if not today_weather:
             # 如果没有天气信息，删除城市信息
             user_profile.pop("city", None)
