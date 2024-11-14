@@ -27,6 +27,9 @@ import requests
 from lunar_python import Lunar, Solar
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
+from contextlib import contextmanager
+
+
 
 # 本地模块导入
 from src.utils.api_protocal import AigcFunctionsResponse
@@ -977,115 +980,129 @@ def format_historical_meal_plans(historical_meal_plans: list) -> str:
     return formatted_output.strip()
 
 
-TIMEOUT = 5  # 设置请求超时为5秒
+class WeatherServiceError(Exception):
+    """自定义天气服务异常"""
+    pass
 
-# 获取天气信息
+
 def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
+    """获取天气信息，增加错误处理、超时控制和日志"""
     try:
-        # 获取 API 配置信息
+        required_keys = ['key', 'weather_base_url', 'geo_base_url']
+        if not all(key in config for key in required_keys):
+            logger.error("Missing required configuration keys")
+            raise WeatherServiceError("Invalid configuration")
+
         api_key = config['key']
-        weather_base_url = config['weather_base_url']  # e.g., https://api.qweather.com/v7/weather/3
-        geoapi_url = config['geo_base_url']  # e.g., https://geoapi.qweather.com/v2/city/lookub
+        weather_base_url = config['weather_base_url']
+        geoapi_url = config['geo_base_url']
 
         logger.info(f"Getting weather info for city: {city}")
-
-        # 获取城市 ID
-        city_id = get_city_id(city, geoapi_url, api_key, logger)
+        city_id = get_city_id(city, geoapi_url, api_key)
         if not city_id:
-            logger.error(f"无法获取城市 {city} 的 ID.")
+            logger.error(f"Could not find city ID for {city}")
             return None
 
-        # 请求天气数据
-        url = f"{weather_base_url}?key={api_key}&location={city_id}"
+        with timing_logger("weather_api_request"):
+            url = f"{weather_base_url}?key={api_key}&location={city_id}"
+            data = make_http_request(url)
 
-        logger.info(f"请求 URL: {url}")
-
-        try:
-            response = requests.get(url, timeout=TIMEOUT)
-            response.raise_for_status()  # 检查请求是否成功
-            data = response.json()
-
-            # 打印请求成功后的日志
-            logger.info(f"成功获取天气数据")
-
-            # 检查 API 错误码和返回数据
-            if response.status_code == 200:
-                if 'daily' in data and data['daily']:
-                    today_weather = data['daily'][0]
-                    formatted_weather = (
-                        f"今日{city}天气{today_weather['textDay']}，"
-                        f"最高温度{today_weather['tempMax']}度，"
-                        f"最低温度{today_weather['tempMin']}度，"
-                        f"风力{today_weather['windScaleDay']}级，"
-                        f"紫外线强度指数{today_weather['uvIndex']}，"
-                        f"湿度{today_weather['humidity']}%，"
-                        f"降水量{today_weather['precip']}mm，"
-                        f"气压{today_weather['pressure']}hPa，"
-                        f"能见度{today_weather['vis']}km。"
-                    )
-                    # 打印获取到的天气信息
-                    logger.info(f"今日天气：{formatted_weather}")
-                    return formatted_weather
-                else:
-                    logger.error("返回的天气数据无效或缺少 'daily' 字段.")
-                    return None
-            else:
-                # 处理错误码
-                handle_api_error(response.status_code, data, logger)
-                return None
-
-        except requests.exceptions.Timeout:
-            logger.error(f"请求 {url} 超时.")
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"请求错误: {e}")
-            return None
-        except json.JSONDecodeError:
-            logger.error("解析返回的 JSON 数据失败.")
+        if not data.get('daily'):
+            logger.error("Weather data not found in response")
             return None
 
+        today_weather = data['daily'][0]
+
+        required_weather_fields = [
+            'textDay', 'tempMax', 'tempMin', 'windScaleDay',
+            'uvIndex', 'humidity', 'precip', 'pressure', 'vis'
+        ]
+
+        if not all(field in today_weather for field in required_weather_fields):
+            logger.error("Missing required weather fields in response")
+            return None
+
+        formatted_weather = (
+            f"今日{city}天气{today_weather['textDay']}，"
+            f"最高温度{today_weather['tempMax']}度，"
+            f"最低温度{today_weather['tempMin']}度，"
+            f"风力{today_weather['windScaleDay']}级，"
+            f"紫外线强度指数{today_weather['uvIndex']}，"
+            f"湿度{today_weather['humidity']}%，"
+            f"降水量{today_weather['precip']}mm，"
+            f"气压{today_weather['pressure']}hPa，"
+            f"能见度{today_weather['vis']}km。"
+        )
+
+        logger.info(f"Successfully got weather info for {city}")
+        return formatted_weather
+
+    except WeatherServiceError as e:
+        logger.error(f"Weather service error: {str(e)}")
+        return None
     except Exception as e:
-        logger.error(f"发生未知异常: {e}")
+        logger.exception(f"Unexpected error in get_weather_info: {str(e)}")
         return None
 
 
-
-# 获取城市 ID
-def get_city_id(city_name, geoapi_url, api_key, logger):
-    url = f"{geoapi_url}?location={city_name}&key={api_key}"
-    logger.info(f"获取城市 ID 请求 URL: {url}")
-
+def get_city_id(city: str, geoapi_url: str, api_key: str) -> Optional[str]:
+    """获取城市ID，添加错误处理和日志"""
     try:
-        # 发起请求并设置超时
-        response = requests.get(url, timeout=TIMEOUT)
+        with timing_logger("get_city_id"):
+            url = f"{geoapi_url}?key={api_key}&location={city}"
+            data = make_http_request(url)
+
+            # 检查返回的数据中是否存在 'location' 且它是一个非空列表
+            if not data.get('location') or len(data['location']) == 0:
+                logger.warning(f"City '{city}' not found or 'location' is empty in response.")
+                return None
+
+            city_id = data['location'][0].get('id')
+            logger.info(f"Successfully got city ID for {city}: {city_id}")
+            return city_id
+
+    except WeatherServiceError as e:
+        logger.error(f"Failed to get city ID: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error while getting city ID: {str(e)}")
+        return None
+
+
+@contextmanager
+def timing_logger(operation: str):
+    start_time = time.time()
+    try:
+        yield
+    finally:
+        duration = time.time() - start_time
+        logger.info(f"{operation} took {duration:.2f} seconds")
+
+
+def make_http_request(url: str, timeout: int = 5) -> Dict[str, Any]:
+    try:
+        logger.info(f"Making HTTP request to {url}")
+        response = requests.get(url, timeout=timeout)
         response.raise_for_status()  # 检查请求是否成功
 
-        # 如果响应状态为 200，继续处理
-        if response.status_code == 200:
-            data = json.loads(response.content)
+        # 如果状态码不是200，直接调用 handle_api_error 进行处理
+        if response.status_code != 200:
+            data = response.json()  # 获取错误响应的数据
+            logger.error(f"HTTP request to {url} failed with status code {response.status_code}")
+            handle_api_error(response.status_code, data, logger)  # 调用 handle_api_error 处理错误
+            return {}
 
-            # 检查返回数据中的代码和城市信息
-            if data['code'] == '200' and data['location']:
-                city_id = data['location'][0]['id']
-                logger.info(f"成功获取城市 {city_name} 的 ID: {city_id}")
-                return city_id
-            else:
-                logger.error(f"城市 {city_name} 未找到或返回数据无效.")
-                return None
-        else:
-            handle_api_error(response.status_code, response.json(), logger)
-            logger.error(f"获取城市ID时遇到问题: HTTP {response.status_code}")
-            return None
+        return response.json()
 
     except requests.exceptions.Timeout:
-        logger.error(f"请求 {url} 超时.")
-        return None
+        logger.error(f"Request timeout: {url}")
+        raise WeatherServiceError(f"Request timeout: {url}")
     except requests.exceptions.RequestException as e:
-        logger.error(f"请求错误: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"获取城市 ID 时发生异常: {e}")
-        return None
+        logger.error(f"Request failed: {e}")
+        raise WeatherServiceError(f"Request failed: {str(e)}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        raise WeatherServiceError(f"JSON decode error: {str(e)}")
 
 
 def handle_api_error(status_code, data, logger):
