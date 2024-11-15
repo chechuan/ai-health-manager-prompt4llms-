@@ -522,7 +522,7 @@ def create_app():
         errors = exc.errors()
         return JSONResponse(
             status_code=200,
-            content={"head": 500, "items": None, "msg": errors},
+            content={"head": 500, "items": None, "msg": repr(errors)},
         )
 
     # 全局异常处理器：用于处理其他未捕获的异常
@@ -531,7 +531,7 @@ def create_app():
         logger.exception(exc)  # 打印异常日志，便于调试
         return JSONResponse(
             status_code=200,  # 强制返回HTTP 200
-            content={"head": 500, "items": None, "msg": str(exc)},  # 自定义错误信息
+            content={"head": 500, "items": None, "msg": repr(exc)},  # 自定义错误信息
         )
 
     async def decorate_chat_complete(
