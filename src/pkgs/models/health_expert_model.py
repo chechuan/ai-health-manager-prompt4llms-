@@ -224,11 +224,11 @@ class HealthExpertModel:
         _event = "西医决策-诊断生成"
 
         # 必填字段和至少需要一项的参数列表
-
         at_least_one = ["user_profile", "messages", "medical_records"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, {}, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -261,11 +261,10 @@ class HealthExpertModel:
 
         _event = "西医决策-主诉生成"
 
-        # 必填字段和至少需要一项的参数列表
-        required_fields = {"messages": []}
-
         # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
+        if not kwargs.get("messages"):
+            raise ValueError("参数 'messages' 为必填项")
+
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -286,11 +285,10 @@ class HealthExpertModel:
 
         _event = "西医决策-现病史生成"
 
-        # 必填字段和至少需要一项的参数列表
-        required_fields = {"messages": []}
-
         # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
+        if not kwargs.get("messages"):
+            raise ValueError("参数 'messages' 为必填项")
+
         messages = (
             self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
@@ -312,11 +310,17 @@ class HealthExpertModel:
         _event = "西医决策-既往史生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {"user_profile": ["past_history_of_present_illness"]}
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, required_fields, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
+
+        if kwargs.get("user_profile"):
+            # 检查past_history_of_present_illness是否为空
+            if not kwargs.get("user_profile", {}).get("past_history_of_present_illness"):
+                raise ValueError("user_profile中必须包含past_history_of_present_illness")
+
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -342,11 +346,16 @@ class HealthExpertModel:
         _event = "西医决策-过敏史生成"
 
         # 必填字段和至少需要一项的参数列表
-        required_fields = {"user_profile": ["allergic_history"]}
         at_least_one = ["user_profile", "messages"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, required_fields, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
+
+        if kwargs.get("user_profile"):
+            # 检查 allergic_history 是否为空
+            if not kwargs.get("user_profile", {}).get("allergic_history"):
+                raise ValueError("user_profile 中必须包含 allergic_history")
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -376,7 +385,8 @@ class HealthExpertModel:
         at_least_one = ["messages", "medical_records"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, {}, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -413,7 +423,8 @@ class HealthExpertModel:
         at_least_one = ["messages", "medical_records"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, {}, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
