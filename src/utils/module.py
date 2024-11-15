@@ -5,21 +5,17 @@
 @Contact :   1627635056@qq.com
 """
 
-# 标准库导入
 import functools
 import json
 import sys
 import time
 import re
-from sympy import true
 import yaml
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import (
     Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional
 )
-
-# 第三方库导入
 import oss2
 import numpy as np
 import openai
@@ -28,14 +24,11 @@ from lunar_python import Lunar, Solar
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
 from contextlib import contextmanager
-
-
-
-# 本地模块导入
 from src.utils.api_protocal import AigcFunctionsResponse
 from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice, CompletionStreamResponse
 )
+import asyncio
 
 try:
     from src.utils.Logger import logger
@@ -755,7 +748,7 @@ def parse_measurement(value_str: str, measure_type: str) -> float:
         raise ValueError("未知的测量类型")
 
 
-def format_historical_meal_plans_v2(historical_meal_plans: list) -> str:
+async def format_historical_meal_plans_v2(historical_meal_plans: list) -> str:
     """
     将历史食谱转换为指定格式的字符串
 
@@ -800,7 +793,7 @@ def async_clock(func):
     return clocked
 
 
-def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str:
+async def convert_meal_plan_to_text(meal_plan_data: List[Dict[str, List[str]]]) -> str:
     """将餐次、食物名称的字典结构转换为文本形式"""
     formatted_text = ""
     for meal in meal_plan_data:
@@ -828,7 +821,7 @@ def parse_height(height: str) -> float:
     raise ValueError("无法解析的身高格式")
 
 
-def calculate_standard_weight(height: str, gender: str) -> float:
+async def calculate_standard_weight(height: str, gender: str) -> float:
     """计算标准体重"""
     height_value = parse_height(height) * 100.0  # 转换为厘米
     if gender == "男":
@@ -847,7 +840,7 @@ def calculate_standard_body_fat_rate(gender: str) -> str:
     return None
 
 
-def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
+async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     """
     根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果
 
@@ -950,7 +943,7 @@ def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     return output
 
 
-def format_historical_meal_plans(historical_meal_plans: list) -> str:
+async def format_historical_meal_plans(historical_meal_plans: list) -> str:
     """
     将历史食谱转换为指定格式的字符串
 
@@ -1145,7 +1138,7 @@ def handle_api_error(status_code, data, logger):
         logger.error(f"Unknown error, HTTP Status Code: {status_code}")
 
 
-def determine_recent_solar_terms():
+async def determine_recent_solar_terms():
     date = datetime.now()
     lunar = Lunar.fromDate(date)
 
@@ -1196,7 +1189,7 @@ def determine_recent_solar_terms_sanji():
     return pre_jieqi_date
 
 
-def get_festivals_and_other_festivals():
+async def get_festivals_and_other_festivals():
     # 获取当天的节日和纪念日
     date = datetime.now()
     year, month, day = date.year, date.month, date.day
@@ -1205,7 +1198,7 @@ def get_festivals_and_other_festivals():
     return ','.join(festivals) if festivals else None
 
 
-def generate_daily_schedule(schedule):
+async def generate_daily_schedule(schedule):
     """
     生成当日剩余日程的格式化字符串
     schedule: list of dicts, 每个字典包含时间和事件，例如：[{'time': '13:00', 'event': '吃火锅'}, {'time': '16:00', 'event': '复诊'}, {'time': '20:00', 'event': '服药'}]
@@ -1216,7 +1209,7 @@ def generate_daily_schedule(schedule):
     return schedule_str
 
 
-def generate_key_indicators(data):
+async def generate_key_indicators(data):
     """
     生成关键指标的表格字符串
     data: list of dicts, 每个字典包含标准格式的日期时间、收缩压、舒张压和单位，例如：[{'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'}]
@@ -1623,7 +1616,7 @@ async def check_and_calculate_bmr(user_profile: dict) -> float:
     return calculate_bmr(weight, height, age, gender)
 
 
-def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
+async def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
     """
     从给定的血压数据列表中获取每一天血压最高的一条数据。
 
@@ -1653,7 +1646,7 @@ def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict]:
     return sorted(highest_data_per_day.values(), key=lambda x: x['date'])
 
 
-def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
+async def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
     """
     判断给定的血压数据是否是连续5天的数据。
 
@@ -1664,7 +1657,7 @@ def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
         bool: 如果数据是连续5天的，返回True；否则返回False。
     """
     # 获取每一天最近的一条数据
-    blood_pressure_data = get_highest_data_per_day(blood_pressure_data)
+    blood_pressure_data = await get_highest_data_per_day(blood_pressure_data)
 
     # 提取日期并排序
     dates = sorted(set([entry['date'].split(' ')[0] for entry in blood_pressure_data]))
@@ -1676,3 +1669,18 @@ def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
             return False
 
     return True
+
+async def run_in_executor(func, *args, **kwargs):
+    """
+    在线程池中执行同步函数。
+
+    Args:
+        func (callable): 要执行的同步函数。
+        *args: 传递给函数的非关键字参数。
+        **kwargs: 传递给函数的关键字参数。
+
+    Returns:
+        执行结果。
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
