@@ -6,18 +6,13 @@
 @Contact :   chechuan1204@gmail.com
 """
 
-# 标准库导入
 import asyncio
 import json
 from copy import deepcopy
 from datetime import datetime
 from typing import Generator
-
-# 第三方库导入
 import json5
 import re
-
-# 本地模块导入
 from data.test_param.test import testParam
 from src.utils.module import (
     check_required_fields, check_aigc_functions_body_fat_weight_management_consultation,
@@ -26,7 +21,7 @@ from src.utils.module import (
     curr_time, determine_recent_solar_terms, format_historical_meal_plans,
     format_historical_meal_plans_v2, generate_daily_schedule, generate_key_indicators,
     get_festivals_and_other_festivals, get_weather_info, parse_generic_content,
-    remove_empty_dicts, handle_calories
+    remove_empty_dicts, handle_calories, run_in_executor
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
@@ -80,7 +75,7 @@ class HealthExpertModel:
             logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
 
-    def __compose_user_msg__(
+    async def __compose_user_msg__(
         self,
         mode: Literal[
             "user_profile",
@@ -230,14 +225,14 @@ class HealthExpertModel:
         if not any(kwargs.get(param) for param in at_least_one):
             raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
-        medical_records: str = self.__compose_user_msg__(
+        medical_records: str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -266,7 +261,7 @@ class HealthExpertModel:
             raise ValueError("参数 'messages' 为必填项")
 
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -290,7 +285,7 @@ class HealthExpertModel:
             raise ValueError("参数 'messages' 为必填项")
 
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -322,11 +317,11 @@ class HealthExpertModel:
                 raise ValueError("user_profile中必须包含past_history_of_present_illness")
 
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -357,11 +352,11 @@ class HealthExpertModel:
             if not kwargs.get("user_profile", {}).get("allergic_history"):
                 raise ValueError("user_profile 中必须包含 allergic_history")
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -388,14 +383,14 @@ class HealthExpertModel:
         if not any(kwargs.get(param) for param in at_least_one):
             raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
-        medical_records: str = self.__compose_user_msg__(
+        medical_records: str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -426,14 +421,14 @@ class HealthExpertModel:
         if not any(kwargs.get(param) for param in at_least_one):
             raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
         )
-        medical_records: str = self.__compose_user_msg__(
+        medical_records: str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -480,7 +475,7 @@ class HealthExpertModel:
             raise ValueError(f"messages不能为空")
 
         # 处理用户画像信息
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", "")
         )
 
@@ -489,10 +484,10 @@ class HealthExpertModel:
         physician_info = PhysicianInfo(**physician_info_data) if physician_info_data else ""
 
         # 处理会话记录
-        messages = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 处理预问诊会话记录
-        pre_consultation_records = self.__compose_user_msg__(
+        pre_consultation_records = await self.__compose_user_msg__(
             "messages", messages=kwargs.get("pre_consultation_records", ""),
             role_map={"assistant": "医生智伴", "user": "患者"}
         )
@@ -549,13 +544,23 @@ class HealthExpertModel:
         at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
         # 验证必填字段
-        await check_required_fields(kwargs, required_fields, at_least_one)
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
+
+        # 如果提供了 user_profile，则检查 required_fields 是否完整
+        if kwargs.get("user_profile"):
+            user_profile = kwargs["user_profile"]
+            missing_fields = [
+                field for field in required_fields["user_profile"] if not user_profile.get(field)
+            ]
+            if missing_fields:
+                raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
 
         # 组合用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__(
+        user_profile_str = await self.__compose_user_msg__(
             "user_profile", user_profile=user_profile
         )
 
@@ -564,12 +569,12 @@ class HealthExpertModel:
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__(
+        medical_records_str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__(
+        messages_str = await self.__compose_user_msg__(
             "messages", messages=kwargs.get("messages", "")
         )
 
@@ -601,7 +606,7 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
 
         # 初始化变量
-        user_profile_str = self.__compose_user_msg__(
+        user_profile_str = await self.__compose_user_msg__(
             "user_profile", user_profile=user_profile
         )
 
@@ -610,12 +615,12 @@ class HealthExpertModel:
         user_profile_str += f"基础代谢:\n{bmr}\n"
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__(
+        medical_records_str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__(
+        messages_str = await self.__compose_user_msg__(
             "messages", messages=kwargs.get("messages", "")
         )
 
@@ -665,12 +670,12 @@ class HealthExpertModel:
             pass
 
         # 组装用户画像
-        user_profile_str = self.__compose_user_msg__(
+        user_profile_str = await self.__compose_user_msg__(
             "user_profile", user_profile=user_profile
         )
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__(
+        medical_records_str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
 
@@ -679,7 +684,7 @@ class HealthExpertModel:
 
         # 组合会话记录字符串
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -724,7 +729,7 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
 
         # 初始化变量
-        user_profile_str = self.__compose_user_msg__(
+        user_profile_str = await self.__compose_user_msg__(
             "user_profile", user_profile=user_profile
         )
 
@@ -733,13 +738,13 @@ class HealthExpertModel:
         user_profile_str += f"基础代谢:\n{bmr}kcal\n"
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__(
+        medical_records_str = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records")
         )
 
         # 组合会话记录字符串
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -748,12 +753,12 @@ class HealthExpertModel:
         food_principle = kwargs.get("food_principle")
 
         # 饮食调理细则
-        ietary_guidelines = self.__compose_user_msg__(
+        ietary_guidelines = await self.__compose_user_msg__(
             "ietary_guidelines", ietary_guidelines=kwargs.get("ietary_guidelines")
         )
 
         # 获取历史食谱
-        historical_diets = format_historical_meal_plans_v2(kwargs.get("historical_diets"))
+        historical_diets = await format_historical_meal_plans_v2(kwargs.get("historical_diets"))
 
         # 构建提示变量
         prompt_vars = {
@@ -806,7 +811,7 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
 
         # 初始化变量
-        user_profile_str = self.__compose_user_msg__(
+        user_profile_str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", {})
         )
 
@@ -818,7 +823,7 @@ class HealthExpertModel:
             "basic_nutritional_needs"
         )
 
-        meal_plan = convert_meal_plan_to_text(kwargs.get("meal_plan", []))
+        meal_plan = await convert_meal_plan_to_text(kwargs.get("meal_plan", []))
 
         # 构建提示变量
         prompt_vars = {
@@ -878,14 +883,14 @@ class HealthExpertModel:
         # 验证必填字段
         await check_required_fields(kwargs, required_fields, at_least_one)
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", {})
         )
-        medical_records = self.__compose_user_msg__(
+        medical_records = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records", {})
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -944,14 +949,14 @@ class HealthExpertModel:
         # 验证必填字段
         await check_required_fields(kwargs, required_fields, at_least_one)
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", {})
         )
-        medical_records = self.__compose_user_msg__(
+        medical_records = await self.__compose_user_msg__(
             "medical_records", medical_records=kwargs.get("medical_records", {})
         )
         messages = (
-            self.__compose_user_msg__("messages", messages=kwargs["messages"])
+            await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
@@ -1001,21 +1006,21 @@ class HealthExpertModel:
             kwargs
         )
 
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
 
         if "messages" in kwargs and kwargs["messages"] and len(kwargs["messages"]) >= 6:
-            messages = self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "健康管理师", "user": "客户"})
+            messages = await self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "健康管理师", "user": "客户"})
             kwargs["intentCode"] = "aigc_functions_body_fat_weight_management_consultation_suggestions"
             _event = "体脂体重管理-问诊-建议"
         else:
             messages = (
-                self.__compose_user_msg__("messages", messages=kwargs["messages"])
+                await self.__compose_user_msg__("messages", messages=kwargs["messages"])
                 if kwargs.get("messages")
                 else ""
             )
-        key_indicators = self.__compose_user_msg__(
+        key_indicators = await self.__compose_user_msg__(
             "key_indicators", key_indicators=kwargs["key_indicators"]
         )
         prompt_vars = {
@@ -1080,14 +1085,14 @@ class HealthExpertModel:
         current_bmi = user_profile.get("bmi")
 
         # 计算标准体重
-        standard_weight = calculate_standard_weight(user_profile["height"], user_profile["gender"])
+        standard_weight = await calculate_standard_weight(user_profile["height"], user_profile["gender"])
         user_profile["standard_weight"] = f"{round(standard_weight)}kg"
 
         target_weight = user_profile.get("target_weight", "未知")
         user_profile["target_weight"] = target_weight
 
         # 组装体重状态和目标
-        weight_status, bmi_status, weight_goal = self.__determine_weight_status(user_profile, current_bmi)
+        weight_status, bmi_status, weight_goal = await self.__determine_weight_status(user_profile, current_bmi)
         weight_status_goal_msg = f"当前体重为{current_weight}千克，{weight_status}，BMI{bmi_status}，需要{weight_goal}。"
 
         # 处理两天数据比较逻辑
@@ -1105,8 +1110,8 @@ class HealthExpertModel:
             )
 
         # 组装用户信息和关键指标字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
-        key_indicators_str = self.__compose_user_msg__("key_indicators", key_indicators=kwargs.get("key_indicators", None))
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        key_indicators_str = await self.__compose_user_msg__("key_indicators", key_indicators=kwargs.get("key_indicators", None))
 
         # 组装提示变量并包含体重状态和目标消息
         prompt_vars = {
@@ -1174,7 +1179,7 @@ class HealthExpertModel:
         current_body_fat_rate = float(body_fat_data[-1]["value"].replace('%', ''))
 
         # 计算标准体重
-        standard_weight = calculate_standard_weight(user_profile["height"], user_profile["gender"])
+        standard_weight = await calculate_standard_weight(user_profile["height"], user_profile["gender"])
         user_profile["standard_weight"] = f"{round(standard_weight)}kg"
 
         target_weight = user_profile.get("target_weight", "未知")
@@ -1185,7 +1190,7 @@ class HealthExpertModel:
         user_profile["standard_body_fat_rate"] = standard_body_fat_rate
 
         # 组装体脂率状态和目标
-        body_fat_status, body_fat_goal = self._determine_body_fat_status(user_profile["gender"], current_body_fat_rate)
+        body_fat_status, body_fat_goal = await self._determine_body_fat_status(user_profile["gender"], current_body_fat_rate)
         body_fat_status_goal_msg = f"当前体脂率为{current_body_fat_rate}%，属于{body_fat_status}，需要{body_fat_goal}。"
 
         # 处理两天数据比较逻辑
@@ -1222,7 +1227,7 @@ class HealthExpertModel:
 
         return content
 
-    def __determine_weight_status(self, user_profile, bmi_value):
+    async def __determine_weight_status(self, user_profile, bmi_value):
         age = user_profile["age"]
         if 18 <= age < 65:
             if bmi_value < 18.5:
@@ -1243,7 +1248,7 @@ class HealthExpertModel:
             else:
                 return "属于肥胖状态", "偏高", "减脂"
 
-    def _determine_body_fat_status(self, gender: str, body_fat_rate: float):
+    async def _determine_body_fat_status(self, gender: str, body_fat_rate: float):
         """确定体脂率状态和目标"""
         if gender == "男":
             if body_fat_rate < 10:
@@ -1301,13 +1306,13 @@ class HealthExpertModel:
         user_profile["bmr"] = f"{bmr}kcal"
 
         # 组合用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
+        medical_records_str = await self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 检查并获取饮食调理原则
         food_principle = kwargs.get("food_principle", "")
@@ -1366,14 +1371,14 @@ class HealthExpertModel:
         user_profile["bmr"] = f"{bmr}kcal"
 
         # 组合用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records",
+        medical_records_str = await self.__compose_user_msg__("medical_records",
                                                         medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 检查并获取饮食调理原则
         food_principle = kwargs.get("food_principle", "")
@@ -1437,14 +1442,14 @@ class HealthExpertModel:
             pass
 
         # 组合用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 组合病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records",
+        medical_records_str = await self.__compose_user_msg__("medical_records",
                                                         medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 检查并获取饮食调理原则
         food_principle = kwargs.get("food_principle", "")
@@ -1501,7 +1506,7 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
 
         # 拼接用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 获取其他相关信息
         messages = kwargs.get("messages", "")
@@ -1512,18 +1517,18 @@ class HealthExpertModel:
         diet_plan_standards = kwargs.get("diet_plan_standards", {})
 
         # 拼接病历信息字符串
-        medical_records_str = self.__compose_user_msg__("medical_records", medical_records=medical_records)
+        medical_records_str = await self.__compose_user_msg__("medical_records", medical_records=medical_records)
 
         # 拼接其他信息字符串
-        ietary_guidelines_str = self.__compose_user_msg__(
+        ietary_guidelines_str = await self.__compose_user_msg__(
             "ietary_guidelines", ietary_guidelines=ietary_guidelines
         )
-        historical_diets_str = format_historical_meal_plans(historical_diets)
+        historical_diets_str = await format_historical_meal_plans(historical_diets)
 
-        diet_plan_standards_str = calculate_and_format_diet_plan(diet_plan_standards)
+        diet_plan_standards_str = await calculate_and_format_diet_plan(diet_plan_standards)
 
         # 组合消息字符串
-        messages_str = self.__compose_user_msg__("messages", messages=messages)
+        messages_str = await self.__compose_user_msg__("messages", messages=messages)
 
         # 构建提示变量
         prompt_vars = {
@@ -1546,7 +1551,7 @@ class HealthExpertModel:
         )
 
         content = await parse_generic_content(content)
-        content = remove_empty_dicts(content)
+        content = await run_in_executor(lambda: remove_empty_dicts(content))
         return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
@@ -1585,7 +1590,7 @@ class HealthExpertModel:
         #     recent_indicators = []
 
         # 拼接用户画像信息字符串
-        user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 构建提示变量
         prompt_vars = {
@@ -1644,33 +1649,27 @@ class HealthExpertModel:
 
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
-        daily_schedule_str = generate_daily_schedule(daily_schedule)
+        daily_schedule_str = await generate_daily_schedule(daily_schedule)
         daily_schedule_section = f"## 当日剩余日程\n{daily_schedule_str}" if daily_schedule_str else ""
 
         # 获取关键指标信息
         key_indicators = kwargs.get("key_indicators", [])
-        key_indicators_str = generate_key_indicators(key_indicators)
+        key_indicators_str = await generate_key_indicators(key_indicators)
         key_indicators_section = f"## 关键指标\n{key_indicators_str}" if key_indicators_str else ""
 
-        # 将阻塞操作放入线程池
-        loop = asyncio.get_event_loop()
-
         # 异步获取当天天气信息
-        today_weather = await loop.run_in_executor(
-            None, lambda: get_weather_info(self.gsr.weather_api_config, city)
+        today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
         )
 
-        # # 获取当天天气
-        # today_weather = get_weather_info(self.gsr.weather_api_config, city)
         if not today_weather:
             # 如果没有天气信息，删除城市信息
             user_profile.pop("city", None)
 
         # 获取最近节气
-        recent_solar_terms = determine_recent_solar_terms()
+        recent_solar_terms = await determine_recent_solar_terms()
 
         # 获取当日节日
-        today_festivals = get_festivals_and_other_festivals()
+        today_festivals = await get_festivals_and_other_festivals()
 
         # 构建当日相关信息
         daily_info = [f"### 当前日期和时间\n{curr_time()}"]
@@ -1728,8 +1727,8 @@ class HealthExpertModel:
             raise ValueError("主线会话记录和支线会话记录均不能为空")
 
         # 组装会话历史
-        main_conversation_history = self.__compose_user_msg__("messages", messages=main_conversation_history)
-        branch_conversation_history = self.__compose_user_msg__("messages", messages=branch_conversation_history)
+        main_conversation_history = await self.__compose_user_msg__("messages", messages=main_conversation_history)
+        branch_conversation_history = await self.__compose_user_msg__("messages", messages=branch_conversation_history)
 
         # 构建提示变量
         prompt_vars = {
@@ -1826,7 +1825,7 @@ class HealthExpertModel:
         current_bp = CurrentBloodPressure(**current_bp_data)
 
         # 获取最近5天每天的血压最高的一条数据
-        recent_bp_data = get_highest_data_per_day(recent_bp_data)
+        recent_bp_data = await get_highest_data_per_day(recent_bp_data)
 
         # 更新每条记录的血压等级
         for record in recent_bp_data:
@@ -1835,10 +1834,10 @@ class HealthExpertModel:
             record['dbp'] = BloodPressureRecord(**record).formatted_dbp()
 
         # 判断5天数据是否连续
-        is_consecutive = check_consecutive_days(recent_bp_data)
+        is_consecutive = await check_consecutive_days(recent_bp_data)
 
         # 拼接用户画像信息字符串
-        user_profile = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        user_profile = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
         # 拼接当前血压情况字符串
         current_bp = "|当前时间|收缩压|舒张压|单位|血压等级|\n|{date}|{sbp}|{dbp}|{unit}|{level}".format(
@@ -1900,7 +1899,7 @@ class HealthExpertModel:
         diet_summary_model_output = await self.__call_model_summary__(**kwargs)
 
         # 截取模型输出内容并拼接最终输出结果
-        truncated_summary = self.__truncate_to_limit(diet_summary_model_output, limit=20)
+        truncated_summary = await self.__truncate_to_limit(diet_summary_model_output, limit=20)
         final_summary = f"{truncated_summary}"
 
         return final_summary
@@ -1916,7 +1915,7 @@ class HealthExpertModel:
         )
         return diet_summary_output
 
-    def __truncate_to_limit(self, text: str, limit: int) -> str:
+    async def __truncate_to_limit(self, text: str, limit: int) -> str:
         """
         截取文本至指定字符限制，若字符数超出限制则保留最后一个标点符号，或在句尾加上句号。
         :param text: 原始文本
@@ -1976,14 +1975,14 @@ class HealthExpertModel:
             raise ValueError("messages不能为空")
 
         # 处理用户画像信息
-        user_profile: str = self.__compose_user_msg__(
+        user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile", "")
         )
         # 拼接用户画像信息字符串
         user_profile_str = f"## 用户画像\n{user_profile}" if user_profile else ""
 
         # 处理会话记录
-        messages = self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
 
         # 处理中医四诊信息
         tcm_four_diagnoses_data = kwargs.get("tcm_four_diagnoses", {})
