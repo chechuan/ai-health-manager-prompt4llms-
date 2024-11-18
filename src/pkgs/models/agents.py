@@ -31,6 +31,7 @@ from src.utils.resources import InitAllResource
 from src.utils.module import (
     construct_naive_response_generator, download_from_oss, dumpJS, param_check,
 )
+from PIL import Image, ImageDraw, ImageFont
 
 
 class Agents:
