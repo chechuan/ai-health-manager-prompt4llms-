@@ -76,10 +76,6 @@ def callLLM(
     #         f"There will change Model: {model} to {default_model}."
     #         + "Please manually check your code use config file to manage which model to use."
     #     )
-    for msg in history:
-        msg_copy = msg.copy()
-        msg_copy.pop('intentCode', None)
-
     if stream and stop:
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
@@ -111,7 +107,7 @@ def callLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         if stream:
             return completion
         retry = 0
@@ -123,28 +119,19 @@ def callLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
             history += [{"role": "user", "content": query}]
-        # 定义允许的字段集合
-        allowed_keys = {'role', 'content'}
-
-        # 过滤消息中的非允许字段
-        clean_history = []
-        for msg in history:
-            msg_copy = {k: v for k, v in msg.items() if k in allowed_keys}
-            clean_history.append(msg_copy)
-
         msg = ""
-        for i, n in enumerate(list(reversed(clean_history))):
+        for i, n in enumerate(list(reversed(history))):
             msg += n["content"]
             if len(msg) > 12000:
-                h = clean_history[-i:]
+                h = history[-i:]
                 break
             else:
-                h = clean_history
+                h = history
         kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
         retry = 0
@@ -240,7 +227,7 @@ async def acallLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
-    
+
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
@@ -255,7 +242,7 @@ async def acallLLM(
                 logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         if stream:
             return completion
         retry = 0
