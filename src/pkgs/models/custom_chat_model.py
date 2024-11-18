@@ -949,15 +949,15 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             sysprompt = self.gsr.get_event_item("report_interpretation_chat")[
                 "description"
             ]
+            sysprompt='你是医生问问题'
             messages.append(
                 {
                     "role": "system",
-                    "content": sysprompt,
-                    "intentCode": intentCode,
+                    "content": sysprompt
                 }
             )
             messages.append(
-                {"role": "user", "content": content, "intentCode": intentCode}
+                {"role": "user", "content": content,}
             )
         else:
             # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
@@ -973,7 +973,6 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
-                    messages[-1]["intentCode"] = intentCode
             else:
                 for idx in range(len(history)):
                     msg = history[idx]
@@ -988,7 +987,6 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
-                    messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
