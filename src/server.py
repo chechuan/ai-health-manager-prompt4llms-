@@ -42,6 +42,12 @@ from src.utils.module import (
     dumpJS, format_sse_chat_complete, response_generator
 )
 
+from src.pkgs.models.func_eval_model.func_eval_model import (
+    image_recog,
+    diet_image_recog,
+    schedule_tips_modify,
+)
+
 
 async def accept_param(request: Request, endpoint: str = None):
     p = await request.json()
@@ -501,8 +507,6 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
 
-
-
 def create_app():
     app: FastAPI = FastAPI(
         title="智能健康管家-算法",
@@ -605,6 +609,61 @@ def create_app():
     app.get("/", response_model=BaseResponse, summary="swagger 文档")(document)
 
     app.post("/test/sync")(_test_sync)
+
+    # async def _image_type_recog(request: Request):
+    #     user_data = await request.json()
+    #     img = user_data.get('image_url', '')
+    #     if not img:
+    #         return {"head": 601, "msg": "请传入图片", "content": ""}
+    #     response = func_eval_model.recog_img_type(img)
+    #     return response
+
+    @app.route("/func_eval/image_type_recog", methods=["post"])
+    async def _image_type_recog(request: Request):
+        """图片类型识别"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/image_type_recog")
+            generator: AsyncGenerator = image_recog(param.get("image_url", ""))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/diet_image_recog", methods=["post"])
+    async def _image_type_recog(request: Request):
+        """饮食图片识别"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
+            generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/schedule_tips_modification", methods=["post"])
+    async def _schedule_tips_modify(request: Request):
+        """用户日程tips修改"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/schedule_tips_modification")
+            generator: AsyncGenerator = schedule_tips_modify(param.get("schedule_tips", ""),
+                                                             param.get("history", []),
+                                                             param.get("cur_time", ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/health_qa", methods=["post"])
     async def _health_qa(request: Request):

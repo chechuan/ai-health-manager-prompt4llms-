@@ -44,6 +44,7 @@ def callLLM(
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
+        is_vl=False,
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
@@ -122,17 +123,20 @@ def callLLM(
         
         ret = completion.choices[0].text
     else:
-        if query and not isinstance(query, object):
-            history += [{"role": "user", "content": query}]
-        msg = ""
-        for i, n in enumerate(list(reversed(history))):
-            msg += n["content"]
-            if len(msg) > 12000:
-                h = history[-i:]
-                break
-            else:
-                h = history
-        kwds["messages"] = h
+        if is_vl:
+            kwds["messages"] = history
+        else:
+            if query and not isinstance(query, object):
+                history += [{"role": "user", "content": query}]
+            msg = ""
+            for i, n in enumerate(list(reversed(history))):
+                msg += n["content"]
+                if len(msg) > 12000:
+                    h = history[-i:]
+                    break
+                else:
+                    h = history
+            kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
         retry = 0
         while retry <= retry_times:
@@ -178,6 +182,7 @@ async def acallLLM(
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
+        is_vl=False,
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
@@ -259,17 +264,20 @@ async def acallLLM(
 
         ret = completion.choices[0].text
     else:
-        if query and not isinstance(query, object):
-            history += [{"role": "user", "content": query}]
-        msg = ""
-        for i, n in enumerate(list(reversed(history))):
-            msg += n["content"]
-            if len(msg) > 1200:
-                h = history[-i:]
-                break
-            else:
-                h = history
-        kwds["messages"] = h
+        if is_vl:
+            kwds["messages"] = history
+        else:
+            if query and not isinstance(query, object):
+                history += [{"role": "user", "content": query}]
+            msg = ""
+            for i, n in enumerate(list(reversed(history))):
+                msg += n["content"]
+                if len(msg) > 1200:
+                    h = history[-i:]
+                    break
+                else:
+                    h = history
+            kwds["messages"] = h
         retry = 0
         while retry <= retry_times:
             try:
