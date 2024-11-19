@@ -1004,16 +1004,23 @@ class Agents:
         return response
 
     async def aigc_functions_relevant_inspection(self, **kwargs):
+        import logging
+
+        # 初始化日志器
+        logger = logging.getLogger("aigc_inspection")
+        logging.basicConfig(level=logging.INFO)
+
         prompt_template = (
             "# 患者与医生历史会话信息\n{history_str}\n\n"
             "# 任务描述\n"
             "你是一个经验丰富的医生,请你协助我进行疾病的鉴别诊断,输出建议我做的临床辅助检查项目\n"
-            "1. 请你根据历史会话信息、初步诊断的结果、鉴别诊断的知识、分析我的疾病，进一步输出能够让我确诊的临床检查项目\n"
+            "1. 请你根据历史会话信息、初步诊断的结果、鉴别诊断的知识、分析我的疾病，进一步输出能够让我确诊的临床检查项目\n"
             "2. 只输出检查项目的名称，不要其他的内容\n"
             "3. 不同检查项目名称之间用`,`隔开,检查项目不要重复\n\n"
             "# 初步诊断结果\n{diagnosis_str}\n\n"
             "Begins!"
         )
+
         duplicate_content = {}
         _messages = []
         for item in kwargs["messages"]:
@@ -1021,6 +1028,7 @@ class Agents:
             if not duplicate_content.get(_content):
                 _messages.append(item)
                 duplicate_content[_content] = 1
+
         rolemap: Dict[str, str] = {"user": "患者", "assistant": "医生"}
         history_str = "\n".join(
             [f"{rolemap[item['role']]}: {item['content']}" for item in _messages]
@@ -1033,6 +1041,9 @@ class Agents:
             {"role": "system", "content": prompt},
             {"role": "user", "content": history_str},
         ]
+
+        # 记录输入日志
+        logger.info(f"Generated Prompt: {prompt}")
         model_args = await self.__update_model_args__(kwargs)
         model_args: dict = (
             {
@@ -1048,7 +1059,17 @@ class Agents:
             query=messages,
             **model_args,
         )
-        return [i.strip() for i in content.split(",")]
+
+        # 记录模型输出
+        logger.info(f"Model Raw Output: {content}")
+
+        # 去除前缀和多余内容
+        clean_output = [
+            i.strip().removeprefix("医生: ").strip() for i in content.split(",")
+        ]
+        logger.info(f"Cleaned Output: {clean_output}")
+
+        return clean_output
 
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
