@@ -311,8 +311,8 @@ class CustomChatAuxiliary(CustomChatModel):
             "6.每次输出不超过200字，不要输出列表。\n"
             "# 输出格式要求：\n"
             "请遵循以下格式回复：\n"
-            "Thought: 思考针对当前问题应该做什么\n"
-            "Doctor: 你作为一个慢病管理专家以及家庭医生,分析思考的内容,在此情况下你会对客户说：\n"
+            "Thought: 思考针对当前问题应该做什么\n"
+            "Doctor: 你作为一个慢病管理专家以及家庭医生,分析思考的内容,在此情况下你会对客户说：\n"
         )
 
         pro = kwargs.get("promptParam", {})
@@ -949,15 +949,15 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             sysprompt = self.gsr.get_event_item("report_interpretation_chat")[
                 "description"
             ]
-            sysprompt = '你是医生问问题'
             messages.append(
                 {
                     "role": "system",
-                    "content": sysprompt
+                    "content": sysprompt,
+                    "intentCode": intentCode
                 }
             )
             messages.append(
-                {"role": "user", "content": content, }
+                {"role": "user", "content": content, "intentCode": intentCode}
             )
         else:
             # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
@@ -973,6 +973,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
+                    messages[-1]["intentCode"] = intentCode
             else:
                 for idx in range(len(history)):
                     msg = history[idx]
@@ -987,6 +988,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
+                    messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
