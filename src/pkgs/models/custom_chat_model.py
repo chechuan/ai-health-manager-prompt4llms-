@@ -953,11 +953,11 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                 {
                     "role": "system",
                     "content": sysprompt,
-                    "intentCode": intentCode,
+                    "intentCode":intentCode
                 }
             )
             messages.append(
-                {"role": "user", "content": content, "intentCode": intentCode}
+                {"role": "user", "content": content,"intentCode":intentCode}
             )
         else:
             # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
