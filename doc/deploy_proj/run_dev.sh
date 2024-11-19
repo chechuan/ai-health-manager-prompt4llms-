@@ -1,4 +1,4 @@
-export ENV=local
+export ENV=dev
 export LOG_CONSOLE_LEVEL=TRACE5
 export LOG_FILE_LEVEL=TRACE
 
