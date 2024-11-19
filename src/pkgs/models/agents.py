@@ -29,7 +29,7 @@ from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
-    construct_naive_response_generator, download_from_oss, dumpJS, param_check,
+    construct_naive_response_generator, download_from_oss, dumpJS, param_check
 )
 from PIL import Image, ImageDraw, ImageFont
 
@@ -824,7 +824,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         # res = json5.loads(content)
-        # _content = "\n".join([i["title"]+":" + i["content"] for i in res]) 
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
         # filtered_string = content.replace('1.','').replace('2.','').replace('3.','')
         return content
 
@@ -1004,6 +1004,12 @@ class Agents:
         return response
 
     async def aigc_functions_relevant_inspection(self, **kwargs):
+        import logging
+
+        # 初始化日志器
+        logger = logging.getLogger("aigc_inspection")
+        logging.basicConfig(level=logging.INFO)
+
         prompt_template = (
             "# 患者与医生历史会话信息\n{history_str}\n\n"
             "# 任务描述\n"
@@ -1014,6 +1020,7 @@ class Agents:
             "# 初步诊断结果\n{diagnosis_str}\n\n"
             "Begins!"
         )
+
         duplicate_content = {}
         _messages = []
         for item in kwargs["messages"]:
@@ -1021,6 +1028,7 @@ class Agents:
             if not duplicate_content.get(_content):
                 _messages.append(item)
                 duplicate_content[_content] = 1
+
         rolemap: Dict[str, str] = {"user": "患者", "assistant": "医生"}
         history_str = "\n".join(
             [f"{rolemap[item['role']]}: {item['content']}" for item in _messages]
@@ -1033,6 +1041,9 @@ class Agents:
             {"role": "system", "content": prompt},
             {"role": "user", "content": history_str},
         ]
+
+        # 记录输入日志
+        logger.info(f"Generated Prompt: {prompt}")
         model_args = await self.__update_model_args__(kwargs)
         model_args: dict = (
             {
@@ -1048,7 +1059,17 @@ class Agents:
             query=messages,
             **model_args,
         )
-        return [i.strip() for i in content.split(",")]
+
+        # 记录模型输出
+        logger.info(f"Model Raw Output: {content}")
+
+        # 去除前缀和多余内容
+        clean_output = [
+            i.strip().removeprefix("医生: ").strip() for i in content.split(",")
+        ]
+        logger.info(f"Cleaned Output: {clean_output}")
+
+        return clean_output
 
     @param_check(check_params=["messages"])
     async def aigc_functions_reason_for_care_plan(self, **kwargs) -> str:
@@ -1077,13 +1098,13 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
-    
+
     async def sanji_questions_generate(self, **kwargs) -> str:
         _event = "猜你想问"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-       
+
         prompt_vars = {
             "user_profile": user_profile,
             "content_all": kwargs["content_all"],
@@ -1098,17 +1119,17 @@ class Agents:
             **kwargs,
         )
         result = content.split('\n')
-        result_=[]
+        result_ = []
         for i in result:
-            i = i.replace('-','')
+            i = i.replace('-', '')
             question_marks = i.count('？')
-            if question_marks>1:
+            if question_marks > 1:
                 last_question_mark_index = i.rfind('？')
                 j = i[:last_question_mark_index].replace('？', '。') + i[last_question_mark_index:]
             else:
-                j=i
+                j = i
             result_.append(j)
-        return {'ques':result_}
+        return {'ques': result_}
 
     async def sanji_assess_3d_classification(self, **kwargs) -> str:
         """"""
@@ -1162,7 +1183,7 @@ class Agents:
             "messages": messages,
         }
         model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0,max_tokens=8192
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0, max_tokens=8192
         )
         content: str = await self.sanji_general(
             # process=0,
