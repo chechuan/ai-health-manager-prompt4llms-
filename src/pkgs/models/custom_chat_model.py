@@ -52,7 +52,7 @@ class CustomChatModel:
         #     raise ValueError("history is empty")
 
     def __extract_event_from_gsr__(
-        self, gsr: InitAllResource, code: str
+            self, gsr: InitAllResource, code: str
     ) -> Dict[str, Any]:
         """从global_share_resource中提取事件数据"""
         event = {}
@@ -101,13 +101,13 @@ class CustomChatAuxiliary(CustomChatModel):
             doctor_index = text.find("\nDoctor:")
             thought_index2 = find_second_occurrence(text, "\nThought:")
             if thought_index != -1 and doctor_index == -1:
-                return "None", text[thought_index + 8 : doctor_index].strip()
+                return "None", text[thought_index + 8: doctor_index].strip()
             if thought_index == -1 and doctor_index != -1:
-                return "None", text[doctor_index + 8 :].strip()
+                return "None", text[doctor_index + 8:].strip()
             if thought_index == -1 and doctor_index == -1:
                 return "None", text
-            thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 : thought_index2].strip()
+            thought = text[thought_index + 8: doctor_index].strip()
+            doctor = text[doctor_index + 8: thought_index2].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -137,13 +137,13 @@ class CustomChatAuxiliary(CustomChatModel):
                     return "None", text
             doctor_index = text.find("\n" + s2)
             if doctor_index == -1:
-                return "None", text[thought_index + l1 :].strip()
-            thought = text[thought_index + l1 : doctor_index].strip()
+                return "None", text[thought_index + l1:].strip()
+            thought = text[thought_index + l1: doctor_index].strip()
             thought_index2 = find_second_occurrence(text, "\n" + s1)
             if thought_index2 != -1:
-                doctor = text[doctor_index + l2 + 1 : thought_index2].strip()
+                doctor = text[doctor_index + l2 + 1: thought_index2].strip()
             else:
-                doctor = text[doctor_index + l2 + 1 :].strip()
+                doctor = text[doctor_index + l2 + 1:].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -161,7 +161,7 @@ class CustomChatAuxiliary(CustomChatModel):
             return "None"
 
     def __compose_auxiliary_diagnosis_message__(
-        self, **kwargs
+            self, **kwargs
     ) -> List[DeltaMessage]:
         """组装辅助诊断消息"""
         # event = self.__extract_event_from_gsr__(self.gsr, "auxiliary_diagnosis")
@@ -171,11 +171,11 @@ class CustomChatAuxiliary(CustomChatModel):
         ]
         sys_prompt = _auxiliary_diagnosis_system_prompt_v7
         pro = kwargs.get("promptParam", {})
-        
-        user_profile = pro.get('user_profile','')
+
+        user_profile = pro.get('user_profile', '')
         prompt_vars = {
-            "user_profile": user_profile }
-        
+            "user_profile": user_profile}
+
         sys_prompt = sys_prompt.format(**prompt_vars)
         system_message = DeltaMessage(role="system", content=sys_prompt)
         messages = []
@@ -277,7 +277,7 @@ class CustomChatAuxiliary(CustomChatModel):
         for idx, n in enumerate(messages):
             messages[idx] = n.dict()
         return messages
-    
+
     def __compose_glucose_diagnosis_message__(self, **kwargs) -> List[DeltaMessage]:
         """组装血糖波动问诊消息"""
         history = [
@@ -311,8 +311,8 @@ class CustomChatAuxiliary(CustomChatModel):
             "6.每次输出不超过200字，不要输出列表。\n"
             "# 输出格式要求：\n"
             "请遵循以下格式回复：\n"
-            "Thought: 思考针对当前问题应该做什么\n"
-            "Doctor: 你作为一个慢病管理专家以及家庭医生,分析思考的内容,在此情况下你会对客户说：\n"
+            "Thought: 思考针对当前问题应该做什么\n"
+            "Doctor: 你作为一个慢病管理专家以及家庭医生,分析思考的内容,在此情况下你会对客户说：\n"
         )
 
         pro = kwargs.get("promptParam", {})
@@ -393,9 +393,9 @@ class CustomChatAuxiliary(CustomChatModel):
             messages[idx] = n.dict()
 
         return messages
-    
+
     def __chat_sanji_glucose_diagnosis___(
-        self, **kwargs
+            self, **kwargs
     ) -> AnyStr:
         """辅助诊断总结、饮食建议
 
@@ -413,11 +413,11 @@ class CustomChatAuxiliary(CustomChatModel):
         )
         prompt_template_str = event["process"]
         pro = kwargs.get("promptParam", {})
-        
-        user_profile = kwargs.get('user_profile',{})
-        recent_gl = pro.get('recent_gl',{})
-        if_glucose = pro.get('if_glucose','')
-        glucose_level = pro.get('glucose_level','')
+
+        user_profile = kwargs.get('user_profile', {})
+        recent_gl = pro.get('recent_gl', {})
+        if_glucose = pro.get('if_glucose', '')
+        glucose_level = pro.get('glucose_level', '')
 
         compose_message = ""
         for i in history:
@@ -431,7 +431,7 @@ class CustomChatAuxiliary(CustomChatModel):
             "recent_gl": recent_gl,
             "if_glucose": if_glucose,
             "glucose_level": glucose_level,
-            "message":compose_message
+            "message": compose_message
         }
 
         prompt = prompt_template_str.format(**prompt_vars)
@@ -457,7 +457,7 @@ class CustomChatAuxiliary(CustomChatModel):
         return content
 
     def __chat_auxiliary_diagnosis_summary_diet_rec__(
-        self, **kwargs
+            self, **kwargs
     ) -> AnyStr:
         """辅助诊断总结、饮食建议
 
@@ -483,8 +483,8 @@ class CustomChatAuxiliary(CustomChatModel):
                 compose_message += f"用户: {content}\n"
         prompt = prompt_template_str.replace("{MESSAGE}", compose_message)
         pro = kwargs.get("promptParam", {})
-        symptom = pro.get('symptom','')
-        user_profile = pro.get('user_profile','')
+        symptom = pro.get('symptom', '')
+        user_profile = pro.get('user_profile', '')
         prompt = prompt.replace("{symptom}", symptom)
         prompt = prompt.replace("{user_profile}", user_profile)
 
@@ -564,12 +564,12 @@ class CustomChatAuxiliary(CustomChatModel):
         return mid_vars, conts, (thought, doctor)
 
     async def chat_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
     ):
         """通用生成"""
         event = kwargs.get("intentCode")
@@ -599,67 +599,67 @@ class CustomChatAuxiliary(CustomChatModel):
     async def __chat_start_with_weather__(self, **kwargs) -> ChatMessage:
         model = 'Qwen1.5-72B-Chat'
         pro = kwargs.get("promptParam", {})
-        if_entropy = pro.get("withEntropy",'')
-        conts=[]
-        
+        if_entropy = pro.get("withEntropy", '')
+        conts = []
+
         city = "廊坊"
-        
+
         today_weather = get_weather_info(self.gsr.weather_api_config, city)
         logger.info(f"获取天气: {dumpJS(today_weather)}")
         if if_entropy == "2" or if_entropy == "3":
             prompt_vars = {"today_weather": today_weather}
-            prompt_template =_chat_start_with_weather_v2.replace('today_weather',today_weather)
+            prompt_template = _chat_start_with_weather_v2.replace('today_weather', today_weather)
             content: str = await self.chat_general(
-                            _event="节气问询",
-                            prompt_template=prompt_template,
-                            prompt_vars=prompt_vars,
-                            **kwargs)
+                _event="节气问询",
+                prompt_template=prompt_template,
+                prompt_vars=prompt_vars,
+                **kwargs)
             # if if_entropy=='2':
             #     result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
             # else:
-                # from datetime import datetime
-                # now = datetime.now()  
-  
-                # # 格式化当前时间，仅保留小时和分钟  
-                # current_time_str = now.strftime("%H:%M")  
-                
-                # # 提取小时部分  
-                # hour = int(current_time_str.split(':')[0])  
-                
-                # # 根据小时判断时段  
-                # if hour < 11:  
-                #     t="上午" 
-                # elif 11 <= hour < 13:  
-                #     t="中午"  
-                # else:  
-                #     t="下午" 
-                # result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
-            result =content
-                # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
+            # from datetime import datetime
+            # now = datetime.now()
+
+            # # 格式化当前时间，仅保留小时和分钟
+            # current_time_str = now.strftime("%H:%M")
+
+            # # 提取小时部分
+            # hour = int(current_time_str.split(':')[0])
+
+            # # 根据小时判断时段
+            # if hour < 11:
+            #     t="上午"
+            # elif 11 <= hour < 13:
+            #     t="中午"
+            # else:
+            #     t="下午"
+            # result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
+            result = content
+            # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
 
         # 用if_entropy字段来控制不同的场景
         else:
             recent_solar_terms = determine_recent_solar_terms_sanji()
             prompt_vars = {"recent_solar_terms": recent_solar_terms}
             content: str = await self.chat_general(
-                            _event="节气问询",
-                            prompt_vars=prompt_vars,
-                            **kwargs)
+                _event="节气问询",
+                prompt_vars=prompt_vars,
+                **kwargs)
             if if_entropy == "0":
                 result = (
-                    content + today_weather
-                    + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
+                        content + today_weather
+                        + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
                 )
             elif if_entropy == "1":
                 if "；" in content:
                     content = content.split("；", 1)[0]
                 entropy = pro.get("askEntropy", "")
                 result = (
-                    "叔叔，您的生命熵为"
-                    + entropy
-                    + "，主要问题是血压不稳定，需要重点控制血压。"
-                    + content
-                    + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
+                        "叔叔，您的生命熵为"
+                        + entropy
+                        + "，主要问题是血压不稳定，需要重点控制血压。"
+                        + content
+                        + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
                 )
             else:
                 result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
@@ -838,7 +838,7 @@ class CustomChatAuxiliary(CustomChatModel):
             key="自定义辅助诊断对话",
         )
         return mid_vars, conts, (thought, doctor)
-    
+
     async def __chat_glucose_diagnosis__(self, **kwargs) -> ChatMessage:
         """血糖波动问诊"""
         # 过滤掉辅助诊断之外的历史消息
@@ -909,10 +909,10 @@ class CustomChatAuxiliary(CustomChatModel):
         elif "no" in output.lower():
             return False
         elif (
-            "没有回答" in content
-            or "没有被回答" in content
-            or "未回答" in content
-            or "未被回答" in content
+                "没有回答" in content
+                or "没有被回答" in content
+                or "未回答" in content
+                or "未被回答" in content
         ):
             return False
         elif "回答过" in content or "回答了" in content:
@@ -937,10 +937,10 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         )
 
     def __compose_message__(
-        self,
-        history: List[Dict[str, str]],
-        intentCode: str = "report_interpretation_chat",
-        **kwargs,
+            self,
+            history: List[Dict[str, str]],
+            intentCode: str = "report_interpretation_chat",
+            **kwargs,
     ):
         """组装消息"""
         messages = []
@@ -949,15 +949,15 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             sysprompt = self.gsr.get_event_item("report_interpretation_chat")[
                 "description"
             ]
+            sysprompt = '你是医生问问题'
             messages.append(
                 {
                     "role": "system",
-                    "content": sysprompt,
-                    "intentCode": intentCode,
+                    "content": sysprompt
                 }
             )
             messages.append(
-                {"role": "user", "content": content, "intentCode": intentCode}
+                {"role": "user", "content": content, }
             )
         else:
             # 出现两次user的信息 == 传入报告一次 + 用户回答一次问题
@@ -973,7 +973,6 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
-                    messages[-1]["intentCode"] = intentCode
             else:
                 for idx in range(len(history)):
                     msg = history[idx]
@@ -988,7 +987,6 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                         messages.append(
                             {"role": msg["role"], "content": msg["content"]}
                         )
-                    messages[-1]["intentCode"] = intentCode
         return messages
 
     def __parse_response__(self, text):
@@ -1001,8 +999,8 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
             doctor_index = text.find("\nDoctor:")
             if thought_index == -1 or doctor_index == -1:
                 return "None", text
-            thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 :].strip()
+            thought = text[thought_index + 8: doctor_index].strip()
+            doctor = text[doctor_index + 8:].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)
@@ -1041,9 +1039,9 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
         _contents = []
         sch = -1
         if (
-            kwargs["intentCode"] == "report_interpretation_chat"
-            and "?" not in content
-            and "？" not in content
+                kwargs["intentCode"] == "report_interpretation_chat"
+                and "?" not in content
+                and "？" not in content
         ):
             tool = "convComplete"
             sch = 1
@@ -1072,11 +1070,11 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
         )
 
     def __search_docs__(
-        self,
-        query: str = "用户query",
-        knowledge_base_name: str = "新奥百科知识库",
-        top_k: int = 3,
-        score_threshold: float = 0.5,
+            self,
+            query: str = "用户query",
+            knowledge_base_name: str = "新奥百科知识库",
+            top_k: int = 3,
+            score_threshold: float = 0.5,
     ) -> str:
         """从指定知识库搜索相关文档"""
         url = self.gsr.api_config["langchain"] + "/knowledge_base/search_docs"
@@ -1099,10 +1097,10 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
         return content.strip()
 
     def __compose_message__(
-        self,
-        history: List[Dict[str, str]],
-        intentCode: str = "report_interpretation_chat",
-        **kwargs,
+            self,
+            history: List[Dict[str, str]],
+            intentCode: str = "report_interpretation_chat",
+            **kwargs,
     ):
         """组装消息"""
         messages = []
@@ -1122,8 +1120,8 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
                 base_info=base_info, external_knowledge=external_knowledge
             )
             messages = [
-                {"role": "system", "content": system_prompt, "intentCode": intentCode}
-            ] + messages
+                           {"role": "system", "content": system_prompt, "intentCode": intentCode}
+                       ] + messages
         for idx in range(len(history)):
             msg = history[idx]
             if msg["role"] == "assistant" and msg.get("function_call"):
@@ -1143,8 +1141,8 @@ class CustomChatReportInterpretationAnswer(CustomChatModel):
             doctor_index = text.find("\nDoctor:")
             if thought_index == -1 or doctor_index == -1:
                 return "None", text
-            thought = text[thought_index + 8 : doctor_index].strip()
-            doctor = text[doctor_index + 8 :].strip()
+            thought = text[thought_index + 8: doctor_index].strip()
+            doctor = text[doctor_index + 8:].strip()
             return thought, doctor
         except Exception as err:
             logger.error(text)

@@ -29,9 +29,10 @@ from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
-    construct_naive_response_generator, download_from_oss, dumpJS, param_check,
+    construct_naive_response_generator, download_from_oss, dumpJS, param_check
 )
 from PIL import Image, ImageDraw, ImageFont
+
 
 class Agents:
     session = Session()
@@ -823,7 +824,7 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         # res = json5.loads(content)
-        # _content = "\n".join([i["title"]+":" + i["content"] for i in res]) 
+        # _content = "\n".join([i["title"]+":" + i["content"] for i in res])
         # filtered_string = content.replace('1.','').replace('2.','').replace('3.','')
         return content
 
@@ -929,18 +930,25 @@ class Agents:
             "只输出`疾病`-`概率`,避免输入任何其他内容"
         )
 
-        # 2024年4月30日14:44:08 过滤重复的输入
+        # 去重过滤输入内容
         duplicate_messages, _messages = {}, []
         for item in kwargs["messages"]:
             if not duplicate_messages.get(item["content"]):
                 _messages.append(item)
                 duplicate_messages[item["content"]] = 1
+
         history_str = "\n".join([f"{item['content']}" for item in _messages])
         prompt = prompt_template.format(history_str=history_str)
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_input},
         ]
+
+        # 日志记录输入
+        logger.debug(f"Formatted Prompt: {repr(prompt)}")
+        logger.debug(f"AIGC Functions Auxiliary Diagnosis LLM Input: {repr(messages)}")
+
+        # 获取模型参数
         model_args = await self.__update_model_args__(kwargs)
         model_args: dict = (
             {
@@ -953,26 +961,54 @@ class Agents:
         )
 
         try:
+            # 调用模型
             d_p_pair_str = await acallLLM(
                 model="Qwen1.5-72B-Chat",
                 query=messages,
                 **model_args,
             )
-            d_p_pair = [i.strip().split("-") for i in d_p_pair_str.split(",")]
-            d_p_pair = [
-                {"name": i[0], "prob": i[1].replace("%", "") + "%"} for i in d_p_pair
-            ]
-        except Exception as err:
-            logger.error(repr(err))
+            logger.info(f"AIGC Functions Auxiliary Diagnosis LLM Output: {repr(d_p_pair_str)}")
+
+            # 数据解析，清理多余字符
             d_p_pair = []
-        return d_p_pair
+            for item in d_p_pair_str.split(","):
+                try:
+                    if "-" in item:
+                        disease, probability = item.split("-", 1)
+                        disease = disease.strip()
+                        probability = probability.strip().replace("%", "")
+
+                        # 过滤多余的文字和换行符
+                        if "\n" in disease:
+                            disease = disease.split("\n")[-1].strip()
+                        if "。" in probability:
+                            probability = probability.split("。")[0].strip()
+
+                        # 验证并格式化
+                        if disease and probability.isdigit():
+                            d_p_pair.append({"name": disease, "prob": probability + "%"})
+                except Exception as parse_error:
+                    logger.warning(f"Error parsing diagnosis item: {repr(item)}, Error: {repr(parse_error)}")
+
+        except Exception as err:
+            logger.error(f"Error during LLM processing: {repr(err)}")
+            d_p_pair = []
+
+        # 返回标准化的结果
+        response = {
+            "head": 200,
+            "items": d_p_pair,
+            "msg": ""
+        }
+        logger.info(f"Final Response: {repr(response)}")
+        return response
 
     async def aigc_functions_relevant_inspection(self, **kwargs):
         prompt_template = (
             "# 患者与医生历史会话信息\n{history_str}\n\n"
             "# 任务描述\n"
             "你是一个经验丰富的医生,请你协助我进行疾病的鉴别诊断,输出建议我做的临床辅助检查项目\n"
-            "1. 请你根据历史会话信息、初步诊断的结果、鉴别诊断的知识、分析我的疾病，进一步输出能够让我确诊的临床检查项目\n"
+            "1. 请你根据历史会话信息、初步诊断的结果、鉴别诊断的知识、分析我的疾病，进一步输出能够让我确诊的临床检查项目\n"
             "2. 只输出检查项目的名称，不要其他的内容\n"
             "3. 不同检查项目名称之间用`,`隔开,检查项目不要重复\n\n"
             "# 初步诊断结果\n{diagnosis_str}\n\n"
@@ -1041,13 +1077,13 @@ class Agents:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return response
-    
+
     async def sanji_questions_generate(self, **kwargs) -> str:
         _event = "猜你想问"
         user_profile: str = self.__compose_user_msg__(
             "user_profile", user_profile=kwargs["user_profile"]
         )
-       
+
         prompt_vars = {
             "user_profile": user_profile,
             "content_all": kwargs["content_all"],
@@ -1062,17 +1098,17 @@ class Agents:
             **kwargs,
         )
         result = content.split('\n')
-        result_=[]
+        result_ = []
         for i in result:
-            i = i.replace('-','')
+            i = i.replace('-', '')
             question_marks = i.count('？')
-            if question_marks>1:
+            if question_marks > 1:
                 last_question_mark_index = i.rfind('？')
                 j = i[:last_question_mark_index].replace('？', '。') + i[last_question_mark_index:]
             else:
-                j=i
+                j = i
             result_.append(j)
-        return {'ques':result_}
+        return {'ques': result_}
 
     async def sanji_assess_3d_classification(self, **kwargs) -> str:
         """"""
@@ -1126,7 +1162,7 @@ class Agents:
             "messages": messages,
         }
         model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0,max_tokens=8192
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0, max_tokens=8192
         )
         content: str = await self.sanji_general(
             # process=0,
