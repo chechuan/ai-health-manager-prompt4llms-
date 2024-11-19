@@ -930,18 +930,25 @@ class Agents:
             "只输出`疾病`-`概率`,避免输入任何其他内容"
         )
 
-        # 2024年4月30日14:44:08 过滤重复的输入
+        # 去重过滤输入内容
         duplicate_messages, _messages = {}, []
         for item in kwargs["messages"]:
             if not duplicate_messages.get(item["content"]):
                 _messages.append(item)
                 duplicate_messages[item["content"]] = 1
+
         history_str = "\n".join([f"{item['content']}" for item in _messages])
         prompt = prompt_template.format(history_str=history_str)
         messages = [
             {"role": "system", "content": prompt},
             {"role": "user", "content": user_input},
         ]
+
+        # 日志记录输入
+        logger.debug(f"Formatted Prompt: {repr(prompt)}")
+        logger.debug(f"AIGC Functions Auxiliary Diagnosis LLM Input: {repr(messages)}")
+
+        # 获取模型参数
         model_args = await self.__update_model_args__(kwargs)
         model_args: dict = (
             {
@@ -954,19 +961,47 @@ class Agents:
         )
 
         try:
+            # 调用模型
             d_p_pair_str = await acallLLM(
                 model="Qwen1.5-72B-Chat",
                 query=messages,
                 **model_args,
             )
-            d_p_pair = [i.strip().split("-") for i in d_p_pair_str.split(",")]
-            d_p_pair = [
-                {"name": i[0], "prob": i[1].replace("%", "") + "%"} for i in d_p_pair
-            ]
-        except Exception as err:
-            logger.error(repr(err))
+            logger.info(f"AIGC Functions Auxiliary Diagnosis LLM Output: {repr(d_p_pair_str)}")
+
+            # 数据解析，清理多余字符
             d_p_pair = []
-        return d_p_pair
+            for item in d_p_pair_str.split(","):
+                try:
+                    if "-" in item:
+                        disease, probability = item.split("-", 1)
+                        disease = disease.strip()
+                        probability = probability.strip().replace("%", "")
+
+                        # 过滤多余的文字和换行符
+                        if "\n" in disease:
+                            disease = disease.split("\n")[-1].strip()
+                        if "。" in probability:
+                            probability = probability.split("。")[0].strip()
+
+                        # 验证并格式化
+                        if disease and probability.isdigit():
+                            d_p_pair.append({"name": disease, "prob": probability + "%"})
+                except Exception as parse_error:
+                    logger.warning(f"Error parsing diagnosis item: {repr(item)}, Error: {repr(parse_error)}")
+
+        except Exception as err:
+            logger.error(f"Error during LLM processing: {repr(err)}")
+            d_p_pair = []
+
+        # 返回标准化的结果
+        response = {
+            "head": 200,
+            "items": d_p_pair,
+            "msg": ""
+        }
+        logger.info(f"Final Response: {repr(response)}")
+        return response
 
     async def aigc_functions_relevant_inspection(self, **kwargs):
         prompt_template = (
