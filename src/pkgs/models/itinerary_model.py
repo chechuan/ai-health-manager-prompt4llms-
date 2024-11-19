@@ -93,7 +93,7 @@ class ItineraryModel:
         :return: 符合条件的住宿列表
         """
         logger.info("根据用户输入筛选住宿。")
-        accommodations = self.data["cleaned_accommodation"]
+        accommodations = self.data["cleaned_accommodation"][:6]
         filtered_accommodations = []
 
         travelers = user_data.get("travelers", [])
@@ -129,7 +129,7 @@ class ItineraryModel:
         :return: 符合条件的活动列表
         """
         logger.info("根据用户输入筛选活动。")
-        activities = self.data["cleaned_activities"]
+        activities = self.data["cleaned_activities"][:18]
         filtered_activities = []
 
         preferences = user_data.get("service_preference", [])
