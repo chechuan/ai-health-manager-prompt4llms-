@@ -313,20 +313,44 @@ Begin!"""
         return history
 
     def run(self, history: Dict):
-        system_prompt = """你是由来康生命研发的智小伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
-###下面是一些要求:
-1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智小伴
-2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
-3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务
-4. 对于用户的发散性提问，你不一定要给出答案，你可以用问题回答问题。你可以询问我任何你想了解的信息。
-5. 当我问你一个值得分析的问题时你要对问题进行拆解,一步步的和我聊
-6. 你的输出要口语化，突出重点
-7. 给出切实可行的实际方案,不要说假大空的套话。
-8. 你要具备积极的价值观，避免输出有毒有害的内容禁止输出黄赌毒相关信息
-9. 当我问你我是谁时，你要知道我是你的客户"""
+        from datetime import datetime
+
+        # 获取当前日期
+        def get_current_date():
+            return datetime.now().strftime("%Y年%m月%d日")
+
+        # 日期转星期
+        def get_weekday_from_date(date_str):
+            """
+            根据日期字符串计算星期几。
+            :param date_str: 日期字符串，格式为 "YYYY年MM月DD日"
+            :return: 星期几（如“星期一”）
+            """
+            weekdays = ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"]
+            date_obj = datetime.strptime(date_str, "%Y年%m月%d日")
+            return weekdays[date_obj.weekday()]
+
+        current_date = get_current_date()
+        system_prompt = f"""你是由来康生命研发的智小伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。
+            ###下面是一些要求:
+            1. 当问你是谁、叫什么名字、是什么模型时,你应当说: 我是智小伴
+            2. 当问你是什么公司或者组织机构研发的时,你应说: 我是由来康生命研发的
+            3. 可以为用户提供健康检测、运动指导、饮食管理、睡眠管理、心理疏导等服务
+            4. 对于用户的发散性提问，你不一定要给出答案，你可以用问题回答问题。你可以询问我任何你想了解的信息。
+            5. 当我问你一个值得分析的问题时你要对问题进行拆解,一步步的和我聊
+            6. 你的输出要口语化，突出重点
+            7. 给出切实可行的实际方案,不要说假大空的套话。
+            8. 你要具备积极的价值观，避免输出有毒有害的内容禁止输出黄赌毒相关信息
+            9. 当我问你我是谁时，你要知道我是你的客户
+            10. 如果对话中涉及日期问题，如“今天星期几”，你应根据提供的当前日期计算出星期几，并告知用户。日期会通过变量 `currentDate` 提供。
+            今天的日期是：{get_weekday_from_date(current_date)}
+            """
+        # 拼接消息历史
         messages = self.__compose_func_reply__(history)
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
+
+        # 调用模型
         response = callLLM(
             history=messages,
             model="Qwen1.5-72B-Chat",
@@ -337,8 +361,12 @@ Begin!"""
             presence_penalty=0,
             stream=True,
         )
+
+        # 处理模型响应
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"闲聊 LLM Output: {content}")
+
+        # 更新历史记录
         if history[-1].get("function_call"):
             history[-1]["function_call"]["arguments"] = content
         else:
@@ -346,10 +374,11 @@ Begin!"""
                 {
                     "intentCode": "other",
                     "role": "assistant",
-                    "content": "I know the answer.",
+                    "content": content,
                     "function_call": {"name": "convComplete", "arguments": content},
                 }
             )
+
         return content, history
 
     def generate_chat_response(self, messages):

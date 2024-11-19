@@ -111,7 +111,7 @@ def callLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         if stream:
             return completion
         retry = 0
@@ -123,7 +123,7 @@ def callLLM(
                 retry += 1
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         ret = completion.choices[0].text
     else:
         if query and not isinstance(query, object):
@@ -240,7 +240,7 @@ async def acallLLM(
         **kwargs,
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
-    
+
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
@@ -255,7 +255,7 @@ async def acallLLM(
                 logger.info(f"call llm error:{repr(e)}")
                 logger.info(f"request llm model error, retry to request")
                 continue
-        
+
         if stream:
             return completion
         retry = 0
