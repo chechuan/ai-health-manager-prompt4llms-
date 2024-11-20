@@ -3,4 +3,4 @@ WORKDIR ./ai-health-manager-prompt4llms
 COPY requirements.txt ./
 RUN pip install -r requirements.txt -i https://repo.huaweicloud.com/repository/pypi/simple -U
 COPY . .
-CMD ["sh","doc/deploy_proj/run_prod.sh"]
+CMD ["sh","doc/deploy_proj/run_dev.sh"]
