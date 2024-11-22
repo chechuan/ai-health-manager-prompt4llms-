@@ -478,13 +478,31 @@ def mount_aigc_functions(app: FastAPI):
     async def _aigc_functions_generate_itinerary(request: Request):
         # 这里调用生成行程的逻辑
         user_data = await request.json()
-        response = itinerary_model.generate_itinerary(user_data)
+        response = await itinerary_model.generate_itinerary(user_data)
         return response
 
     async def _aigc_functions_generate_bath_plan(request: Request):
         user_data = await request.json()
         # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = bath_plan_model.generate_bath_plan(user_data)
+        response = await bath_plan_model.generate_bath_plan(user_data)
+        return response
+
+    async def _aigc_functions_generate_itinerary_v1_1_0(request: Request):
+        # 这里调用生成行程的逻辑
+        user_data = await request.json()
+        response = await itinerary_model.generate_itinerary_v1_1_0(user_data)
+        return response
+
+    async def _aigc_functions_generate_bath_plan_v1_1_0(request: Request):
+        user_data = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        response = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
+        return response
+
+    async def _aigc_functions_likang_introduction_v1_1_0(request: Request):
+        params = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        response = await itinerary_model.aigc_functions_likang_introduction(**params)
         return response
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
@@ -497,10 +515,16 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
 
-
     app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
 
     app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
+
+    app.post("/aigc/v1_1_0/itinerary", description="根据用户的偏好和需求生成个性化行程清单（V1.1.0）")(_aigc_functions_generate_itinerary_v1_1_0)
+
+    app.post("/aigc/v1_1_0/bath_plan", description="生成泡浴方案（V1.1.0）")(_aigc_functions_generate_bath_plan_v1_1_0)
+
+    app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
+
 
 
 def mount_multimodal_endpoints(app: FastAPI):
