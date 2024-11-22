@@ -78,7 +78,7 @@ class MultiModalModel:
         management_tag = kwargs.get("management_tag", "")
         payload = {"user_info": user_info, "diet_info": diet_info, "management_tag": management_tag}
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{self.endpoint}/api/dishes/ana_food_eval", data=payload) as resp:
+            async with session.post(f"{self.endpoint}/api/dishes/ana_food_eval", json=payload) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     logger.debug(f"diet_eval success: {data}")
@@ -90,7 +90,7 @@ class MultiModalModel:
                     return self._get_result(resp.status, {}, error_msg)
                 
 if __name__ == '__main__':
-    
+
     # 初始化资源
     gsr = InitAllResource()
     multimodal_model = MultiModalModel(gsr)
