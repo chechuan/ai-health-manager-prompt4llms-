@@ -538,7 +538,15 @@ class Chat:
         elif intent == 'remind_take_blood_pressure':
             out_text = {'message':'好的，已通知张叔叔测量血压', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
-        elif intent in ["route_rec", "spa_rec"]:
+        # elif intent in ["route_rec", "spa_rec"]:
+        #     # # 直接使用 history 中的内容生成 messages
+        #     # messages = [
+        #     #     {"role": "user", "content": history[0]["content"]}
+        #     # ]
+        #     # # 调用 generate_chat_response 方法生成响应
+        #     # content = self.assistant.generate_chat_response(messages)
+        #     out_text = {'message': '', 'intentCode': intent, 'processCode': 'alg', 'intentDesc': desc}
+        elif intent in ["spa_knowledge"]:
             # 直接使用 history 中的内容生成 messages
             messages = [
                 {"role": "user", "content": history[0]["content"]}
