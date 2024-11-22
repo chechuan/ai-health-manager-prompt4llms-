@@ -1,0 +1,10 @@
+local:
+    endpoint: http://10.228.67.99:26926
+dev:
+    endpoint: http://10.228.67.99:26926
+test:
+    endpoint: http://10.228.67.99:26926
+fat:
+    endpoint: http://10.228.67.99:26926
+prod:
+    endpoint: http://10.228.67.99:26926
