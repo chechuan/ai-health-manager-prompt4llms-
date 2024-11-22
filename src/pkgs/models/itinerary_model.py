@@ -1312,7 +1312,7 @@ class ItineraryModel:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
-        business_category = list(set(article.get("category", "") for article in self.data.get("tweet_articles", [])))
+        business_category = list(set(article.get("business_category", "") for article in self.data.get("tweet_articles", [])))
         if not business_category:
             business_category = ["温泉", "酒店"]  # 默认值
 
@@ -1376,7 +1376,7 @@ class ItineraryModel:
             frontend_contents = await assemble_frontend_format_with_fixed_items(overview)
 
 
-        business_category = list(set(article.get("category", "") for article in self.data.get("tweet_articles", [])))
+        business_category = list(set(article.get("business_category", "") for article in self.data.get("tweet_articles", [])))
         if not business_category:
             business_category = ["温泉", "酒店"]  # 默认值
 

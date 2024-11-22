@@ -242,7 +242,7 @@ class BathPlanModel:
         # 转换为前端需要的结构化格式
         frontend_contents = await wrap_content_for_frontend(markdown_output, content_type="MARKDOWN")
 
-        business_category = list(set(article.get("category", "") for article in self.data.get("tweet_articles", [])))
+        business_category = list(set(article.get("business_category", "") for article in self.data.get("tweet_articles", [])))
         if not business_category:
             business_category = ["温泉", "酒店"]  # 默认值
 
