@@ -24,28 +24,20 @@ class BathPlanModel:
     def __init__(self, gsr):
         self.gsr = gsr
         self.mysql_conn = MysqlConnector(**self.gsr.mysql_config)
-        self.data = None  # 数据需要异步加载
+        self.data = self.load_data()
 
-    async def load_data(self):
+    def load_data(self):
         """
-        从数据库中异步加载泡浴方案和温泉作用表的数据
+        从数据库中加载泡浴方案和温泉作用表的数据
         """
         tables = [
             "bath_category_effects", "cleaned_bath_plan", "tweet_articles"
         ]
-        data = {}
-
-        # 使用 run_in_executor 来异步加载每个表
-        for table in tables:
-            query_result = await run_in_executor(self.mysql_conn.query, f"SELECT * FROM {table}")
-            data[table] = query_result
-
+        data = {table: self.mysql_conn.query(f"select * from {table}") for table in tables}
         return data
 
     # 读取泡浴方案和温泉作用的数据
     async def load_bath_plan_data(self):
-        if not self.data:
-            self.data = await self.load_data()
 
         bath_plan_data = self.data['cleaned_bath_plan']
         spring_effects_data = self.data['bath_category_effects']

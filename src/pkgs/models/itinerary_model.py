@@ -41,7 +41,7 @@ class ItineraryModel:
         """
         logger.info("正在从数据库加载行程推荐数据...")
         tables = [
-            "cleaned_accommodation", "cleaned_activities",
+            "cleaned_accommodation", "cleaned_activities", "tweet_articles"
             # "cleaned_agricultural_products",
             # "cleaned_agricultural_services", "cleaned_dining", "cleaned_health_projects",
             # "cleaned_packages", "cleaned_secondary_products", "cleaned_study_tour_products"
