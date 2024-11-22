@@ -4,6 +4,7 @@ import time
 from src.pkgs.models.func_eval_model.func_eva_util import *
 from src.prompt.model_init import acallLLM, callLLM
 from src.utils.Logger import logger
+from data.jiahe_util import get_userInfo
 
 async def image_recog(img):
         """识别图片类型"""
@@ -84,52 +85,64 @@ async def diet_image_recog(img):
 
         yield {"content": content, "head": 200, "err_msg":"", "end":True}
 
-async def convert_imgInfo_to_text_of_history(history):
-    for i, h in enumerate(history):
-        if h['content'].startswith('http'):
-            prompt = get_func_eval_prompt('img_info_prompt')
-            messages = [
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {"url": h['content']}
-                        }
-                    ]
-                }
-            ]
-            logger.debug(
-                "图片信息总结模型输入： " + json.dumps(messages, ensure_ascii=False)
-            )
-            start_time = time.time()
-            generate_text = await acallLLM(
-                history=messages,
-                max_tokens=200,
-                top_p=0.9,
-                temperature=0.8,
-                do_sample=True,
-                # stream=True,
-                is_vl=True,
-                model="Qwen-VL-base-0.0.1",
-            )
-            logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
-            logger.debug("图片信息总结模型输出： " + generate_text)
+async def extract_imgInfo(history, daily_diet_info):
+    img_info = []
+    if history:
+        for h in history:
+            if h['content'].startswith('http'):
+                img_info.append(h['content'])
+    elif daily_diet_info:
+        for i, info in enumerate(daily_diet_info):
+            if not info.get('diet_info', '') and info.get('diet_image', ''):
+                img_info.append(info['diet_image'])
+    for i, img_url in enumerate(img_info):
+        prompt = get_func_eval_prompt('img_sumUp_prompt') if history else get_func_eval_prompt('diet_image_recog_prompt')
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": img_url}
+                    }
+                ]
+            }
+        ]
+        logger.debug(
+            "图片信息总结/识别模型输入： " + json.dumps(messages, ensure_ascii=False)
+        )
+        start_time = time.time()
+        generate_text = await acallLLM(
+            history=messages,
+            max_tokens=200,
+            top_p=0.9,
+            temperature=0.8,
+            do_sample=True,
+            # stream=True,
+            is_vl=True,
+            model="Qwen-VL-base-0.0.1",
+        )
+        logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+        logger.debug("图片信息总结/识别模型输出： " + generate_text)
+        if history:
             history[i]['content'] = "上传了一张图片，图片信息为：" + generate_text
-
-        yield history
+        else:
+            generate_text = generate_text.replace("`", '').replace("json", '').strip()
+            generate_text = generate_text[generate_text.find('['): generate_text.rfind(']') + 1]
+            content = json.loads(generate_text.strip())
+            daily_diet_info[i]['diet_info'] = content
+    yield history if history else daily_diet_info
 
 
 async def schedule_tips_modify(schedule_template, history, cur_time):
     """日程修改"""
-    yield_item = convert_imgInfo_to_text_of_history(history)
+    yield_item = extract_imgInfo(history=history, daily_diet_info=[])
     his = []
     async for item in yield_item:
         his = item
     his_str = get_history_info(his)
-    # prompt = get_func_eval_prompt('schedule_modify_prompt')
-    prompt = schedule_modify_prompt
+    prompt = get_func_eval_prompt('schedule_modify_prompt')
     messages = [
         {
             "role": "user",
@@ -157,3 +170,117 @@ async def schedule_tips_modify(schedule_template, history, cur_time):
     logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     logger.debug("日程tips修改模型输出： " + generate_text)
     yield {"schedule_tips": generate_text, "head": 200, "err_msg": "", "end": True}
+
+async def sport_schedule_tips_modify(schedule, history, cur_time):
+    """运动日程修改"""
+    yield_item = extract_imgInfo(history=history, daily_diet_info=[])
+    his = []
+    async for item in yield_item:
+        his = item
+    his_str = get_history_info(his)
+    sch_str = get_sch_str(schedule)
+    prompt = get_func_eval_prompt('sport_schedule_recog_prompt')
+    messages = [
+        {
+            "role": "user",
+            "content": prompt.format(
+                sch_str,
+                his_str,
+                cur_time
+            ),
+        }
+    ]
+    logger.debug(
+        "运动日程修改模型输入： " + prompt.format(
+                sch_str,
+                his_str,
+                cur_time,
+            )
+    )
+    start_time = time.time()
+    generate_text = await acallLLM(
+        history=messages,
+        max_tokens=200,
+        top_p=0.9,
+        temperature=0.8,
+        do_sample=True,
+        # stream=True,
+        is_vl=True,
+        model="Qwen1.5-32B-Chat",
+    )
+    logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+    logger.debug("运动日程修改模型输出： " + generate_text)
+    generate_text = generate_text.replace("`", '').replace("json", '').strip()
+    generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}') + 1].replace('\n\\', '').replace('\n', '').replace(' ', '')
+    content = json.loads(generate_text.strip())
+    if not content.get('is_modify'):
+        yield {"is_modify":False, "modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
+    else:
+        yield {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
+
+
+    # async def gen_diet_eval(cur_date, location, personal_dietary_requirements,history=[], userInfo={}):
+    #     """饮食评估"""
+    #     userInfo, his_prompt = get_userInfo_history(userInfo, history)
+    #     messages = [
+    #         {
+    #             "role": "user",
+    #             "content": jiahe_daily_diet_principle_prompt.format(
+    #                 userInfo, cur_date, location, his_prompt, personal_dietary_requirements
+    #             ),
+    #         }
+    #     ]
+    #     logger.debug(
+    #         "当餐饮食评估模型输入： " + json.dumps(messages, ensure_ascii=False)
+    #     )
+    #     start_time = time.time()
+    #     generate_text = callLLM(
+    #         history=messages,
+    #         max_tokens=2048,
+    #         top_p=0.9,
+    #         temperature=0.8,
+    #         do_sample=True,
+    #         # stream=True,
+    #         model="Qwen1.5-32B-Chat",
+    #     )
+    #     logger.debug("当餐饮食评估模型输出latancy： " + str(time.time() - start_time))
+    #     logger.debug("当餐饮食评估模型输出： " + generate_text)
+    #     yield {"message": generate_text, "end": True}
+
+async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
+    """一日饮食评估建议"""
+    yield_item = extract_imgInfo(history=[], daily_diet_info=daily_diet_info)
+    daily_diet_info = []
+    async for item in yield_item:
+        daily_diet_info = item
+    daily_diet_str = get_daily_diet_str(daily_diet_info)
+    prompt = get_func_eval_prompt('daily_diet_eval_prompt')
+    userInfo_str = get_userInfo(userInfo)
+    bg_str = get_daily_blood_glucose_str(daily_blood_glucose)
+    messages = [
+        {
+            "role": "user",
+            "content": prompt.format(
+                userInfo_str,
+                daily_diet_str,
+                bg_str,
+                management_tag,
+            ),
+        }
+    ]
+    logger.debug(
+        "一日饮食评估建议模型输入： " + prompt.format(userInfo,daily_diet_str, daily_blood_glucose, management_tag)
+    )
+    start_time = time.time()
+    generate_text = await acallLLM(
+        history=messages,
+        max_tokens=200,
+        top_p=0.9,
+        temperature=0.8,
+        do_sample=True,
+        is_vl=True,
+        model="Qwen1.5-32B-Chat",
+    )
+    logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+    logger.debug("一日饮食评估建议模型输出： " + generate_text)
+    yield {"daily_diet_eval": generate_text.replace('\n\n', '\n'), "head": 200, "err_msg": "", "end": True}

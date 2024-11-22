@@ -46,6 +46,8 @@ from src.pkgs.models.func_eval_model.func_eval_model import (
     image_recog,
     diet_image_recog,
     schedule_tips_modify,
+    sport_schedule_tips_modify,
+    daily_diet_eval,
 )
 
 
@@ -656,6 +658,41 @@ def create_app():
             generator: AsyncGenerator = schedule_tips_modify(param.get("schedule_tips", ""),
                                                              param.get("history", []),
                                                              param.get("cur_time", ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/sport_schedule_modify_suggestion", methods=["post"])
+    async def _schedule_tips_modify(request: Request):
+        """用户运动日程修改"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/sport_schedule_modify_suggestion")
+            generator: AsyncGenerator = sport_schedule_tips_modify(param.get("schedule", []),
+                                                             param.get("history", []),
+                                                             param.get("cur_time", ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/daily_diet_eval", methods=["post"])
+    async def _schedule_tips_modify(request: Request):
+        """一日血糖饮食建议"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
+            generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
+                                                                   param.get("daily_diet_info", []),
+                                                                   param.get("daily_blood_glucose", ''),
+                                                                   param.get("management_tag", ''))
             result = decorate_general_complete(
                 generator
             )

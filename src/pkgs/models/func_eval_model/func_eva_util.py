@@ -11,6 +11,29 @@ def get_history_info(history):
         his_str += f"{i['send_time']}: {i['role']}: {i['content']}\n"
     return his_str
 
+def get_sch_str(schedule):
+    sch_str = ''
+    for s in schedule:
+        sch_str += f"{s.get('time', '')} {s.get('name', '')}\n"
+    return sch_str
+
+def get_daily_blood_glucose_str(daily_blood_glucose):
+    bg_str = ''
+    for i in daily_blood_glucose:
+        bg_str += f"{i.get('time', '')} {i.get('value', '')}; "
+    return bg_str
+
+
+
+def get_daily_diet_str(daily_diet_info):
+    daily_diet_str = ''
+    for i in daily_diet_info:
+        diet_info = ''
+        for info in i.get('diet_info', []):
+            if info:
+                diet_info += f"{info.get('count')}{info.get('unit')}{info.get('count')}，"
+        daily_diet_str += f"{i.get('diet_time', '')} 饮食情况为：{diet_info}。医生评价是：{i.get('diet_eval', '无')}\n"
+
 def get_standard_img_type(text):
     if '运动' in text:
         return 'sport_image'
