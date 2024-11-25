@@ -136,7 +136,7 @@ async def extract_imgInfo(history, daily_diet_info):
 
 
 async def schedule_tips_modify(schedule_template, history, cur_time):
-    """日程修改"""
+    """日程tips修改"""
     yield_item = extract_imgInfo(history=history, daily_diet_info=[])
     his = []
     async for item in yield_item:
@@ -163,7 +163,6 @@ async def schedule_tips_modify(schedule_template, history, cur_time):
         top_p=0.9,
         temperature=0.8,
         do_sample=True,
-        # stream=True,
         is_vl=True,
         model="Qwen1.5-32B-Chat",
     )
@@ -203,7 +202,6 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
         max_tokens=200,
         top_p=0.9,
         temperature=0.8,
-        do_sample=True,
         # stream=True,
         is_vl=True,
         model="Qwen1.5-32B-Chat",
@@ -217,35 +215,6 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
         yield {"is_modify":False, "modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
     else:
         yield {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
-
-
-    # async def gen_diet_eval(cur_date, location, personal_dietary_requirements,history=[], userInfo={}):
-    #     """饮食评估"""
-    #     userInfo, his_prompt = get_userInfo_history(userInfo, history)
-    #     messages = [
-    #         {
-    #             "role": "user",
-    #             "content": jiahe_daily_diet_principle_prompt.format(
-    #                 userInfo, cur_date, location, his_prompt, personal_dietary_requirements
-    #             ),
-    #         }
-    #     ]
-    #     logger.debug(
-    #         "当餐饮食评估模型输入： " + json.dumps(messages, ensure_ascii=False)
-    #     )
-    #     start_time = time.time()
-    #     generate_text = callLLM(
-    #         history=messages,
-    #         max_tokens=2048,
-    #         top_p=0.9,
-    #         temperature=0.8,
-    #         do_sample=True,
-    #         # stream=True,
-    #         model="Qwen1.5-32B-Chat",
-    #     )
-    #     logger.debug("当餐饮食评估模型输出latancy： " + str(time.time() - start_time))
-    #     logger.debug("当餐饮食评估模型输出： " + generate_text)
-    #     yield {"message": generate_text, "end": True}
 
 async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
     """一日饮食评估建议"""
