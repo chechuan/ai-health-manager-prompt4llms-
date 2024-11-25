@@ -1809,7 +1809,7 @@ async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
                     {
                         "label": "日期",
                         "prop": "value1",
-                        "min-width": 70,
+                        "min-width": 80,
                         "mergeRows": ["value1"],
                         "fixed": False
                     },
