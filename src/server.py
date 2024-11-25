@@ -29,6 +29,7 @@ from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.models.health_expert_model import HealthExpertModel
 from src.pkgs.models.itinerary_model import ItineraryModel
 from src.pkgs.models.bath_plan_model import BathPlanModel
+from src.pkgs.models.multimodal_model import MultiModalModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
@@ -540,6 +541,47 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
 
 
+
+def mount_multimodal_endpoints(app: FastAPI):
+
+    @app.route("/func_eval/image_type_recog", methods=["post"])
+    async def _func_eval_image_type_recog(request: Request):
+        """图片分类，包含：饮食、运动、报告、其他"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/image_type_recog")
+            ret = await multimodal_model.image_type_recog(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/func_eval/diet_recog", methods=["post"])
+    async def _func_eval_diet_recog(request: Request):
+        """菜品识别，提取菜品名称、数量、单位信息"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_recog")
+            ret = await multimodal_model.diet_recog(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/func_eval/diet_eval", methods=["post"])
+    async def _func_eval_diet_eval(request: Request):
+        """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_eval")
+            ret = await multimodal_model.diet_eval(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
 
 def create_app():
@@ -1221,6 +1263,7 @@ def create_app():
     mount_aigc_functions(app)
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
+    mount_multimodal_endpoints(app)
     MakeFastAPIOffline(app)
     return app
 
@@ -1236,6 +1279,7 @@ def prepare_for_all():
     global jiahe_expert
     global itinerary_model
     global bath_plan_model
+    global multimodal_model
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1247,6 +1291,7 @@ def prepare_for_all():
     jiahe_expert = JiaheExpertModel(gsr)
     itinerary_model = ItineraryModel(gsr)
     bath_plan_model = BathPlanModel(gsr)
+    multimodal_model = MultiModalModel(gsr)
 
 
 # app = create_app()

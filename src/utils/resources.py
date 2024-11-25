@@ -132,6 +132,7 @@ class InitAllResource:
             for event in event_list
         }
         intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
+        self.multimodal_config = load_yaml(Path("config", "multimodal_config.yaml"))[self.args.env]
 
         self.intent_aigcfunc_map = {}
         _tmp_dict = {}
