@@ -556,6 +556,16 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
         )
     return prompt
 
+async def extract_clean_output(response: str) -> str:
+    # 提取 <|im_start|>assistant 到 <|im_end|> 之间的内容
+    matches = re.findall(r"<\|im_start\|>assistant\s*(.*?)<\|im_end\|>", response, re.DOTALL)
+    if matches:
+        # 如果有多段输出，合并成单段
+        return "\n".join(match.strip() for match in matches)
+    else:
+        # 如果没有匹配，移除所有 <|im_start|> 和 <|im_end|>
+        return response.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
+
 
 async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
@@ -1664,6 +1674,7 @@ async def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
 
     return True
 
+
 async def run_in_executor(func, *args, **kwargs):
     """
     在线程池中执行同步函数。
@@ -1678,6 +1689,7 @@ async def run_in_executor(func, *args, **kwargs):
     """
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
+
 
 async def wrap_content_for_frontend(content_text, content_type="MARKDOWN", item_title=""):
     """

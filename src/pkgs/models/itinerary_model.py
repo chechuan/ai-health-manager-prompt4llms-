@@ -14,10 +14,11 @@ import math
 import random
 import json
 from typing import Generator
-from src.prompt.model_init import acallLLM
+from src.prompt.model_init import acallLLM, callLikangLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
-from src.utils.module import run_in_executor, wrap_content_for_frontend, parse_generic_content, assemble_frontend_format_with_fixed_items
+from src.utils.module import (run_in_executor, wrap_content_for_frontend, parse_generic_content,
+                              assemble_frontend_format_with_fixed_items, extract_clean_output)
 import asyncio
 import json5
 
@@ -975,10 +976,10 @@ class ItineraryModel:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -986,7 +987,7 @@ class ItineraryModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
 
     async def aigc_functions_itinerary_description(self, day_itinerary: dict, **kwargs) -> dict:
@@ -1288,36 +1289,61 @@ class ItineraryModel:
         :param kwargs: 包含会话记录(messages)和背景信息(background_info)的动态参数
         :return: 生成的介绍内容，返回标准化结构
         """
+        # 获取事件码
         _event = kwargs.get("intentCode", "aigc_functions_likang_introduction")
 
-        messages = await self.__compose_user_msg__(
-            "messages",
-            messages=kwargs.get("messages", ""),
-            role_map={"assistant": "智小伴", "user": "用户"}
+        # 动态获取系统提示
+        system_prompt_template = self.gsr.get_event_item(_event)["description"]
+        if not system_prompt_template:
+            raise ValueError(f"无法从事件 {_event} 获取有效的描述，请检查配置！")
+
+        # 动态插入当前时间
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        system_prompt = system_prompt_template.format(datetime=current_time)
+
+        # 组合用户消息
+        messages = kwargs.get("messages", [])
+        messages = [{"role": "system", "content": system_prompt}] + messages
+
+        # 调试日志，记录完整消息内容
+        logger.debug(f"生成固安来康郡介绍 LLM Input: {repr(messages)}")
+
+        try:
+            # 调用大模型直接生成内容
+            content = await callLikangLLM(
+                history=messages,
+                model="Qwen1.5-32B-Chat",
+                temperature=0.7,
+                top_p=0.7,
+                repetition_penalty=1.0,
+                stream=False
+            )
+
+            # 添加日志记录输出内容
+            logger.debug(f"生成固安来康郡介绍 LLM Output: {content}")
+
+        except Exception as e:
+            logger.error(f"调用大模型时发生错误: {repr(e)}")
+            raise
+
+        # 处理业务分类
+        business_category = list(
+            set(
+                article.get("business_category", "")
+                for article in self.data.get("tweet_articles", [])
+                if article.get("category") in ["温泉", "酒店"]
+            )
         )
-
-        # 构建大模型参数
-        prompt_vars = {
-            "messages": messages,
-            "datetime": datetime.today().strftime("%Y-%m-%d")
-            # "background_info": kwargs.get("background_info", "")
-        }
-
-        model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
-
-        # 调用大模型
-        content = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-        )
-
-        business_category = list(set(article.get("business_category", "") for article in self.data.get("tweet_articles", [])))
         if not business_category:
-            business_category = ["温泉", "酒店"]  # 默认值
+            business_category = ["温泉", "酒店"]  # 设置默认值
 
+        # 清理生成的内容
+        content = await extract_clean_output(content)
+
+        # 格式化内容供前端使用
         frontend_contents = await wrap_content_for_frontend(content)
 
+        # 构建返回结果
         res = {
             "head": 200,
             "items": {
@@ -1375,8 +1401,13 @@ class ItineraryModel:
             # 如果行程大于三天，生成 frontend_contents
             frontend_contents = await assemble_frontend_format_with_fixed_items(overview)
 
-
-        business_category = list(set(article.get("business_category", "") for article in self.data.get("tweet_articles", [])))
+        business_category = list(
+            set(
+                article.get("business_category", "")
+                for article in self.data.get("tweet_articles", [])
+                if article.get("category") in ["温泉", "酒店"]
+            )
+        )
         if not business_category:
             business_category = ["温泉", "酒店"]  # 默认值
 
