@@ -12,9 +12,15 @@ from src.utils.database import MysqlConnector
 import re
 from src.utils.resources import InitAllResource
 from src.utils.Logger import logger
+from src.utils.module import run_in_executor, wrap_content_for_frontend
+
 
 
 class BathPlanModel:
+    # 将常量提取为类变量
+    NOTICE = "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适"
+    OUTPUT_BASIS = "根据您的测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡汤方案，具体内容如下："
+
     def __init__(self, gsr):
         self.gsr = gsr
         self.mysql_conn = MysqlConnector(**self.gsr.mysql_config)
@@ -25,13 +31,14 @@ class BathPlanModel:
         从数据库中加载泡浴方案和温泉作用表的数据
         """
         tables = [
-            "bath_category_effects", "cleaned_bath_plan"
+            "bath_category_effects", "cleaned_bath_plan", "tweet_articles"
         ]
         data = {table: self.mysql_conn.query(f"select * from {table}") for table in tables}
         return data
 
     # 读取泡浴方案和温泉作用的数据
-    def load_bath_plan_data(self):
+    async def load_bath_plan_data(self):
+
         bath_plan_data = self.data['cleaned_bath_plan']
         spring_effects_data = self.data['bath_category_effects']
 
@@ -42,7 +49,7 @@ class BathPlanModel:
 
         return bath_plan_dict, spring_effects_dict
 
-    def parse_bath_plan(self, bath_plan_string, spring_effects_data, gender, is_default=False):
+    async def parse_bath_plan(self, bath_plan_string, spring_effects_data, gender, is_default=False):
         """
         解析泡浴方案字符串，将温泉名和作用提取出来
         """
@@ -82,11 +89,11 @@ class BathPlanModel:
 
         return bath_plan
 
-    def generate_bath_plan(self, user_data):
+    async def generate_bath_plan(self, user_data):
         """
         根据用户输入的健康问题生成泡浴方案
         """
-        bath_plan_data, spring_effects_data = self.load_bath_plan_data()
+        bath_plan_data, spring_effects_data = await self.load_bath_plan_data()
 
         full_plan = []
         user_problems = []
@@ -105,12 +112,12 @@ class BathPlanModel:
         elif len(user_problems) > 1:
             combination_key = '+'.join(user_problems)
         else:
-            return self.default_bath_plan(user_data['gender'], spring_effects_data, bath_plan_data)
+            return await self.default_bath_plan(user_data['gender'], spring_effects_data, bath_plan_data)
 
         if combination_key in bath_plan_data:
             bath_plan_string = bath_plan_data[combination_key]
-            full_plan = self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data['gender'], is_default=False)
-            health_analysis = self.get_health_analysis(combination_key, user_data['gender'])
+            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data['gender'], is_default=False)
+            health_analysis = await self.get_health_analysis(combination_key, user_data['gender'])
         else:
             return {"msg": "未找到匹配的泡浴方案"}
 
@@ -125,7 +132,7 @@ class BathPlanModel:
             "msg": ""
         }
 
-    def get_health_analysis(self, combination_key, gender):
+    async def get_health_analysis(self, combination_key, gender):
         """
         根据问题组合键和性别获取健康分析
         """
@@ -142,28 +149,111 @@ class BathPlanModel:
         else:
             return "未找到健康分析"
 
-    def default_bath_plan(self, gender, spring_effects_data, bath_plan_data):
+    async def default_bath_plan(self, gender, spring_effects_data, bath_plan_data):
         """
         当用户未选择问题时，返回默认方案
         """
         if "未选择问题" in bath_plan_data:
             default_plan_string = bath_plan_data["未选择问题"]
             default_plan_string = default_plan_string.replace("专享泉", "男士泉" if gender == "男" else "女士泉")
-            default_plan = self.parse_bath_plan(default_plan_string, spring_effects_data, gender, is_default=True)
-            health_analysis = self.get_health_analysis("未选择问题", gender)
+            default_plan = await self.parse_bath_plan(default_plan_string, spring_effects_data, gender, is_default=True)
+            health_analysis = await self.get_health_analysis("未选择问题", gender)
 
             return {
                 "head": 200,
                 "items": {
                     "bath_plan": default_plan,
-                    "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
-                    "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
+                    "notice": self.NOTICE,
+                    "output_basis": self.OUTPUT_BASIS,
                     "health_analysis": health_analysis
                 },
                 "msg": ""
             }
         else:
             return {"msg": "未找到默认的泡浴方案"}
+
+    async def generate_markdown_bath_plan(self, full_plan, health_analysis):
+        """
+        根据泡浴方案和健康分析生成 Markdown 格式内容
+        """
+        # 健康分析部分
+        markdown = f"根据您的症状描述，{health_analysis}\n\n"
+
+        # 添加 output_basis 说明
+        markdown += f"{self.OUTPUT_BASIS}\n\n"
+
+        # 判断是否有温泉池，并生成方案部分
+        for idx, step in enumerate(full_plan):
+            if idx == 0:  # 第一条为重点推荐
+                markdown += f"- **{step['spring_name']}（重点推荐）**\n"
+            else:  # 其余为普通推荐，没有括号内容
+                markdown += f"- **{step['spring_name']}**\n"
+            markdown += f"  - **时间建议**: {step['suggested_time']}\n"
+            markdown += f"  - **疗愈效果**: {step['effect']}\n\n"
+
+        # 添加温馨提示部分
+        markdown += f"**智小伴建议**：{self.NOTICE}\n\n"
+
+        return markdown
+
+    async def generate_bath_plan_v1_1_0(self, user_data):
+        """
+        根据用户输入的健康问题生成泡浴方案
+        """
+        bath_plan_data, spring_effects_data = await self.load_bath_plan_data()
+
+        full_plan = []
+        user_problems = []
+
+        if user_data.get('skin_problems'):
+            user_problems.append('皮肤问题')
+        if user_data.get('pain_problems'):
+            user_problems.append('疼痛问题')
+        if user_data.get('fatigue_problems'):
+            user_problems.append('疲劳问题')
+        if user_data.get('sleep_problems'):
+            user_problems.append('睡眠问题')
+
+        if len(user_problems) == 1:
+            combination_key = user_problems[0]
+        elif len(user_problems) > 1:
+            combination_key = '+'.join(user_problems)
+        else:
+            return await self.default_bath_plan(user_data['gender'], spring_effects_data, bath_plan_data)
+
+        if combination_key in bath_plan_data:
+            bath_plan_string = bath_plan_data[combination_key]
+            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data['gender'], is_default=False)
+            health_analysis = await self.get_health_analysis(combination_key, user_data['gender'])
+        else:
+            return {"msg": "未找到匹配的泡浴方案"}
+
+        # 生成 Markdown 格式
+        markdown_output = await self.generate_markdown_bath_plan(full_plan, health_analysis)
+
+        # 转换为前端需要的结构化格式
+        frontend_contents = await wrap_content_for_frontend(markdown_output, content_type="MARKDOWN")
+
+        business_category = list(
+            set(
+                article.get("business_category", "")
+                for article in self.data.get("tweet_articles", [])
+                if article.get("category") in ["温泉", "酒店"]
+            )
+        )
+        if not business_category:
+            business_category = ["温泉", "酒店"]  # 默认值
+
+        return {
+            "head": 200,
+            "items": {
+                "plan": full_plan,
+                "contents": frontend_contents,
+                "cates": business_category
+            },
+            "msg": ""
+        }
+
 
 
 if __name__ == '__main__':
