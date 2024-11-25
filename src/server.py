@@ -557,7 +557,7 @@ def mount_multimodal_endpoints(app: FastAPI):
 
     @app.route("/func_eval/diet_eval", methods=["post"])
     async def _func_eval_diet_eval(request: Request):
-        """饮食评估，根据用户信息、饮食信息、用户管理标签，生成一句话点评"""
+        """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
         try:
             param = await async_accept_param_purge(request, endpoint="/func_eval/diet_eval")
             ret = await multimodal_model.diet_eval(**param)

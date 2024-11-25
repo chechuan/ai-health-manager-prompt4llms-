@@ -72,11 +72,12 @@ class MultiModalModel:
                     return self._get_result(resp.status, {}, error_msg)
     
     async def diet_eval(self, **kwargs):
-        """饮食评估，根据用户信息、饮食信息、用户管理标签，生成一句话点评"""
+        """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
         user_info = kwargs.get("user_info", {})
         diet_info = kwargs.get("diet_info", [])
         management_tag = kwargs.get("management_tag", "")
-        payload = {"user_info": user_info, "diet_info": diet_info, "management_tag": management_tag}
+        diet_period = kwargs.get("diet_period", "")
+        payload = {"user_info": user_info, "diet_info": diet_info, "management_tag": management_tag, "diet_period": diet_period}
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.endpoint}/api/dishes/ana_food_eval", json=payload) as resp:
                 if resp.status == 200:
