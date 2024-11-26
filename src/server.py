@@ -672,33 +672,33 @@ def create_app():
         """用户运动日程修改"""
         try:
             param = await accept_param(request, endpoint="/func_eval/sport_schedule_modify_suggestion")
-            generator: AsyncGenerator = sport_schedule_tips_modify(param.get("schedule", []),
-                                                             param.get("history", []),
-                                                             param.get("cur_time", ''))
-            result = decorate_general_complete(
-                generator
-            )
+            item = await sport_schedule_tips_modify(param.get("schedule", []),
+                                              param.get("history", []),
+                                              param.get("cur_time", ''))
+            result = make_result(items=item)
         except Exception as err:
             logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
         finally:
-            return StreamingResponse(result, media_type="text/event-stream")
+            return result
 
     @app.route("/func_eval/daily_diet_eval", methods=["post"])
     async def _schedule_tips_modify(request: Request):
         """一日血糖饮食建议"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
-            generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
-                                                                   param.get("daily_diet_info", []),
-                                                                   param.get("daily_blood_glucose", ''),
-                                                                   param.get("management_tag", ''))
+            generator: AsyncGenerator = await daily_diet_eval(param.get("userInfo", {}),
+                                   param.get("daily_diet_info", []),
+                                   param.get("daily_blood_glucose", ''),
+                                   param.get("management_tag", ''))
             result = decorate_general_complete(
                 generator
             )
         except Exception as err:
             logger.exception(err)
             result = yield_result(head=600, msg=repr(err), items=param)
+
         finally:
             return StreamingResponse(result, media_type="text/event-stream")
 

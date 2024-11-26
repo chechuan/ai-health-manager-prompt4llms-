@@ -212,9 +212,9 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}') + 1].replace('\n\\', '').replace('\n', '').replace(' ', '')
     content = json.loads(generate_text.strip())
     if not content.get('is_modify'):
-        yield {"is_modify":False, "modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
+        return {"is_modify":False, "modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
     else:
-        yield {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
+        return {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
 
 async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
     """一日饮食评估建议"""
