@@ -481,7 +481,6 @@ def curr_weekday():
     today = date.today().strftime("%A")
     return today
 
-
 def dumpJS(obj, ensure_ascii=False, **kwargs):
     return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
 
