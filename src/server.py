@@ -763,7 +763,7 @@ def create_app():
         """一日血糖饮食建议"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
-            generator: AsyncGenerator = await daily_diet_eval(param.get("userInfo", {}),
+            generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
                                    param.get("daily_diet_info", []),
                                    param.get("daily_blood_glucose", ''),
                                    param.get("management_tag", ''))
