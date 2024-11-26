@@ -766,7 +766,7 @@ def create_app():
             generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
                                    param.get("daily_diet_info", []),
                                    param.get("daily_blood_glucose", ''),
-                                   param.get("management_tag", ''))
+                                   param.get("management_tag", '血糖管理'))
             result = decorate_general_complete(
                 generator
             )
