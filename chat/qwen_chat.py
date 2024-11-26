@@ -496,17 +496,6 @@ class Chat:
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
 
-        # 应对演示临时添加-240208
-        import json
-        data_demo = json.load(open('data/demo.json', 'r'))
-        data_demo = sorted(data_demo, key=lambda x:len(x['key_words']), reverse=True)
-        for i in data_demo:
-            key_num = sum([1 for k in i['key_words'] if k in
-                history[-1]['contnet']])
-            if key_num == len(i['key_words']) and key_num > 0:
-                return {'message':i['response'], 'intentCode':'other',
-                        'processCode':i['processCode'], 'intentDesc':'日常对话'}
-
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))

@@ -69,7 +69,7 @@ async def diet_image_recog(img):
         start_time = time.time()
         generate_text = await acallLLM(
             history=messages,
-            max_tokens=500,
+            max_tokens=1000,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -115,7 +115,7 @@ async def extract_imgInfo(history, daily_diet_info):
         start_time = time.time()
         generate_text = await acallLLM(
             history=messages,
-            max_tokens=200,
+            max_tokens=1000,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -159,7 +159,7 @@ async def schedule_tips_modify(schedule_template, history, cur_time):
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         do_sample=True,
@@ -199,7 +199,7 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         # stream=True,
@@ -238,12 +238,12 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         }
     ]
     logger.debug(
-        "一日饮食评估建议模型输入： " + prompt.format(userInfo,daily_diet_str, daily_blood_glucose, management_tag)
+        "一日饮食评估建议模型输入： " + prompt.format(userInfo,daily_diet_str, bg_str, management_tag)
     )
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         do_sample=True,

@@ -178,9 +178,14 @@ def get_parent_scene_intent(prompt_tool_data, scene_code):
 
 def get_sub_scene_intent(prompt_tool_data, scene_code, parant_intent):
     res = []
+    other_intent = ''
     for i in prompt_tool_data.keys():
+        if i == '其他':
+            other_intent = i + ':' + prompt_tool_data[i]['description']
+            continue
         if prompt_tool_data[i]['scene'] and prompt_tool_data[i]['hierarchy'] == 1 and parant_intent == prompt_tool_data[i]['paternal_intent'] and scene_code in prompt_tool_data[i]['scene'].split(','):
             res.append(i + ':' + prompt_tool_data[i]['description'])
+    res.append(other_intent)
     return '\n'.join(res)
 
 def get_sub_scene_intent_v2(prompt_tool_data, scene_code, parant_intent):
