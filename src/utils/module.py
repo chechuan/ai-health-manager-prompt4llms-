@@ -476,7 +476,6 @@ def this_sunday():
         today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
     )
 
-
 def curr_weekday():
     today = date.today().strftime("%A")
     return today
