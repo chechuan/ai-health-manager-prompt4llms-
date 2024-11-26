@@ -17,6 +17,7 @@ local:
             - Qwen1.5-72B-Chat
             - Qwen2-72B-Instruct
             - bce-embedding-base-v1
+            - Qwen-VL-base-0.0.1
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -36,6 +37,7 @@ dev:
                 - Qwen1.5-72B-Chat
                 - Qwen2-72B-Instruct
                 - bce-embedding-base-v1
+                - Qwen-VL-base-0.0.1
 prod:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate.op.laikang.com/aihealthmanager
@@ -55,3 +57,4 @@ prod:
                 - Qwen1.5-72B-Chat
                 - Qwen2-72B-Instruct
                 - bce-embedding-base-v1
+                - Qwen-VL-base-0.0.1

@@ -44,6 +44,7 @@ def callLLM(
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
+        is_vl=False,
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
@@ -126,26 +127,29 @@ def callLLM(
 
         ret = completion.choices[0].text
     else:
-        if query and not isinstance(query, object):
-            history += [{"role": "user", "content": query}]
-        # 定义允许的字段集合
-        allowed_keys = {'role', 'content'}
+        if is_vl:
+            kwds["messages"] = history
+        else:
+            if query and not isinstance(query, object):
+                history += [{"role": "user", "content": query}]
+            # 定义允许的字段集合
+            allowed_keys = {'role', 'content'}
 
-        # 过滤消息中的非允许字段
-        clean_history = []
-        for msg in history:
-            msg_copy = {k: v for k, v in msg.items() if k in allowed_keys}
-            clean_history.append(msg_copy)
+            # 过滤消息中的非允许字段
+            clean_history = []
+            for msg in history:
+                msg_copy = {k: v for k, v in msg.items() if k in allowed_keys}
+                clean_history.append(msg_copy)
 
-        msg = ""
-        for i, n in enumerate(list(reversed(clean_history))):
-            msg += n["content"]
-            if len(msg) > 12000:
-                h = clean_history[-i:]
-                break
-            else:
-                h = clean_history
-        kwds["messages"] = h
+            msg = ""
+            for i, n in enumerate(list(reversed(clean_history))):
+                msg += n["content"]
+                if len(msg) > 1800:
+                    h = clean_history[-i:]
+                    break
+                else:
+                    h = clean_history
+            kwds["messages"] = h
         # logger.debug("LLM输入：" + json.dumps(kwds, ensure_ascii=False))
         retry = 0
         while retry <= retry_times:
@@ -191,6 +195,7 @@ async def acallLLM(
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
+        is_vl=False,
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
@@ -272,17 +277,20 @@ async def acallLLM(
 
         ret = completion.choices[0].text
     else:
-        if query and not isinstance(query, object):
-            history += [{"role": "user", "content": query}]
-        msg = ""
-        for i, n in enumerate(list(reversed(history))):
-            msg += n["content"]
-            if len(msg) > 1200:
-                h = history[-i:]
-                break
-            else:
-                h = history
-        kwds["messages"] = h
+        if is_vl:
+            kwds["messages"] = history
+        else:
+            if query and not isinstance(query, object):
+                history += [{"role": "user", "content": query}]
+            msg = ""
+            for i, n in enumerate(list(reversed(history))):
+                msg += n["content"]
+                if len(msg) > 1800:
+                    h = history[-i:]
+                    break
+                else:
+                    h = history
+            kwds["messages"] = h
         retry = 0
         while retry <= retry_times:
             try:
