@@ -21,10 +21,11 @@ from src.utils.module import (
     curr_time, determine_recent_solar_terms, format_historical_meal_plans,
     format_historical_meal_plans_v2, generate_daily_schedule, generate_key_indicators,
     get_festivals_and_other_festivals, get_weather_info, parse_generic_content,
-    remove_empty_dicts, handle_calories, run_in_executor
+    remove_empty_dicts, handle_calories, run_in_executor, log_with_source
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
+from src.utils.Logger import logger as global_logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 
@@ -36,6 +37,7 @@ class HealthExpertModel:
         self.gsr = gsr
         self.regist_aigc_functions()
 
+    @log_with_source
     async def aaigc_functions_general(
         self,
         _event: str = "",
@@ -45,6 +47,11 @@ class HealthExpertModel:
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
+        logger = kwargs.get("logger", global_logger)  # 确保使用注入的 logger
+        logger.info(f"Source for logging: {kwargs.get('source')}")
+        logger.info(f"Injected logger: {logger}")
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (

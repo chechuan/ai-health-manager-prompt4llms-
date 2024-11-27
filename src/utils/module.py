@@ -1719,7 +1719,7 @@ async def wrap_content_for_frontend(content_text, content_type="MARKDOWN", item_
         item_contents = [{"text": content_text}]
 
     return {
-        "text": "AI",
+        "text": "",
         "payload": [
             {
                 "itemTitle": item_title,
@@ -1859,3 +1859,20 @@ async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
             tips_and_closing
         ]
     }
+
+
+def log_with_source(func):
+    """异步装饰器，用于根据 source 动态绑定日志"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        source = kwargs.get("source", "user")
+        logger.info(f"Source for logging: {source}")  # 验证 source 是否正确
+        if source == "monitor":
+            logger_with_source = logger.bind(source=source)  # 动态绑定日志上下文
+            logger_with_source.info("Logger is bound with source=monitor")
+        else:
+            logger_with_source = logger
+
+        kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
+        return await func(*args, **kwargs)
+    return wrapper
