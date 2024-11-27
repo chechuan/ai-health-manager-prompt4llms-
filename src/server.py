@@ -777,7 +777,7 @@ def create_app():
             return result
 
     @app.route("/func_eval/daily_diet_eval", methods=["post"])
-    async def _schedule_tips_modify(request: Request):
+    async def _daily_diet_eval(request: Request):
         """一日血糖饮食建议"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
