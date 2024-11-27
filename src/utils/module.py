@@ -1852,7 +1852,7 @@ async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
 
     # 返回完整的结构
     return {
-        "text": "AI",
+        "text": "",
         "payload": [
             markdown_intro,
             table_structure,
