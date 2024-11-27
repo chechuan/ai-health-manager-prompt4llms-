@@ -93,7 +93,7 @@ async def extract_imgInfo(history, daily_diet_info):
                 img_info.append(h['content'])
     elif daily_diet_info:
         for i, info in enumerate(daily_diet_info):
-            if not info.get('diet_info', '') and info.get('diet_image', ''):
+            if info.get('diet_image', '') and not info.get('diet_info', ''):
                 img_info.append(info['diet_image'])
     for i, img_url in enumerate(img_info):
         prompt = get_func_eval_prompt('img_sumUp_prompt') if history else get_func_eval_prompt('diet_image_recog_prompt')
@@ -238,7 +238,7 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         }
     ]
     logger.debug(
-        "一日饮食评估建议模型输入： " + prompt.format(userInfo,daily_diet_str, bg_str, management_tag)
+        "一日饮食评估建议模型输入： " + prompt.format(userInfo_str,daily_diet_str, bg_str, management_tag)
     )
     start_time = time.time()
     generate_text = await acallLLM(
