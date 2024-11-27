@@ -6,20 +6,20 @@
 @Contact :   chechuan1204@gmail.com
 """
 
-# 标准库导入
-import asyncio, json, sys, traceback
+import asyncio
+import json
+import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Union
 
-# 第三方库导入
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
-# 本地模块导入
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from chat.qwen_chat import Chat
@@ -32,15 +32,28 @@ from src.pkgs.models.bath_plan_model import BathPlanModel
 from src.pkgs.models.multimodal_model import MultiModalModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
-    AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
-    AigcFunctionsResponse, AigcSanjiRequest, BaseResponse, BodyFatWeightManagementRequest,
-    OutpatientSupportRequest, RolePlayRequest, SanJiKangYangRequest, TestRequest
+    AigcFunctionsCompletionResponse,
+    AigcFunctionsDoctorRecommendRequest,
+    AigcFunctionsRequest,
+    AigcFunctionsResponse,
+    AigcSanjiRequest,
+    BaseResponse,
+    BodyFatWeightManagementRequest,
+    OutpatientSupportRequest,
+    RolePlayRequest,
+    SanJiKangYangRequest,
+    TestRequest,
 )
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
-    MakeFastAPIOffline, NpEncoder, build_aigc_functions_response, curr_time,
-    dumpJS, format_sse_chat_complete, response_generator
+    MakeFastAPIOffline,
+    NpEncoder,
+    build_aigc_functions_response,
+    curr_time,
+    dumpJS,
+    format_sse_chat_complete,
+    response_generator,
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
@@ -599,6 +612,11 @@ def create_app():
         version=f"{datetime.now().strftime('%Y.%m.%d %H:%M:%S')}",
     )
     prepare_for_all()
+
+    @app.get("/health", summary="健康检查接口")
+    async def health_check():
+        """健康检查接口"""
+        return {"status": "healthy"}
 
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
