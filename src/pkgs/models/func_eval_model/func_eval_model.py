@@ -247,9 +247,25 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         top_p=0.9,
         temperature=0.8,
         do_sample=True,
+        stream=True,
         is_vl=True,
         model="Qwen1.5-32B-Chat",
     )
-    logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
-    logger.debug("一日饮食评估建议模型输出： " + generate_text)
-    yield {"daily_diet_eval": generate_text.replace('\n\n', '\n'), "head": 200, "err_msg": "", "end": True}
+    # logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+    # logger.debug("一日饮食评估建议模型输出： " + generate_text)
+    # yield {"message": generate_text.replace('\n\n', '\n'), "end": True}
+    #response_time = time.time()
+    content = ""
+    printed = False
+    async for i in generate_text:
+        t = time.time()
+        msg = i.choices[0].delta.to_dict()
+        text_stream = msg.get("content").replace('\n', '')
+        if text_stream:
+            if not printed:
+                print(f"latency first token {t - start_time:.2f} s")
+                printed = True
+            content += text_stream
+            yield {'message': text_stream, 'end': False}
+    logger.debug("一日饮食评估建议模型输出： " + content)
+    yield {'message': "", 'end': True}
