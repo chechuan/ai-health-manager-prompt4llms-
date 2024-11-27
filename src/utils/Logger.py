@@ -90,16 +90,10 @@ class Logging:
 logger = Logging(appid="ai-health-manager-prompt4llms").logger
 
 if __name__ == "__main__":
-    # logger.trace("log level trace.")
-    # logger.debug("log level debug.")
-    # logger.info("log level info.")
-    # logger.success("log level success.")
-    # logger.warning("log level warning.")
-    # logger.error("log level error.")
-    # logger.critical("log level critical.")
-    # 普通日志
-    logger.info("This is a general log.")  # 应该进入 general.log
-
-    # 监控日志
-    monitor_logger = logger.bind(source="monitor")
-    monitor_logger.info("This is a monitor log.")  # 应该进入 monitor.log
+    logger.trace("log level trace.")
+    logger.debug("log level debug.")
+    logger.info("log level info.")
+    logger.success("log level success.")
+    logger.warning("log level warning.")
+    logger.error("log level error.")
+    logger.critical("log level critical.")
