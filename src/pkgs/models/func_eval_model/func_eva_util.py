@@ -23,8 +23,6 @@ def get_daily_blood_glucose_str(daily_blood_glucose):
         bg_str += f"测量时间：{i.get('time', '')}  测量值：{i.get('value', '')}\n"
     return bg_str
 
-
-
 def get_daily_diet_str(daily_diet_info):
     daily_diet_str = ''
     for i in daily_diet_info:
