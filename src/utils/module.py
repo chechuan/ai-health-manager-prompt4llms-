@@ -1866,7 +1866,7 @@ def log_with_source(func):
     @wraps(func)
     async def wrapper(*args, **kwargs):
         source = kwargs.get("source", "user")
-        logger.info(f"Source for logging: {source}")  # 验证 source 是否正确
+        # logger.info(f"Source for logging: {source}")  # 验证 source 是否正确
         if source == "monitor":
             logger_with_source = logger.bind(source=source)  # 动态绑定日志上下文
             logger_with_source.info("Logger is bound with source=monitor")
