@@ -1330,6 +1330,13 @@ class SanJiKangYangRequest(BaseModel):
         description="营养师对饮食的分析建议",
         examples=['主食摄入较多，蔬果较少']
     )
+    source: Union[str, None] = Field(
+        None,
+        description="来源",
+        examples=[
+            'monitor', 'user'
+        ],
+    )
 
 
 class BodyFatWeightManagementRequest(BaseModel):

@@ -1399,6 +1399,7 @@ class ItineraryModel:
 
         else:
             # 如果行程大于三天，生成 frontend_contents
+            markdown = await self.generate_markdown_from_items(overview)
             frontend_contents = await assemble_frontend_format_with_fixed_items(overview)
 
         business_category = list(
@@ -1417,7 +1418,8 @@ class ItineraryModel:
             "items": {
                 "plan": overview,
                 "contents": frontend_contents,
-                "cates": business_category
+                "cates": business_category,
+                "plan_text": markdown
             },
             "msg": "",
         }

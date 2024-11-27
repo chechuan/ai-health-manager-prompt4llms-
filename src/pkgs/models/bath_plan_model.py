@@ -249,7 +249,8 @@ class BathPlanModel:
             "items": {
                 "plan": full_plan,
                 "contents": frontend_contents,
-                "cates": business_category
+                "cates": business_category,
+                "plan_text": markdown_output
             },
             "msg": ""
         }
