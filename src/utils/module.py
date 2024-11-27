@@ -468,7 +468,6 @@ def date_after(**kwargs):
     date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
-
 def this_sunday():
     """返回下周一0点0分0秒"""
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
@@ -476,11 +475,9 @@ def this_sunday():
         today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
     )
 
-
 def curr_weekday():
     today = date.today().strftime("%A")
     return today
-
 
 def dumpJS(obj, ensure_ascii=False, **kwargs):
     return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
