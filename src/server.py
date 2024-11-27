@@ -695,35 +695,35 @@ def create_app():
 
     app.post("/test/sync")(_test_sync)
 
-    @app.route("/func_eval/image_type_recog", methods=["post"])
-    async def _image_type_recog(request: Request):
-        """图片类型识别"""
-        try:
-            param = await accept_param(request, endpoint="/func_eval/image_type_recog")
-            generator: AsyncGenerator = image_recog(param.get("image_url", ""))
-            result = decorate_general_complete(
-                generator
-            )
-        except Exception as err:
-            logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
-        finally:
-            return StreamingResponse(result, media_type="text/event-stream")
-
-    @app.route("/func_eval/diet_image_recog", methods=["post"])
-    async def _image_type_recog(request: Request):
-        """饮食图片识别"""
-        try:
-            param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
-            generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
-            result = decorate_general_complete(
-                generator
-            )
-        except Exception as err:
-            logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
-        finally:
-            return StreamingResponse(result, media_type="text/event-stream")
+    # @app.route("/func_eval/image_type_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """图片类型识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/image_type_recog")
+    #         generator: AsyncGenerator = image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
+    #
+    # @app.route("/func_eval/diet_image_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """饮食图片识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
+    #         generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/func_eval/schedule_tips_modification", methods=["post"])
     async def _schedule_tips_modify(request: Request):
