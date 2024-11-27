@@ -173,12 +173,12 @@ def get_intent(text):
     elif "数字人" in text and "切换" in text:
         code = "digital_image_switch"
         desc = "切换数字人皮肤"
-    elif "运动评价" in text:
-        code = "sport_eval"
-        desc = "运动评价"
-    elif "运动咨询" in text:
-        code = "sport_rec"
-        desc = "运动咨询"
+    # elif "运动评价" in text:
+    #     code = "sport_eval"
+    #     desc = "运动评价"
+    # elif "运动咨询" in text:
+    #     code = "sport_rec"
+    #     desc = "运动咨询"
     elif "温泉推荐" in text:
         code = "spa_rec"
         desc = "温泉推荐"
@@ -320,9 +320,9 @@ def get_intent(text):
     elif "营养其他" in text:
         code = "nutri_other"
         desc = "营养其他"
-    elif "高血压" in text:
-        code = "chronic_qa"
-        desc = "高血压知识问答"
+    # elif "高血压" in text:
+    #     code = "chronic_qa"
+    #     desc = "高血压知识问答"
     elif "低血压" in text:
         code = "hypotensive_consultation"
         desc = "低血压咨询"
