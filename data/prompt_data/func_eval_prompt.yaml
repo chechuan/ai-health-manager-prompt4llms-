@@ -72,6 +72,7 @@ sport_schedule_recog_prompt: '# 你是一名运动日程管理助手，你需要
   - 首先，关注日程信息中是否有运动日程，没有运动日程则is_modify输出false，reason和suggestion都输出无。\n\
   - 其次，关注`用户对话交互信息`中是否有`可能的需要修改运动日程的影响事项`中不适合运动的情况。\n\
   - 有不适合运动的情况，则is_modify输出true，并输出相应reason和suggestion。\n\
+  - 有描述不适合运动的情况，但并非用户本人的情况则is_modify输出false。
   - reason字数在100字以内，suggestion字数在500字以内。\n\
   - 以json格式输出\n\
   \n\
