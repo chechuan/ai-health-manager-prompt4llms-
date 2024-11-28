@@ -215,9 +215,9 @@ def get_intent(text):
     elif "血糖" in text:
         code = "blood_glucose_counseling"
         desc = "血糖咨询"
-    elif "营养知识" in text:
-        code = "nutri_knowledge_rec"
-        desc = "营养知识咨询"
+    # elif "营养知识" in text:
+    #     code = "nutri_knowledge_rec"
+    #     desc = "营养知识咨询"
     elif "饮食处方" in text:
         code = "food_rec"
         desc = "饮食处方推荐"
