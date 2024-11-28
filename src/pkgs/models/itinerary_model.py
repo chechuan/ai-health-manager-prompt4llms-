@@ -10,10 +10,17 @@ from fastapi import FastAPI, Request
 from datetime import datetime, timedelta
 from src.utils.resources import InitAllResource
 from src.utils.database import MysqlConnector
-from src.utils.Logger import logger
-import json
 import math
 import random
+import json
+from typing import Generator
+from src.prompt.model_init import acallLLM, callLikangLLM
+from src.utils.Logger import logger
+from src.utils.api_protocal import *
+from src.utils.module import (run_in_executor, wrap_content_for_frontend, parse_generic_content,
+                              assemble_frontend_format_with_fixed_items, extract_clean_output)
+import asyncio
+import json5
 
 app = FastAPI()
 
@@ -35,7 +42,7 @@ class ItineraryModel:
         """
         logger.info("正在从数据库加载行程推荐数据...")
         tables = [
-            "cleaned_accommodation", "cleaned_activities",
+            "cleaned_accommodation", "cleaned_activities", "tweet_articles"
             # "cleaned_agricultural_products",
             # "cleaned_agricultural_services", "cleaned_dining", "cleaned_health_projects",
             # "cleaned_packages", "cleaned_secondary_products", "cleaned_study_tour_products"
@@ -44,7 +51,7 @@ class ItineraryModel:
         logger.info("行程推荐数据加载成功。")
         return data
 
-    def filter_data(self, table_name, user_data):
+    async def filter_data(self, table_name, user_data):
         """
         通用数据过滤入口，根据表名分发到不同的处理函数
         :param table_name: 要过滤的表名
@@ -53,11 +60,11 @@ class ItineraryModel:
         """
         logger.info(f"开始筛选表 {table_name} 中的数据")
 
+
         if table_name == "cleaned_activities":
-            return self.filter_activities(user_data)
+            return await self.filter_activities(user_data, self.data.get("cleaned_activities", []))
         elif table_name == "cleaned_accommodation":
-            return self.filter_accommodation(user_data)
-        # 继续添加其他表的分支
+            return await self.filter_accommodation(user_data, self.data.get("cleaned_accommodation", []))
         else:
             logger.warning(f"未知的表名：{table_name}")
             return []
@@ -86,14 +93,17 @@ class ItineraryModel:
 
         return total_price if total_price > 0 else None  # 返回总价或None
 
-    def filter_accommodation(self, user_data):
+    async def filter_accommodation(self, user_data, accommodations):
         """
         根据用户输入筛选符合条件的住宿
         :param user_data: 用户输入的数据，包括出行人员和预算
         :return: 符合条件的住宿列表
         """
         logger.info("根据用户输入筛选住宿。")
-        accommodations = self.data["cleaned_accommodation"][:6]
+        # 确保传入的 `activities` 是列表
+        if not isinstance(accommodations, list):
+            raise ValueError("Expected 'accommodations' to be a list.")
+        accommodations = accommodations[:6]
         filtered_accommodations = []
 
         travelers = user_data.get("travelers", [])
@@ -122,14 +132,18 @@ class ItineraryModel:
 
         return filtered_accommodations
 
-    def filter_activities(self, user_data):
+    async def filter_activities(self, user_data, activities):
         """
         筛选符合用户偏好、年龄段、预算、时间和季节的活动
         :param user_data: 用户输入的数据，包括偏好、出行人员和预算
         :return: 符合条件的活动列表
         """
         logger.info("根据用户输入筛选活动。")
-        activities = self.data["cleaned_activities"][:18]
+        # 确保传入的 `activities` 是列表
+        if not isinstance(activities, list):
+            raise ValueError("Expected 'activities' to be a list.")
+
+        activities = activities[:18]
         filtered_activities = []
 
         preferences = user_data.get("service_preference", [])
@@ -364,7 +378,7 @@ class ItineraryModel:
             return delta_days >= reservation_days  # 如果在预约期限内，返回True
         return True  # 如果没有预约要求，返回True
 
-    def get_activity_price(self, price_info, service_time, duration):
+    async def get_activity_price(self, price_info, service_time, duration):
         """
         根据活动的时间和套餐获取活动的价格（考虑跨越多个日期）
         :param price_info: 活动的价格信息
@@ -372,30 +386,34 @@ class ItineraryModel:
         :param duration: 活动的时长（小时）
         :return: 活动的总价格
         """
-        start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-        end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
 
-        total_price = 0  # 用于累加跨越多日的价格
-        current_date = start_date
+        async def calculate_price():
+            start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
+            end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
 
-        while current_date <= end_date:
-            # 判断当天是否免费
-            if price_info.get("is_free", False):
-                day_price = 0
-            else:
-                day_price = price_info.get("default", 0)
+            total_price = 0  # 用于累加跨越多日的价格
+            current_date = start_date
 
-                # 如果有按时长收费，计算总价
-                if price_info.get("unit_price"):
-                    unit_price = price_info["unit_price"]["amount"]
-                    day_price += unit_price * float(duration)
+            while current_date <= end_date:
+                # 判断当天是否免费
+                if price_info.get("is_free", False):
+                    day_price = 0
+                else:
+                    day_price = price_info.get("default", 0)
 
-            total_price += day_price
-            current_date += timedelta(days=1)
+                    # 如果有按时长收费，计算总价
+                    if price_info.get("unit_price"):
+                        unit_price = price_info["unit_price"]["amount"]
+                        day_price += unit_price * float(duration)
 
-        return total_price if total_price > 0 else None  # 返回总价或None
+                total_price += day_price
+                current_date += timedelta(days=1)
 
-    def generate_recommendation_basis(self, user_data, selected_accommodation, spa_activities):
+            return total_price if total_price > 0 else None  # 返回总价或 None
+
+        # 使用 asyncio.to_thread 将计算逻辑移到线程池中运行
+        return await run_in_executor(calculate_price)
+    async def generate_recommendation_basis(self, user_data, selected_accommodation, spa_activities):
         """
         根据用户输入和推荐结果生成推荐依据
         :param user_data: 用户输入的数据
@@ -452,7 +470,7 @@ class ItineraryModel:
 
         return basis
 
-    def generate_default_itinerary(self, user_data, selected_hotel=None):
+    async def generate_default_itinerary(self, user_data, selected_hotel=None):
         """
         根据用户的服务时间，生成通用的行程方案，适合大多数人的默认安排。
         所有活动都从现有的活动列表中选择，确保每一天都有安排。
@@ -475,7 +493,9 @@ class ItineraryModel:
                     "description": None,
                     "room_description": "院线房 61.66㎡-71.82㎡\n小院私汤，卧室有投影幕布，含双早"
                 },
-                "activity_code": "ACC992657"
+                "activity_code": "ACC992657",
+                "external_id": ""
+
             }
 
         # 已有的活动列表，用于随机选取
@@ -484,15 +504,17 @@ class ItineraryModel:
                 "name": "盐房",
                 "location": "来康温泉",
                 "activity_code": "ACT173738",
+                "external_id": "",
                 "extra_info": {
-                    "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
-                    "operation_tips": "建议泡汤时间不超过30分钟。"
+                "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
+                "operation_tips": "建议泡汤时间不超过30分钟。"
                 }
             },
             {
                 "name": "岩洞氧吧",
                 "location": "来康温泉",
                 "activity_code": "ACT268949",
+                "external_id": "",
                 "extra_info": {
                     "description": "抗氧化防衰老,可促进人体新陈代谢,具有提神、消除疲劳、提高免疫力的功效,从而增强抗病能力。",
                     "operation_tips": "体验时保持放松。"
@@ -502,6 +524,7 @@ class ItineraryModel:
                 "name": "香修体验",
                 "location": "七修书院",
                 "activity_code": "ACT698000",
+                "external_id": "",
                 "extra_info": {
                     "description": "了解香学文化及制作合香香品",
                     "operation_tips": "请在老师指导下操作。"
@@ -511,6 +534,7 @@ class ItineraryModel:
                 "name": "花修体验",
                 "location": "七修书院",
                 "activity_code": "ACT098692",
+                "external_id": "",
                 "extra_info": {
                     "description": "学习中式插花，享受宁静时光",
                     "operation_tips": "请提前预约花材。"
@@ -520,6 +544,7 @@ class ItineraryModel:
                 "name": "功修体验",
                 "location": "七修书院",
                 "activity_code": "ACT193928",
+                "external_id": "",
                 "extra_info": {
                     "description": "导引养生功，讲解带练每一招式要点",
                     "operation_tips": "适合所有年龄段，活动轻松。"
@@ -529,6 +554,7 @@ class ItineraryModel:
                 "name": "书修体验",
                 "location": "七修书院",
                 "activity_code": "ACT796407",
+                "external_id": "",
                 "extra_info": {
                     "description": "拓印、静心抄经，体验传统书法的静心力量",
                     "operation_tips": "建议提前预约，选择书法材料。"
@@ -538,6 +564,7 @@ class ItineraryModel:
                 "name": "食修体验",
                 "location": "七修书院",
                 "activity_code": "ACT875638",
+                "external_id": "",
                 "extra_info": {
                     "description": "学习制作药食同源的小点心，了解传统健康饮食文化",
                     "operation_tips": "活动时间约1.5小时，请提前预约。"
@@ -557,6 +584,7 @@ class ItineraryModel:
                                 "name": "办理入住",
                                 "location": selected_hotel.get("name", "汤泉逸墅 院线房"),
                                 "activity_code": selected_hotel.get("activity_code", "ACC992657"),
+                                "external_id": selected_hotel.get("external_id", ""),
                                 "extra_info": {
                                     # "description": selected_hotel.get("extra_info", {}).get("description", "请提前确认入住时间，提醒需要预约等"),
                                     "description": "请提前确认入住时间，提醒需要预约等",
@@ -569,6 +597,7 @@ class ItineraryModel:
                                 "name": "盐房",
                                 "location": "来康温泉",
                                 "activity_code": "ACT173738",
+                                "external_id": "",
                                 "extra_info": {
                                     "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。",
                                     "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -600,18 +629,19 @@ class ItineraryModel:
 
         return itinerary
 
-    def select_random_hotel(self, selected_accommodation):
+    async def select_random_hotel(self, selected_accommodation):
         """
         随机选择一个符合条件的酒店
         :param selected_accommodation: 经过筛选的符合条件的住宿列表
         :return: 随机选择的酒店信息
         """
         if selected_accommodation:
-            hotel = random.choice(selected_accommodation)
+            hotel = await self.select_random_activity(selected_accommodation)
             return {
                 "name": hotel["name"],
                 "location": "待定",
                 "activity_code": hotel["activity_code"],
+                "external_id": hotel["external_id"],
                 "extra_info": {
                     "description": hotel.get("hotel_description", "房型丰富、设施齐全、中医理疗特色"),
                     "room_description": hotel.get("room_description", "")
@@ -621,12 +651,16 @@ class ItineraryModel:
             "name": "无合适酒店",
             "location": "",
             "activity_code": "",
+            "external_id": "",
             "extra_info": {
                 "description": "无"
             }
         }
 
-    def create_itinerary(self, user_data, filtered_activities, spa_activities, selected_hotel):
+    async def select_random_activity(self, activities):
+        return await asyncio.to_thread(random.choice, activities)
+
+    async def create_itinerary(self, user_data, filtered_activities, spa_activities, selected_hotel):
         """
         创建用户的行程安排，确保每天都有活动，不允许出现空白天
         :param user_data: 用户输入的数据
@@ -676,6 +710,7 @@ class ItineraryModel:
                             "name": "办理入住",
                             "location": selected_hotel.get("name", ""),
                             "activity_code": selected_hotel["activity_code"],
+                            "external_id": selected_hotel["external_id"],
                             "extra_info": {
                                 "description": "请提前确认入住时间，提醒需要预约等",
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
@@ -687,11 +722,12 @@ class ItineraryModel:
 
                 # 如果有温泉活动并且温泉次数未达到上限，安排温泉活动
                 if spa_activities and spa_activity_count < max_spa_activities:
-                    random_spa_activity = random.choice(spa_activities)
+                    random_spa_activity = await self.select_random_activity(spa_activities)
                     day_activities[-1]["activities"].append({
                         "name": random_spa_activity["activity_name"],
                         "location": random_spa_activity["activity_category"],
                         "activity_code": random_spa_activity["activity_code"],
+                        "external_id": random_spa_activity["external_id"],
                         "extra_info": {
                             "description": random_spa_activity["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -714,6 +750,7 @@ class ItineraryModel:
                                         "name": activity["activity_name"],
                                         "location": activity["activity_category"],
                                         "activity_code": activity["activity_code"],
+                                        "external_id": activity["external_id"],
                                         "extra_info": {
                                             "description": activity["description"],
                                             "operation_tips": activity.get("reservation_note", "无")
@@ -726,7 +763,7 @@ class ItineraryModel:
 
                 # 如果当日没有活动，随机安排一个非温泉类活动
                 if not day_activities:
-                    random_activity = random.choice(filtered_activities)
+                    random_activity = await self.select_random_activity(filtered_activities)
                     day_activities.append({
                         "period": "上午",
                         "activities": [
@@ -734,6 +771,7 @@ class ItineraryModel:
                                 "name": random_activity["activity_name"],
                                 "location": random_activity["activity_category"],
                                 "activity_code": random_activity["activity_code"],
+                                "external_id": random_activity["external_id"],
                                 "extra_info": {
                                     "description": random_activity["description"],
                                     "operation_tips": random_activity.get("reservation_note", "无")
@@ -752,30 +790,30 @@ class ItineraryModel:
 
         return itinerary
 
-    def generate_itinerary(self, user_data):
+    async def generate_itinerary(self, user_data):
         """
         根据用户数据生成行程清单
         :param user_data: 用户输入的数据，包括偏好、需求等
         :return: 行程清单的响应字典
         """
         # 1. 筛选符合条件的活动
-        filtered_activities = self.filter_data("cleaned_activities", user_data)
+        filtered_activities = await self.filter_data("cleaned_activities", user_data)
 
         # 筛选出温泉类的活动
         spa_activities = [activity for activity in filtered_activities if
                           "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]]
 
         # 2. 随机选择一个符合条件的酒店
-        selected_accommodation = self.filter_data("cleaned_accommodation", user_data)
-        hotel = self.select_random_hotel(selected_accommodation)
+        selected_accommodation = await self.filter_data("cleaned_accommodation", user_data)
+        hotel = await self.select_random_hotel(selected_accommodation)
 
         # 3. 创建行程，将选中的酒店和温泉活动作为参数传递
         if not filtered_activities:
-            itinerary = self.generate_default_itinerary(user_data, hotel)
+            itinerary = await self.generate_default_itinerary(user_data, hotel)
         else:
-            itinerary = self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
+            itinerary = await self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
         # 4. 生成推荐依据
-        recommendation_basis = self.generate_recommendation_basis(user_data, hotel, spa_activities)
+        recommendation_basis = await self.generate_recommendation_basis(user_data, hotel, spa_activities)
 
         # 5. 构建最终的响应结构
         response = {
@@ -784,7 +822,8 @@ class ItineraryModel:
                 "hotel": {
                     "name": hotel["name"],
                     "extra_info": hotel["extra_info"],
-                    "activity_code": hotel["activity_code"]
+                    "activity_code": hotel["activity_code"],
+                    "external_id": hotel["external_id"]
                 },
                 "recommendation_basis": recommendation_basis,
                 "itinerary": itinerary,
@@ -794,6 +833,597 @@ class ItineraryModel:
 
         return response
 
+    async def format_itinerary_to_text(self, itinerary_data: list) -> str:
+        """
+        将行程数据格式化为指定的文本格式
+        :param itinerary_data: JSON格式的行程数据列表
+        :return: 格式化后的字符串
+        """
+        result = ""
+
+        try:
+            for day_entry in itinerary_data:
+                # 确保day和date存在
+                day = day_entry.get("day", "未知天数")
+                date = day_entry.get("date", "未知日期")
+                result += f"第{day}天（{date}）\n"
+
+                time_slots = day_entry.get("time_slots", [])
+                for time_slot in time_slots:
+                    # 确保时间段存在
+                    period = time_slot.get("period", "未知时间段")
+                    activities = time_slot.get("activities", [])
+
+                    result += f"{period}：\n"
+                    for activity in activities:
+                        # 确保活动信息存在
+                        name = activity.get("name", "未知活动")
+                        location = activity.get("location", "未知地点")
+                        description = activity.get("description", "无描述")
+
+                        result += f"{name} - {location}（{description}）\n"
+
+                result += "\n"  # 每天之间空行
+
+        except Exception as e:
+            # 捕获所有异常并记录错误信息，返回一个安全的提示
+            result += "\n行程数据格式化时发生错误，请检查输入数据。\n"
+            result += f"错误详情：{str(e)}"
+
+        return result.strip()  # 去除末尾的多余空行
+
+    async def transform_itinerary(self, response_data):
+        """
+        转换行程数据结构为大模型所需的简化格式
+        :param response_data: 原始响应数据
+        :return: 转换后的行程数据列表
+        """
+        try:
+            # 从响应中提取行程数据
+            itinerary = response_data.get("itinerary", [])
+            if not isinstance(itinerary, list):
+                raise ValueError("Invalid itinerary data format: Expected a list.")
+
+            simplified_itinerary = []
+
+            # 遍历每一天的行程
+            for day_entry in itinerary:
+                # 提取基础信息
+                day = day_entry.get("day")
+                date = day_entry.get("date")
+                time_slots = day_entry.get("time_slots", [])
+
+                if not day or not date:
+                    raise ValueError(f"Missing 'day' or 'date' in day entry: {day_entry}")
+
+                transformed_day = {
+                    "day": day,
+                    "date": date,
+                    "time_slots": []
+                }
+
+                # 遍历时间段
+                for time_slot in time_slots:
+                    period = time_slot.get("period")
+                    activities = time_slot.get("activities", [])
+
+                    if not period:
+                        raise ValueError(f"Missing 'period' in time slot: {time_slot}")
+
+                    transformed_slot = {
+                        "period": period,
+                        "activities": []
+                    }
+
+                    # 遍历活动
+                    for activity in activities:
+                        if not isinstance(activity, dict):
+                            raise ValueError(f"Invalid activity format: Expected a dict, got {type(activity)}")
+
+                        transformed_activity = {
+                            "name": activity.get("name", None),
+                            "location": activity.get("location", None),
+                            "description": activity.get("extra_info", {}).get("description", None),
+                            "external_id": activity.get("external_id", None)
+                        }
+                        transformed_slot["activities"].append(transformed_activity)
+
+                    transformed_day["time_slots"].append(transformed_slot)
+
+                simplified_itinerary.append(transformed_day)
+
+            return simplified_itinerary
+
+        except Exception as e:
+            # 日志记录异常，确保系统不崩溃
+            import logging
+            logging.error(f"Error transforming itinerary: {e}")
+            # 返回空列表或其他合理的默认值
+            return []
+
+    async def __update_model_args__(self, kwargs, **args) -> Dict:
+        if "model_args" in kwargs:
+            if kwargs.get("model_args"):
+                args = {
+                    **args,
+                    **kwargs["model_args"],
+                }
+            del kwargs["model_args"]
+        return args
+
+    async def aaigc_functions_general(
+        self,
+        _event: str = "",
+        prompt_vars: dict = {},
+        model_args: Dict = {},
+        prompt_template: str = "",
+        **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        prompt_template: str = (
+            prompt_template
+            if prompt_template
+            else self.gsr.get_event_item(event)["description"]
+        )
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+
+        prompt = prompt_template.format(**prompt_vars)
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+
+        content: Union[str, Generator] = await acallLLM(
+            model=model,
+            query=prompt,
+            **model_args,
+        )
+        if isinstance(content, str):
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
+        return content
+
+    async def aigc_functions_itinerary_description(self, day_itinerary: dict, **kwargs) -> dict:
+        """
+        根据单天行程生成活动描述
+        :param day_itinerary: 单天行程数据
+        :return: 包含更新后的活动描述的单天行程数据
+        """
+        _event = kwargs.get("intentCode", "aigc_functions_itinerary_description")
+
+        # 构建大模型参数
+        prompt_vars = {"itinerary": day_itinerary}
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用大模型
+        content = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        try:
+            # 解析生成的内容
+            parsed_content = await parse_generic_content(content)
+            return parsed_content
+        except Exception as e:
+            logger.error(f"活动描述生成失败: {str(e)}")
+            return day_itinerary  # 返回原始数据，确保稳定性
+
+    async def aigc_functions_itinerary_summary(self, itinerary_text: str, **kwargs) -> dict:
+        """
+        根据完整行程生成总结语和实用建议
+        :param itinerary_text: 行程文本数据
+        :return: 包含 intro、tips 和 closing 的字典
+        """
+        _event = kwargs.get("intentCode", "aigc_functions_itinerary_summary")
+
+        # 构建大模型参数
+        prompt_vars = {"itinerary": itinerary_text}
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用大模型
+        content = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        try:
+            # 尝试解析生成的内容
+            return await parse_generic_content(content)
+        except Exception as e:
+            logger.error(f"解析行程总结失败: {str(e)}")
+            raise  # 抛出异常，让上层函数处理
+
+    # Helper Functions
+    async def _filter_activities_and_hotel(self, user_data: dict):
+        """
+        筛选活动和酒店
+        """
+        filtered_activities = await self.filter_data("cleaned_activities", user_data)
+        spa_activities = [
+            activity for activity in filtered_activities if
+            "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]
+        ]
+        selected_accommodation = await self.filter_data("cleaned_accommodation", user_data)
+        hotel = await self.select_random_hotel(selected_accommodation)
+        return filtered_activities, spa_activities, hotel
+
+    async def _create_itinerary(self, user_data: dict, filtered_activities, spa_activities, hotel):
+        """
+        根据活动和酒店生成初步行程
+        """
+        if not filtered_activities:
+            return await self.generate_default_itinerary(user_data, hotel)
+        return await self.create_itinerary(user_data, filtered_activities, spa_activities, hotel)
+
+    async def _generate_descriptions_and_summary(self, transformed_itinerary: list):
+        """
+        并发生成活动描述和行程总结
+        :param transformed_itinerary: 标准化行程数据
+        :return: 更新后的行程数据和总结
+        """
+
+        async def process_day(day_entry):
+            """
+            调用生成活动描述的方法
+            """
+            try:
+                return await self.aigc_functions_itinerary_description(
+                    day_entry, intentCode="aigc_functions_itinerary_description"
+                )
+            except Exception as e:
+                logger.error(f"生成活动描述失败（第{day_entry.get('day', '未知天数')}天）：{e}")
+                # 为该天活动生成默认描述
+                for time_slot in day_entry.get("time_slots", []):
+                    for activity in time_slot.get("activities", []):
+                        activity["description"] = "无法生成个性化描述，请联系客服解决问题。"
+                return day_entry
+
+        async def generate_summary():
+            """
+            调用生成行程总结的方法
+            """
+            try:
+                itinerary_text = await self.format_itinerary_to_text(transformed_itinerary)
+                return await self.aigc_functions_itinerary_summary(
+                    itinerary_text, intentCode="aigc_functions_itinerary_summary"
+                )
+            except Exception as e:
+                logger.error(f"生成行程总结失败: {e}")
+                # 返回默认值
+                return {
+                    "intro": "欢迎来到我们的行程体验！",
+                    "tips": ["请携带合适衣物", "注意预约事项", "确保旅途中安全"],
+                    "closing": "感谢选择我们的行程方案，祝您旅途愉快！"
+                }
+
+        # 并发处理活动描述和总结生成
+        try:
+            updated_itinerary, summary = await asyncio.gather(
+                asyncio.gather(*(process_day(day) for day in transformed_itinerary)),
+                generate_summary()
+            )
+            return updated_itinerary, summary
+        except Exception as e:
+            logger.error(f"并发处理活动描述和总结失败: {e}")
+            raise
+
+    async def generate_markdown_from_items(self, items: dict) -> str:
+        """
+        根据 items 数据生成 Markdown 文本
+        :param items: 包含行程相关信息的字典
+        :return: 生成的 Markdown 文本
+        """
+        markdown = []
+
+        # 添加欢迎语
+        intro = items.get("intro", "欢迎参加我们的行程！")
+        markdown.append(f"{intro}\n")
+
+        # 添加每日行程
+        itinerary = items.get("itinerary", [])
+        for day in itinerary:
+            day_number = day.get("day", "未知天数")
+            date = day.get("date", "未知日期")
+            markdown.append(f"**第{day_number}天**：")
+
+            for time_slot in day.get("time_slots", []):
+                period = time_slot.get("period", "未知时间段")
+                markdown.append(f"- **{period}**：")
+
+                for activity in time_slot.get("activities", []):
+                    name = activity.get("name", "未知活动")
+                    location = activity.get("location", "未知地点")
+                    description = activity.get("description", "无描述")
+
+                    # 特殊处理 "办理入住"
+                    if name == "办理入住":
+                        markdown.append(f"  - 到达来康都并办理入住，建议入住{location}，能够享受便捷的服务。")
+                    else:
+                        markdown.append(f"  - **{name}**：")
+                        markdown.append(f"    - {description}")
+                        markdown.append(f"    - 地点：{location}")
+
+            # 检查并添加“返程”到最后一天最后一个时间段
+            if day == itinerary[-1]:  # 检查是否为最后一天
+                if time_slot == day.get("time_slots", [])[-1]:  # 检查是否为最后一个时间段
+                    markdown.append("  - **返程**")
+
+            markdown.append("")  # 空行分隔天数
+
+        # 添加温馨提示
+        tips = items.get("tips", [])
+        if tips:
+            markdown.append("## 温馨小贴士：")
+            for tip in tips:
+                markdown.append(f"- {tip}")
+            markdown.append("")  # 空行分隔
+
+        # 添加总结
+        closing = items.get("closing", "感谢参加我们的行程，祝您旅途愉快！")
+        markdown.append(f"{closing}")
+
+        # 合并所有内容
+        return "\n".join(markdown)
+
+    async def clean_itinerary(self, itinerary: list) -> list:
+        """
+        清理行程数据，确保日期格式和其他字段正确
+        :param itinerary: 行程列表
+        :return: 清理后的行程列表
+        """
+        for day_entry in itinerary:
+            # 清理日期格式
+            day_entry["date"] = day_entry["date"].replace(" ", "").strip()
+
+            # # 其他字段的校验或清理可以在这里加入
+            # for time_slot in day_entry.get("time_slots", []):
+            #     for activity in time_slot.get("activities", []):
+            #         activity["name"] = activity.get("name", "未知活动").strip()
+            #         activity["location"] = activity.get("location", "未知地点").strip()
+            #         activity["description"] = activity.get("description", "无描述").strip()
+
+        return itinerary
+
+    async def __compose_user_msg__(
+        self,
+        mode: Literal[
+            "user_profile",
+            "messages",
+            "drug_plan",
+            "medical_records",
+            "ietary_guidelines",
+            "key_indicators",
+        ],
+        user_profile: UserProfile = None,
+        medical_records: MedicalRecords = None,
+        ietary_guidelines: DietaryGuidelinesDetails = None,
+        messages: List[ChatMessage] = [],
+        key_indicators: "List[KeyIndicators]" = "[]",
+        drug_plan: "List[DrugPlanItem]" = "[]",
+        role_map: Dict = {},
+    ) -> str:
+        content = ""
+        if mode == "user_profile":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "messages":
+            assert messages is not None, "messages can't be None"
+            assert messages is not [], "messages can't be empty list"
+            role_map = (
+                {"assistant": "医生", "user": "患者"} if not role_map else role_map
+            )
+            for message in messages:
+                if message.get("role", "other") == "other":
+                    content += f"other: {message['content']}\n"
+                elif role_map.get(message.get("role", "other")):
+                    content += f"{role_map[message['role']]}: {message['content']}\n"
+                else:
+                    content += f"{message['content']}\n"
+        elif mode == "drug_plan":
+            if drug_plan:
+                for item in json5.loads(drug_plan):
+                    content += (
+                        ", ".join(
+                            [
+                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                for k, v in item.items()
+                            ]
+                        )
+                        + "\n"
+                    )
+                content = content.strip()
+        elif mode == "medical_records":
+            if medical_records:
+                for key, value in medical_records.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "ietary_guidelines":
+            if ietary_guidelines:
+                for key, value in ietary_guidelines.items():
+                    if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
+                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "key_indicators":
+            # 创建一个字典来存储按日期聚合的数据
+            aggregated_data = {}
+
+            # 遍历数据并聚合
+            for item in key_indicators:
+                for entry in item["data"]:
+                    date, time = entry["time"].split(" ")
+                    value = entry["value"]
+                    if date not in aggregated_data:
+                        aggregated_data[date] = {}
+                    aggregated_data[date][item["key"]] = {"time": time, "value": value}
+
+            # 创建 Markdown 表格
+            content = "| 测量日期 | 测量时间 | 体重 | BMI | 体脂率 |\n"
+            content += "| ------ | ------ | ---- | ----- | ------ |\n"
+
+            # 填充表格
+            for date, measurements in aggregated_data.items():
+                time = measurements.get("体重", {}).get("time", "")
+                weight = measurements.get("体重", {}).get("value", "")
+                bmi = measurements.get("bmi", {}).get("value", "")
+                body_fat_rate = measurements.get("体脂率", {}).get("value", "")
+                row = f"| {date} | {time} | {weight} | {bmi} | {body_fat_rate} |\n"
+                content += row
+        else:
+            logger.error(f"Compose user profile error: mode {mode} not supported")
+        return content
+
+    async def aigc_functions_likang_introduction(self, **kwargs) -> dict:
+        """
+        根据用户对话和背景信息生成固安来康郡的介绍内容
+        :param kwargs: 包含会话记录(messages)和背景信息(background_info)的动态参数
+        :return: 生成的介绍内容，返回标准化结构
+        """
+        # 获取事件码
+        _event = kwargs.get("intentCode", "aigc_functions_likang_introduction")
+
+        # 动态获取系统提示
+        system_prompt_template = self.gsr.get_event_item(_event)["description"]
+        if not system_prompt_template:
+            raise ValueError(f"无法从事件 {_event} 获取有效的描述，请检查配置！")
+
+        # 动态插入当前时间
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        system_prompt = system_prompt_template.format(datetime=current_time)
+
+        # 组合用户消息
+        messages = kwargs.get("messages", [])
+        messages = [{"role": "system", "content": system_prompt}] + messages
+
+        # 调试日志，记录完整消息内容
+        logger.debug(f"生成固安来康郡介绍 LLM Input: {repr(messages)}")
+
+        try:
+            # 调用大模型直接生成内容
+            content = await callLikangLLM(
+                history=messages,
+                model="Qwen1.5-32B-Chat",
+                temperature=0.7,
+                top_p=0.7,
+                repetition_penalty=1.0,
+                stream=False
+            )
+
+            # 添加日志记录输出内容
+            logger.debug(f"生成固安来康郡介绍 LLM Output: {content}")
+
+        except Exception as e:
+            logger.error(f"调用大模型时发生错误: {repr(e)}")
+            raise
+
+        # 处理业务分类
+        business_category = list(
+            set(
+                article.get("business_category", "")
+                for article in self.data.get("tweet_articles", [])
+                if article.get("category") in ["温泉", "酒店"]
+            )
+        )
+        if not business_category:
+            business_category = ["温泉", "酒店"]  # 设置默认值
+
+        # 清理生成的内容
+        content = await extract_clean_output(content)
+
+        # 格式化内容供前端使用
+        frontend_contents = await wrap_content_for_frontend(content)
+
+        # 构建返回结果
+        res = {
+            "head": 200,
+            "items": {
+                "contents": frontend_contents,
+                "cates": business_category
+            },
+            "msg": "",
+        }
+
+        return res
+
+    async def generate_itinerary_v1_1_0(self, user_data: dict, **kwargs) -> dict:
+        """
+        根据用户数据生成完整行程，并包括活动描述和行程总结
+        :param user_data: 用户输入的数据，包括偏好、需求等
+        :return: 包含行程详情的响应字典
+        """
+        # 1. 筛选符合条件的活动和酒店
+        filtered_activities, spa_activities, hotel = await self._filter_activities_and_hotel(user_data)
+
+        # 2. 创建初步行程
+        itinerary = await self._create_itinerary(user_data, filtered_activities, spa_activities, hotel)
+
+        # 3. 标准化行程数据
+        transformed_itinerary = await self.transform_itinerary({"itinerary": itinerary})
+
+        # logger.debug(
+        #     f"Transformed itinerary before processing: {json.dumps(transformed_itinerary, indent=4, ensure_ascii=False)}")
+
+        # 4. 并发生成活动描述和总结
+        updated_itinerary, summary = await self._generate_descriptions_and_summary(transformed_itinerary)
+        # logger.debug(
+        #     f"Transformed itinerary before processing: {json.dumps(updated_itinerary, indent=4, ensure_ascii=False)}")
+
+        # 5. 对 updated_itinerary 进行清理和格式化
+        updated_itinerary = await self.clean_itinerary(updated_itinerary)
+        # logger.debug(
+        #     f"Transformed itinerary before processing: {json.dumps(updated_itinerary, indent=4, ensure_ascii=False)}")
+
+        # 6. 构建 overview 字典
+        overview = {
+            "intro": summary.get("intro", ""),
+            "itinerary": updated_itinerary,
+            "tips": summary.get("tips", []),
+            "closing": summary.get("closing", ""),
+        }
+
+        # 7. 判断行程天数并生成附加数据
+        if len(updated_itinerary) <= 3:
+            # 如果行程小于等于三天，生成 Markdown
+            markdown = await self.generate_markdown_from_items(overview)
+            frontend_contents = await wrap_content_for_frontend(markdown)
+
+        else:
+            # 如果行程大于三天，生成 frontend_contents
+            markdown = await self.generate_markdown_from_items(overview)
+            frontend_contents = await assemble_frontend_format_with_fixed_items(overview)
+
+        business_category = list(
+            set(
+                article.get("business_category", "")
+                for article in self.data.get("tweet_articles", [])
+                if article.get("category") in ["温泉", "酒店"]
+            )
+        )
+        if not business_category:
+            business_category = ["温泉", "酒店"]  # 默认值
+
+        # 9. 构建完整的响应结构
+        response = {
+            "head": 200,
+            "items": {
+                "plan": overview,
+                "contents": frontend_contents,
+                "cates": business_category,
+                "plan_text": markdown
+            },
+            "msg": "",
+        }
+        return response
 
 
 if __name__ == '__main__':

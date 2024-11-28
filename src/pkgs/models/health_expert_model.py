@@ -21,10 +21,11 @@ from src.utils.module import (
     curr_time, determine_recent_solar_terms, format_historical_meal_plans,
     format_historical_meal_plans_v2, generate_daily_schedule, generate_key_indicators,
     get_festivals_and_other_festivals, get_weather_info, parse_generic_content,
-    remove_empty_dicts, handle_calories, run_in_executor
+    remove_empty_dicts, handle_calories, run_in_executor, log_with_source
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
+from src.utils.Logger import logger as global_logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 
@@ -36,6 +37,7 @@ class HealthExpertModel:
         self.gsr = gsr
         self.regist_aigc_functions()
 
+    @log_with_source
     async def aaigc_functions_general(
         self,
         _event: str = "",
@@ -45,6 +47,7 @@ class HealthExpertModel:
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
+        logger = kwargs.get("logger", global_logger)  # 确保使用注入的 logger
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (
@@ -1691,6 +1694,101 @@ class HealthExpertModel:
             "daily_schedule": daily_schedule_section,
             "key_indicators": key_indicators_section,
             "daily_info": daily_info_str
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
+    
+    async def aigc_functions_generate_greeting_new(self, **kwargs) -> str:
+        """
+        生成每日问候开场白
+
+        需求文档：<https://alidocs.dingtalk.com/i/nodes/amweZ92PV6BD4ZlzHvbOD3xzVxEKBD6p?utm_scene=team_space&iframeQuery=anchorId%3Duu_lyz717o1dw4tnoeoiqa>
+
+        根据用户画像、当日剩余日程、关键指标、当日相关信息等生成每日问候开场白。
+
+        参数:
+            kwargs (dict): 包含用户画像、当日剩余日程、关键指标、当日相关信息的参数字典
+
+        返回:
+            str: 每日问候开场白文本
+        """
+
+        _event = "生成每日问候开场白"
+
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
+        city = user_profile.get("city", "")
+
+        # 移除性别和年龄信息
+        user_profile.pop("gender", None)
+        user_profile.pop("age", None)
+        user_profile.pop("city", None)
+
+        # 获取当日剩余日程信息
+        daily_schedule = kwargs.get("daily_schedule", [])
+        daily_schedule_str = await generate_daily_schedule(daily_schedule)
+        daily_schedule_section = f"## 当日剩余日程\n{daily_schedule_str}" if daily_schedule_str else ""
+
+        # 获取关键指标信息
+        key_indicators = kwargs.get("key_indicators", [])
+        key_indicators_str = await generate_key_indicators(key_indicators)
+        key_indicators_section = f"## 关键指标\n{key_indicators_str}" if key_indicators_str else ""
+
+        # 异步获取当天天气信息
+        today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
+        )
+
+        if not today_weather:
+            # 如果没有天气信息，删除城市信息
+            user_profile.pop("city", None)
+
+        # 获取最近节气
+        recent_solar_terms = await determine_recent_solar_terms()
+
+        # 获取当日节日
+        today_festivals = await get_festivals_and_other_festivals()
+
+        # 构建当日相关信息
+        daily_info = [f"### 当前日期和时间\n{curr_time()}"]
+        if today_weather:
+            daily_info.append(f"### 当日天气\n{today_weather}")
+        if recent_solar_terms:
+            daily_info.append(f"### 最近节气\n{recent_solar_terms}")
+        if today_festivals:
+            daily_info.append(f"### 当日节日\n{today_festivals}")
+
+        daily_info_str = "\n".join(daily_info).strip()
+
+        groupSceneTag = kwargs.get("groupSceneTag", '')
+        manageDays = kwargs.get("manageDays", '')
+        dietStatus = kwargs.get("dietStatus", '')
+
+        if (groupSceneTag=='' or manageDays =='') and dietStatus !='':
+            cr = f"你昨日的饮食状态{dietStatus}"
+        elif groupSceneTag!='' and manageDays !='' and dietStatus !='':
+            cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天,昨日的饮食状态{dietStatus}"
+        elif groupSceneTag and manageDays !='' and dietStatus =='':
+            cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天."
+        else:
+            cr = ""
+
+        # 拼接用户画像信息字符串
+        # user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        # user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
+
+        # 构建提示变量
+        prompt_vars = {
+            "daily_schedule": daily_schedule_section,
+            "key_indicators": key_indicators_section,
+            "daily_info": daily_info_str,
+            "cr":cr
         }
 
         # 更新模型参数

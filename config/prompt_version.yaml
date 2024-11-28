@@ -79,6 +79,10 @@ local:
         aigc_functions_blood_pressure_alert_non_continuous: 0.0.1
         aigc_functions_diet_recommendation_summary: 0.0.1
         aigc_functions_tcm_consultation_decision_support: 0.0.1
+        aigc_functions_itinerary_description: 0.0.1
+        aigc_functions_itinerary_summary: 0.0.1
+        aigc_functions_likang_introduction: 0.0.1
+        aigc_functions_generate_greeting_new: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -164,6 +168,10 @@ dev:
         aigc_functions_blood_pressure_alert_non_continuous: 0.0.1
         aigc_functions_diet_recommendation_summary: 0.0.1
         aigc_functions_tcm_consultation_decision_support: 0.0.1
+        aigc_functions_itinerary_description: 0.0.1
+        aigc_functions_itinerary_summary: 0.0.1
+        aigc_functions_likang_introduction: 0.0.1
+        aigc_functions_generate_greeting_new: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -249,6 +257,9 @@ prod:
         aigc_functions_blood_pressure_alert_non_continuous: 0.0.1
         aigc_functions_diet_recommendation_summary: 0.0.1
         aigc_functions_tcm_consultation_decision_support: 0.0.1
+        aigc_functions_itinerary_description: 0.0.1
+        aigc_functions_itinerary_summary: 0.0.1
+        aigc_functions_likang_introduction: 0.0.1
     character:
     tool:
         创建日程: 0.2.0

@@ -179,12 +179,24 @@ def get_intent(text):
     elif "运动咨询" in text:
         code = "sport_rec"
         desc = "运动咨询"
-    elif "行程" in text:
-        code = "route_rec"
-        desc = "行程推荐"
-    elif "温泉" in text:
+    elif "温泉推荐" in text:
         code = "spa_rec"
         desc = "温泉推荐"
+    elif "行程推荐" in text:
+        code = "route_rec"
+        desc = "行程推荐"
+    elif "固安来康郡" in text:
+        code = "gu_an_laikangjun"
+        desc = "固安来康郡"
+    elif "温泉知识" in text:
+        code = "spa_knowledge"
+        desc = "温泉知识"
+    elif "查看行程方案结果" in text:
+        code = "itinerary_result_view"
+        desc = "查看行程方案结果"
+    elif "查看温泉方案结果" in text:
+        code = "spa_plan_result_view"
+        desc = "查看温泉方案结果"
     elif "页面" in text or "打开" in text:
         code = "open_Function"
         desc = "打开功能页面"
@@ -206,6 +218,9 @@ def get_intent(text):
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"
+    elif "血糖" in text:
+        code = "blood_glucose_counseling"
+        desc = "血糖咨询"
     elif "营养知识" in text:
         code = "nutri_knowledge_rec"
         desc = "营养知识咨询"
@@ -314,6 +329,9 @@ def get_intent(text):
     elif "高血压" in text:
         code = "chronic_qa"
         desc = "高血压知识问答"
+    elif "低血压" in text:
+        code = "hypotensive_consultation"
+        desc = "低血压咨询"
     elif "非会议日程管理" in text:
         code = "other_schedule"
         desc = "非会议日程管理"
@@ -347,18 +365,6 @@ def get_intent(text):
     elif "猜你想问" in text:
         code = "aigc_functions_generate_related_questions"
         desc = "猜你想问"
-    elif "健康宝" in text:
-        code = "hospital"
-        desc = "健康宝"
-    elif "医院预约" in text:
-        code = "hospital_appointment"
-        desc = "医院预约"
-    elif "检查结果查询" in text:
-        code = "exam_results"
-        desc = "检查结果查询"
-    elif "健康报告解读" in text:
-        code = "report_analysis"
-        desc = "健康报告解读"
     else:
         code = "other"
         desc = "日常对话"
@@ -471,7 +477,6 @@ def date_after(**kwargs):
     date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
-
 def this_sunday():
     """返回下周一0点0分0秒"""
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
@@ -479,11 +484,9 @@ def this_sunday():
         today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
     )
 
-
 def curr_weekday():
     today = date.today().strftime("%A")
     return today
-
 
 def dumpJS(obj, ensure_ascii=False, **kwargs):
     return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
@@ -561,6 +564,16 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
             "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
         )
     return prompt
+
+async def extract_clean_output(response: str) -> str:
+    # 提取 <|im_start|>assistant 到 <|im_end|> 之间的内容
+    matches = re.findall(r"<\|im_start\|>assistant\s*(.*?)<\|im_end\|>", response, re.DOTALL)
+    if matches:
+        # 如果有多段输出，合并成单段
+        return "\n".join(match.strip() for match in matches)
+    else:
+        # 如果没有匹配，移除所有 <|im_start|> 和 <|im_end|>
+        return response.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
 
 
 async def response_generator(response, error: bool = False) -> AsyncGenerator:
@@ -1138,25 +1151,52 @@ def handle_api_error(status_code, data, logger):
         logger.error(f"Unknown error, HTTP Status Code: {status_code}")
 
 
-async def determine_recent_solar_terms():
-    date = datetime.now()
-    lunar = Lunar.fromDate(date)
+async def determine_recent_solar_terms(date_str: str = None):
+    """
+    确定传入日期的当前节气或下一个节气。
 
-    # 获取当天的节气
-    current_jieqi = lunar.getCurrentJieQi()
-    if current_jieqi:
-        return f"{current_jieqi.getSolar().toYmd()} {current_jieqi.getName()}"
+    Args:
+        date_str (str, optional): 日期字符串，格式为 'YYYY-MM-DD'，默认为当前日期。
 
-    # 获取下一个节气
-    next_jieqi = lunar.getNextJieQi(True)
-    if next_jieqi:
-        next_jieqi_solar = next_jieqi.getSolar()
-        next_jieqi_date = datetime(next_jieqi_solar.getYear(), next_jieqi_solar.getMonth(), next_jieqi_solar.getDay())
-        delta_days = (next_jieqi_date - date).days
-        if delta_days <= 7:
-            return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
+    Returns:
+        str: 节气的名称和日期，例如 "2024-11-07 立冬"，如果失败则返回 "无"。
+    """
+    try:
+        # 如果未传入日期，使用当前时间
+        if date_str is None:
+            date = datetime.now()
+        else:
+            date = datetime.strptime(date_str, "%Y-%m-%d")
 
-    return None
+        # 转换为农历对象
+        lunar = Lunar.fromDate(date)
+
+        # 获取所有节气
+        jieqi_list = lunar.getJieQiTable()
+
+        # 遍历节气，判断当前日期是否在某个节气范围内
+        for jieqi_name, solar_date in jieqi_list.items():
+            start_date = datetime.strptime(solar_date.toYmd(), "%Y-%m-%d")
+            next_index = list(jieqi_list.keys()).index(jieqi_name) + 1
+            next_jieqi_name = list(jieqi_list.keys())[next_index % len(jieqi_list)]
+            next_solar_date = datetime.strptime(jieqi_list[next_jieqi_name].toYmd(), "%Y-%m-%d")
+
+            # 检查是否在当前节气范围内
+            if start_date <= date < next_solar_date:
+                return f"{start_date.strftime('%Y-%m-%d')} {jieqi_name}"
+
+        # 如果未找到当前节气，返回下一个节气
+        next_jieqi = lunar.getNextJieQi(True)
+        if next_jieqi:
+            next_solar_date = next_jieqi.getSolar()
+            return f"{next_solar_date.toYmd()} {next_jieqi.getName()}"
+
+        return "无"
+
+    except Exception as e:
+        # 捕获异常并返回 "无"
+        print(f"Error: {e}")
+        return "无"
 
 def determine_recent_solar_terms_sanji():
     date = datetime.now()
@@ -1670,6 +1710,7 @@ async def check_consecutive_days(blood_pressure_data: List[Dict]) -> bool:
 
     return True
 
+
 async def run_in_executor(func, *args, **kwargs):
     """
     在线程池中执行同步函数。
@@ -1684,3 +1725,187 @@ async def run_in_executor(func, *args, **kwargs):
     """
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
+
+
+async def wrap_content_for_frontend(content_text, content_type="MARKDOWN", item_title=""):
+    """
+    将内容封装为前端需要的结构，支持不同类型的内容
+    Args:
+        content_text (str | list): 需要封装的内容，可以是字符串或字符串列表
+        content_type (str): 内容类型，例如 MARKDOWN、HTML、TEXT
+        item_title (str): 给前端的唯一标识符
+    Returns:
+        dict: 包装后的前端结构
+    """
+    # 检查参数合法性
+    if not isinstance(content_text, (str, list)):
+        raise ValueError("content_text must be a string or a list of strings.")
+    if not isinstance(item_title, str):
+        raise ValueError("item_title must be a string.")
+    if content_type not in ["MARKDOWN", "HTML", "TEXT"]:
+        raise ValueError("content_type must be one of ['MARKDOWN', 'HTML', 'TEXT'].")
+
+    # 如果是字符串列表，将其转化为多个内容
+    if isinstance(content_text, list):
+        item_contents = [{"text": text} for text in content_text]
+    else:
+        item_contents = [{"text": content_text}]
+
+    return {
+        "text": "",
+        "payload": [
+            {
+                "itemTitle": item_title,
+                "itemType": content_type,
+                "itemContents": item_contents
+            }
+        ]
+    }
+
+
+async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
+    """
+    将 overview 数据组装为前端所需的格式，并固定第一天和最后一天的特殊活动。
+    Args:
+        overview (dict): 包含行程数据的 overview 字段
+    Returns:
+        dict: 返回组装后的前端数据结构
+    """
+
+    # 使用 JSON 深拷贝
+    copied_overview = json.loads(json.dumps(overview))
+
+    def format_date(date_str):
+        """
+        将日期转换为“10月27日”的格式
+        :param date_str: 原始日期字符串，格式为 YYYY-MM-DD
+        :return: 转换后的日期字符串
+        """
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            return date_obj.strftime("%m月%d日")
+        except ValueError:
+            return date_str  # 如果日期格式不对，直接返回原始值
+
+    markdown_intro = {
+        "itemTitle": "",
+        "itemType": "MARKDOWN",
+        "itemContents": [
+            {
+                "text": copied_overview.get("intro", "")
+            }
+        ]
+    }
+
+    # 准备表格内容
+    table_data = []
+    itinerary = copied_overview.get("itinerary", [])
+
+    # 如果行程存在，调整第一天和最后一天的固定活动
+    if itinerary:
+        # 固定第一天上午的活动为“到达和入住”，保留原地点
+        first_day = itinerary[0]
+        if "time_slots" in first_day and first_day["time_slots"]:
+            first_time_slot = first_day["time_slots"][0]
+            if "activities" in first_time_slot and first_time_slot["activities"]:
+                first_time_slot["activities"][0]["name"] = "到达和入住"
+
+        # 固定最后一天的最后一个活动为“返程”
+        last_day = itinerary[-1]
+        if "time_slots" in last_day and last_day["time_slots"]:
+            last_time_slot = last_day["time_slots"][-1]
+            if "activities" in last_time_slot and last_time_slot["activities"]:
+                last_time_slot["activities"].append({
+                    "name": "返程",
+                    "location": "",
+                    "description": "结束此次愉快的旅程，踏上归途。",
+                    "external_id": None
+                })
+
+    # 遍历行程数据并构建表格数据
+    for day_data in itinerary:
+        formatted_date = format_date(day_data.get("date", ""))
+        date_display = f"{formatted_date}\n（第{day_data.get('day')}天）"
+        for time_slot in day_data.get("time_slots", []):
+            period = time_slot.get("period", "")
+            for activity in time_slot.get("activities", []):
+                table_data.append({
+                    "value1": date_display,
+                    "value2": period,
+                    "value3": activity.get("name", ""),
+                    "value4": activity.get("location", ""),
+                })
+
+    table_structure = {
+        "itemTitle": "",
+        "itemType": "TABLE",
+        "itemContents": [
+            {
+                "tableOptions": [
+                    {
+                        "label": "日期",
+                        "prop": "value1",
+                        "min-width": 80,
+                        "mergeRows": ["value1"],
+                        "fixed": False
+                    },
+                    {
+                        "label": "时间",
+                        "prop": "value2",
+                        "min-width": 50,
+                        "mergeRows": ["value1", "value2"]
+                    },
+                    {
+                        "label": "活动",
+                        "prop": "value3",
+                        "min-width": 140
+                    },
+                    {
+                        "label": "地点",
+                        "prop": "value4",
+                        "min-width": 140
+                    }
+                ],
+                "tableData": table_data
+            }
+        ]
+    }
+
+    # 准备温馨提示和 closing 部分
+    tips_and_closing = {
+        "itemTitle": "",
+        "itemType": "MARKDOWN",
+        "itemContents": [
+            {
+                "text": f"## 温馨小贴士：\n- " + "\n- ".join(copied_overview.get("tips", [])) +
+                        f"\n\n{copied_overview.get('closing', '')}"
+            }
+        ]
+    }
+
+    # 返回完整的结构
+    return {
+        "text": "",
+        "payload": [
+            markdown_intro,
+            table_structure,
+            tips_and_closing
+        ]
+    }
+
+
+def log_with_source(func):
+    """异步装饰器，用于根据 source 动态绑定日志"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        source = kwargs.get("source", "user")
+        # logger.info(f"Source for logging: {source}")  # 验证 source 是否正确
+        if source == "monitor":
+            logger_with_source = logger.bind(source=source)  # 动态绑定日志上下文
+            logger_with_source.info("Logger is bound with source=monitor")
+        else:
+            logger_with_source = logger
+
+        kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
+        return await func(*args, **kwargs)
+    return wrapper

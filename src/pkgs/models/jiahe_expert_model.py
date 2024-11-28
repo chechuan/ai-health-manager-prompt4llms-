@@ -11,7 +11,7 @@ from src.prompt.model_init import ChatMessage, acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
-from src.utils.module import parse_generic_content
+from src.utils.module import parse_generic_content, determine_recent_solar_terms
 
 
 class JiaheExpertModel:
@@ -161,11 +161,12 @@ class JiaheExpertModel:
     async def gen_diet_principle(cur_date, location, personal_dietary_requirements,history=[], userInfo={}):
         """出具饮食调理原则"""
         userInfo, his_prompt = get_userInfo_history(userInfo, history)
+        recent_jieqi = await determine_recent_solar_terms(cur_date)
         messages = [
             {
                 "role": "user",
                 "content": jiahe_daily_diet_principle_prompt.format(
-                    userInfo, cur_date, location, his_prompt, personal_dietary_requirements
+                    userInfo, cur_date, recent_jieqi, location, his_prompt, personal_dietary_requirements
                 ),
             }
         ]

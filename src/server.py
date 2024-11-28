@@ -6,20 +6,20 @@
 @Contact :   chechuan1204@gmail.com
 """
 
-# 标准库导入
-import asyncio, json, sys, traceback
+import asyncio
+import json
+import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Union
 
-# 第三方库导入
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
-# 本地模块导入
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from chat.qwen_chat import Chat
@@ -29,17 +29,39 @@ from src.pkgs.models.jiahe_expert_model import JiaheExpertModel
 from src.pkgs.models.health_expert_model import HealthExpertModel
 from src.pkgs.models.itinerary_model import ItineraryModel
 from src.pkgs.models.bath_plan_model import BathPlanModel
+from src.pkgs.models.multimodal_model import MultiModalModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
-    AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
-    AigcFunctionsResponse, AigcSanjiRequest, BaseResponse, BodyFatWeightManagementRequest,
-    OutpatientSupportRequest, RolePlayRequest, SanJiKangYangRequest, TestRequest
+    AigcFunctionsCompletionResponse,
+    AigcFunctionsDoctorRecommendRequest,
+    AigcFunctionsRequest,
+    AigcFunctionsResponse,
+    AigcSanjiRequest,
+    BaseResponse,
+    BodyFatWeightManagementRequest,
+    OutpatientSupportRequest,
+    RolePlayRequest,
+    SanJiKangYangRequest,
+    TestRequest,
 )
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
-    MakeFastAPIOffline, NpEncoder, build_aigc_functions_response, curr_time,
-    dumpJS, format_sse_chat_complete, response_generator
+    MakeFastAPIOffline,
+    NpEncoder,
+    build_aigc_functions_response,
+    curr_time,
+    dumpJS,
+    format_sse_chat_complete,
+    response_generator,
+)
+
+from src.pkgs.models.func_eval_model.func_eval_model import (
+    image_recog,
+    diet_image_recog,
+    schedule_tips_modify,
+    sport_schedule_tips_modify,
+    daily_diet_eval,
 )
 
 
@@ -237,6 +259,21 @@ def mount_rule_endpoints(app: FastAPI):
         finally:
             return ret
 
+    @app.route("/health/blood_glucose_warning", methods=["post"])
+    async def _health_blood_glucose_warning(request: Request):
+        """血糖预警"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_glucose_warning"
+            )
+            ret = await expert_model.health_blood_glucose_warning(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+   
     @app.route("/health/warning_solutions_early", methods=["post"])
     async def _health_warning_solutions_early(request: Request):
         """预警解决方案"""
@@ -477,13 +514,31 @@ def mount_aigc_functions(app: FastAPI):
     async def _aigc_functions_generate_itinerary(request: Request):
         # 这里调用生成行程的逻辑
         user_data = await request.json()
-        response = itinerary_model.generate_itinerary(user_data)
+        response = await itinerary_model.generate_itinerary(user_data)
         return response
 
     async def _aigc_functions_generate_bath_plan(request: Request):
         user_data = await request.json()
         # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = bath_plan_model.generate_bath_plan(user_data)
+        response = await bath_plan_model.generate_bath_plan(user_data)
+        return response
+
+    async def _aigc_functions_generate_itinerary_v1_1_0(request: Request):
+        # 这里调用生成行程的逻辑
+        user_data = await request.json()
+        response = await itinerary_model.generate_itinerary_v1_1_0(user_data)
+        return response
+
+    async def _aigc_functions_generate_bath_plan_v1_1_0(request: Request):
+        user_data = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        response = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
+        return response
+
+    async def _aigc_functions_likang_introduction_v1_1_0(request: Request):
+        params = await request.json()
+        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
+        response = await itinerary_model.aigc_functions_likang_introduction(**params)
         return response
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
@@ -496,11 +551,58 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
 
-
     app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
 
     app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
 
+    app.post("/aigc/v1_1_0/itinerary", description="根据用户的偏好和需求生成个性化行程清单（V1.1.0）")(_aigc_functions_generate_itinerary_v1_1_0)
+
+    app.post("/aigc/v1_1_0/bath_plan", description="生成泡浴方案（V1.1.0）")(_aigc_functions_generate_bath_plan_v1_1_0)
+
+    app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
+
+
+
+def mount_multimodal_endpoints(app: FastAPI):
+
+    @app.route("/func_eval/image_type_recog", methods=["post"])
+    async def _func_eval_image_type_recog(request: Request):
+        """图片分类，包含：饮食、运动、报告、其他"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/image_type_recog")
+            ret = await multimodal_model.image_type_recog(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/func_eval/diet_recog", methods=["post"])
+    async def _func_eval_diet_recog(request: Request):
+        """菜品识别，提取菜品名称、数量、单位信息"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_recog")
+            ret = await multimodal_model.diet_recog(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
+    @app.route("/func_eval/diet_eval", methods=["post"])
+    async def _func_eval_diet_eval(request: Request):
+        """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_eval")
+            ret = await multimodal_model.diet_eval(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
 
 def create_app():
@@ -510,6 +612,11 @@ def create_app():
         version=f"{datetime.now().strftime('%Y.%m.%d %H:%M:%S')}",
     )
     prepare_for_all()
+
+    @app.get("/health", summary="健康检查接口")
+    async def health_check():
+        """健康检查接口"""
+        return {"status": "healthy"}
 
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
@@ -605,6 +712,88 @@ def create_app():
     app.get("/", response_model=BaseResponse, summary="swagger 文档")(document)
 
     app.post("/test/sync")(_test_sync)
+
+    # @app.route("/func_eval/image_type_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """图片类型识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/image_type_recog")
+    #         generator: AsyncGenerator = image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
+    #
+    # @app.route("/func_eval/diet_image_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """饮食图片识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
+    #         generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/schedule_tips_modification", methods=["post"])
+    async def _schedule_tips_modify(request: Request):
+        """用户日程tips修改"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/schedule_tips_modification")
+            generator: AsyncGenerator = schedule_tips_modify(param.get("schedule_tips", ""),
+                                                             param.get("history", []),
+                                                             param.get("cur_time", ''))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
+
+    @app.route("/func_eval/sport_schedule_modify_suggestion", methods=["post"])
+    async def _schedule_tips_modify(request: Request):
+        """用户运动日程修改"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/sport_schedule_modify_suggestion")
+            item = await sport_schedule_tips_modify(param.get("schedule", []),
+                                              param.get("history", []),
+                                              param.get("cur_time", ''))
+            result = make_result(items=item)
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+        finally:
+            return result
+
+    @app.route("/func_eval/daily_diet_eval", methods=["post"])
+    async def _daily_diet_eval(request: Request):
+        """一日血糖饮食建议"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
+            generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
+                                   param.get("daily_diet_info", []),
+                                   param.get("daily_blood_glucose", ''),
+                                   param.get("management_tag", '血糖管理'))
+            result = decorate_general_complete(
+                generator
+            )
+        except Exception as err:
+            logger.exception(err)
+            result = yield_result(head=600, msg=repr(err), items=param)
+
+        finally:
+            return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/health_qa", methods=["post"])
     async def _health_qa(request: Request):
@@ -1182,6 +1371,7 @@ def create_app():
     mount_aigc_functions(app)
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
+    mount_multimodal_endpoints(app)
     MakeFastAPIOffline(app)
     return app
 
@@ -1197,6 +1387,7 @@ def prepare_for_all():
     global jiahe_expert
     global itinerary_model
     global bath_plan_model
+    global multimodal_model
 
     gsr = InitAllResource()
     args = gsr.args
@@ -1208,6 +1399,7 @@ def prepare_for_all():
     jiahe_expert = JiaheExpertModel(gsr)
     itinerary_model = ItineraryModel(gsr)
     bath_plan_model = BathPlanModel(gsr)
+    multimodal_model = MultiModalModel(gsr)
 
 
 # app = create_app()

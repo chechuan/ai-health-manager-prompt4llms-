@@ -496,17 +496,6 @@ class Chat:
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
 
-        # 应对演示临时添加-240208
-        import json
-        data_demo = json.load(open('data/demo.json', 'r'))
-        data_demo = sorted(data_demo, key=lambda x:len(x['key_words']), reverse=True)
-        for i in data_demo:
-            key_num = sum([1 for k in i['key_words'] if k in
-                history[-1]['contnet']])
-            if key_num == len(i['key_words']) and key_num > 0:
-                return {'message':i['response'], 'intentCode':'other',
-                        'processCode':i['processCode'], 'intentDesc':'日常对话'}
-
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
                 input_prompt))
@@ -538,7 +527,15 @@ class Chat:
         elif intent == 'remind_take_blood_pressure':
             out_text = {'message':'好的，已通知张叔叔测量血压', 'intentCode':intent,
                     'processCode':'trans_back', 'intentDesc':desc}
-        elif intent in ["route_rec", "spa_rec"]:
+        # elif intent in ["route_rec", "spa_rec"]:
+        #     # # 直接使用 history 中的内容生成 messages
+        #     # messages = [
+        #     #     {"role": "user", "content": history[0]["content"]}
+        #     # ]
+        #     # # 调用 generate_chat_response 方法生成响应
+        #     # content = self.assistant.generate_chat_response(messages)
+        #     out_text = {'message': '', 'intentCode': intent, 'processCode': 'alg', 'intentDesc': desc}
+        elif intent in ["spa_knowledge"]:
             # 直接使用 history 中的内容生成 messages
             messages = [
                 {"role": "user", "content": history[0]["content"]}
