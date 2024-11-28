@@ -1767,6 +1767,15 @@ class HealthExpertModel:
         manageDays = kwargs.get("manageDays", '')
         dietStatus = kwargs.get("dietStatus", '')
 
+        if (groupSceneTag=='' or manageDays =='') and dietStatus !='':
+            cr = f"你昨日的饮食状态{dietStatus}"
+        elif groupSceneTag!='' and manageDays !='' and dietStatus !='':
+            cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天,昨日的饮食状态{dietStatus}"
+        elif groupSceneTag and manageDays !='' and dietStatus =='':
+            cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天."
+        else:
+            cr = ""
+
         # 拼接用户画像信息字符串
         # user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
         # user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
@@ -1776,9 +1785,7 @@ class HealthExpertModel:
             "daily_schedule": daily_schedule_section,
             "key_indicators": key_indicators_section,
             "daily_info": daily_info_str,
-            "dietStatus": dietStatus,
-            "manageDays": manageDays,
-            "groupSceneTag": groupSceneTag
+            "cr":cr
         }
 
         # 更新模型参数
