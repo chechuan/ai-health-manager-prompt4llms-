@@ -112,12 +112,12 @@ class BathPlanModel:
         elif len(user_problems) > 1:
             combination_key = '+'.join(user_problems)
         else:
-            return await self.default_bath_plan(user_data['gender'], spring_effects_data, bath_plan_data)
+            return await self.default_bath_plan(user_data.get("gender", "男"), spring_effects_data, bath_plan_data)
 
         if combination_key in bath_plan_data:
             bath_plan_string = bath_plan_data[combination_key]
-            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data['gender'], is_default=False)
-            health_analysis = await self.get_health_analysis(combination_key, user_data['gender'])
+            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data.get("gender", "男"), is_default=False)
+            health_analysis = await self.get_health_analysis(combination_key, user_data.get("gender", "男"))
         else:
             return {"msg": "未找到匹配的泡浴方案"}
 
@@ -149,9 +149,10 @@ class BathPlanModel:
         else:
             return "未找到健康分析"
 
-    async def default_bath_plan(self, gender, spring_effects_data, bath_plan_data):
+    async def default_bath_plan(self, gender, spring_effects_data, bath_plan_data, version=None):
         """
         当用户未选择问题时，返回默认方案
+        根据版本返回不同的数据结构
         """
         if "未选择问题" in bath_plan_data:
             default_plan_string = bath_plan_data["未选择问题"]
@@ -159,16 +160,22 @@ class BathPlanModel:
             default_plan = await self.parse_bath_plan(default_plan_string, spring_effects_data, gender, is_default=True)
             health_analysis = await self.get_health_analysis("未选择问题", gender)
 
-            return {
-                "head": 200,
-                "items": {
-                    "bath_plan": default_plan,
-                    "notice": self.NOTICE,
-                    "output_basis": self.OUTPUT_BASIS,
-                    "health_analysis": health_analysis
-                },
-                "msg": ""
-            }
+            # 根据版本判断返回的结构
+            if version == "v_1.1.0":
+                # v_1.1.0 版本只返回 full_plan 和 health_analysis
+                return default_plan, health_analysis
+            else:
+                # 其他版本的默认返回结构
+                return {
+                    "head": 200,
+                    "items": {
+                        "bath_plan": default_plan,
+                        "notice": self.NOTICE,
+                        "output_basis": self.OUTPUT_BASIS,
+                        "health_analysis": health_analysis
+                    },
+                    "msg": ""
+                }
         else:
             return {"msg": "未找到默认的泡浴方案"}
 
@@ -196,15 +203,33 @@ class BathPlanModel:
 
         return markdown
 
+    async def get_bath_plan(self, combination_key, gender, spring_effects_data, bath_plan_data):
+        """
+        获取泡浴方案：如果没有选择健康问题，返回默认方案；否则，返回自定义方案。
+        """
+        # 如果是没有选择健康问题的情况，获取默认方案
+        if combination_key == "未选择问题":
+            return await self.default_bath_plan(gender, spring_effects_data, bath_plan_data, version="v_1.1.0")
+
+        # 如果有健康问题，查找匹配的方案
+        if combination_key in bath_plan_data:
+            bath_plan_string = bath_plan_data[combination_key]
+            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, gender, is_default=False)
+            health_analysis = await self.get_health_analysis(combination_key, gender)
+            return full_plan, health_analysis
+
+        # 如果没有找到匹配的方案
+        return [], {"msg": "未找到匹配的泡浴方案"}
+
     async def generate_bath_plan_v1_1_0(self, user_data):
         """
         根据用户输入的健康问题生成泡浴方案
         """
         bath_plan_data, spring_effects_data = await self.load_bath_plan_data()
+        gender = user_data.get('gender', "男")
 
-        full_plan = []
+        # 收集用户的健康问题
         user_problems = []
-
         if user_data.get('skin_problems'):
             user_problems.append('皮肤问题')
         if user_data.get('pain_problems'):
@@ -214,19 +239,12 @@ class BathPlanModel:
         if user_data.get('sleep_problems'):
             user_problems.append('睡眠问题')
 
-        if len(user_problems) == 1:
-            combination_key = user_problems[0]
-        elif len(user_problems) > 1:
-            combination_key = '+'.join(user_problems)
-        else:
-            return await self.default_bath_plan(user_data['gender'], spring_effects_data, bath_plan_data)
+        # 根据健康问题选择组合的key
+        combination_key = '+'.join(user_problems) if user_problems else "未选择问题"
 
-        if combination_key in bath_plan_data:
-            bath_plan_string = bath_plan_data[combination_key]
-            full_plan = await self.parse_bath_plan(bath_plan_string, spring_effects_data, user_data['gender'], is_default=False)
-            health_analysis = await self.get_health_analysis(combination_key, user_data['gender'])
-        else:
-            return {"msg": "未找到匹配的泡浴方案"}
+        # 获取泡浴方案
+        full_plan, health_analysis = await self.get_bath_plan(combination_key, gender, spring_effects_data,
+                                                              bath_plan_data)
 
         # 生成 Markdown 格式
         markdown_output = await self.generate_markdown_bath_plan(full_plan, health_analysis)
@@ -256,7 +274,6 @@ class BathPlanModel:
         }
 
 
-
 if __name__ == '__main__':
     # 测试输入数据
     input_data = {
@@ -272,4 +289,4 @@ if __name__ == '__main__':
     gsr = InitAllResource()
     generator = BathPlanModel(gsr)
     recommended_bath_plan = generator.generate_bath_plan(input_data)
-    print(recommended_bath_plan)
+    # print(recommended_bath_plan)
