@@ -1701,6 +1701,94 @@ class HealthExpertModel:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
+    
+    async def aigc_functions_generate_greeting_new(self, **kwargs) -> str:
+        """
+        生成每日问候开场白
+
+        需求文档：<https://alidocs.dingtalk.com/i/nodes/amweZ92PV6BD4ZlzHvbOD3xzVxEKBD6p?utm_scene=team_space&iframeQuery=anchorId%3Duu_lyz717o1dw4tnoeoiqa>
+
+        根据用户画像、当日剩余日程、关键指标、当日相关信息等生成每日问候开场白。
+
+        参数:
+            kwargs (dict): 包含用户画像、当日剩余日程、关键指标、当日相关信息的参数字典
+
+        返回:
+            str: 每日问候开场白文本
+        """
+
+        _event = "生成每日问候开场白"
+
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
+        city = user_profile.get("city", "")
+
+        # 移除性别和年龄信息
+        user_profile.pop("gender", None)
+        user_profile.pop("age", None)
+        user_profile.pop("city", None)
+
+        # 获取当日剩余日程信息
+        daily_schedule = kwargs.get("daily_schedule", [])
+        daily_schedule_str = await generate_daily_schedule(daily_schedule)
+        daily_schedule_section = f"## 当日剩余日程\n{daily_schedule_str}" if daily_schedule_str else ""
+
+        # 获取关键指标信息
+        key_indicators = kwargs.get("key_indicators", [])
+        key_indicators_str = await generate_key_indicators(key_indicators)
+        key_indicators_section = f"## 关键指标\n{key_indicators_str}" if key_indicators_str else ""
+
+        # 异步获取当天天气信息
+        today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
+        )
+
+        if not today_weather:
+            # 如果没有天气信息，删除城市信息
+            user_profile.pop("city", None)
+
+        # 获取最近节气
+        recent_solar_terms = await determine_recent_solar_terms()
+
+        # 获取当日节日
+        today_festivals = await get_festivals_and_other_festivals()
+
+        # 构建当日相关信息
+        daily_info = [f"### 当前日期和时间\n{curr_time()}"]
+        if today_weather:
+            daily_info.append(f"### 当日天气\n{today_weather}")
+        if recent_solar_terms:
+            daily_info.append(f"### 最近节气\n{recent_solar_terms}")
+        if today_festivals:
+            daily_info.append(f"### 当日节日\n{today_festivals}")
+
+        daily_info_str = "\n".join(daily_info).strip()
+
+        groupSceneTag = kwargs.get("groupSceneTag", '')
+        manageDays = kwargs.get("manageDays", '')
+        dietStatus = kwargs.get("dietStatus", '')
+
+        # 拼接用户画像信息字符串
+        # user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
+        # user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
+
+        # 构建提示变量
+        prompt_vars = {
+            "daily_schedule": daily_schedule_section,
+            "key_indicators": key_indicators_section,
+            "daily_info": daily_info_str,
+            "dietStatus": dietStatus,
+            "manageDays": manageDays,
+            "groupSceneTag": groupSceneTag
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+        return content
 
     async def aigc_functions_guide_user_back_to_consultation(self, **kwargs) -> str:
         """
