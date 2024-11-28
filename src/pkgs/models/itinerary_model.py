@@ -1127,14 +1127,14 @@ class ItineraryModel:
 
         # 添加欢迎语
         intro = items.get("intro", "欢迎参加我们的行程！")
-        markdown.append(f"{intro}\n")
+        markdown.append(f"{intro}\n&nbsp;")  # 在欢迎语后添加空行
 
         # 添加每日行程
         itinerary = items.get("itinerary", [])
         for day in itinerary:
             day_number = day.get("day", "未知天数")
             date = day.get("date", "未知日期")
-            markdown.append(f"**第{day_number}天**：")
+            markdown.append(f"### 第{day_number}天：")
 
             for time_slot in day.get("time_slots", []):
                 period = time_slot.get("period", "未知时间段")
@@ -1163,7 +1163,7 @@ class ItineraryModel:
         # 添加温馨提示
         tips = items.get("tips", [])
         if tips:
-            markdown.append("## 温馨小贴士：")
+            markdown.append("### 温馨小贴士：")
             for tip in tips:
                 markdown.append(f"- {tip}")
             markdown.append("")  # 空行分隔
