@@ -191,6 +191,12 @@ def get_intent(text):
     elif "温泉知识" in text:
         code = "spa_knowledge"
         desc = "温泉知识"
+    elif "查看行程方案结果" in text:
+        code = "itinerary_result_view"
+        desc = "查看行程方案结果"
+    elif "查看温泉方案结果" in text:
+        code = "spa_plan_result_view"
+        desc = "查看温泉方案结果"
     elif "页面" in text or "打开" in text:
         code = "open_Function"
         desc = "打开功能页面"
@@ -212,6 +218,9 @@ def get_intent(text):
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"
+    elif "血糖" in text:
+        code = "blood_glucose_counseling"
+        desc = "血糖咨询"
     elif "营养知识" in text:
         code = "nutri_knowledge_rec"
         desc = "营养知识咨询"
@@ -320,6 +329,9 @@ def get_intent(text):
     elif "高血压" in text:
         code = "chronic_qa"
         desc = "高血压知识问答"
+    elif "低血压" in text:
+        code = "hypotensive_consultation"
+        desc = "低血压咨询"
     elif "非会议日程管理" in text:
         code = "other_schedule"
         desc = "非会议日程管理"
@@ -465,7 +477,6 @@ def date_after(**kwargs):
     date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
-
 def this_sunday():
     """返回下周一0点0分0秒"""
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
@@ -473,11 +484,9 @@ def this_sunday():
         today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
     )
 
-
 def curr_weekday():
     today = date.today().strftime("%A")
     return today
-
 
 def dumpJS(obj, ensure_ascii=False, **kwargs):
     return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
@@ -1142,25 +1151,52 @@ def handle_api_error(status_code, data, logger):
         logger.error(f"Unknown error, HTTP Status Code: {status_code}")
 
 
-async def determine_recent_solar_terms():
-    date = datetime.now()
-    lunar = Lunar.fromDate(date)
+async def determine_recent_solar_terms(date_str: str = None):
+    """
+    确定传入日期的当前节气或下一个节气。
 
-    # 获取当天的节气
-    current_jieqi = lunar.getCurrentJieQi()
-    if current_jieqi:
-        return f"{current_jieqi.getSolar().toYmd()} {current_jieqi.getName()}"
+    Args:
+        date_str (str, optional): 日期字符串，格式为 'YYYY-MM-DD'，默认为当前日期。
 
-    # 获取下一个节气
-    next_jieqi = lunar.getNextJieQi(True)
-    if next_jieqi:
-        next_jieqi_solar = next_jieqi.getSolar()
-        next_jieqi_date = datetime(next_jieqi_solar.getYear(), next_jieqi_solar.getMonth(), next_jieqi_solar.getDay())
-        delta_days = (next_jieqi_date - date).days
-        if delta_days <= 7:
-            return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
+    Returns:
+        str: 节气的名称和日期，例如 "2024-11-07 立冬"，如果失败则返回 "无"。
+    """
+    try:
+        # 如果未传入日期，使用当前时间
+        if date_str is None:
+            date = datetime.now()
+        else:
+            date = datetime.strptime(date_str, "%Y-%m-%d")
 
-    return None
+        # 转换为农历对象
+        lunar = Lunar.fromDate(date)
+
+        # 获取所有节气
+        jieqi_list = lunar.getJieQiTable()
+
+        # 遍历节气，判断当前日期是否在某个节气范围内
+        for jieqi_name, solar_date in jieqi_list.items():
+            start_date = datetime.strptime(solar_date.toYmd(), "%Y-%m-%d")
+            next_index = list(jieqi_list.keys()).index(jieqi_name) + 1
+            next_jieqi_name = list(jieqi_list.keys())[next_index % len(jieqi_list)]
+            next_solar_date = datetime.strptime(jieqi_list[next_jieqi_name].toYmd(), "%Y-%m-%d")
+
+            # 检查是否在当前节气范围内
+            if start_date <= date < next_solar_date:
+                return f"{start_date.strftime('%Y-%m-%d')} {jieqi_name}"
+
+        # 如果未找到当前节气，返回下一个节气
+        next_jieqi = lunar.getNextJieQi(True)
+        if next_jieqi:
+            next_solar_date = next_jieqi.getSolar()
+            return f"{next_solar_date.toYmd()} {next_jieqi.getName()}"
+
+        return "无"
+
+    except Exception as e:
+        # 捕获异常并返回 "无"
+        print(f"Error: {e}")
+        return "无"
 
 def determine_recent_solar_terms_sanji():
     date = datetime.now()
@@ -1716,7 +1752,7 @@ async def wrap_content_for_frontend(content_text, content_type="MARKDOWN", item_
         item_contents = [{"text": content_text}]
 
     return {
-        "text": "AI",
+        "text": "",
         "payload": [
             {
                 "itemTitle": item_title,
@@ -1849,10 +1885,27 @@ async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
 
     # 返回完整的结构
     return {
-        "text": "AI",
+        "text": "",
         "payload": [
             markdown_intro,
             table_structure,
             tips_and_closing
         ]
     }
+
+
+def log_with_source(func):
+    """异步装饰器，用于根据 source 动态绑定日志"""
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        source = kwargs.get("source", "user")
+        # logger.info(f"Source for logging: {source}")  # 验证 source 是否正确
+        if source == "monitor":
+            logger_with_source = logger.bind(source=source)  # 动态绑定日志上下文
+            logger_with_source.info("Logger is bound with source=monitor")
+        else:
+            logger_with_source = logger
+
+        kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
+        return await func(*args, **kwargs)
+    return wrapper

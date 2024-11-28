@@ -69,7 +69,7 @@ async def diet_image_recog(img):
         start_time = time.time()
         generate_text = await acallLLM(
             history=messages,
-            max_tokens=500,
+            max_tokens=1000,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -93,7 +93,7 @@ async def extract_imgInfo(history, daily_diet_info):
                 img_info.append(h['content'])
     elif daily_diet_info:
         for i, info in enumerate(daily_diet_info):
-            if not info.get('diet_info', '') and info.get('diet_image', ''):
+            if info.get('diet_image', '') and not info.get('diet_info', ''):
                 img_info.append(info['diet_image'])
     for i, img_url in enumerate(img_info):
         prompt = get_func_eval_prompt('img_sumUp_prompt') if history else get_func_eval_prompt('diet_image_recog_prompt')
@@ -115,7 +115,7 @@ async def extract_imgInfo(history, daily_diet_info):
         start_time = time.time()
         generate_text = await acallLLM(
             history=messages,
-            max_tokens=200,
+            max_tokens=1000,
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
@@ -159,7 +159,7 @@ async def schedule_tips_modify(schedule_template, history, cur_time):
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         do_sample=True,
@@ -199,7 +199,7 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         # stream=True,
@@ -238,18 +238,34 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         }
     ]
     logger.debug(
-        "一日饮食评估建议模型输入： " + prompt.format(userInfo,daily_diet_str, daily_blood_glucose, management_tag)
+        "一日饮食评估建议模型输入： " + prompt.format(userInfo_str,daily_diet_str, bg_str, management_tag)
     )
     start_time = time.time()
     generate_text = await acallLLM(
         history=messages,
-        max_tokens=200,
+        max_tokens=1000,
         top_p=0.9,
         temperature=0.8,
         do_sample=True,
+        stream=True,
         is_vl=True,
         model="Qwen1.5-32B-Chat",
     )
-    logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
-    logger.debug("一日饮食评估建议模型输出： " + generate_text)
-    yield {"daily_diet_eval": generate_text.replace('\n\n', '\n'), "head": 200, "err_msg": "", "end": True}
+    # logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+    # logger.debug("一日饮食评估建议模型输出： " + generate_text)
+    # yield {"message": generate_text.replace('\n\n', '\n'), "end": True}
+    #response_time = time.time()
+    content = ""
+    printed = False
+    async for i in generate_text:
+        t = time.time()
+        msg = i.choices[0].delta.to_dict()
+        text_stream = msg.get("content").replace('\n', '')
+        if text_stream:
+            if not printed:
+                print(f"latency first token {t - start_time:.2f} s")
+                printed = True
+            content += text_stream
+            yield {'message': text_stream, 'end': False}
+    logger.debug("一日饮食评估建议模型输出： " + content)
+    yield {'message': "", 'end': True}

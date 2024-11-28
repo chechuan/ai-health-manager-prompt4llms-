@@ -20,10 +20,8 @@ def get_sch_str(schedule):
 def get_daily_blood_glucose_str(daily_blood_glucose):
     bg_str = ''
     for i in daily_blood_glucose:
-        bg_str += f"{i.get('time', '')} {i.get('value', '')}; "
+        bg_str += f"测量时间：{i.get('time', '')}  测量值：{i.get('value', '')}\n"
     return bg_str
-
-
 
 def get_daily_diet_str(daily_diet_info):
     daily_diet_str = ''
@@ -31,8 +29,9 @@ def get_daily_diet_str(daily_diet_info):
         diet_info = ''
         for info in i.get('diet_info', []):
             if info:
-                diet_info += f"{info.get('count')}{info.get('unit')}{info.get('count')}，"
-        daily_diet_str += f"{i.get('diet_time', '')} 饮食情况为：{diet_info}。医生评价是：{i.get('diet_eval', '无')}\n"
+                diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('name', '')}，"
+        daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
+    return daily_diet_str
 
 def get_standard_img_type(text):
     if '运动' in text:

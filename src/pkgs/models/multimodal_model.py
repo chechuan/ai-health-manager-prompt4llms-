@@ -38,9 +38,12 @@ class MultiModalModel:
     async def image_type_recog(self, **kwargs):
         """图片分类，包含：饮食、运动、报告、其他"""
         image_url = kwargs.get("image_url")
+        diet_recog = kwargs.get("diet_recog", False)
         if not image_url:
             return self._get_result(400, {}, "image_url is required and cannot be empty.")
-        payload = {"image_url": image_url}
+        if not diet_recog in [True, False]:
+            return self._get_result(400, {}, "diet_recog must be boolean.")
+        payload = {"image_url": image_url, "diet_recog": diet_recog}
         async with aiohttp.ClientSession() as session:
             async with session.post(f"{self.endpoint}/api/dishes/ana_image_type", data=payload) as resp:
                 if resp.status == 200:

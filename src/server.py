@@ -6,20 +6,20 @@
 @Contact :   chechuan1204@gmail.com
 """
 
-# 标准库导入
-import asyncio, json, sys, traceback
+import asyncio
+import json
+import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Union
 
-# 第三方库导入
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
 
-# 本地模块导入
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
 from chat.qwen_chat import Chat
@@ -32,15 +32,28 @@ from src.pkgs.models.bath_plan_model import BathPlanModel
 from src.pkgs.models.multimodal_model import MultiModalModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
-    AigcFunctionsCompletionResponse, AigcFunctionsDoctorRecommendRequest, AigcFunctionsRequest,
-    AigcFunctionsResponse, AigcSanjiRequest, BaseResponse, BodyFatWeightManagementRequest,
-    OutpatientSupportRequest, RolePlayRequest, SanJiKangYangRequest, TestRequest
+    AigcFunctionsCompletionResponse,
+    AigcFunctionsDoctorRecommendRequest,
+    AigcFunctionsRequest,
+    AigcFunctionsResponse,
+    AigcSanjiRequest,
+    BaseResponse,
+    BodyFatWeightManagementRequest,
+    OutpatientSupportRequest,
+    RolePlayRequest,
+    SanJiKangYangRequest,
+    TestRequest,
 )
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
 from src.utils.module import (
-    MakeFastAPIOffline, NpEncoder, build_aigc_functions_response, curr_time,
-    dumpJS, format_sse_chat_complete, response_generator
+    MakeFastAPIOffline,
+    NpEncoder,
+    build_aigc_functions_response,
+    curr_time,
+    dumpJS,
+    format_sse_chat_complete,
+    response_generator,
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
@@ -600,6 +613,11 @@ def create_app():
     )
     prepare_for_all()
 
+    @app.get("/health", summary="健康检查接口")
+    async def health_check():
+        """健康检查接口"""
+        return {"status": "healthy"}
+
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
@@ -695,35 +713,35 @@ def create_app():
 
     app.post("/test/sync")(_test_sync)
 
-    @app.route("/func_eval/image_type_recog", methods=["post"])
-    async def _image_type_recog(request: Request):
-        """图片类型识别"""
-        try:
-            param = await accept_param(request, endpoint="/func_eval/image_type_recog")
-            generator: AsyncGenerator = image_recog(param.get("image_url", ""))
-            result = decorate_general_complete(
-                generator
-            )
-        except Exception as err:
-            logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
-        finally:
-            return StreamingResponse(result, media_type="text/event-stream")
-
-    @app.route("/func_eval/diet_image_recog", methods=["post"])
-    async def _image_type_recog(request: Request):
-        """饮食图片识别"""
-        try:
-            param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
-            generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
-            result = decorate_general_complete(
-                generator
-            )
-        except Exception as err:
-            logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
-        finally:
-            return StreamingResponse(result, media_type="text/event-stream")
+    # @app.route("/func_eval/image_type_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """图片类型识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/image_type_recog")
+    #         generator: AsyncGenerator = image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
+    #
+    # @app.route("/func_eval/diet_image_recog", methods=["post"])
+    # async def _image_type_recog(request: Request):
+    #     """饮食图片识别"""
+    #     try:
+    #         param = await accept_param(request, endpoint="/func_eval/diet_image_recog")
+    #         generator: AsyncGenerator = diet_image_recog(param.get("image_url", ""))
+    #         result = decorate_general_complete(
+    #             generator
+    #         )
+    #     except Exception as err:
+    #         logger.exception(err)
+    #         result = yield_result(head=600, msg=repr(err), items=param)
+    #     finally:
+    #         return StreamingResponse(result, media_type="text/event-stream")
 
     @app.route("/func_eval/schedule_tips_modification", methods=["post"])
     async def _schedule_tips_modify(request: Request):
@@ -759,14 +777,14 @@ def create_app():
             return result
 
     @app.route("/func_eval/daily_diet_eval", methods=["post"])
-    async def _schedule_tips_modify(request: Request):
+    async def _daily_diet_eval(request: Request):
         """一日血糖饮食建议"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
             generator: AsyncGenerator = daily_diet_eval(param.get("userInfo", {}),
                                    param.get("daily_diet_info", []),
                                    param.get("daily_blood_glucose", ''),
-                                   param.get("management_tag", ''))
+                                   param.get("management_tag", '血糖管理'))
             result = decorate_general_complete(
                 generator
             )
