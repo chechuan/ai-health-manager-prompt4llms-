@@ -82,6 +82,7 @@ local:
         aigc_functions_itinerary_description: 0.0.1
         aigc_functions_itinerary_summary: 0.0.1
         aigc_functions_likang_introduction: 0.0.1
+        aigc_functions_generate_greeting_new: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
@@ -170,6 +171,7 @@ dev:
         aigc_functions_itinerary_description: 0.0.1
         aigc_functions_itinerary_summary: 0.0.1
         aigc_functions_likang_introduction: 0.0.1
+        aigc_functions_generate_greeting_new: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
