@@ -187,7 +187,9 @@ class BathPlanModel:
         markdown = f"根据您的症状描述，{health_analysis}\n\n"
 
         # 添加 output_basis 说明
-        markdown += f"{self.OUTPUT_BASIS}\n\n ###### &nbsp;"
+        markdown += f"{self.OUTPUT_BASIS}\n\n"
+
+        markdown += "###### &nbsp;\n"
 
         # 判断是否有温泉池，并生成方案部分
         for idx, step in enumerate(full_plan):
@@ -198,6 +200,7 @@ class BathPlanModel:
             markdown += f"  - **时间建议**: {step['suggested_time']}\n"
             markdown += f"  - **疗愈效果**: {step['effect']}\n\n ###### &nbsp;"
 
+        markdown += "###### &nbsp;\n"
         # 添加温馨提示部分
         markdown += f"**智小伴建议**：{self.NOTICE}\n\n"
 
