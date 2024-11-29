@@ -1127,7 +1127,7 @@ class ItineraryModel:
 
         # 添加欢迎语
         intro = items.get("intro", "欢迎参加我们的行程！")
-        markdown.append(f"{intro}\n&nbsp;")  # 在欢迎语后添加空行
+        markdown.append(f"{intro}\n<br/>")  # 在欢迎语后添加空行
 
         # 添加每日行程
         itinerary = items.get("itinerary", [])
