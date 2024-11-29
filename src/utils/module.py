@@ -1935,22 +1935,3 @@ def log_with_source(func):
         return await func(*args, **kwargs)
     return wrapper
 
-
-def replace_you(text) -> str:
-    """统一替换‘您’为‘你’"""
-    if isinstance(text, str):
-        # 如果是字符串，直接替换“您”为“你”
-        return text.replace('您', '你')
-    elif isinstance(text, dict):
-        # 如果是字典，递归替换所有字符串值中的“您”为“你”
-        return {key: replace_you(value) for key, value in text.items()}
-    elif isinstance(text, list):
-        # 如果是列表，递归替换列表中的所有字符串元素
-        return [replace_you(item) for item in text]
-    elif hasattr(text, 'model_dump_json'):  # 针对自定义对象，如 AigcFunctionsResponse
-        # 如果是 AigcFunctionsResponse 类型，替换其中的 message 字段
-        text.message = replace_you(text.message)
-        return text.model_dump_json(exclude_unset=False)  # 返回处理后的 JSON 字符串
-    return text  # 如果是其他类型，则不做处理，直接返回
-
-
