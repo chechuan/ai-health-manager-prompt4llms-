@@ -196,7 +196,7 @@ class expertModel:
             "thought": thought,
             "scheme_gen": 0,
             "content": content
-                       + "已为您智能匹配了最适合您的减压方案，帮助您改善睡眠、缓解压力。",
+                       + "已为你智能匹配了最适合你的减压方案，帮助你改善睡眠、缓解压力。",
             "scene_ending": True,
         }
 
@@ -236,7 +236,7 @@ class expertModel:
         if len(kwargs["history"]) > 0:
             query = kwargs["history"][-1]["content"]
         # if not query:
-        #     return {'thought': '', 'content': f'您今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
+        #     return {'thought': '', 'content': f'你今日体重为{weight}', 'scene_ending': False, 'scheme_gen':False}
         if query:
             # 判断是否是对方案不满意及对方案某一部分不满意
             prompt = weight_scheme_modify_prompt.format(query)
@@ -301,10 +301,10 @@ class expertModel:
                 return {
                     "thought": thought,
                     "contents": [
-                        f"您今日体重为{weight}。",
-                        "健康报告显示您的健康处于平衡状态。"
+                        f"你今日体重为{weight}。",
+                        "健康报告显示你的健康处于平衡状态。"
                         + content
-                        + "这里是您下周的方案，请查收。",
+                        + "这里是你下周的方案，请查收。",
                     ],
                     "scene_ending": False,
                     "scheme_gen": 1,
@@ -315,11 +315,11 @@ class expertModel:
                 return {
                     "thought": thought,
                     "contents": [
-                        f"您今日体重为{weight}。",
+                        f"你今日体重为{weight}。",
                         cnt,
-                        "健康报告显示您的健康处于平衡状态。"
+                        "健康报告显示你的健康处于平衡状态。"
                         + content
-                        + "这里是您下周的方案，请查收。",
+                        + "这里是你下周的方案，请查收。",
                     ],
                     "scene_ending": False,
                     "scheme_gen": 2,
@@ -330,7 +330,7 @@ class expertModel:
             modi_type = get_scheme_modi_type(content)
             return {
                 "thought": thought,
-                "contents": ["好的，已重新帮您生成了健康方案，请查收。"],
+                "contents": ["好的，已重新帮你生成了健康方案，请查收。"],
                 "scene_ending": False,
                 "scheme_gen": 0,
                 "modi_scheme": modi_type,
@@ -713,7 +713,7 @@ class expertModel:
                 content = (
                     content
                     if content
-                    else "尽量保持放松，深呼吸，有助于降低血压。，您可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒。"
+                    else "尽量保持放松，深呼吸，有助于降低血压。，你可以先尝试静坐，闭上眼睛，缓慢地深呼吸，每次呼吸持续5秒。"
                 )
             return thought, content
 
@@ -721,7 +721,7 @@ class expertModel:
             if len(history) < 2:
                 return False
             if (
-                    "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门"
+                    "根据你目前的健康状况，我将通知你的家庭医生上门为你服务，请问是否接受医生上门"
                     in history[-2]["content"]
             ):
                 prompt = blood_pressure_pd_prompt.format(history[-2]["content"], query)
@@ -756,7 +756,7 @@ class expertModel:
             r = [
                 1
                 for i in history
-                if "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门"
+                if "根据你目前的健康状况，我将通知你的家庭医生上门为你服务，请问是否接受医生上门"
                    in i["content"]
             ]
             return True if sum(r) > 0 else False
@@ -836,7 +836,7 @@ class expertModel:
                     level=level,
                     contents=[
                         content1,
-                        "我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
+                        "我已经将你目前的血压情况发送给你的女儿和家庭医生，并提醒他们随时关注你的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察你的健康情况。",
                         content2,
                     ],
                     visit_verbal_idx=1,
@@ -897,7 +897,7 @@ class expertModel:
                         # visit_verbal_idx=-1,
                         contents=[
                             content,
-                            "根据您目前的健康状况，我将通知您的家庭医生上门为您服务，请问是否接受医生上门？",
+                            "根据你目前的健康状况，我将通知你的家庭医生上门为你服务，请问是否接受医生上门？",
                         ],
                         thought=thought,
                     ).model_dump()
@@ -932,7 +932,7 @@ class expertModel:
             thought, content = broadcast_gen(bps_msg=bp_msg)
             contents = [
                 content,
-                "我已为您呼叫120。",
+                "我已为你呼叫120。",
             ]
             return bloodPressureLevelResponse(
                 blood_trend_gen=True,
@@ -954,7 +954,7 @@ class expertModel:
                 thought2, content2 = blood_pressure_inquiry(history, query, iq_n=6)
                 contents = [
                     content1,
-                    f"我已经将您目前的血压情况发送给您的女儿和家庭医生，并提醒他们随时关注您的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察您的健康情况。",
+                    f"我已经将你目前的血压情况发送给你的女儿和家庭医生，并提醒他们随时关注你的健康。如果你仍感到紧张和不安，或经常感到不适症状，我希望你能和家人、家庭医生一起观察你的健康情况。",
                     content2,
                 ]
                 return bloodPressureLevelResponse(
@@ -1169,12 +1169,12 @@ class expertModel:
             if time == "1":
                 if glucose < 3:
                     result = "高危低血糖"
-                    content='您血糖非常低，请立即补充含糖食物'
-                    agent_content=f"您好，客户目前空腹血糖非常低，请及时与客户取得联系，给予处理建议。"
+                    content='你血糖非常低，请立即补充含糖食物'
+                    agent_content=f"你好，客户目前空腹血糖非常低，请及时与客户取得联系，给予处理建议。"
                 elif 3 <= glucose < 3.9:
                     result = "低血糖"
-                    content='您血糖较低，请尽快补充含糖食物'
-                    agent_content=f"您好，客户目前空腹血糖偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"
+                    content='你血糖较低，请尽快补充含糖食物'
+                    agent_content=f"你好，客户目前空腹血糖偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"
                 elif 3.9 <= glucose <=7:
                     result = "血糖正常"
                     content='血糖正常，请继续保持'
@@ -1182,20 +1182,20 @@ class expertModel:
                 elif 7.0 < glucose <= 13.9:
                     result = "血糖控制高"
                     content='今日空腹血糖值偏高，请遵医嘱，规律生活'
-                    agent_content=f"您好，客户目前空腹血糖偏高，请给予关注。"
+                    agent_content=f"你好，客户目前空腹血糖偏高，请给予关注。"
                 else:
                     result = "血糖控制高危"
                     content = "今日空腹血糖非常高，请严格遵医嘱！"
-                    agent_content="您好，客户目前空腹血糖非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"
+                    agent_content="你好，客户目前空腹血糖非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"
             elif time == "2" and time != "":
                 if glucose < 3:
                     result = "高危低血糖"
-                    content='您血糖非常低，请立即补充含糖食物'
-                    agent_content=f"您好，客户目前血糖非常低，请及时与客户取得联系，给予处理建议。"
+                    content='你血糖非常低，请立即补充含糖食物'
+                    agent_content=f"你好，客户目前血糖非常低，请及时与客户取得联系，给予处理建议。"
                 elif 3 <= glucose < 3.9:
                     result = "低血糖"
-                    content='您血糖较低，请尽快补充含糖食物'
-                    agent_content=f"您好，客户目前空腹血糖偏低，请及时与客户取得联系，给予处理建议。"
+                    content='你血糖较低，请尽快补充含糖食物'
+                    agent_content=f"你好，客户目前空腹血糖偏低，请及时与客户取得联系，给予处理建议。"
                 elif 3.9 <= glucose <=10:
                     result = "血糖正常"
                     content='当前血糖正常，请继续保持，适量运动'
@@ -1203,20 +1203,20 @@ class expertModel:
                 elif 10 < glucose <= 16.7:
                     result = "血糖控制高"
                     content='餐后2小时血糖值偏高，请遵医嘱，规律生活'
-                    agent_content=f"您好，客户目前餐后2小时血糖偏高，请给予关注。"
+                    agent_content=f"你好，客户目前餐后2小时血糖偏高，请给予关注。"
                 else:
                     result = "血糖控制高危"
                     content = "今日餐后2小时血糖值非常高，请严格遵医嘱"
-                    agent_content=f"您好，客户目前餐后2小时血糖非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"
+                    agent_content=f"你好，客户目前餐后2小时血糖非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"
             else:
                 if glucose < 3:
                     result = "高危低血糖"
-                    content='您血糖值非常低，请立即补充含糖食物'
-                    agent_content=f"您好，客户目前血糖非常低，请及时与客户取得联系，给予处理建议。"
+                    content='你血糖值非常低，请立即补充含糖食物'
+                    agent_content=f"你好，客户目前血糖非常低，请及时与客户取得联系，给予处理建议。"
                 elif 3 <= glucose < 3.9:
                     result = "低血糖"
-                    content='您血糖较低，请尽快补充含糖食物'
-                    agent_content=f"您好，客户目前血糖偏低，请及时与客户取得联系，给予处理建议。"
+                    content='你血糖较低，请尽快补充含糖食物'
+                    agent_content=f"你好，客户目前血糖偏低，请及时与客户取得联系，给予处理建议。"
                 elif 3.9 <= glucose <=10:
                     result = "血糖正常"
                     content='当前血糖正常，请继续保持，适量运动'
@@ -1224,15 +1224,15 @@ class expertModel:
                 elif 10 < glucose <= 13.9:
                     result = "血糖控制高"
                     content='随机血糖值偏高，请遵医嘱，规律生活'
-                    agent_content=f"您好，客户目前随机血糖偏高，请关注该用户近2日动态血糖变化。"
+                    agent_content=f"你好，客户目前随机血糖偏高，请关注该用户近2日动态血糖变化。"
                 elif 13.9 < glucose < 16.7:
                     result = "血糖控制中危"
                     content='随机血糖值较高，请严格遵医嘱，规律生活'
-                    agent_content=f"您好，客户目前随机血糖较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"
+                    agent_content=f"你好，客户目前随机血糖较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"
                 else:
                     result = "血糖控制高危"
                     content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
-                    agent_content=f"您好，客户目前随机血糖极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"
+                    agent_content=f"你好，客户目前随机血糖极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"
             return result,content,agent_content
 
         model = "Qwen1.5-32B-Chat"
@@ -1606,7 +1606,7 @@ class expertModel:
 
             格式一：从提供的数据来看，患者的血压在24小时内呈现下降趋势，收缩压下降了25%，舒张压下降了15%。建议其保持健康的生活习惯，如控制饮食，适量运动，同时定期测量血压和心率，及时了解自己的健康状况。如果血压持续下降，提醒患者及时就医。
 
-            格式二：患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请您与患者进一步沟通。
+            格式二：患者收缩压150、舒张压100，均高于正常范围，属于2级高血压。由于监测指标未达到报告分析要求，请你与患者进一步沟通。
 
         prd: https://alidocs.dingtalk.com/i/nodes/KGZLxjv9VGBk7RlwHeRpRpXrW6EDybno?utm_scene=team_space
 
@@ -1891,7 +1891,7 @@ class expertModel:
                     item.get("role"),
                     item.get("content"),
                 )
-                # {"name": "管家","role": "hb_qa@39238","content": "欢迎韩伟娜进入本群，您可以在这里畅所欲言了。"}  管家的信息无用, 过滤    2024年1月11日10:41:02
+                # {"name": "管家","role": "hb_qa@39238","content": "欢迎韩伟娜进入本群，你可以在这里畅所欲言了。"}  管家的信息无用, 过滤    2024年1月11日10:41:02
                 if name == "管家":
                     continue
                 user_input = ""
