@@ -543,14 +543,14 @@ class CustomChatAuxiliary(CustomChatModel):
         #     break
         conts = []
         if doctor == "None":
-            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+            thought = "对不起，这儿可能出现了一些问题，请你稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
         elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
             # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(**kwargs)
             conts = [
                 sug,
-                "我建议接入家庭医生对您进行后续健康服务，是否邀请家庭医生加入群聊？",
+                "我建议接入家庭医生对你进行后续健康服务，是否邀请家庭医生加入群聊？",
             ]
         else:
             ...
@@ -615,7 +615,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 prompt_vars=prompt_vars,
                 **kwargs)
             # if if_entropy=='2':
-            #     result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。您是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
+            #     result = content+'小孩和老人，免疫力相对较低，容易受到天气变化的影响。你是否想了解一下家人最近的身体状况，以便提前做好预防呢？'
             # else:
             # from datetime import datetime
             # now = datetime.now()
@@ -633,9 +633,9 @@ class CustomChatAuxiliary(CustomChatModel):
             #     t="中午"
             # else:
             #     t="下午"
-            # result = '张叔叔，'+t+'好呀。来跟您说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
+            # result = '张叔叔，'+t+'好呀。来跟你说下今天的天气哦。'+content+'可以根据天气安排一下今天的活动哟。'
             result = content
-            # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为您播报昨晚的睡眠情况吗？']
+            # conts=['天气的变化往往和我们的健康状态紧密相关，可能会对我们的身体产生一些潜在的影响，需要为你播报昨晚的睡眠情况吗？']
 
         # 用if_entropy字段来控制不同的场景
         else:
@@ -648,21 +648,21 @@ class CustomChatAuxiliary(CustomChatModel):
             if if_entropy == "0":
                 result = (
                         content + today_weather
-                        + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
+                        + "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑你与家人的生活习惯，生成了三济健康报告:"
                 )
             elif if_entropy == "1":
                 if "；" in content:
                     content = content.split("；", 1)[0]
                 entropy = pro.get("askEntropy", "")
                 result = (
-                        "叔叔，您的生命熵为"
+                        "叔叔，你的生命熵为"
                         + entropy
                         + "，主要问题是血压不稳定，需要重点控制血压。"
                         + content
-                        + "。血压出现一定程度的波动是正常的生理现象，您不必紧张。您可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
+                        + "。血压出现一定程度的波动是正常的生理现象，你不必紧张。你可以通过听音乐、阅读、散步等方式来放松心情以保证血压的稳定。"
                 )
             else:
-                result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑您与家人的生活习惯，生成了三济健康报告:"
+                result = "基于实时监测的物联数据，结合当前节气及天气情况，综合考虑你与家人的生活习惯，生成了三济健康报告:"
 
         mid_vars = update_mid_vars(
             kwargs["mid_vars"],
@@ -722,7 +722,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 stream=False,
             )
             add_thought, add_content = self.__parse_response__(content)
-            add_str = "我给您匹配一个降压小妙招，您可以试一下。"
+            add_str = "我给你匹配一个降压小妙招，你可以试一下。"
             conts = [add_content, add_str]
 
         mid_vars = update_mid_vars(
@@ -786,7 +786,7 @@ class CustomChatAuxiliary(CustomChatModel):
                 stream=False,
             )
             add_thought, add_content = self.__parse_response__(content)
-            add_str = "我给您匹配一个降压小妙招，您可以试一下。"
+            add_str = "我给你匹配一个降压小妙招，你可以试一下。"
             conts = [add_content, add_str]
 
         mid_vars = update_mid_vars(
@@ -826,7 +826,7 @@ class CustomChatAuxiliary(CustomChatModel):
         conts = []
 
         if thought == "None" or doctor == "None":
-            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+            thought = "对不起，这儿可能出现了一些问题，请你稍后再试。"
         if "？" not in content and "?" not in content and '有没有' not in content and "吗" not in content:
             conts = ["血糖问诊结束"]
 
@@ -866,7 +866,7 @@ class CustomChatAuxiliary(CustomChatModel):
         conts = []
 
         if thought == "None" or doctor == "None":
-            thought = "对不起，这儿可能出现了一些问题，请您稍后再试。"
+            thought = "对不起，这儿可能出现了一些问题，请你稍后再试。"
         elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
             # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
             sug = self.__chat_sanji_glucose_diagnosis___(**kwargs)
@@ -1057,7 +1057,7 @@ class CustomChatReportInterpretationAsk(CustomChatModel):
                 ]
             elif kwargs["promptParam"]["report_type"] == "腹部报告":
                 _contents = [
-                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据您的情况，我为您智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
+                    "健康报告显示你的健康处于平衡状态。我已经帮你智能匹配到河北中石油中心医院肝胆内科赵医生，请你尽快去看医生。根据你的情况，我为你智能匹配了一个健康体检保险计划，其中包含全面体检服务、门诊挂号和陪诊服务，可针对规定的12个项目内的检查化验项目进行门诊报销。"
                 ]
         return mid_vars, messages, _contents, sch, (thought, content, tool)
 

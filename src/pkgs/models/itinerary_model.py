@@ -494,7 +494,8 @@ class ItineraryModel:
                     "room_description": "院线房 61.66㎡-71.82㎡\n小院私汤，卧室有投影幕布，含双早"
                 },
                 "activity_code": "ACC992657",
-                "external_id": ""
+                "external_id": "1861325596038701057",
+                "activity_link": "1861325396494688258"
 
             }
 
@@ -504,7 +505,8 @@ class ItineraryModel:
                 "name": "盐房",
                 "location": "来康温泉",
                 "activity_code": "ACT173738",
-                "external_id": "",
+                "external_id": "1861321439575711746",
+                "activity_link": "1854491188558483457",
                 "extra_info": {
                 "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
                 "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -514,7 +516,8 @@ class ItineraryModel:
                 "name": "岩洞氧吧",
                 "location": "来康温泉",
                 "activity_code": "ACT268949",
-                "external_id": "",
+                "external_id": "1861321652046569473",
+                "activity_link": "1854490708579110913",
                 "extra_info": {
                     "description": "抗氧化防衰老,可促进人体新陈代谢,具有提神、消除疲劳、提高免疫力的功效,从而增强抗病能力。",
                     "operation_tips": "体验时保持放松。"
@@ -524,7 +527,8 @@ class ItineraryModel:
                 "name": "香修体验",
                 "location": "七修书院",
                 "activity_code": "ACT698000",
-                "external_id": "",
+                "external_id": "1861320574441791489",
+                "activity_link": "1854495789122768897",
                 "extra_info": {
                     "description": "了解香学文化及制作合香香品",
                     "operation_tips": "请在老师指导下操作。"
@@ -534,7 +538,8 @@ class ItineraryModel:
                 "name": "花修体验",
                 "location": "七修书院",
                 "activity_code": "ACT098692",
-                "external_id": "",
+                "external_id": "1861318693749432321",
+                "activity_link": "1854793377206161410",
                 "extra_info": {
                     "description": "学习中式插花，享受宁静时光",
                     "operation_tips": "请提前预约花材。"
@@ -544,7 +549,8 @@ class ItineraryModel:
                 "name": "功修体验",
                 "location": "七修书院",
                 "activity_code": "ACT193928",
-                "external_id": "",
+                "external_id": "1861319659617951746",
+                "activity_link": "1854496041670201345",
                 "extra_info": {
                     "description": "导引养生功，讲解带练每一招式要点",
                     "operation_tips": "适合所有年龄段，活动轻松。"
@@ -554,7 +560,8 @@ class ItineraryModel:
                 "name": "书修体验",
                 "location": "七修书院",
                 "activity_code": "ACT796407",
-                "external_id": "",
+                "external_id": "1861320250339532801",
+                "activity_link": "1854502838028128257",
                 "extra_info": {
                     "description": "拓印、静心抄经，体验传统书法的静心力量",
                     "operation_tips": "建议提前预约，选择书法材料。"
@@ -564,7 +571,8 @@ class ItineraryModel:
                 "name": "食修体验",
                 "location": "七修书院",
                 "activity_code": "ACT875638",
-                "external_id": "",
+                "external_id": "1861319971506397185",
+                "activity_link": "1854781310617178114",
                 "extra_info": {
                     "description": "学习制作药食同源的小点心，了解传统健康饮食文化",
                     "operation_tips": "活动时间约1.5小时，请提前预约。"
@@ -585,6 +593,7 @@ class ItineraryModel:
                                 "location": selected_hotel.get("name", "汤泉逸墅 院线房"),
                                 "activity_code": selected_hotel.get("activity_code", "ACC992657"),
                                 "external_id": selected_hotel.get("external_id", ""),
+                                "activity_link": selected_hotel.get("activity_link", ""),
                                 "extra_info": {
                                     # "description": selected_hotel.get("extra_info", {}).get("description", "请提前确认入住时间，提醒需要预约等"),
                                     "description": "请提前确认入住时间，提醒需要预约等",
@@ -597,7 +606,8 @@ class ItineraryModel:
                                 "name": "盐房",
                                 "location": "来康温泉",
                                 "activity_code": "ACT173738",
-                                "external_id": "",
+                                "external_id": "1861321439575711746",
+                                "activity_link": "1854491188558483457",
                                 "extra_info": {
                                     "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。",
                                     "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -642,6 +652,7 @@ class ItineraryModel:
                 "location": "待定",
                 "activity_code": hotel["activity_code"],
                 "external_id": hotel["external_id"],
+                "activity_link": hotel["activity_link"],
                 "extra_info": {
                     "description": hotel.get("hotel_description", "房型丰富、设施齐全、中医理疗特色"),
                     "room_description": hotel.get("room_description", "")
@@ -652,6 +663,7 @@ class ItineraryModel:
             "location": "",
             "activity_code": "",
             "external_id": "",
+            "activity_link": "",
             "extra_info": {
                 "description": "无"
             }
@@ -711,6 +723,7 @@ class ItineraryModel:
                             "location": selected_hotel.get("name", ""),
                             "activity_code": selected_hotel["activity_code"],
                             "external_id": selected_hotel["external_id"],
+                            "activity_link": selected_hotel["activity_link"],
                             "extra_info": {
                                 "description": "请提前确认入住时间，提醒需要预约等",
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
@@ -728,6 +741,7 @@ class ItineraryModel:
                         "location": random_spa_activity["activity_category"],
                         "activity_code": random_spa_activity["activity_code"],
                         "external_id": random_spa_activity["external_id"],
+                        "activity_link": random_spa_activity["activity_link"],
                         "extra_info": {
                             "description": random_spa_activity["description"],
                             "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -751,6 +765,7 @@ class ItineraryModel:
                                         "location": activity["activity_category"],
                                         "activity_code": activity["activity_code"],
                                         "external_id": activity["external_id"],
+                                        "activity_link": activity["activity_link"],
                                         "extra_info": {
                                             "description": activity["description"],
                                             "operation_tips": activity.get("reservation_note", "无")
@@ -772,6 +787,7 @@ class ItineraryModel:
                                 "location": random_activity["activity_category"],
                                 "activity_code": random_activity["activity_code"],
                                 "external_id": random_activity["external_id"],
+                                "activity_link": random_activity["activity_link"],
                                 "extra_info": {
                                     "description": random_activity["description"],
                                     "operation_tips": random_activity.get("reservation_note", "无")
@@ -823,7 +839,8 @@ class ItineraryModel:
                     "name": hotel["name"],
                     "extra_info": hotel["extra_info"],
                     "activity_code": hotel["activity_code"],
-                    "external_id": hotel["external_id"]
+                    "external_id": hotel["external_id"],
+                    "activity_link": hotel["activity_link"]
                 },
                 "recommendation_basis": recommendation_basis,
                 "itinerary": itinerary,
@@ -924,7 +941,8 @@ class ItineraryModel:
                             "name": activity.get("name", None),
                             "location": activity.get("location", None),
                             "description": activity.get("extra_info", {}).get("description", None),
-                            "external_id": activity.get("external_id", None)
+                            "external_id": activity.get("external_id", None),
+                            "activity_link": activity.get("activity_link", None)
                         }
                         transformed_slot["activities"].append(transformed_activity)
 
@@ -1127,14 +1145,14 @@ class ItineraryModel:
 
         # 添加欢迎语
         intro = items.get("intro", "欢迎参加我们的行程！")
-        markdown.append(f"{intro}\n")
+        markdown.append(f"{intro}\n ###### &nbsp;")  # 在欢迎语后添加空行
 
         # 添加每日行程
         itinerary = items.get("itinerary", [])
         for day in itinerary:
             day_number = day.get("day", "未知天数")
             date = day.get("date", "未知日期")
-            markdown.append(f"**第{day_number}天**：")
+            markdown.append(f"### 第{day_number}天：")
 
             for time_slot in day.get("time_slots", []):
                 period = time_slot.get("period", "未知时间段")
@@ -1163,10 +1181,11 @@ class ItineraryModel:
         # 添加温馨提示
         tips = items.get("tips", [])
         if tips:
-            markdown.append("## 温馨小贴士：")
+            markdown.append("### 温馨小贴士：")
             for tip in tips:
                 markdown.append(f"- {tip}")
             markdown.append("")  # 空行分隔
+            markdown.append("###### &nbsp;")  # 空行分隔
 
         # 添加总结
         closing = items.get("closing", "感谢参加我们的行程，祝您旅途愉快！")
@@ -1312,7 +1331,7 @@ class ItineraryModel:
             # 调用大模型直接生成内容
             content = await callLikangLLM(
                 history=messages,
-                model="Qwen1.5-32B-Chat",
+                model="Qwen2-72B-Instruct",
                 temperature=0.7,
                 top_p=0.7,
                 repetition_penalty=1.0,
@@ -1449,3 +1468,9 @@ if __name__ == '__main__':
     generator = ItineraryModel(gsr)
     recommended_itinerary = generator.generate_itinerary(input_data)
     print(recommended_itinerary)
+
+
+
+
+
+

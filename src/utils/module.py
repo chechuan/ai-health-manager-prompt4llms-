@@ -173,12 +173,12 @@ def get_intent(text):
     elif "数字人" in text and "切换" in text:
         code = "digital_image_switch"
         desc = "切换数字人皮肤"
-    elif "运动评价" in text:
-        code = "sport_eval"
-        desc = "运动评价"
-    elif "运动咨询" in text:
-        code = "sport_rec"
-        desc = "运动咨询"
+    # elif "运动评价" in text:
+    #     code = "sport_eval"
+    #     desc = "运动评价"
+    # elif "运动咨询" in text:
+    #     code = "sport_rec"
+    #     desc = "运动咨询"
     elif "温泉推荐" in text:
         code = "spa_rec"
         desc = "温泉推荐"
@@ -221,9 +221,9 @@ def get_intent(text):
     elif "血糖" in text:
         code = "blood_glucose_counseling"
         desc = "血糖咨询"
-    elif "营养知识" in text:
-        code = "nutri_knowledge_rec"
-        desc = "营养知识咨询"
+    # elif "营养知识" in text:
+    #     code = "nutri_knowledge_rec"
+    #     desc = "营养知识咨询"
     elif "饮食处方" in text:
         code = "food_rec"
         desc = "饮食处方推荐"
@@ -326,9 +326,9 @@ def get_intent(text):
     elif "营养其他" in text:
         code = "nutri_other"
         desc = "营养其他"
-    elif "高血压" in text:
-        code = "chronic_qa"
-        desc = "高血压知识问答"
+    # elif "高血压" in text:
+    #     code = "chronic_qa"
+    #     desc = "高血压知识问答"
     elif "低血压" in text:
         code = "hypotensive_consultation"
         desc = "低血压咨询"
@@ -576,6 +576,28 @@ async def extract_clean_output(response: str) -> str:
         return response.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
 
 
+def replace_you(text) -> str:
+    """统一替换‘您’为‘你’，并添加异常处理"""
+    try:
+        if isinstance(text, str):
+            # 如果是字符串，直接替换“您”为“你”
+            return text.replace('您', '你')
+        elif isinstance(text, dict):
+            # 如果是字典，递归替换所有字符串值中的“您”为“你”
+            return {key: replace_you(value) for key, value in text.items()}
+        elif isinstance(text, list):
+            # 如果是列表，递归替换列表中的所有字符串元素
+            return [replace_you(item) for item in text]
+        elif hasattr(text, 'model_dump_json'):  # 针对自定义对象，如 AigcFunctionsResponse
+            # 如果是 AigcFunctionsResponse 类型，替换其中的 message 字段
+            text.message = replace_you(text.message)
+            return text.model_dump_json(exclude_unset=False)  # 返回处理后的 JSON 字符串
+        return text  # 如果是其他类型，则不做处理，直接返回
+    except Exception as e:
+        # 处理所有可能的异常，避免报错
+        return f"替换过程中发生错误: {str(e)}"
+
+
 async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
@@ -588,11 +610,14 @@ async def response_generator(response, error: bool = False) -> AsyncGenerator:
             else:
                 content = chunk.choices[0].delta.content
             if content:
+                # 替换“您” -> “你”
+                content = replace_you(content)  # 在这里调用统一替换方法
                 chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
                 yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
         chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     else:
         chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
+        chunk_resp.message = replace_you(response)  # 错误消息替换
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 
@@ -1909,3 +1934,4 @@ def log_with_source(func):
         kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
         return await func(*args, **kwargs)
     return wrapper
+
