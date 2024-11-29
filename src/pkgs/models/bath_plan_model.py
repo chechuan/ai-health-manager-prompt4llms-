@@ -187,7 +187,7 @@ class BathPlanModel:
         markdown = f"根据您的症状描述，{health_analysis}\n\n"
 
         # 添加 output_basis 说明
-        markdown += f"{self.OUTPUT_BASIS}\n\n"
+        markdown += f"{self.OUTPUT_BASIS}\n\n ###### &nbsp;"
 
         # 判断是否有温泉池，并生成方案部分
         for idx, step in enumerate(full_plan):
@@ -196,7 +196,7 @@ class BathPlanModel:
             else:  # 其余为普通推荐，没有括号内容
                 markdown += f"- **{step['spring_name']}**\n"
             markdown += f"  - **时间建议**: {step['suggested_time']}\n"
-            markdown += f"  - **疗愈效果**: {step['effect']}\n\n"
+            markdown += f"  - **疗愈效果**: {step['effect']}\n\n ###### &nbsp;"
 
         # 添加温馨提示部分
         markdown += f"**智小伴建议**：{self.NOTICE}\n\n"
@@ -268,7 +268,10 @@ class BathPlanModel:
                 "plan": full_plan,
                 "contents": frontend_contents,
                 "cates": business_category,
-                "plan_text": markdown_output
+                "plan_text": markdown_output,
+                "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
+                "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
+                "health_analysis": health_analysis
             },
             "msg": ""
         }

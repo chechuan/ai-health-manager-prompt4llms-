@@ -1185,6 +1185,7 @@ class ItineraryModel:
             for tip in tips:
                 markdown.append(f"- {tip}")
             markdown.append("")  # 空行分隔
+            markdown.append("###### &nbsp;")  # 空行分隔
 
         # 添加总结
         closing = items.get("closing", "感谢参加我们的行程，祝您旅途愉快！")
