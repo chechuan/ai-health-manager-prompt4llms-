@@ -107,6 +107,7 @@ def make_result(
         head = 600
     res = {"head": head, "msg": msg, "items": items, **kwargs}
     res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+    res = res.replace("您", "你")
     if ret_response:
         return Response(res, media_type=kwargs.get("media_type", "application/json"))
     else:
@@ -664,8 +665,9 @@ def create_app():
                         item["backend_history"] = yield_item["history"]
                     else:
                         item["backend_history"] = []
+                res = json.dumps(item, ensure_ascii=False).replace('您', '你')
                 yield format_sse_chat_complete(
-                    json.dumps(item, ensure_ascii=False), "delta"
+                    res, "delta"
                 )
                 if yield_item["data"]["end"] == True:
                     break
@@ -688,8 +690,9 @@ def create_app():
                     "Output (except mid_vars & backend_history):"
                     + json.dumps(item, ensure_ascii=False)
                 )
+                res = json.dumps(item, ensure_ascii=False).replace('您', '你')
                 yield format_sse_chat_complete(
-                    json.dumps(item, ensure_ascii=False), "delta"
+                    res, "delta"
                 )
                 if yield_item["end"] == True:
                     break
