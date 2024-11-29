@@ -198,7 +198,7 @@ class BathPlanModel:
             else:  # 其余为普通推荐，没有括号内容
                 markdown += f"- **{step['spring_name']}**\n"
             markdown += f"  - **时间建议**: {step['suggested_time']}\n"
-            markdown += f"  - **疗愈效果**: {step['effect']}\n\n ###### &nbsp;"
+            markdown += f"  - **疗愈效果**: {step['effect']}\n\n"
 
         markdown += "###### &nbsp;\n"
         # 添加温馨提示部分
