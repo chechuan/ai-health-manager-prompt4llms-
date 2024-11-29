@@ -29,7 +29,7 @@ def get_daily_diet_str(daily_diet_info):
         diet_info = ''
         for info in i.get('diet_info', []):
             if info:
-                diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('name', '')}，"
+                diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('foodname', '')}，"
         daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
     return daily_diet_str
 
