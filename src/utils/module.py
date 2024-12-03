@@ -248,9 +248,9 @@ def get_intent(text):
     elif "网络" in text:
         code = "websearch"
         desc = "网络搜索"
-    elif "首都" in text:
-        code = "KLLI3.captialInfo"
-        desc = "首都查询"
+    # elif "首都" in text:
+    #     code = "KLLI3.captialInfo"
+    #     desc = "首都查询"
     elif "彩票" in text:
         code = "lottery"
         desc = "彩票"
@@ -260,12 +260,12 @@ def get_intent(text):
     elif "计算器" in text:
         code = "AIUI.calc"
         desc = "计算器"
-    elif "国内城市查询" in text:
-        code = "LEIQIAO.cityOfPro"
-        desc = "国内城市查询"
-    elif "省会查询" in text:
-        code = "ZUOMX.queryCapital"
-        desc = "省会查询"
+    # elif "国内城市查询" in text:
+    #     code = "LEIQIAO.cityOfPro"
+    #     desc = "国内城市查询"
+    # elif "省会查询" in text:
+    #     code = "ZUOMX.queryCapital"
+    #     desc = "省会查询"
     elif "翻译" in text:
         code = "translation"
         desc = "翻译"
