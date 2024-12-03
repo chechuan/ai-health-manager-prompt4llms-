@@ -71,7 +71,7 @@ def get_daily_key_bg(bg_info, diet_info):
     res.append(day_high)
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
     res = [dict(t) for t in unique_tuples]
-    res = sorted(res, key=lambda item: item["time"])
+    res = sorted(res, key=lambda item: item.get('time', ''))
     return res
 
 
