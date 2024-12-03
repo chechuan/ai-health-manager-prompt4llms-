@@ -32,7 +32,7 @@ def get_daily_diet_str(daily_diet_info):
             if info:
                 diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('foodname', '')}，"
         daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
-    return daily_diet_str
+    return daily_diet_str if daily_diet_str else '无'
 
 def get_daily_key_bg(bg_info, diet_info):
     res = []
@@ -74,6 +74,30 @@ def get_daily_key_bg(bg_info, diet_info):
     res = sorted(res, key=lambda item: item.get('time', ''))
     return res
 
+
+daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对用户提交的一日食物信息做出合理评价和建议。
+
+## 用户个人信息：
+{0}
+
+## 用户当天饮食及每餐评价信息：
+{1}
+
+## 用户一日血糖信息：
+{2}
+
+## 用户管理场景：
+{3}
+
+## 输入内容要求：
+- 输出可能包含的维度有：血糖稳定性评估，餐后血糖波动分析，餐后血糖波动可能与食物的关联，食物选择是否合理，待改善建议。
+- 请充分参考一日血糖数据，识别异常血糖信息，并给予提醒，尤其是低血糖情况应给出建议。
+- 确保分析的食物信息都来自`用户当天饮食及每餐评价信息`，不要自己创造。
+- 输出内容要求简洁自然，通俗易懂，符合营养学观点。
+- 直接输出一段文本内容，字数控制在300字以内。
+- 避免输出列表。
+
+Begins!"""
 
 
 
