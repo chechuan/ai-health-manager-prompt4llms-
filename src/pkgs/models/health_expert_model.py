@@ -37,7 +37,6 @@ class HealthExpertModel:
         self.gsr = gsr
         self.regist_aigc_functions()
 
-    @log_with_source
     async def aaigc_functions_general(
         self,
         _event: str = "",
@@ -219,6 +218,8 @@ class HealthExpertModel:
     async def aigc_functions_diagnosis_generation(self, **kwargs) -> str:
         """西医决策-诊断生成"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxioksess0fecv6j3aq
+
         _event = "西医决策-诊断生成"
 
         # 必填字段和至少需要一项的参数列表
@@ -257,6 +258,8 @@ class HealthExpertModel:
     async def aigc_functions_chief_complaint_generation(self, **kwargs) -> str:
         """西医决策-主诉生成"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiol879po3hki6uxyd
+
         _event = "西医决策-主诉生成"
 
         # 验证必填字段
@@ -281,6 +284,8 @@ class HealthExpertModel:
     async def aigc_functions_generate_present_illness(self, **kwargs) -> str:
         """西医决策-现病史生成"""
 
+        #需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiolopcya0m20232q
+
         _event = "西医决策-现病史生成"
 
         # 验证必填字段
@@ -304,6 +309,8 @@ class HealthExpertModel:
     # @param_check(check_params=["messages"])
     async def aigc_functions_generate_past_medical_history(self, **kwargs) -> str:
         """西医决策-既往史生成"""
+
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiomgvu65nnylw8on6
 
         _event = "西医决策-既往史生成"
 
@@ -341,6 +348,8 @@ class HealthExpertModel:
     async def aigc_functions_generate_allergic_history(self, **kwargs) -> str:
         """西医决策-过敏史生成"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiomn8kvixfptr1whl
+
         _event = "西医决策-过敏史生成"
 
         # 必填字段和至少需要一项的参数列表
@@ -376,6 +385,8 @@ class HealthExpertModel:
     # @param_check(check_params=["messages"])
     async def aigc_functions_generate_medication_plan(self, **kwargs) -> str:
         """西药医嘱生成"""
+
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxjry3ryciljuj4ay4q
 
         _event = "西药医嘱生成"
 
@@ -414,6 +425,8 @@ class HealthExpertModel:
     # @param_check(check_params=["messages"])
     async def aigc_functions_generate_examination_plan(self, **kwargs) -> str:
         """检查检验医嘱生成"""
+
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxvjtw1xzpz73psuirk
 
         _event = "检查检验医嘱生成"
 
@@ -522,6 +535,8 @@ class HealthExpertModel:
         """
         三济康养方案总则
 
+        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxllc1eq0ukitru9tjf
+
         根据用户画像和病历信息生成康养方案总则。
 
         参数:
@@ -604,6 +619,8 @@ class HealthExpertModel:
     async def aigc_functions_dietary_guidelines_generation(self, **kwargs) -> str:
         """饮食调理原则生成"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxllcmbkr26x41akllo
+
         _event = "饮食调理原则生成"
 
         user_profile = kwargs.get("user_profile", {})
@@ -651,6 +668,8 @@ class HealthExpertModel:
     async def aigc_functions_dietary_details_generation(self, **kwargs) -> str:
         """饮食调理细则生成"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygukg03i9frbezyb5s
+
         _event = "饮食调理细则生成"
 
         # 必填字段和至少需要一项的参数列表
@@ -659,10 +678,24 @@ class HealthExpertModel:
                              "bmi", ("current_diseases", "management_goals")]
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+
+        # 使用集合优化检查
+        missing_fields = []
+        for key, fields in required_fields.items():
+            if key == "user_profile":
+                user_profile_keys = set(user_profile.keys())
+                for field in fields:
+                    if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                        if not any(f in user_profile_keys for f in field):
+                            missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+                    elif field not in user_profile_keys:
+                        missing_fields.append(f"缺少必填字段: {field}")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         try:
             # 使用工具类方法检查并计算基础代谢率（BMR）
@@ -716,6 +749,8 @@ class HealthExpertModel:
     async def aigc_functions_meal_plan_generation(self, **kwargs) -> str:
         """带量食谱-生成餐次、食物名称"""
 
+        # 需求文档： https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygts2wqefdpc1f13ob
+
         kwargs["intentCode"] = "aigc_functions_meal_plan_generation"
 
         _event = "生成餐次、食物名称"
@@ -726,10 +761,23 @@ class HealthExpertModel:
                              ("current_diseases", "management_goals")]
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+
+        missing_fields = []  # 存储缺失的字段
+        for key, fields in required_fields.items():
+            if key == "user_profile":
+                user_profile_keys = set(user_profile.keys())
+                for field in fields:
+                    if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                        if not any(f in user_profile_keys for f in field):
+                            missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+                    elif field not in user_profile_keys:
+                        missing_fields.append(f"缺少必填字段: {field}")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         # 初始化变量
         user_profile_str = await self.__compose_user_msg__(
@@ -790,6 +838,8 @@ class HealthExpertModel:
     async def aigc_functions_generate_food_quality_guidance(self, **kwargs) -> str:
         """生成餐次、食物名称的质量指导"""
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxlmm6en673nuggac8
+
         kwargs["intentCode"] = "aigc_functions_generate_food_quality_guidance"
 
         _event = "生成餐次、食物名称的质量指导"
@@ -797,21 +847,34 @@ class HealthExpertModel:
         # 必填字段和至少需要一项的参数列表
         required_fields = {
             "user_profile": [
-                "age",
-                "gender",
-                "height",
-                "weight",
-                "bmi",
-                "daily_physical_labor_intensity",
-                ("current_diseases", "management_goals"),
+                "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals")
             ],
-            "ietary_guidelines": {"basic_nutritional_needs": ""},
+            "ietary_guidelines": {"basic_nutritional_needs": ""}
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+        ietary_guidelines = kwargs.get("ietary_guidelines", {})
+
+        missing_fields = []  # 存储缺失的字段
+        # 检查 user_profile 字段
+        user_profile_keys = set(user_profile.keys())
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查 ietary_guidelines 字段
+        for field, subfield in required_fields["ietary_guidelines"].items():
+            if field not in ietary_guidelines or ietary_guidelines.get(field) == subfield:
+                missing_fields.append(f"缺少必填字段: {field} -> {subfield}")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         # 初始化变量
         user_profile_str = await self.__compose_user_msg__(
@@ -850,6 +913,8 @@ class HealthExpertModel:
     async def aigc_functions_sanji_plan_exercise_regimen(self, **kwargs) -> str:
         """三济康养方案-运动-运动调理原则
 
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxllcdhgekhu7atk6lq
+
         # 能力说明
 
         根据用户画像如健康状态，管理目标，运动水平等，输出适合用户的运动调理原则，说明运动调理的目标和建议
@@ -872,36 +937,54 @@ class HealthExpertModel:
         # 必填字段和至少需要一项的参数列表
         required_fields = {
             "user_profile": [
-                "age",
-                "gender",
-                "height",
-                "weight",
-                "bmi",
-                "daily_physical_labor_intensity",
-                ("current_diseases", "management_goals"),
+                "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals")
             ]
         }
-        at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields, at_least_one)
+        # 检查必填字段
+        user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
 
-        user_profile: str = await self.__compose_user_msg__(
-            "user_profile", user_profile=kwargs.get("user_profile", {})
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
+
+        # 初始化变量
+        user_profile_str = await self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile
         )
-        medical_records = await self.__compose_user_msg__(
-            "medical_records", medical_records=kwargs.get("medical_records", {})
+        medical_records_str = await self.__compose_user_msg__(
+            "medical_records", medical_records=medical_records
         )
         messages = (
             await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
+
+        # 构建提示变量
         prompt_vars = {
-            "user_profile": user_profile,
+            "user_profile": user_profile_str,
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
-            "medical_records": medical_records,
+            "medical_records": medical_records_str,
         }
         model_args = await self.__update_model_args__(
             kwargs, temperature=0.7, top_p=0.3, repetition_penalty=1.0
@@ -915,6 +998,8 @@ class HealthExpertModel:
         self, **kwargs
     ) -> Union[str, Generator]:
         """三济康养方案-运动-运动计划
+
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxlld06f540bbnm6thv
 
         # 能力说明
 
@@ -938,36 +1023,54 @@ class HealthExpertModel:
         # 必填字段和至少需要一项的参数列表
         required_fields = {
             "user_profile": [
-                "age",
-                "gender",
-                "height",
-                "weight",
-                "bmi",
-                "daily_physical_labor_intensity",
-                ("current_diseases", "management_goals"),
+                "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
+                ("current_diseases", "management_goals")
             ]
         }
-        at_least_one = ["user_profile", "medical_records", "key_indicators"]
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields, at_least_one)
+        # 检查必填字段
+        user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
 
-        user_profile: str = await self.__compose_user_msg__(
-            "user_profile", user_profile=kwargs.get("user_profile", {})
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少有一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
+
+        # 初始化变量
+        user_profile_str = await self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile
         )
-        medical_records = await self.__compose_user_msg__(
-            "medical_records", medical_records=kwargs.get("medical_records", {})
+        medical_records_str = await self.__compose_user_msg__(
+            "medical_records", medical_records=medical_records
         )
         messages = (
             await self.__compose_user_msg__("messages", messages=kwargs["messages"])
             if kwargs.get("messages")
             else ""
         )
+
+        # 构建提示变量
         prompt_vars = {
-            "user_profile": user_profile,
+            "user_profile": user_profile_str,
             "messages": messages,
             "date": datetime.today().strftime("%Y-%m-%d"),
-            "medical_records": medical_records,
+            "medical_records": medical_records_str,
             "sport_principle": kwargs.get("sport_principle", "无"),
         }
         model_args = await self.__update_model_args__(

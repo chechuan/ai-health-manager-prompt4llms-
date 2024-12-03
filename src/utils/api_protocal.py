@@ -1352,6 +1352,14 @@ class SanJiKangYangRequest(BaseModel):
             '很好'
         ],
     )
+    source: Union[str, None] = Field(
+        None,
+        description="日志来源",
+        examples=[
+            'monitor',
+            'user'
+        ],
+    )
 
 
 class BodyFatWeightManagementRequest(BaseModel):

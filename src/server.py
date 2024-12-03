@@ -9,6 +9,7 @@
 import asyncio
 import json
 import sys
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -639,11 +640,6 @@ def create_app():
     )
     prepare_for_all()
 
-    @app.get("/health", summary="健康检查接口")
-    async def health_check():
-        """健康检查接口"""
-        return {"status": "healthy"}
-
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
@@ -666,6 +662,19 @@ def create_app():
             status_code=200,  # 强制返回HTTP 200
             content={"head": 500, "items": None, "msg": repr(exc)},  # 自定义错误信息
         )
+
+    @app.get("/health", summary="健康检查接口")
+    async def health_check():
+        """健康检查接口"""
+        start_time = time.time()  # 记录开始时间
+
+        # 返回健康状态
+        response = {"status": "healthy"}
+
+        # 记录响应时间
+        response_time = time.time() - start_time
+        logger.info(f"\033[32m[monitor]\033[0m Health check completed in {response_time:.2f} seconds.")
+        return response
 
     async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
@@ -1251,7 +1260,7 @@ def create_app():
         """demo,主要用于展示返回的中间变量"""
         try:
             param = await accept_param(request, endpoint="/chat/complete")
-            generator = await chat_v2.general_yield_result(
+            generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
@@ -1271,7 +1280,7 @@ def create_app():
         """角色扮演对话"""
         try:
             param = await accept_param(request, endpoint="/chat/role_play")
-            generator = await chat_v2.general_yield_result(
+            generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
