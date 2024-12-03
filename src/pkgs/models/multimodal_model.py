@@ -60,7 +60,7 @@ class MultiModalModel:
             "content":[{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         image_caption = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, is_vl=True, model="Qwen-VL-base-0.0.1",
+            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
         )
 
         # 图片分类
@@ -69,7 +69,7 @@ class MultiModalModel:
             "content": f"{self.prompts['图片分类']} {image_caption}",
         }]
         classification_text = await acallLLM(
-            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat",
+            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
         )
 
         # 类别定义，大类分四种，子类别index对应types的编号
@@ -108,7 +108,7 @@ class MultiModalModel:
                     "content":[{"type": "image_url", "image_url": {"url": image_url}}]
                 }]
                 diet_text = await acallLLM(
-                    history=messages, max_tokens=768, temperature=0, is_vl=True, model="Qwen-VL-base-0.0.1",
+                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
                 )
 
                 messages = [{
@@ -116,7 +116,7 @@ class MultiModalModel:
                     "content": f"{self.prompts['菜品格式化']} {diet_text}",
                 }]
                 generate_text = await acallLLM(
-                    history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat",
+                    history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
                 )
                 # 处理结果
                 diet_info = None
@@ -157,7 +157,7 @@ class MultiModalModel:
             "content":[{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         diet_text = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, is_vl=True, model="Qwen-VL-base-0.0.1",
+            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
         )
 
         # 格式化菜品信息
@@ -166,7 +166,7 @@ class MultiModalModel:
             "content": f"{self.prompts['菜品格式化']} {diet_text}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat",
+            history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
         )
 
         # 处理结果
@@ -221,7 +221,7 @@ class MultiModalModel:
             'content': f"{self.prompts['饮食一句话建议']} {query}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat",
+            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
         )
         json_data["content"] = generate_text
 
