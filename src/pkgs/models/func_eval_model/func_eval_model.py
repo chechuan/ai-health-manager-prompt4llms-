@@ -225,7 +225,8 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
     daily_diet_str = get_daily_diet_str(daily_diet_info)
     prompt = get_func_eval_prompt('daily_diet_eval_prompt')
     userInfo_str = get_userInfo(userInfo)
-    bg_str = get_daily_blood_glucose_str(daily_blood_glucose)
+    daily_bg = get_daily_key_bg(daily_blood_glucose, daily_diet_info)
+    bg_str = get_daily_blood_glucose_str(daily_bg)
     messages = [
         {
             "role": "user",
