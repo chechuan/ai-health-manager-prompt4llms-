@@ -54,6 +54,7 @@ from src.utils.module import (
     dumpJS,
     format_sse_chat_complete,
     response_generator,
+    replace_you
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
@@ -107,6 +108,7 @@ def make_result(
         head = 600
     res = {"head": head, "msg": msg, "items": items, **kwargs}
     res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+    res = res.replace("您", "你")
     if ret_response:
         return Response(res, media_type=kwargs.get("media_type", "application/json"))
     else:
@@ -454,36 +456,48 @@ def mount_aigc_functions(app: FastAPI):
             return build_aigc_functions_response(_return)
 
     async def _aigc_functions_outpatient_support(
-        request_model: OutpatientSupportRequest,
+            request_model: OutpatientSupportRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
-        """处理西医决策支持的aigc函数"""
+        """处理西医决策支持的AIGC函数"""
         try:
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/outpatient_support"
             )
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应 构造返回数据的AsyncGenerator
-                _return: AsyncGenerator = response_generator(response)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
+                # 处理流式响应
+                _return = response_generator(response)
+            else:
+                # 非流式响应
+                response = replace_you(response)  # 直接替换“您”为“你”
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+
         except Exception as err:
+            # 错误处理
             msg = repr(err)
+            msg = replace_you(msg)  # 错误消息统一替换
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
+                _return = response_generator(msg, error=True)  # 流式错误响应
+            else:
+                ret = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=None
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
+                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
         finally:
-            return build_aigc_functions_response(_return)
+            return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
     async def _async_aigc_functions_sanji_kangyang(
-        request_model: SanJiKangYangRequest,
+            request_model: SanJiKangYangRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """三济康养方案的AIGC函数"""
         try:
@@ -491,25 +505,37 @@ def mount_aigc_functions(app: FastAPI):
                 request_model, endpoint="/aigc/sanji/kangyang"
             )
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应 构造返回数据的AsyncGenerator
-                _return: AsyncGenerator = response_generator(response)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
+                # 处理流式响应
+                _return = response_generator(response)
+            else:
+                # 非流式响应
+                response = replace_you(response)  # 直接替换“您”为“你”
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+
         except Exception as err:
+            # 错误处理
             msg = repr(err)
+            msg = replace_you(msg)  # 错误消息统一替换
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
-            else:  # 处理str响应 构造json str
-                ret: BaseModel = AigcFunctionsCompletionResponse(
+                _return = response_generator(msg, error=True)  # 流式错误响应
+            else:
+                ret = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=None
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
+                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
         finally:
-            return build_aigc_functions_response(_return)
+            return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
     async def _aigc_functions_generate_itinerary(request: Request):
         # 这里调用生成行程的逻辑
@@ -664,8 +690,9 @@ def create_app():
                         item["backend_history"] = yield_item["history"]
                     else:
                         item["backend_history"] = []
+                res = json.dumps(item, ensure_ascii=False).replace('您', '你')
                 yield format_sse_chat_complete(
-                    json.dumps(item, ensure_ascii=False), "delta"
+                    res, "delta"
                 )
                 if yield_item["data"]["end"] == True:
                     break
@@ -688,8 +715,9 @@ def create_app():
                     "Output (except mid_vars & backend_history):"
                     + json.dumps(item, ensure_ascii=False)
                 )
+                res = json.dumps(item, ensure_ascii=False).replace('您', '你')
                 yield format_sse_chat_complete(
-                    json.dumps(item, ensure_ascii=False), "delta"
+                    res, "delta"
                 )
                 if yield_item["end"] == True:
                     break
@@ -1347,24 +1375,36 @@ def create_app():
                 request_model, endpoint="/aigc/weight_management"
             )
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(response)
+                # 处理流式响应
+                _return = response_generator(response)
             else:
-                ret: BaseModel = AigcFunctionsCompletionResponse(
-                    head=200, items=response
-                )
-                _return: str = ret.model_dump_json(exclude_unset=False)
+                # 非流式响应
+                response = replace_you(response)  # 直接替换“您”为“你”
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
         except Exception as err:
+            # 错误处理
             msg = repr(err)
+            msg = replace_you(msg)  # 错误消息统一替换
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return: AsyncGenerator = response_generator(msg, error=True)
+                _return = response_generator(msg, error=True)  # 流式错误响应
             else:
-                ret: BaseModel = AigcFunctionsCompletionResponse(
+                ret = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=None
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
+                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
         finally:
-            return build_aigc_functions_response(_return)
+            return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
     app.route("/aigc/weight_management", methods=["post"])(_aigc_functions_weight_management)
 

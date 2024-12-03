@@ -248,9 +248,9 @@ def get_intent(text):
     elif "网络" in text:
         code = "websearch"
         desc = "网络搜索"
-    elif "首都" in text:
-        code = "KLLI3.captialInfo"
-        desc = "首都查询"
+    # elif "首都" in text:
+    #     code = "KLLI3.captialInfo"
+    #     desc = "首都查询"
     elif "彩票" in text:
         code = "lottery"
         desc = "彩票"
@@ -260,12 +260,12 @@ def get_intent(text):
     elif "计算器" in text:
         code = "AIUI.calc"
         desc = "计算器"
-    elif "国内城市查询" in text:
-        code = "LEIQIAO.cityOfPro"
-        desc = "国内城市查询"
-    elif "省会查询" in text:
-        code = "ZUOMX.queryCapital"
-        desc = "省会查询"
+    # elif "国内城市查询" in text:
+    #     code = "LEIQIAO.cityOfPro"
+    #     desc = "国内城市查询"
+    # elif "省会查询" in text:
+    #     code = "ZUOMX.queryCapital"
+    #     desc = "省会查询"
     elif "翻译" in text:
         code = "translation"
         desc = "翻译"
@@ -576,6 +576,28 @@ async def extract_clean_output(response: str) -> str:
         return response.replace("<|im_start|>", "").replace("<|im_end|>", "").strip()
 
 
+def replace_you(text) -> str:
+    """统一替换‘您’为‘你’，并添加异常处理"""
+    try:
+        if isinstance(text, str):
+            # 如果是字符串，直接替换“您”为“你”
+            return text.replace('您', '你')
+        elif isinstance(text, dict):
+            # 如果是字典，递归替换所有字符串值中的“您”为“你”
+            return {key: replace_you(value) for key, value in text.items()}
+        elif isinstance(text, list):
+            # 如果是列表，递归替换列表中的所有字符串元素
+            return [replace_you(item) for item in text]
+        elif hasattr(text, 'model_dump_json'):  # 针对自定义对象，如 AigcFunctionsResponse
+            # 如果是 AigcFunctionsResponse 类型，替换其中的 message 字段
+            text.message = replace_you(text.message)
+            return text.model_dump_json(exclude_unset=False)  # 返回处理后的 JSON 字符串
+        return text  # 如果是其他类型，则不做处理，直接返回
+    except Exception as e:
+        # 处理所有可能的异常，避免报错
+        return f"替换过程中发生错误: {str(e)}"
+
+
 async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
@@ -588,11 +610,14 @@ async def response_generator(response, error: bool = False) -> AsyncGenerator:
             else:
                 content = chunk.choices[0].delta.content
             if content:
+                # 替换“您” -> “你”
+                content = replace_you(content)  # 在这里调用统一替换方法
                 chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
                 yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
         chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     else:
         chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
+        chunk_resp.message = replace_you(response)  # 错误消息替换
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 
@@ -1909,3 +1934,4 @@ def log_with_source(func):
         kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
         return await func(*args, **kwargs)
     return wrapper
+
