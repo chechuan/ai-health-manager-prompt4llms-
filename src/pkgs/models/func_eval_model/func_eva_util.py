@@ -62,10 +62,11 @@ def get_daily_key_bg(bg_info, diet_info):
                 res.append(buckets[key][0])
         elif 5 < int(key) < 22:
             res.append(buckets[key][0])
-            if not day_high:
-                day_high = i
-            elif day_high['value'] < i['value']:
-                day_high = i
+            for i in buckets[key]:
+                if not day_high:
+                    day_high = i
+                elif day_high['value'] < i['value']:
+                    day_high = i
     res.append(night_low)
     res.append(day_high)
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
