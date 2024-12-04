@@ -262,7 +262,7 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
     async for i in generate_text:
         t = time.time()
         msg = i.choices[0].delta.to_dict()
-        text_stream = msg.get("content").replace('\n', '')
+        text_stream = msg.get("content").replace('\n\n', '\n')
         if text_stream:
             if not printed:
                 print(f"latency first token {t - start_time:.2f} s")
