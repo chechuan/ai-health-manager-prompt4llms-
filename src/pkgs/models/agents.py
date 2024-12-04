@@ -999,7 +999,6 @@ class Agents:
 
         # 返回标准化的结果
         response = d_p_pair
-       
         logger.info(f"Final Response: {repr(response)}")
         return response
 
