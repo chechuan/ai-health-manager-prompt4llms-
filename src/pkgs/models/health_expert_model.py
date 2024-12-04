@@ -42,7 +42,6 @@ class HealthExpertModel:
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
-        logger = kwargs.get("logger")  # 确保使用注入的 logger
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (

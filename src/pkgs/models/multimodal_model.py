@@ -21,12 +21,13 @@ from src.utils.resources import InitAllResource
 from src.utils.Logger import logger
 from src.prompt.model_init import acallLLM, callLLM
 
+
 class MultiModalModel:
     def __init__(self, gsr):
         self.gsr = gsr
         # self.endpoint = self.gsr.multimodal_config["endpoint"]
         self._init_prompts()
-    
+
     def _get_result(self, head: int, items: dict, msg: str = "") -> dict:
         """封装返回结果"""
         return {
@@ -34,7 +35,7 @@ class MultiModalModel:
             "items": items,
             "msg": msg
         }
-    
+
     async def image_type_recog(self, **kwargs):
         """图片分类，包含：饮食、运动、报告、其他"""
         image_url = kwargs.get("image_url")
@@ -44,20 +45,20 @@ class MultiModalModel:
             return self._get_result(400, {}, "image_url is required and cannot be empty.")
         if not diet_recog in [True, False]:
             return self._get_result(400, {}, "diet_recog must be boolean.")
-        
+
         # 检查图片 URL 是否可访问
         async with aiohttp.ClientSession() as session:
             async with session.head(image_url) as response:
                 if not (response.status == 200):
                     return self._get_result(400, {}, "image_url is not accessible.")
-        
+
         # 先调用多模态大模型识别
         messages = [{
             "role": "system",
             "content": self.prompts["图片内容"]
         }, {
             "role": "user",
-            "content":[{"type": "image_url", "image_url": {"url": image_url}}]
+            "content": [{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         image_caption = await acallLLM(
             history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
@@ -73,7 +74,7 @@ class MultiModalModel:
         )
 
         # 类别定义，大类分四种，子类别index对应types的编号
-        types = {"其他":0,"饮食":1,"运动":2,"报告":3}
+        types = {"其他": 0, "饮食": 1, "运动": 2, "报告": 3}
         subtypes = [
             ["其他"],
             ["其他", "餐食", "食材"],
@@ -82,7 +83,7 @@ class MultiModalModel:
         ]
 
         # 分类结果处理
-        json_data = {"status":0,"type":0,"desc":"其他","subtype":0,"subdesc":"其他"}
+        json_data = {"status": 0, "type": 0, "desc": "其他", "subtype": 0, "subdesc": "其他"}
         if classification_text in types:
             json_data["type"] = types[classification_text]
             json_data["desc"] = classification_text
@@ -95,7 +96,7 @@ class MultiModalModel:
             elif classification_text == "报告":
                 json_data["subtype"] = 4
                 json_data["subdesc"] = "体重报告"
-        
+
             # 后端建议，判断是否需要额外做饮食识别
             if diet_recog is True and json_data["desc"] == "饮食":
                 # 原本想直接用图片描述做菜品信息格式化来提高效率
@@ -105,10 +106,11 @@ class MultiModalModel:
                     "content": self.prompts["菜品描述"]
                 }, {
                     "role": "user",
-                    "content":[{"type": "image_url", "image_url": {"url": image_url}}]
+                    "content": [{"type": "image_url", "image_url": {"url": image_url}}]
                 }]
                 diet_text = await acallLLM(
-                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
+                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1",
+                    timeout=20
                 )
 
                 messages = [{
@@ -120,7 +122,7 @@ class MultiModalModel:
                 )
                 # 处理结果
                 diet_info = None
-                try: # 去掉json串中多余的内容
+                try:  # 去掉json串中多余的内容
                     diet_info = self._get_food_info_json(generate_text)
                 except Exception as error:
                     logger.error("image_type_recog error check json {0}".format(image_url))
@@ -129,32 +131,32 @@ class MultiModalModel:
                 else:
                     json_data["foods"] = []
                     json_data["status"] = -1
-        
+
         # 处理返回内容
         result = self._get_result(200, json_data, "")
         logger.debug(f"image_type_recog success: {result}")
         return result
-    
+
     async def diet_recog(self, **kwargs):
         """菜品识别，提取菜品名称、数量、单位信息"""
         image_url = kwargs.get("image_url")
         logger.debug(f"diet_recog image_url: {image_url}")
         if not image_url:
             return self._get_result(400, {}, "image_url is required and cannot be empty.")
-        
+
         # 检查图片 URL 是否可访问
         async with aiohttp.ClientSession() as session:
             async with session.head(image_url) as response:
                 if not (response.status == 200):
                     return self._get_result(400, {}, "image_url is not accessible.")
-        
+
         # 先调用多模态大模型识别菜品名称以及数量
         messages = [{
             "role": "system",
             "content": self.prompts["菜品描述"]
         }, {
             "role": "user",
-            "content":[{"type": "image_url", "image_url": {"url": image_url}}]
+            "content": [{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         diet_text = await acallLLM(
             history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
@@ -171,7 +173,7 @@ class MultiModalModel:
 
         # 处理结果
         json_result = None
-        try: # 去掉json串中多余的内容
+        try:  # 去掉json串中多余的内容
             json_result = self._get_food_info_json(generate_text)
         except Exception as error:
             logger.error("diet_recog error check json {0}".format(image_url))
@@ -179,19 +181,20 @@ class MultiModalModel:
             json_data = {"status": 0, "foods": json_result["foods"]}
         else:
             json_data = {"status": -1, "foods": []}
-        
+
         # 处理返回内容
         result = self._get_result(200, json_data, "")
         logger.debug(f"diet_recog success: {result}")
         return result
-    
+
     async def diet_eval(self, **kwargs):
         """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
         user_info = kwargs.get("user_info", {}) or {}
         diet_info = kwargs.get("diet_info", []) or []
         management_tag = kwargs.get("management_tag", "") or ""
         diet_period = kwargs.get("diet_period", "") or ""
-        logger.debug(f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period}")
+        logger.debug(
+            f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period}")
 
         # 初始化返回内容
         json_data = {
@@ -204,7 +207,7 @@ class MultiModalModel:
             result = self._get_result(200, json_data, "")
             logger.debug(f"diet_eval success: {result}")
             return result
-        
+
         # 拼接用户信息
         query = ""
         if len(user_info.keys()) > 0:
@@ -214,7 +217,7 @@ class MultiModalModel:
         query += f"本餐餐食信息：{json.dumps(diet_info, ensure_ascii=False)}\n"
         if management_tag in ["血糖管理", "血压管理", "减脂减重管理"]:
             query += f"用户目标：{management_tag}\n"
-        
+
         # 请求LLM
         messages = [{
             'role': 'user',
@@ -229,7 +232,7 @@ class MultiModalModel:
         result = self._get_result(200, json_data, "")
         logger.debug(f"diet_eval success: {result}")
         return result
-    
+
     def _init_prompts(self):
         self.prompts = {
             "菜品描述": "请分析图片中所有菜品以及数量",
@@ -292,7 +295,7 @@ class MultiModalModel:
 以下是当前用户提交的信息：
 """,
         }
-    
+
     def _get_food_info_json(self, result):
         # 定向纠错，去掉json串前面的分析内容
         if result[:-3].rfind("```") > 0:
@@ -301,23 +304,24 @@ class MultiModalModel:
             result = result[result[:-3].rfind("json"):]
         if result.rfind("返回") > 0:
             result = result[result.rfind("返回"):]
-        if result.rfind("//") > 0: # 去掉多余的注释内容
+        if result.rfind("//") > 0:  # 去掉多余的注释内容
             result = re.sub(r"//.*?\n", "", result)
         # 去掉json串中多余的markdown内容
         info = json.loads(result.replace("```", "").replace("json", "").replace("返回", "").replace("。", ""))
-        
+
         if "foods" not in info or not isinstance(info["foods"], list):
             raise Exception
         for i, food in enumerate(info["foods"]):
             if "foodname" not in food or "unit" not in food or "count" not in food:
                 raise Exception
-            try: # 检查数量是否为数字，不是则默认为1
+            try:  # 检查数量是否为数字，不是则默认为1
                 count = int(food["count"])
             except Exception as _:
                 food["count"] = "1"
-        
+
         return info
-                
+
+
 if __name__ == '__main__':
 
     # 初始化资源
