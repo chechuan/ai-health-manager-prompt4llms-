@@ -77,7 +77,7 @@ class Agents:
             docs += "\n".join(process_ocr_result)
         else:
             logger.error(f"Report interpretation OCR result is empty")
-        return docs, raw_result, process_ocr_result
+        return docs, raw_result
 
     def __report_interpretation_result__(
             self,
@@ -425,7 +425,7 @@ class Agents:
         image_url, file_path = prepare_file(**kwargs)
         if not file_path:
             return self.__report_interpretation_result__(msg="请输入信息源")
-        docs, raw_result, process_ocr_result = await self.__ocr_report__(**kwargs)
+        docs, raw_result = await self.__ocr_report__(**kwargs)
         if not docs:
             return self.__report_interpretation_result__(
                 msg="未识别出报告内容，请重新尝试",
@@ -998,11 +998,8 @@ class Agents:
             d_p_pair = []
 
         # 返回标准化的结果
-        response = {
-            "head": 200,
-            "items": d_p_pair,
-            "msg": ""
-        }
+        response = d_p_pair
+       
         logger.info(f"Final Response: {repr(response)}")
         return response
 
