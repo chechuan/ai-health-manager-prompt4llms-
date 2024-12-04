@@ -6,7 +6,6 @@
 @Contact :   1627635056@qq.com
 """
 
-# 标准库导入
 import asyncio
 import re
 import sys
@@ -14,13 +13,11 @@ from os.path import basename
 from pathlib import Path
 from typing import AsyncGenerator, Generator
 
-# 第三方库导入
 import json5
 from fastapi.exceptions import ValidationException
 from requests import Session
 from langchain.prompts.prompt import PromptTemplate
 
-# 项目本地模块导入
 sys.path.append(Path(__file__).parents[4].as_posix())
 from data.jiahe_util import *
 from data.test_param.test import testParam
@@ -894,6 +891,10 @@ class Agents:
             "5. 输出示例如下\n"
             "5. 您的发热情况如何，如否有测量体温？｜｜除了嗓子痛和痒，是否有咳嗽或者喉咙有异物感？\n"
         )
+
+        # 打印拼接后的 prompt
+        logger.info(f"AIGC Functions {_event} Assembled Prompt: \n{prompt}")
+
         model_args = await self.__update_model_args__(kwargs)
         model_args: dict = (
             {

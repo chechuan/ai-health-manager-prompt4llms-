@@ -9,6 +9,7 @@
 import asyncio
 import json
 import sys
+import time
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -538,34 +539,87 @@ def mount_aigc_functions(app: FastAPI):
             return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
     async def _aigc_functions_generate_itinerary(request: Request):
-        # 这里调用生成行程的逻辑
-        user_data = await request.json()
-        response = await itinerary_model.generate_itinerary(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_itinerary")
+
+            # 调用生成行程的逻辑
+            result = await itinerary_model.generate_itinerary(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成行程", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_itinerary: {e}")
+            return make_result(head=500, msg="生成行程失败", items=None)
 
     async def _aigc_functions_generate_bath_plan(request: Request):
-        user_data = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await bath_plan_model.generate_bath_plan(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_bath_plan")
+
+            # 调用生成浴池计划的逻辑
+            result = await bath_plan_model.generate_bath_plan(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成浴池计划", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_bath_plan: {e}")
+            return make_result(head=500, msg="生成浴池计划失败", items=None)
 
     async def _aigc_functions_generate_itinerary_v1_1_0(request: Request):
-        # 这里调用生成行程的逻辑
-        user_data = await request.json()
-        response = await itinerary_model.generate_itinerary_v1_1_0(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_itinerary_v1_1_0")
+
+            # 调用生成行程的逻辑
+            result = await itinerary_model.generate_itinerary_v1_1_0(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成行程v1.1.0", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_itinerary_v1_1_0: {e}")
+            return make_result(head=500, msg="生成行程v1.1.0失败", items=None)
 
     async def _aigc_functions_generate_bath_plan_v1_1_0(request: Request):
-        user_data = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_bath_plan_v1_1_0")
+
+            # 调用生成浴池计划的逻辑
+            result = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成浴池计划v1.1.0", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_bath_plan_v1_1_0: {e}")
+            return make_result(head=500, msg="生成浴池计划v1.1.0失败", items=None)
 
     async def _aigc_functions_likang_introduction_v1_1_0(request: Request):
-        params = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await itinerary_model.aigc_functions_likang_introduction(**params)
-        return response
+        try:
+            # 记录请求参数
+            params = await async_accept_param_purge(request, endpoint="_aigc_functions_likang_introduction_v1_1_0")
+
+            # 调用生成 Likang 介绍的逻辑
+            response = await itinerary_model.aigc_functions_likang_introduction(**params)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成Likang介绍", items=response)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_likang_introduction_v1_1_0: {e}")
+            return make_result(head=500, msg="生成Likang介绍失败", items=None)
+
+        # 统一格式化响应
+        return make_result(head=200, msg="成功生成Likang介绍", items=response)
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
@@ -639,11 +693,6 @@ def create_app():
     )
     prepare_for_all()
 
-    @app.get("/health", summary="健康检查接口")
-    async def health_check():
-        """健康检查接口"""
-        return {"status": "healthy"}
-
     async def document():  # 用于展示接口文档
         return RedirectResponse(url="/docs")
 
@@ -666,6 +715,19 @@ def create_app():
             status_code=200,  # 强制返回HTTP 200
             content={"head": 500, "items": None, "msg": repr(exc)},  # 自定义错误信息
         )
+
+    @app.get("/health", summary="健康检查接口")
+    async def health_check():
+        """健康检查接口"""
+        start_time = time.time()  # 记录开始时间
+
+        # 返回健康状态
+        response = {"status": "healthy"}
+
+        # 记录响应时间
+        response_time = time.time() - start_time
+        logger.info(f"\033[32m[monitor]\033[0m Health check completed in {response_time:.2f} seconds.")
+        return response
 
     async def decorate_chat_complete(
         generator, return_mid_vars=False, return_backend_history=False
@@ -1251,7 +1313,7 @@ def create_app():
         """demo,主要用于展示返回的中间变量"""
         try:
             param = await accept_param(request, endpoint="/chat/complete")
-            generator = await chat_v2.general_yield_result(
+            generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
@@ -1271,7 +1333,7 @@ def create_app():
         """角色扮演对话"""
         try:
             param = await accept_param(request, endpoint="/chat/role_play")
-            generator = await chat_v2.general_yield_result(
+            generator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
                 use_sys_prompt=True,
