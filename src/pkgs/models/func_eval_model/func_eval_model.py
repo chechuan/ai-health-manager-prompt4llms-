@@ -251,7 +251,7 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         do_sample=True,
         stream=True,
         is_vl=True,
-        model="Qwen1.5-32B-Chat",
+        model="Qwen2-72B-Instruct",
     )
     # logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     # logger.debug("一日饮食评估建议模型输出： " + generate_text)
