@@ -1471,76 +1471,6 @@ async def handle_calories(content: dict, **kwargs) -> dict:
         content["quantity"] = kwargs["food_quantity"]
     return content
 
-
-async def check_required_fields(params: dict, required_fields: dict, at_least_one: list = []):
-    """
-    检查参数中的必填字段，包括多层嵌套和“或”的逻辑。
-
-    参数:
-        params (dict): 参数字典。
-        required_fields (dict): 必填字段字典，键为参数名，值为该参数的必填字段列表、字典或元组（表示“或”逻辑）。
-        field_names (dict): 字段中文释义字典。
-        at_least_one (list): 至少需要有一项的参数列表（可选）。
-
-    抛出:
-        ValueError: 如果必填字段缺失或至少一项参数缺失，抛出错误。
-    """
-    missing = []
-
-    async def add_missing(field, prefix=""):
-        _prefix = prefix.rstrip(".")
-        missing.append(f"{_prefix} 缺少 {field}")
-
-    async def recursive_check(current_params, current_fields, prefix=""):
-        """
-        递归检查参数中的必填字段。
-
-        参数:
-            current_params (dict): 当前层级的参数字典。
-            current_fields (dict or list): 当前层级的必填字段字典或列表。
-            prefix (str): 当前字段的前缀，用于构建错误信息中的完整路径。
-        """
-        _prefix = prefix.rstrip(".")
-        if not current_params:
-            if _prefix not in at_least_one:
-                raise AssertionError(f"{_prefix} 不能为空")
-
-        if isinstance(current_fields, dict):
-            for param, fields in current_fields.items():
-                if param not in current_params or not current_params[param]:
-                    # 如果参数不存在或为空，则记录缺失的参数
-                    await add_missing(param, prefix)
-                elif isinstance(fields, (dict, list)):
-                    await recursive_check(current_params[param], fields, prefix=f"{prefix}{param}.")
-        elif isinstance(current_fields, list):
-            for field in current_fields:
-                if isinstance(field, tuple):
-                    # 如果字段是元组，表示“或”的逻辑，检查至少一个字段存在
-                    if not any(f in current_params and current_params[f] is not None for f in field):
-                        field_names_str = '或'.join(field for field in field)
-                        await add_missing(field_names_str, prefix)
-                elif isinstance(field, str):
-                    if field not in current_params or current_params[field] is None:
-                        # 如果必填字段不存在或为空，则记录缺失的字段
-                        await add_missing(field, prefix)
-
-    # 检查至少一项参数存在的条件
-    if at_least_one and not any(params.get(p) for p in at_least_one):
-        # 打印执行时间日志
-        raise AssertionError(f"至少需要提供以下一项参数：{', '.join(at_least_one)}")
-    # 检查所有必填字段
-    for key, fields in required_fields.items():
-        if key in params:
-            await recursive_check(params[key], fields, prefix=f"{key}.")
-        else:
-            await add_missing(key)
-
-    # 如果有缺失的必填字段，抛出错误
-    # print(missing)
-    if missing:
-        raise AssertionError(f"缺少必要的字段：{'; '.join(missing)}")
-
-
 async def check_aigc_functions_body_fat_weight_management_consultation(params: dict
 ) -> List:
     """检查参数是否满足需求
@@ -1935,3 +1865,78 @@ def log_with_source(func):
         return await func(*args, **kwargs)
     return wrapper
 
+
+async def determine_weight_status(user_profile, bmi_value):
+    age = user_profile["age"]
+    if 18 <= age < 65:
+        if bmi_value < 18.5:
+            return "身材偏瘦", "偏低", "增肌"
+        elif 18.5 <= bmi_value < 24:
+            return "属于标准体重", "正常", "保持体重"
+        elif 24 <= bmi_value < 28:
+            return "体重超重", "偏高", "减脂"
+        else:
+            return "属于肥胖状态", "偏高", "减脂"
+    else:
+        if bmi_value < 20:
+            return "身材偏瘦", "偏低", "增肌"
+        elif 20 <= bmi_value < 26.9:
+            return "属于标准体重", "正常", "保持体重"
+        elif 26.9 <= bmi_value < 28:
+            return "体重超重", "偏高", "减脂"
+        else:
+            return "属于肥胖状态", "偏高", "减脂"
+
+async def determine_body_fat_status(gender: str, body_fat_rate: float):
+        """确定体脂率状态和目标"""
+        if gender == "男":
+            if body_fat_rate < 10:
+                return "偏低状态", "增重"
+            elif 10 <= body_fat_rate < 20:
+                return "正常范围", "保持体重"
+            elif 20 <= body_fat_rate < 25:
+                return "偏高状态", "减脂"
+            else:
+                return "肥胖状态", "减脂"
+        elif gender == "女":
+            if body_fat_rate < 15:
+                return "偏低状态", "增重"
+            elif 15 <= body_fat_rate < 25:
+                return "正常范围", "保持体重"
+            elif 25 <= body_fat_rate < 30:
+                return "偏高状态", "减脂"
+            else:
+                return "肥胖状态", "减脂"
+
+
+async def truncate_to_limit(text: str, limit: int) -> str:
+    """
+    截取文本至指定字符限制，若字符数超出限制则保留最后一个标点符号，或在句尾加上句号。
+    :param text: 原始文本
+    :param limit: 字符限制，默认为20个字符
+    :return: 处理后的文本
+    """
+    # 去掉换行符
+    text = text.replace("\n", "")
+
+    # 如果文本长度小于等于限制，直接返回
+    if len(text) <= limit:
+        return text if text.endswith("。") else text + "。"
+
+    # 截取前limit个字符
+    truncated = text[:limit]
+
+    # 在截断文本中寻找最后一个标点符号
+    last_punctuation = max(truncated.rfind(p) for p in "。，！？")
+
+    # 如果找到标点符号，将该标点转换为句号
+    if last_punctuation != -1:
+        truncated = truncated[:last_punctuation + 1]
+        # 如果标点不是句号，替换成句号
+        if truncated[-1] not in "。":
+            truncated = truncated[:-1] + "。"
+    else:
+        # 如果没有标点符号，直接在末尾加句号
+        truncated = truncated.rstrip() + "。"
+
+    return truncated
