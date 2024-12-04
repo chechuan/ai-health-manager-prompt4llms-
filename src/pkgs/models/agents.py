@@ -998,11 +998,8 @@ class Agents:
             d_p_pair = []
 
         # 返回标准化的结果
-        response = {
-            "head": 200,
-            "items": d_p_pair,
-            "msg": ""
-        }
+        response = d_p_pair
+
         logger.info(f"Final Response: {repr(response)}")
         return response
 
