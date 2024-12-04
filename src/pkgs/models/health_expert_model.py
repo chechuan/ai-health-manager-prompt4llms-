@@ -8,30 +8,26 @@
 
 import asyncio
 import json
-from copy import deepcopy
-from datetime import datetime
-from typing import Generator
 import json5
 import re
-from data.test_param.test import testParam
+from copy import deepcopy
+from datetime import datetime
+from typing import Generator, Dict, Union, List, Literal
 from src.utils.module import (
-    check_required_fields, check_aigc_functions_body_fat_weight_management_consultation,
-    check_and_calculate_bmr, get_highest_data_per_day, check_consecutive_days,
+    check_aigc_functions_body_fat_weight_management_consultation, check_and_calculate_bmr,
     calculate_and_format_diet_plan, calculate_standard_weight, convert_meal_plan_to_text,
-    curr_time, determine_recent_solar_terms, format_historical_meal_plans,
-    format_historical_meal_plans_v2, generate_daily_schedule, generate_key_indicators,
-    get_festivals_and_other_festivals, get_weather_info, parse_generic_content,
-    remove_empty_dicts, handle_calories, run_in_executor, log_with_source
+    curr_time, determine_recent_solar_terms, format_historical_meal_plans, format_historical_meal_plans_v2,
+    generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
+    get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
+    determine_weight_status, determine_body_fat_status, truncate_to_limit
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
-from src.utils.Logger import logger as global_logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 
 
 class HealthExpertModel:
-
     def __init__(self, gsr: InitAllResource) -> None:
         # 初始化实例属性
         self.gsr = gsr
@@ -46,7 +42,6 @@ class HealthExpertModel:
         **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
-        logger = kwargs.get("logger", global_logger)  # 确保使用注入的 logger
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (
@@ -1198,7 +1193,7 @@ class HealthExpertModel:
         user_profile["target_weight"] = target_weight
 
         # 组装体重状态和目标
-        weight_status, bmi_status, weight_goal = await self.__determine_weight_status(user_profile, current_bmi)
+        weight_status, bmi_status, weight_goal = await determine_weight_status(user_profile, current_bmi)
         weight_status_goal_msg = f"当前体重为{current_weight}千克，{weight_status}，BMI{bmi_status}，需要{weight_goal}。"
 
         # 处理两天数据比较逻辑
@@ -1296,7 +1291,7 @@ class HealthExpertModel:
         user_profile["standard_body_fat_rate"] = standard_body_fat_rate
 
         # 组装体脂率状态和目标
-        body_fat_status, body_fat_goal = await self._determine_body_fat_status(user_profile["gender"], current_body_fat_rate)
+        body_fat_status, body_fat_goal = await determine_body_fat_status(user_profile["gender"], current_body_fat_rate)
         body_fat_status_goal_msg = f"当前体脂率为{current_body_fat_rate}%，属于{body_fat_status}，需要{body_fat_goal}。"
 
         # 处理两天数据比较逻辑
@@ -1333,48 +1328,6 @@ class HealthExpertModel:
 
         return content
 
-    async def __determine_weight_status(self, user_profile, bmi_value):
-        age = user_profile["age"]
-        if 18 <= age < 65:
-            if bmi_value < 18.5:
-                return "身材偏瘦", "偏低", "增肌"
-            elif 18.5 <= bmi_value < 24:
-                return "属于标准体重", "正常", "保持体重"
-            elif 24 <= bmi_value < 28:
-                return "体重超重", "偏高", "减脂"
-            else:
-                return "属于肥胖状态", "偏高", "减脂"
-        else:
-            if bmi_value < 20:
-                return "身材偏瘦", "偏低", "增肌"
-            elif 20 <= bmi_value < 26.9:
-                return "属于标准体重", "正常", "保持体重"
-            elif 26.9 <= bmi_value < 28:
-                return "体重超重", "偏高", "减脂"
-            else:
-                return "属于肥胖状态", "偏高", "减脂"
-
-    async def _determine_body_fat_status(self, gender: str, body_fat_rate: float):
-        """确定体脂率状态和目标"""
-        if gender == "男":
-            if body_fat_rate < 10:
-                return "偏低状态", "增重"
-            elif 10 <= body_fat_rate < 20:
-                return "正常范围", "保持体重"
-            elif 20 <= body_fat_rate < 25:
-                return "偏高状态", "减脂"
-            else:
-                return "肥胖状态", "减脂"
-        elif gender == "女":
-            if body_fat_rate < 15:
-                return "偏低状态", "增重"
-            elif 15 <= body_fat_rate < 25:
-                return "正常范围", "保持体重"
-            elif 25 <= body_fat_rate < 30:
-                return "偏高状态", "减脂"
-            else:
-                return "肥胖状态", "减脂"
-
     async def aigc_functions_recommended_daily_calorie_intake(self, **kwargs) -> str:
         """
         推荐每日饮食摄入热量值（B端）
@@ -1401,11 +1354,29 @@ class HealthExpertModel:
             ]
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
-        # 获取用户画像信息
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
+
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少有一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
         bmr = await check_and_calculate_bmr(user_profile)
@@ -1466,11 +1437,29 @@ class HealthExpertModel:
             ]
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
-        # 获取用户画像信息
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
+
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少有一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         # 使用工具类方法检查并计算基础代谢率（BMR）
         bmr = await check_and_calculate_bmr(user_profile)
@@ -1533,11 +1522,29 @@ class HealthExpertModel:
             ]
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
-        # 获取用户画像信息
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
+
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少有一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         try:
             # 使用工具类方法检查并计算基础代谢率（BMR）
@@ -1605,11 +1612,29 @@ class HealthExpertModel:
             "diet_plan_standards": {}
         }
 
-        # 验证必填字段
-        await check_required_fields(kwargs, required_fields)
-
-        # 获取用户画像信息
+        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
+
+        missing_fields = []  # 存储缺失的字段
+        user_profile_keys = set(user_profile.keys())
+
+        # 检查 user_profile 字段
+        for field in required_fields["user_profile"]:
+            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+                if not any(f in user_profile_keys for f in field):
+                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
+            elif field not in user_profile_keys:
+                missing_fields.append(f"缺少必填字段: {field}")
+
+        # 检查至少有一个字段
+        if not any([user_profile, medical_records, key_indicators]):
+            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
+
+        # 如果有缺失字段，抛出错误
+        if missing_fields:
+            raise ValueError(" ".join(missing_fields))
 
         # 拼接用户画像信息字符串
         user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
@@ -2100,7 +2125,7 @@ class HealthExpertModel:
         diet_summary_model_output = await self.__call_model_summary__(**kwargs)
 
         # 截取模型输出内容并拼接最终输出结果
-        truncated_summary = await self.__truncate_to_limit(diet_summary_model_output, limit=20)
+        truncated_summary = await truncate_to_limit(diet_summary_model_output, limit=20)
         final_summary = f"{truncated_summary}"
 
         return final_summary
@@ -2115,38 +2140,6 @@ class HealthExpertModel:
             _event="饮食分析结果生成", prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return diet_summary_output
-
-    async def __truncate_to_limit(self, text: str, limit: int) -> str:
-        """
-        截取文本至指定字符限制，若字符数超出限制则保留最后一个标点符号，或在句尾加上句号。
-        :param text: 原始文本
-        :param limit: 字符限制，默认为20个字符
-        :return: 处理后的文本
-        """
-        # 去掉换行符
-        text = text.replace("\n", "")
-
-        # 如果文本长度小于等于限制，直接返回
-        if len(text) <= limit:
-            return text if text.endswith("。") else text + "。"
-
-        # 截取前limit个字符
-        truncated = text[:limit]
-
-        # 在截断文本中寻找最后一个标点符号
-        last_punctuation = max(truncated.rfind(p) for p in "。，！？")
-
-        # 如果找到标点符号，将该标点转换为句号
-        if last_punctuation != -1:
-            truncated = truncated[:last_punctuation + 1]
-            # 如果标点不是句号，替换成句号
-            if truncated[-1] not in "。":
-                truncated = truncated[:-1] + "。"
-        else:
-            # 如果没有标点符号，直接在末尾加句号
-            truncated = truncated.rstrip() + "。"
-
-        return truncated
 
     async def aigc_functions_tcm_consultation_decision_support(self, **kwargs) -> str:
         """

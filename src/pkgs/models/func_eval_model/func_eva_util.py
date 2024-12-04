@@ -44,14 +44,20 @@ def get_daily_key_bg(bg_info, diet_info):
             buckets[time.split(':')[0]] = [info]
         else:
             buckets[time.split(':')[0]].append(info)
-    img_time = OrderedDict()
+    img_time = []
     for info in diet_info:
         time_key = info.get('diet_time', '').split(' ')[-1].split(':')[0]
         if time_key:
-            img_time[time_key] = time_key
+            img_time.append(time_key)
     night_low = {}
     day_high = {}
     for key in buckets.keys():
+        if int(key) in [int(i) - 1 for i in img_time]:
+            res.append(buckets[key][len(buckets[key]) // 3])
+            res.append(buckets[key][len(buckets[key]) // 3 * 2])
+        if int(key) in [int(i) + 1 for i in img_time]:
+            res.append(buckets[key][len(buckets[key]) // 3])
+            res.append(buckets[key][len(buckets[key]) // 3 * 2])
         if int(key) < 6 or int(key) > 21:
             for i in buckets[key]:
                 if not night_low:
@@ -75,35 +81,34 @@ def get_daily_key_bg(bg_info, diet_info):
     return res
 
 
-daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对用户提交的一日食物信息做出合理评价和建议。
+daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对我提交的一日食物信息做出合理评价和建议。
 
-## 用户个人信息：
+## 个人信息：
 {0}
 
-## 用户当天饮食及每餐评价信息：
+## 当天饮食及每餐评价信息：
 {1}
 
-## 用户一日血糖信息：
+## 一日血糖信息：
 {2}
 
-## 用户管理场景：
+## 管理场景：
 {3}
 
-## 输入内容要求：
-- 输出可能包含的维度有：血糖稳定性评估，餐后血糖波动分析，餐后血糖波动可能与食物的关联，食物选择是否合理，待改善建议。
-- 请充分参考一日血糖数据，识别异常血糖信息，并给予提醒，尤其是低血糖情况应给出建议。
-- 确保分析的食物信息都来自`用户当天饮食及每餐评价信息`，不要自己创造。
-- 输出内容要求简洁自然，通俗易懂，符合营养学观点。
-- 直接输出一段文本内容，字数控制在300字以内。
-- 避免输出列表。
+# 输出要求
+  - 输出可能包含的维度有：血糖稳定性评估、餐后血糖波动可能与食物的关联并且评价食物选择是否合理、饮食待改善建议3个维度。
+  - 每个维度的评价可以换行显示，可参考输出示例。
+  - 血糖稳定性评估请从餐后血糖波动、最大血糖波动维度来分析，识别异常血糖信息，并给予提醒，比如对低血糖情况应给出建议。
+  - 待改善建议避免输出列表。
+  - 输出内容要求简洁自然，通俗易懂，符合营养学观点。
+  - 整体字数控制在400字以内。
+ 
+ # 输出示例
+从你的血糖数据来看，餐后血糖波动较大，尤其是午餐后血糖显著升高至14mmol/L，之后虽有所下降，但仍高于理想范围。全天最大血糖波动也较大，从早餐后的12mmol/L到睡前的4mmol/L，波动幅度超过8mmol/L。需特别注意低血糖情况，应警惕夜间低血糖风险。
+午餐蒸红薯是高升糖食物，且咸菜可能含较多盐分，可能是导致午餐后血糖升高的原因之一，不利于血糖控制。晚餐食物以蔬菜为主，血糖波动较小，但缺乏足够的蛋白质和主食，可能导致后续血糖过低。
+建议调整午餐主食，选择低升糖指数的食物，如全麦面包或燕麦片，并增加绿叶蔬菜的摄入。晚餐应添加一份蛋白质来源，如鸡胸肉或豆腐，并搭配一份适量主食，如糙米饭或全麦面包，以确保营养均衡，同时避免血糖过低。整体饮食应控制总量，分餐次合理搭配，有助于稳定血糖。
 
 Begins!"""
-
-
-
-
-
-
 
 
 def get_standard_img_type(text):
