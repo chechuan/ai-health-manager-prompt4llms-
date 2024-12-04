@@ -84,9 +84,9 @@ class ItineraryModel:
         while current_date <= end_date:
             # 根据是周末还是工作日，决定当天的价格
             if current_date.weekday() >= 5:  # 周六和周日
-                day_price = price_info.get("weekend", {}).get("with_meal", 0)
+                day_price = price_info.get("weekend", {}).get("withMeal", 0)
             else:  # 周一到周五
-                day_price = price_info.get("weekday", {}).get("with_meal", 0)
+                day_price = price_info.get("weekday", {}).get("withMeal", 0)
 
             total_price += day_price
             current_date += timedelta(days=1)
@@ -251,8 +251,8 @@ class ItineraryModel:
         }
 
         # 提取适用人群中的年龄组和必需人群
-        required_age_groups = {person["age_group"] for person in applicable_people if person.get("required", False)}
-        applicable_age_groups = {person["age_group"] for person in applicable_people}
+        required_age_groups = {person.get("ageGroup") for person in applicable_people if person.get("required", False)}
+        applicable_age_groups = {person.get("ageGroup") for person in applicable_people}
 
         # 初始化字典以跟踪出行人员的年龄组
         travelers_age_groups = {age_group: False for age_group in applicable_age_groups}
@@ -396,14 +396,14 @@ class ItineraryModel:
 
             while current_date <= end_date:
                 # 判断当天是否免费
-                if price_info.get("is_free", False):
+                if price_info.get("isFree", False):
                     day_price = 0
                 else:
-                    day_price = price_info.get("default", 0)
+                    day_price = price_info.get("defaultValue", 0)
 
                     # 如果有按时长收费，计算总价
-                    if price_info.get("unit_price"):
-                        unit_price = price_info["unit_price"]["amount"]
+                    if price_info.get("unitPrice"):
+                        unit_price = price_info["unitPrice"]["amount"]
                         day_price += unit_price * float(duration)
 
                 total_price += day_price

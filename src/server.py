@@ -539,34 +539,87 @@ def mount_aigc_functions(app: FastAPI):
             return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
     async def _aigc_functions_generate_itinerary(request: Request):
-        # 这里调用生成行程的逻辑
-        user_data = await request.json()
-        response = await itinerary_model.generate_itinerary(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_itinerary")
+
+            # 调用生成行程的逻辑
+            result = await itinerary_model.generate_itinerary(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成行程", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_itinerary: {e}")
+            return make_result(head=500, msg="生成行程失败", items=None)
 
     async def _aigc_functions_generate_bath_plan(request: Request):
-        user_data = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await bath_plan_model.generate_bath_plan(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_bath_plan")
+
+            # 调用生成浴池计划的逻辑
+            result = await bath_plan_model.generate_bath_plan(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成浴池计划", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_bath_plan: {e}")
+            return make_result(head=500, msg="生成浴池计划失败", items=None)
 
     async def _aigc_functions_generate_itinerary_v1_1_0(request: Request):
-        # 这里调用生成行程的逻辑
-        user_data = await request.json()
-        response = await itinerary_model.generate_itinerary_v1_1_0(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_itinerary_v1_1_0")
+
+            # 调用生成行程的逻辑
+            result = await itinerary_model.generate_itinerary_v1_1_0(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成行程v1.1.0", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_itinerary_v1_1_0: {e}")
+            return make_result(head=500, msg="生成行程v1.1.0失败", items=None)
 
     async def _aigc_functions_generate_bath_plan_v1_1_0(request: Request):
-        user_data = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
-        return response
+        try:
+            # 记录请求参数
+            user_data = await async_accept_param_purge(request, endpoint="_aigc_functions_generate_bath_plan_v1_1_0")
+
+            # 调用生成浴池计划的逻辑
+            result = await bath_plan_model.generate_bath_plan_v1_1_0(user_data)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成浴池计划v1.1.0", items=result)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_generate_bath_plan_v1_1_0: {e}")
+            return make_result(head=500, msg="生成浴池计划v1.1.0失败", items=None)
 
     async def _aigc_functions_likang_introduction_v1_1_0(request: Request):
-        params = await request.json()
-        # intentcode = user_data.get("intentcode_bath_plan", "default_bath_code")
-        response = await itinerary_model.aigc_functions_likang_introduction(**params)
-        return response
+        try:
+            # 记录请求参数
+            params = await async_accept_param_purge(request, endpoint="_aigc_functions_likang_introduction_v1_1_0")
+
+            # 调用生成 Likang 介绍的逻辑
+            response = await itinerary_model.aigc_functions_likang_introduction(**params)
+
+            # 统一格式化响应
+            return make_result(head=200, msg="成功生成Likang介绍", items=response)
+
+        except Exception as e:
+            # 处理异常
+            logger.error(f"Error in _aigc_functions_likang_introduction_v1_1_0: {e}")
+            return make_result(head=500, msg="生成Likang介绍失败", items=None)
+
+        # 统一格式化响应
+        return make_result(head=200, msg="成功生成Likang介绍", items=response)
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
