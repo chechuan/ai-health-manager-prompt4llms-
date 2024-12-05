@@ -102,7 +102,7 @@ async def async_accept_param_purge(request: Request, endpoint: str = None):
     return p
 
 
-def git make_result(
+def make_result(
         head=200, msg=None, items=None, ret_response=True, log=False, **kwargs
 ) -> Union[Response, StreamingResponse]:
     if not items and head == 200:
