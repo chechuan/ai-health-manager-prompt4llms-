@@ -833,8 +833,6 @@ class ItineraryModel:
 
         # 5. 构建最终的响应结构
         response = {
-            "head": 200,
-            "items": {
                 "hotel": {
                     "name": hotel["name"],
                     "extra_info": hotel["extra_info"],
@@ -846,7 +844,6 @@ class ItineraryModel:
                 "itinerary": itinerary,
                 "msg": "行程生成成功"
             }
-        }
 
         return response
 
@@ -1364,13 +1361,9 @@ class ItineraryModel:
 
         # 构建返回结果
         res = {
-            "head": 200,
-            "items": {
                 "contents": frontend_contents,
                 "cates": business_category
-            },
-            "msg": "",
-        }
+            }
 
         return res
 
@@ -1433,15 +1426,11 @@ class ItineraryModel:
 
         # 9. 构建完整的响应结构
         response = {
-            "head": 200,
-            "items": {
                 "plan": overview,
                 "contents": frontend_contents,
                 "cates": business_category,
                 "plan_text": markdown
-            },
-            "msg": "",
-        }
+            }
         return response
 
 

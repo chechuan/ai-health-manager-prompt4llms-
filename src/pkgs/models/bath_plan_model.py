@@ -122,15 +122,11 @@ class BathPlanModel:
             return {"msg": "未找到匹配的泡浴方案"}
 
         return {
-            "head": 200,
-            "items": {
                 "bath_plan": full_plan,
                 "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
                 "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
                 "health_analysis": health_analysis
-            },
-            "msg": ""
-        }
+            }
 
     async def get_health_analysis(self, combination_key, gender):
         """
@@ -266,8 +262,6 @@ class BathPlanModel:
             business_category = ["温泉", "酒店"]  # 默认值
 
         return {
-            "head": 200,
-            "items": {
                 "plan": full_plan,
                 "contents": frontend_contents,
                 "cates": business_category,
@@ -275,9 +269,7 @@ class BathPlanModel:
                 "notice": "建议累计泡浴时长40-50分钟/次，避免长时间泡浴导致疲劳、低血糖等不适",
                 "output_basis": "根据健康问卷测评结果，结合温泉功效特色，从整体有效性角度为您推荐泡浴方案，仅供参考",
                 "health_analysis": health_analysis
-            },
-            "msg": ""
-        }
+            }
 
 
 if __name__ == '__main__':
