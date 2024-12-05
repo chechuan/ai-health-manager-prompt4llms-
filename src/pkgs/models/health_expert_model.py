@@ -526,7 +526,7 @@ class HealthExpertModel:
         return content
 
     # @param_check(check_params=["messages"])
-    async def aigc_functions_sjkyn_guideline_genetion(self, **kwargs) -> str:
+    async def aigc_functions_sjkyn_guideline_generation(self, **kwargs) -> str:
         """
         三济康养方案总则
 
