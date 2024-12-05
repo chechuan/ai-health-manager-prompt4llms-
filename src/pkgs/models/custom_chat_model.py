@@ -545,13 +545,13 @@ class CustomChatAuxiliary(CustomChatModel):
         if doctor == "None":
             thought = "对不起，这儿可能出现了一些问题，请你稍后再试。"
         # elif not doctor or "问诊Finished" in doctor:
-        elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
-            # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
-            sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(**kwargs)
-            conts = [
-                sug,
-                "我建议接入家庭医生对你进行后续健康服务，是否邀请家庭医生加入群聊？",
-            ]
+        # elif "?" not in doctor and "？" not in doctor and "有没有" not in doctor and '吗' not in doctor:
+        #     # doctor = self.__chat_auxiliary_diagnosis_summary_diet_rec__(history)
+        #     sug = self.__chat_auxiliary_diagnosis_summary_diet_rec__(**kwargs)
+        #     conts = [
+        #         sug,
+        #         "我建议接入家庭医生对你进行后续健康服务，是否邀请家庭医生加入群聊？",
+        #     ]
         else:
             ...
         mid_vars = update_mid_vars(
