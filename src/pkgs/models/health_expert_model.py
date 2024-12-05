@@ -19,7 +19,7 @@ from src.utils.module import (
     curr_time, determine_recent_solar_terms, format_historical_meal_plans, format_historical_meal_plans_v2,
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
-    determine_weight_status, determine_body_fat_status, truncate_to_limit
+    determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
