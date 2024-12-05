@@ -102,12 +102,15 @@ async def async_accept_param_purge(request: Request, endpoint: str = None):
     return p
 
 
-def make_result(
-    head=200, msg=None, items=None, ret_response=True, **kwargs
+def git make_result(
+        head=200, msg=None, items=None, ret_response=True, log=False, **kwargs
 ) -> Union[Response, StreamingResponse]:
     if not items and head == 200:
         head = 600
     res = {"head": head, "msg": msg, "items": items, **kwargs}
+    if log:
+        res_json = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
+        logger.info(f"Response content: {res_json}")
     res = json.dumps(res, cls=NpEncoder, ensure_ascii=False)
     res = res.replace("您", "你")
     if ret_response:
@@ -460,9 +463,10 @@ def mount_aigc_functions(app: FastAPI):
             request_model: OutpatientSupportRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """处理西医决策支持的AIGC函数"""
+        endpoint = "/aigc/outpatient_support"
         try:
             param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/outpatient_support"
+                request_model, endpoint=endpoint
             )
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
@@ -482,6 +486,7 @@ def mount_aigc_functions(app: FastAPI):
                         head=200, items=response
                     )
                     _return = ret.model_dump_json(exclude_unset=False)
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
 
         except Exception as err:
             # 错误处理
@@ -501,9 +506,10 @@ def mount_aigc_functions(app: FastAPI):
             request_model: SanJiKangYangRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """三济康养方案的AIGC函数"""
+        endpoint = "/aigc/sanji/kangyang"
         try:
             param = await async_accept_param_purge(
-                request_model, endpoint="/aigc/sanji/kangyang"
+                request_model, endpoint=endpoint
             )
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
@@ -523,6 +529,7 @@ def mount_aigc_functions(app: FastAPI):
                         head=200, items=response
                     )
                     _return = ret.model_dump_json(exclude_unset=False)
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
 
         except Exception as err:
             # 错误处理
@@ -547,7 +554,7 @@ def mount_aigc_functions(app: FastAPI):
             result = await itinerary_model.generate_itinerary(user_data)
 
             # 统一格式化响应
-            return make_result(head=200, msg="成功生成行程", items=result)
+            return make_result(head=200, msg="成功生成行程", items=result, log=True)
 
         except Exception as e:
             # 处理异常
@@ -563,7 +570,7 @@ def mount_aigc_functions(app: FastAPI):
             result = await bath_plan_model.generate_bath_plan(user_data)
 
             # 统一格式化响应
-            return make_result(head=200, msg="成功生成浴池计划", items=result)
+            return make_result(head=200, msg="成功生成浴池计划", items=result, log=True)
 
         except Exception as e:
             # 处理异常
@@ -579,7 +586,7 @@ def mount_aigc_functions(app: FastAPI):
             result = await itinerary_model.generate_itinerary_v1_1_0(user_data)
 
             # 统一格式化响应
-            return make_result(head=200, msg="成功生成行程v1.1.0", items=result)
+            return make_result(head=200, msg="成功生成行程v1.1.0", items=result, log=True)
 
         except Exception as e:
             # 处理异常
@@ -611,15 +618,12 @@ def mount_aigc_functions(app: FastAPI):
             response = await itinerary_model.aigc_functions_likang_introduction(**params)
 
             # 统一格式化响应
-            return make_result(head=200, msg="成功生成Likang介绍", items=response)
+            return make_result(head=200, msg="成功生成Likang介绍", items=response, log=True)
 
         except Exception as e:
             # 处理异常
             logger.error(f"Error in _aigc_functions_likang_introduction_v1_1_0: {e}")
             return make_result(head=500, msg="生成Likang介绍失败", items=None)
-
-        # 统一格式化响应
-        return make_result(head=200, msg="成功生成Likang介绍", items=response)
 
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
