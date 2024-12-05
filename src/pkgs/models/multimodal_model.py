@@ -61,7 +61,7 @@ class MultiModalModel:
             "content": [{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         image_caption = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
+            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
         )
 
         # 图片分类
@@ -70,7 +70,7 @@ class MultiModalModel:
             "content": f"{self.prompts['图片分类']} {image_caption}",
         }]
         classification_text = await acallLLM(
-            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
+            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
         )
 
         # 类别定义，大类分四种，子类别index对应types的编号
@@ -109,8 +109,7 @@ class MultiModalModel:
                     "content": [{"type": "image_url", "image_url": {"url": image_url}}]
                 }]
                 diet_text = await acallLLM(
-                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1",
-                    timeout=20
+                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
                 )
 
                 messages = [{
@@ -118,7 +117,7 @@ class MultiModalModel:
                     "content": f"{self.prompts['菜品格式化']} {diet_text}",
                 }]
                 generate_text = await acallLLM(
-                    history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
+                    history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
                 )
                 # 处理结果
                 diet_info = None
@@ -159,7 +158,7 @@ class MultiModalModel:
             "content": [{"type": "image_url", "image_url": {"url": image_url}}]
         }]
         diet_text = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=20
+            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
         )
 
         # 格式化菜品信息
@@ -168,7 +167,7 @@ class MultiModalModel:
             "content": f"{self.prompts['菜品格式化']} {diet_text}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
+            history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
         )
 
         # 处理结果
@@ -193,8 +192,7 @@ class MultiModalModel:
         diet_info = kwargs.get("diet_info", []) or []
         management_tag = kwargs.get("management_tag", "") or ""
         diet_period = kwargs.get("diet_period", "") or ""
-        logger.debug(
-            f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period}")
+        logger.debug(f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period}")
 
         # 初始化返回内容
         json_data = {
@@ -224,7 +222,7 @@ class MultiModalModel:
             'content': f"{self.prompts['饮食一句话建议']} {query}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=20
+            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
         )
         json_data["content"] = generate_text
 
@@ -316,6 +314,8 @@ class MultiModalModel:
                 raise Exception
             try:  # 检查数量是否为数字，不是则默认为1
                 count = int(food["count"])
+                if count >= 30: # 数量超过30份，大概率是大模型输出有误，返回默认为1份
+                    food["count"] = "1"
             except Exception as _:
                 food["count"] = "1"
 
