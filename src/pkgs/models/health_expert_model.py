@@ -2267,7 +2267,7 @@ class HealthExpertModel:
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
+        content = await parse_generic_content(content)
         return content
 
 
