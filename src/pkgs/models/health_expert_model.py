@@ -19,7 +19,7 @@ from src.utils.module import (
     curr_time, determine_recent_solar_terms, format_historical_meal_plans, format_historical_meal_plans_v2,
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
-    determine_weight_status, determine_body_fat_status, truncate_to_limit
+    determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
@@ -1741,10 +1741,10 @@ class HealthExpertModel:
 
         # 新增逻辑：检查并调整问号数量
         def format_question(question: str) -> str:
-            # 替换句中非句尾的问号为逗号，只保留句尾问号
-            question = re.sub(r"？(?!$)", "，", question)  # 替换句中问号为逗号
-            if not question.endswith("？"):
-                question += "？"  # 如果句末没有问号，添加一个问号
+            # 替换句中非句尾的问号（包括中文问号和英文问号）为逗号，只保留句尾问号
+            question = re.sub(r"[？?](?!$)", "，", question)  # 替换句中问号为逗号
+            if not question.endswith("？") and not question.endswith("?"):
+                question += "？"  # 如果句末没有问号（中文或英文），添加一个中文问号
             return question
 
         # 格式化每个问题，确保符合要求
