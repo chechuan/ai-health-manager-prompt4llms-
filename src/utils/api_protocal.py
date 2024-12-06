@@ -124,11 +124,28 @@ USER_PROFILE_KEY_MAP = {
 }
 
 
+USER_PROFILE_KEY_MAP_SANJI = {
+    "age": "年龄",
+    "gender": "性别",
+    "height": "身高",
+    "weight": "体重",
+    "allergic_history": "过敏史",
+    "surgery_history": "手术史",
+    "current_diseases": "疾病名称（西医）",
+    "traditional_chinese_medicine_constitution": "体质类型",
+    "chinese_medicine_disease": "中医疾病",
+    "chinese_medicine_symptom": "中医证候",
+    "severity": "疾病严重程度",
+    "constitution_symptom": "体质相关症状表现"
+}
+
+
+
 DIETARY_GUIDELINES_KEY_MAP = {
     "focus_issues": "重点关注问题",
     "suitable_foods": "适宜吃",
     "unsuitable_foods": "不宜吃",
-    "basic_nutritional_needs": "基础营养需求",
+    "basic_nutritional_needs": "基础营养需求"
 }
 
 
@@ -229,6 +246,10 @@ class UserProfile(BaseModel):
     last_night_sleep_time: Optional[str] = Field(None, description="昨晚睡眠时间", example=["120"])
     today_blood_sugar: Optional[str] = Field(None, description="今日血糖", example=["5"])
     today_life_entropy: Optional[str] = Field(None, description="今日生命熵", example=["53.45"])
+    chinese_medicine_disease: Optional[str] = Field(None, description="中医疾病", examples=["肝郁气滞"])
+    chinese_medicine_symptom: Optional[str] = Field(None, description="证候", examples=["头痛"])
+    severity: Optional[str] = Field(None, description="疾病严重程度", examples=["中等"])
+    constitution_symptom: Optional[str] = Field(None, description="体质相关症状表现", examples=["口干"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -795,28 +816,7 @@ class OutpatientSupportRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                },
-                {"role": "user", "content": "下腹痛"},
-                {
-                    "role": "assistant",
-                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
-                },
-                {"role": "user", "content": "一阵一阵的，还可以忍受"},
-                {
-                    "role": "assistant",
-                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                },
-                {"role": "user", "content": "绞痛吧，有点恶心"},
-                {
-                    "role": "assistant",
-                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
-                {
-                    "role": "assistant",
-                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
+                }
             ]
         ],
     )
@@ -858,28 +858,7 @@ class OutpatientSupportRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                },
-                {"role": "user", "content": "下腹痛"},
-                {
-                    "role": "assistant",
-                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
-                },
-                {"role": "user", "content": "一阵一阵的，还可以忍受"},
-                {
-                    "role": "assistant",
-                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                },
-                {"role": "user", "content": "绞痛吧，有点恶心"},
-                {
-                    "role": "assistant",
-                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
-                {
-                    "role": "assistant",
-                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
+                }
             ]
         ],
     )
@@ -921,11 +900,11 @@ class OutpatientSupportRequest(BaseModel):
     tcm_four_diagnoses: Optional[TcmFourDiagnoses] = Field(
         None,
         description="中医四诊信息，包括脉象采集、面象采集和舌象采集",
-        example={
+        examples=[{
             "face_diagnosis": ["面色红", "唇色白"],
             "tongue_diagnosis": ["舌边尖红"],
             "pulse_diagnosis": ["弱脉"]
-        }
+        }]
     )
 
 
@@ -934,43 +913,44 @@ class DietaryGuidelinesDetails(BaseModel):
     focus_issues: Optional[str] = Field(
         None,
         description="重点关注问题",
-        example="控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。",
+        examples=["控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。"],
     )
     suitable_foods: Optional[str] = Field(
         None,
         description="适宜吃",
-        example="高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。",
+        examples=["高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。"],
     )
     unsuitable_foods: Optional[str] = Field(
         None,
         description="不宜吃",
-        example="高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。",
+        examples=["高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。"],
     )
     basic_nutritional_needs: Optional[str] = Field(
         None,
         description="基础营养需求",
-        example="每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。",
+        examples=["每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。"],
     )
 
 
 class HistoricalDiet(BaseModel):
-    date: str = Field(None, description="当前日期", example="2024年6月20日")
+    date: str = Field(None, description="当前日期", examples=["2024年6月20日"])
     meals: Optional[Dict[str, List[str]]] = Field(
         None,
         description="餐次和食物名称",
-        example={
+        examples=[{
             "早餐": ["豆腐脑", "鸡蛋", "凉拌芹菜"],
             "午餐": ["大米饭", "清炒油麦菜", "红烧鸡翅", "芹菜汁"],
             "晚餐": ["玉米", "鸡腿", "牛奶"],
-        },
+        }]
     )
 
 
 class MealPlan(BaseModel):
-    meal: str = Field(description="餐次", example="早餐")
+    meal: str = Field(description="餐次", examples=["早餐"])
     foods: List[str] = Field(
-        description="食物名称", example=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]
+        description="食物名称", examples=["燕麦粥", "鸡蛋", "拌菠菜", "小米粥"]
     )
+
 
 class SanJiKangYangRequest(BaseModel):
     intentCode: Literal[
@@ -990,7 +970,10 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_greeting",
         "aigc_functions_generate_food_calories",
         "aigc_functions_diet_recommendation_summary",
-        "aigc_functions_generate_greeting_new"
+        "aigc_functions_generate_greeting_new",
+        "aigc_functions_sjkyn_guideline_generation_new",
+        "aigc_functions_energy_treatment_guideline_generation",
+        "aigc_functions_energy_treatment_detailed_generation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1038,7 +1021,8 @@ class SanJiKangYangRequest(BaseModel):
         None,
         description="饮食调理原则",
         examples=[
-            '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
+            '饮食调理原则：目标是缓解肠胃炎症状，促进肠胃功能恢复。推荐饮食方案为"低脂易消化膳食"。该方案低脂易消化，减轻肠胃负担，'
+            '同时确保营养供应。避免油腻和刺激性食物，多吃蒸煮食品，如瘦肉、鱼、蔬菜泥、水果泥等。注意饮食卫生，分餐多次，少量多餐。'
         ],
     )
     ietary_guidelines: Optional[DietaryGuidelinesDetails] = Field(
@@ -1049,7 +1033,8 @@ class SanJiKangYangRequest(BaseModel):
                 "重点关注问题": "控制糖分摄入，减少甜食，注意监测血糖，适当增加运动。",
                 "适宜吃": "高纤维食物，如全谷类、蔬菜和水果；低糖、低脂的乳制品；瘦肉和鱼。",
                 "不宜吃": "高糖食物，如甜饮料、糖果；高脂食物，如炸食、肥肉；精细加工食品。",
-                "基础营养需求": "每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。",
+                "基础营养需求": "每日热量摄取约1800-2000千卡，以55%的碳水化合物、25%的蛋白质和20%的健康脂肪为主。"
+                "多吃绿叶蔬菜，保证每日至少1500ml水分摄入，避免饮酒。",
             }
         ],
     )
@@ -1090,23 +1075,17 @@ class SanJiKangYangRequest(BaseModel):
     meal_plan_parameters: Optional[List[Dict[str, Any]]] = Field(
         None,
         description="多套参数列表，每套参数包含用户画像、病历信息、消息、饮食原则、饮食调理细则等",
-        example=[
+        examples=[
             {
                 "user_profile": {
                     "age": "30",
                     "gender": "male",
                     "height": "175",
-                    "weight": "70",
-                    "bmi": "22.9",
-                    "daily_physical_labor_intensity": "medium",
-                    "current_diseases": "none",
-                    "management_goals": "maintain weight"
+                    "weight": "70"
                 },
                 "medical_records": {
                     "history_of_present_illness": "none",
-                    "chief_complaint": "none",
-                    "past_history_of_present_illness": "none",
-                    "allergic_history": "none"
+                    "chief_complaint": "none"
                 },
                 "messages": [
                     {"role": "user", "content": "I want to maintain my current weight."}
@@ -1121,17 +1100,11 @@ class SanJiKangYangRequest(BaseModel):
                     "age": "40",
                     "gender": "female",
                     "height": "165",
-                    "weight": "60",
-                    "bmi": "22.0",
-                    "daily_physical_labor_intensity": "low",
-                    "current_diseases": "none",
-                    "management_goals": "lose weight"
+                    "weight": "60"
                 },
                 "medical_records": {
                     "history_of_present_illness": "none",
-                    "chief_complaint": "none",
-                    "past_history_of_present_illness": "none",
-                    "allergic_history": "none"
+                    "chief_complaint": "none"
                 },
                 "messages": [
                     {"role": "user", "content": "I want to lose weight."}
@@ -1155,11 +1128,6 @@ class SanJiKangYangRequest(BaseModel):
           },
           "recommended_macronutrient_grams": [
             {
-              "nutrient": "碳水化合物",
-              "min_energy_ratio": 0.45,
-              "max_energy_ratio": 0.55
-            },
-            {
               "nutrient": "蛋白质",
               "min_energy_ratio": 0.15,
               "max_energy_ratio": 0.25
@@ -1180,21 +1148,6 @@ class SanJiKangYangRequest(BaseModel):
               "meal_name": "上午加餐",
               "min_energy_ratio": 0,
               "max_energy_ratio": 0.1
-            },
-            {
-              "meal_name": "午餐",
-              "min_energy_ratio": 0.3,
-              "max_energy_ratio": 0.4
-            },
-            {
-              "meal_name": "下午加餐",
-              "min_energy_ratio": 0,
-              "max_energy_ratio": 0.1
-            },
-            {
-              "meal_name": "晚餐",
-              "min_energy_ratio": 0.3,
-              "max_energy_ratio": 0.4
             }
           ]
         }
@@ -1222,28 +1175,7 @@ class SanJiKangYangRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                },
-                {"role": "user", "content": "下腹痛"},
-                {
-                    "role": "assistant",
-                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
-                },
-                {"role": "user", "content": "一阵一阵的，还可以忍受"},
-                {
-                    "role": "assistant",
-                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                },
-                {"role": "user", "content": "绞痛吧，有点恶心"},
-                {
-                    "role": "assistant",
-                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
-                {
-                    "role": "assistant",
-                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
+                }
             ]
         ],
     )
@@ -1261,50 +1193,24 @@ class SanJiKangYangRequest(BaseModel):
                 {
                     "role": "assistant",
                     "content": "你能描述一下腹痛的部位吗，是在上腹部、下腹部还是两侧？",
-                },
-                {"role": "user", "content": "下腹痛"},
-                {
-                    "role": "assistant",
-                    "content": "这种疼痛是一阵一阵的还是持续不断的？疼痛的程度如何，能否忍受？",
-                },
-                {"role": "user", "content": "一阵一阵的，还可以忍受"},
-                {
-                    "role": "assistant",
-                    "content": "你的腹痛是刺痛、钝痛还是绞痛？同时有没有伴随其他症状，比如发热、恶心、呕吐、腹泻或者便秘？",
-                },
-                {"role": "user", "content": "绞痛吧，有点恶心"},
-                {
-                    "role": "assistant",
-                    "content": "你的恶心感是与腹痛同时出现的吗？你有拉肚子或者便秘的情况吗？饮食和排便习惯近期有没有改变？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
-                {
-                    "role": "assistant",
-                    "content": "你近期有没有做过剧烈运动或者饮食上吃了不易消化的食物？这种腹痛是在月经期间更容易发生吗？",
-                },
-                {"role": "user", "content": "同时出现，没有别的症状"},
+                }
             ]
         ],
     )
     daily_schedule: Union[None, List[dict]] = Field(
         None,
         description="当日剩余日程",
-        examples=[{'time': '13:00', 'event': '吃火锅'}, {'time': '16:00', 'event': '复诊'}, {'time': '20:00', 'event': '服药'}],
+        examples=[
+            {'time': '13:00', 'event': '吃火锅'},
+            {'time': '16:00', 'event': '复诊'}
+        ]
     )
     key_indicators: Union[None, List[dict]] = Field(
         None,
         description="关键指标",
         examples=[
                     {'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-20 20:34:35', 'sbp': 118, 'dbp': 86, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-21 08:24:34', 'sbp': 132, 'dbp': 86, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-21 21:05:46', 'sbp': 121, 'dbp': 78, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-22 09:01:09', 'sbp': 128, 'dbp': 86, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-22 20:25:21', 'sbp': 123, 'dbp': 80, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-23 09:11:41', 'sbp': 128, 'dbp': 92, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-23 19:32:18', 'sbp': 117, 'dbp': 88, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-24 08:05:12', 'sbp': 132, 'dbp': 85, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-24 20:07:05', 'sbp': 134, 'dbp': 86, 'unit': 'mmHg'}
+                    {'datetime': '2024-07-20 20:34:35', 'sbp': 118, 'dbp': 86, 'unit': 'mmHg'}
             ],
     )
     food_name: Union[str, None] = Field(
