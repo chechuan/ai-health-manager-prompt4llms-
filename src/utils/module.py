@@ -197,9 +197,12 @@ def get_intent(text):
     elif "查看温泉方案结果" in text:
         code = "spa_plan_result_view"
         desc = "查看温泉方案结果"
-    elif "页面" in text or "打开" in text:
+    elif "功能页面" in text and "打开" in text:
         code = "open_Function"
         desc = "打开功能页面"
+    elif "页面" in text and "打开" in text:
+        code = "open_page"
+        desc = "打开页面"
     elif "菜谱" in text:
         code = "cookbook"
         desc = "菜谱"
