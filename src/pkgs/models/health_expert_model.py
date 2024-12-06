@@ -2205,6 +2205,71 @@ class HealthExpertModel:
         content = await parse_generic_content(content)
         return content
 
+    async def aigc_functions_energy_treatment_guideline_generation(self, **kwargs) -> str:
+        """
+        三济康养方案-能量调理
+
+        需走文档:
+
+        能力说明: 根据用户画像和病历信息生成能量调理方案总则和中医调理方法的调理细则。
+
+        参数:
+            kwargs (dict): 包含用户画像和病历信息的参数字典
+
+        返回:
+            str: 生成的能量调理方案总则及中医调理方法细则内容
+        """
+
+        _event = "三济康养方案-能量调理"
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": [
+                "gender"
+            ]
+        }
+
+        # 如果提供了 user_profile，则检查 required_fields 是否完整
+        if kwargs.get("user_profile"):
+            user_profile = kwargs["user_profile"]
+            missing_fields = [
+                field for field in required_fields["user_profile"] if not user_profile.get(field)
+            ]
+            if missing_fields:
+                raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
+
+        # 获取用户画像信息
+        user_profile = kwargs.get("user_profile", {})
+
+        # 组合用户画像信息字符串
+        user_profile_str = await self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile
+        )
+
+        # 组合消息字符串
+        messages_str = await self.__compose_user_msg__(
+            "messages", messages=kwargs.get("messages", "")
+        )
+
+        # 构建提示变量
+        prompt_vars = {
+            "user_profile": user_profile_str,
+            "messages": messages_str,
+            "current_date": datetime.today().strftime("%Y-%m-%d")
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        return content
+
 
 if __name__ == "__main__":
     gsr = InitAllResource()
