@@ -124,11 +124,28 @@ USER_PROFILE_KEY_MAP = {
 }
 
 
+USER_PROFILE_KEY_MAP_SANJI = {
+    "age": "年龄",
+    "gender": "性别",
+    "height": "身高",
+    "weight": "体重",
+    "allergic_history": "过敏史",
+    "surgery_history": "手术史",
+    "current_diseases": "疾病名称（西医）",
+    "traditional_chinese_medicine_constitution": "体质类型",
+    "chinese_medicine_disease": "中医疾病",
+    "chinese_medicine_symptom": "中医证候",
+    "severity": "疾病严重程度",
+    "constitution_symptom": "体质相关症状表现"
+}
+
+
+
 DIETARY_GUIDELINES_KEY_MAP = {
     "focus_issues": "重点关注问题",
     "suitable_foods": "适宜吃",
     "unsuitable_foods": "不宜吃",
-    "basic_nutritional_needs": "基础营养需求",
+    "basic_nutritional_needs": "基础营养需求"
 }
 
 
@@ -231,9 +248,7 @@ class UserProfile(BaseModel):
     today_life_entropy: Optional[str] = Field(None, description="今日生命熵", example=["53.45"])
     chinese_medicine_disease: Optional[str] = Field(None, description="中医疾病", examples=["肝郁气滞"])
     chinese_medicine_symptom: Optional[str] = Field(None, description="证候", examples=["头痛"])
-    disease_name: Optional[str] = Field(None, description="西医疾病名称", examples=["高血压"])
     severity: Optional[str] = Field(None, description="疾病严重程度", examples=["中等"])
-    constitution_type: Optional[str] = Field(None, description="体质类型", examples=["阴虚"])
     constitution_symptom: Optional[str] = Field(None, description="体质相关症状表现", examples=["口干"])
 
 
@@ -956,7 +971,9 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_generate_food_calories",
         "aigc_functions_diet_recommendation_summary",
         "aigc_functions_generate_greeting_new",
+        "aigc_functions_sjkyn_guideline_generation_new",
         "aigc_functions_energy_treatment_guideline_generation",
+        "aigc_functions_energy_treatment_detailed_generation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
