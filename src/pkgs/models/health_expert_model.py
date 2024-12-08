@@ -6,13 +6,14 @@
 @Contact :   chechuan1204@gmail.com
 """
 
+import inspect
 import asyncio
 import json
 import json5
 import re
 from copy import deepcopy
 from datetime import datetime
-from typing import Generator, Dict, Union, List, Literal
+from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 from src.utils.module import (
     check_aigc_functions_body_fat_weight_management_consultation, check_and_calculate_bmr,
     calculate_and_format_diet_plan, calculate_standard_weight, convert_meal_plan_to_text,
@@ -20,7 +21,7 @@ from src.utils.module import (
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
-    filter_user_profile
+    filter_user_profile, replace_you
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
@@ -99,7 +100,7 @@ class HealthExpertModel:
                 for key, value in user_profile.items():
                     if value and USER_PROFILE_KEY_MAP.get(key):
                         content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
-        if mode == "user_profile_new":
+        elif mode == "user_profile_new":
             if user_profile:
                 for key, value in user_profile.items():
                     if value and USER_PROFILE_KEY_MAP_SANJI.get(key):
@@ -2224,10 +2225,13 @@ class HealthExpertModel:
             kwargs (dict): 包含用户基本信息、病历信息、健康指标等的字典
 
         返回:
-            str: 生成的康养方案总则和能量调理话术的组合内容
+            Union[str, AsyncGenerator]: 返回字符串或异步生成器
         """
 
         _event = "三济康养方案总则新版"
+        kwargs = deepcopy(kwargs)
+
+        model_args = kwargs.get("model_args", {})
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
@@ -2289,6 +2293,7 @@ class HealthExpertModel:
 
         # 生成能量调理话术
         kwargs["intentCode"] = "aigc_functions_energy_treatment_guideline_generation"
+        kwargs["model_args"] = model_args
 
         # 用户基本信息处理
         filtered_user_profile = await filter_user_profile(user_profile)
@@ -2313,9 +2318,22 @@ class HealthExpertModel:
             _event=_event, prompt_vars=prompt_vars_for_energy_guideline,
             model_args=generation_params_for_energy_guideline, **kwargs
         )
+        logger.info(f"total_guideline + energy_treatment_guideline: {total_guideline, energy_treatment_guideline}")
 
-        # 返回总则和能量调理话术的组合内容
-        return total_guideline + energy_treatment_guideline
+        kwargs["model_args"] = model_args
+        # 根据是否需要流式响应返回不同类型
+        if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
+            async def combined_stream():
+                async for chunk in total_guideline:
+                    yield chunk
+                async for chunk in energy_treatment_guideline:
+                    yield chunk
+
+            return combined_stream()  # 返回异步生成器
+        else:
+            # 组合总则和能量调理话术为一个字符串
+            combined_response = f"{total_guideline}{energy_treatment_guideline}"
+            return combined_response  # 返回字符串
 
     async def aigc_functions_energy_treatment_detailed_generation(self, **kwargs) -> str:
         """

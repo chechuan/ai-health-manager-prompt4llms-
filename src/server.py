@@ -504,46 +504,40 @@ def mount_aigc_functions(app: FastAPI):
 
     async def _async_aigc_functions_sanji_kangyang(
             request_model: SanJiKangYangRequest,
-    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+    ) -> Response:
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
         try:
-            param = await async_accept_param_purge(
-                request_model, endpoint=endpoint
-            )
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应
-                _return = response_generator(response)
+                # 处理流式响应，直接返回 StreamingResponse
+                generator = response_generator(response)
+                return StreamingResponse(generator, media_type="text/event-stream")
             else:
-                # 非流式响应
-                response = replace_you(response)  # 直接替换“您”为“你”
+                # 处理非流式响应
+                response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await
                 if isinstance(response, str):
-                    ret = AigcFunctionsCompletionResponse(
-                        head=200, items=response
-                    )
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
                 else:
-                    ret = AigcFunctionsCompletionResponse(
-                        head=200, items=response
-                    )
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
                 logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
-
+                return build_aigc_functions_response(_return)
         except Exception as err:
             # 错误处理
-            msg = repr(err)
-            msg = replace_you(msg)  # 错误消息统一替换
+            msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return = response_generator(msg, error=True)  # 流式错误响应
+                # 流式错误响应
+                generator = response_generator(msg, error=True)
+                return StreamingResponse(generator, media_type="text/event-stream")
             else:
-                ret = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=None
-                )
-                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
-        finally:
-            return build_aigc_functions_response(_return)  # 确保返回值有赋值
+                # 非流式错误响应
+                ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+                return build_aigc_functions_response(_return)
 
     async def _aigc_functions_generate_itinerary(request: Request):
         try:
