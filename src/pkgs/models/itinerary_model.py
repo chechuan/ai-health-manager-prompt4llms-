@@ -1367,7 +1367,7 @@ class ItineraryModel:
 
         return res
 
-    async def generate_itinerary_v1_1_0(self, user_data: dict, **kwargs) -> dict:
+    async def generate_itinerary_v1_1_0(self, user_data: dict) -> dict:
         """
         根据用户数据生成完整行程，并包括活动描述和行程总结
         :param user_data: 用户输入的数据，包括偏好、需求等
