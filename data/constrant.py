@@ -1015,18 +1015,18 @@ OPEN_EXTRACT = """用户发言：
 箭头前是用户发言信息，你的输出为箭头后面的内容
 一定不要输出箭头和箭头前面的内容，输出抽取范例里箭头后面的内容
 抽取范例：
-打开首页：front
-打开消息：message
-打开看板：kanban
-打开客户管理：customer
-打开寻客：targetCustomers
-打开员工管理：employeeManagement
-打开血糖入组评估问卷：glucose
-打开张三已填写入组评估问卷：张三｜evaluationQuestionnaire
-打开李华三济评估报告：李华｜evaluationReport
-打开梨花三济康养方案：梨花｜wellnessProgram
-打开梨花智能匹配专家：梨花｜intelligentMatchingExpert
-打开小凳子叔叔任务日程：小凳子叔叔｜taskSchedule
+打开首页：openfront
+打开消息：openmessage
+打开看板：openkanban
+打开客户管理：opencustomer
+打开寻客：opentarget
+打开员工管理：openemployee
+打开血糖入组评估问卷：openglucose
+打开张三已填写入组评估问卷：张三｜openevaluation
+打开李华三济评估报告：李华｜openreport
+打开梨花三济康养方案：梨花｜openwellness
+打开梨花智能匹配专家：梨花｜openintelligent
+打开小凳子叔叔任务日程：小凳子叔叔｜openschedule
 """
 
 CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY = """You are a helpful assistant.
