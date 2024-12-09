@@ -279,6 +279,21 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route("/health/open_extract", methods=["post"])
+    async def _health_open_extract(request: Request):
+        """页面打开"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/open_extract"
+            )
+            ret = await expert_model.health_open_extract(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
    
     @app.route("/health/warning_solutions_early", methods=["post"])
     async def _health_warning_solutions_early(request: Request):
