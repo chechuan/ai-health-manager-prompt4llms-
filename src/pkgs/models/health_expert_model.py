@@ -1709,11 +1709,24 @@ class HealthExpertModel:
             List[str]: 用户可能提问的三个相关问题
         """
         _event = "猜你想问"
+        kwargs = deepcopy(kwargs)
 
         # 获取用户提问信息
         user_question = kwargs.get("user_question", "")
-        if not user_question:
-            raise ValueError(f"user_question不能为空")
+        user_messages = kwargs.get("messages", "")
+
+        prompt_parts = []
+
+        if user_question:
+            prompt_parts.append(f"## 用户问题\n{user_question}")
+
+        if user_messages:
+            # 处理会话记录
+            messages = await self.__compose_user_msg__("messages", messages=user_messages,
+                                                       role_map={"assistant": "Assistant", "user": "User"})
+            prompt_parts.append(f"## 用户会话记录\n{messages}")
+
+        prompt_message = "\n".join(prompt_parts) if prompt_parts else ""
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", "")
@@ -1729,12 +1742,12 @@ class HealthExpertModel:
         # else:
         #     recent_indicators = []
 
+
         # 拼接用户画像信息字符串
         user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
-        # 构建提示变量
         prompt_vars = {
-            "user_question": user_question,
+            "messages": prompt_message,
             "user_profile": user_profile_str,
             "datetime": datetime.today().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -1857,7 +1870,7 @@ class HealthExpertModel:
             str: 每日问候开场白文本
         """
 
-        _event = "生成每日问候开场白"
+        _event = "生成每日问候开场白新版"
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
