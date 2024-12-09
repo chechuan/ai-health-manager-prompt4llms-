@@ -1261,6 +1261,42 @@ class expertModel:
         return dict_
 
     @clock
+    async def health_open_extract(self, param: Dict) -> str:
+        """打开页面信息抽取"""
+        model = "Qwen1.5-32B-Chat"
+        pro = param
+        data= pro.get("messages", "")
+        prompt_template = OPEN_EXTRACT
+        prompt_vars = {"messages": data}
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"打开页面信息抽取: {dumpJS(history)}")
+        response = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        if "：" in response:
+            content = response.split('：',1)[1]
+            if '｜' in content:
+                user =content.split("｜",-1)[0]
+                kw = content.split("｜",-1)[1]
+            else:
+                user =''
+                kw = content
+        else:
+            if '｜' in response:
+                user =response.split("｜",-1)[0]
+                kw = response.split("｜",-1)[1]
+            else:
+                user =''
+                kw = ''
+         
+        dict_={}
+        dict_['user']=user
+        dict_['kw']= kw
+        return dict_
+    @clock
     async def health_literature_generation(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param["history"]
