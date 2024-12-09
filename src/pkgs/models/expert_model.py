@@ -1294,6 +1294,9 @@ class expertModel:
          
         dict_={}
         dict_['user']=user
+        if kw not in ['openfront','openkanban','opencustomer','openmessage','opentarget','openemployee',
+                      'openglucose','openevaluation','openreport','openwellness','openintelligent','openschedule']:
+            kw='other'
         dict_['kw']= kw
         return dict_
     @clock
