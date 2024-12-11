@@ -202,12 +202,7 @@ class GlucoseAnalyzer:
         low_glucose_periods = [
             f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} 持续{int(duration.total_seconds() / 60)}分钟"
             for start, end, duration in report['日间分析']['low_glucose_periods']]
-        summary = f"""
-=== 1日动态血糖分析报告 ===
-
-详细血糖监测分析报告：
-
-1. 总体血糖控制:  
+        summary = f"""1. 总体血糖控制:  
    - 平均血糖: {report['基础指标']['平均血糖']} mmol/L
    - GMI指标: {report['基础指标']['GMI']}%
    - 变异系数(CV): {report['基础指标']['变异系数(CV)']}%

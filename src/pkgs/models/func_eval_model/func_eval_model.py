@@ -6,6 +6,9 @@ from src.prompt.model_init import acallLLM, callLLM
 from src.utils.Logger import logger
 from data.jiahe_util import get_userInfo
 
+from src.pkgs.models.func_eval_model.glucose_analysis import GlucoseAnalyzer
+from src.pkgs.models.func_eval_model.daily_image_analysis import analyze_diet_and_glucose
+
 async def image_recog(img):
         """识别图片类型"""
         if not img:
@@ -222,12 +225,14 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
     daily_diet_info = []
     async for item in yield_item:
         daily_diet_info = item
-    daily_diet_str = get_daily_diet_str(daily_diet_info)
+    daily_diet_str = get_daily_diet_str(daily_diet_info, daily_blood_glucose)
     # prompt = get_func_eval_prompt('daily_diet_eval_prompt')
     prompt = daily_diet_eval_prompt
+    prompt = daily_diet_eval_prompt_3
     userInfo_str = get_userInfo(userInfo)
     daily_bg = get_daily_key_bg(daily_blood_glucose, daily_diet_info)
     bg_str = get_daily_blood_glucose_str(daily_bg)
+    glucose_analyses = GlucoseAnalyzer().analyze_glucose_data(daily_blood_glucose)
     messages = [
         {
             "role": "user",
@@ -235,12 +240,13 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
                 userInfo_str,
                 daily_diet_str,
                 bg_str,
+                glucose_analyses.get('summary', ''),
                 management_tag,
             ),
         }
     ]
     logger.debug(
-        "一日饮食评估建议模型输入： " + prompt.format(userInfo_str,daily_diet_str, bg_str, management_tag)
+        "一日饮食评估建议模型输入： " + prompt.format(userInfo_str,daily_diet_str, bg_str, glucose_analyses.get('summary', ''), management_tag)
     )
     start_time = time.time()
     generate_text = await acallLLM(
@@ -270,4 +276,4 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
             content += text_stream
             yield {'message': text_stream, 'end': False}
     logger.debug("一日饮食评估建议模型输出： " + content)
-    yield {'message': "", 'prompt': prompt.format(userInfo_str, daily_diet_str, bg_str,management_tag), 'end': True}
+    yield {'message': "", 'prompt': prompt.format(userInfo_str, daily_diet_str, bg_str, glucose_analyses.get('summary', ''),management_tag), 'end': True}

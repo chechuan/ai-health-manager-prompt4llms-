@@ -80,7 +80,7 @@ def req(url, param):
             x += json.loads(i[5:].strip())['message']
             if json.loads(i[5:].strip()).get('prompt', ''):
                 p = json.loads(i[5:].strip())['prompt']
-    return x
+    return x, p
 
 # userInfo = {
 #     "age": 43,
@@ -113,7 +113,7 @@ daily_bg_data = [{"time": "2024-12-03 00:00:14", "value": "6.8"}, {"time": "2024
 
 buckets = []
 
-rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/血糖数据.xlsx")
+rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/夏雨-验证大厅/血糖数据.xlsx")
 bg_sheet = rb.sheet_by_index(0)
 bg_rows = bg_sheet.nrows
 bg_cols = bg_sheet.ncols
@@ -129,7 +129,7 @@ for i in range(1, bg_rows):
                          'value': str(bg_sheet.cell(i, 1))})
 
 
-rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/群图片.xlsx")
+rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/夏雨-验证大厅/图片数据.xlsx")
 bg_sheet = rb.sheet_by_index(0)
 img_rows = bg_sheet.nrows
 img_cols = bg_sheet.ncols
@@ -155,10 +155,12 @@ for key in d_b.keys():
 
 # wb = xlwt.Workbook()
 # sh = wb.add_sheet('sheet1')
-wb = xlsxwriter.Workbook('daily_diet_eval_batch_1211.xlsx')
+wb = xlsxwriter.Workbook('daily_diet_eval_batch_1211_6.xlsx')
 # wb = xlsxwriter.Workbook('bgs.xlsx')
 sh = wb.add_worksheet('sheet1')
 for x, i in enumerate(buckets):
+    # if x > 1:
+    #     break
     daily_bg_data = i['daily_blood_glucose']
     daily_bg_data = [{'time':i['time'], 'value':i['value'].replace('number:', '').strip()} for i in daily_bg_data]
     daily_diet_info = i['daily_diet_info']
@@ -166,11 +168,18 @@ for x, i in enumerate(buckets):
 
     bgs = get_daily_key_bg(daily_bg_data, daily_diet_info)
     bgs = '\n'.join([json.dumps(bg) for bg in bgs])
-    sh.write(x, 1, bgs)
+
     #
     # continue
     try:
         param = {
+            "userInfo":{
+                'gender': '男',
+                'height': '171cm',
+                'weight': '73kg',
+                'birthday': '1971/2/20',
+                'disease': '糖尿病'
+            },
             "daily_blood_glucose": daily_bg_data,
             "daily_diet_info": daily_diet_info,
             "management_tag": management_tag
@@ -184,8 +193,9 @@ for x, i in enumerate(buckets):
             diet += f"{j['diet_time']} {j['diet_image']}\n"
 
         sh.write(x, 0, bg)
+        sh.write(x, 1, bgs)
         sh.write(x, 2, diet)
-        sh.write(x, 3, ret)
+        sh.write(x, 3, prompt)
         sh.write(x, 4, ret)
     except Exception as e:
         continue

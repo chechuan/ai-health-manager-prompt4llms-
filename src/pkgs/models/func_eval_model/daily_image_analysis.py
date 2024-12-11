@@ -14,6 +14,20 @@ class FoodCategory(Enum):
     SNACK = "零食点心类"
     UNKNOWN = "未分类"
 
+def find_rising_periods(data, fmt="%H:%M"):
+    glucose_periods = []
+    i = 0
+    while i < len(data) - 1:
+        # start_time = datetime.strptime(data[i]['time'], fmt)
+        # end_time = datetime.strptime(data[i + 1]['time'], fmt)
+        if data[i + 1]['value'] > data[i]['value']:
+            start = i
+            while i < len(data) - 1 and data[i + 1]['value'] > data[i]['value']:
+                i += 1
+            end = i
+            glucose_periods.append(f"{data[start]['time']} - {data[end]['time']}")
+        i += 1
+    return glucose_periods
 
 class FoodGIDatabase:
     """食物升糖指数(GI)数据库"""
@@ -174,7 +188,7 @@ class MealAnalyzer:
 
     def analyze_meal(self, meal: Dict) -> Dict:
         """分析单餐的组成和特点"""
-        components = meal['components']
+        # components = meal['components']
         meal_time = meal['time']
 
         # 分析每个食物
@@ -183,15 +197,15 @@ class MealAnalyzer:
         high_gi_foods = []
         unknown_foods = []
 
-        for food in components:
-            food_info = self.db.get_food_info(food)
-            foods_analysis.append(f"{food}(GI:{food_info['gi_value'] if food_info['gi_value'] != -1 else '未知'})")
-            categories_found.add(food_info['category'])
-
-            if food_info['gi_value'] >= 70:
-                high_gi_foods.append(food)
-            elif not food_info['is_known']:
-                unknown_foods.append(food)
+        # for food in components:
+        #     food_info = self.db.get_food_info(food)
+        #     foods_analysis.append(f"{food}(GI:{food_info['gi_value'] if food_info['gi_value'] != -1 else '未知'})")
+        #     categories_found.add(food_info['category'])
+        #
+        #     if food_info['gi_value'] >= 70:
+        #         high_gi_foods.append(food)
+        #     elif not food_info['is_known']:
+        #         unknown_foods.append(food)
 
         return {
             'time': meal_time,
@@ -220,37 +234,38 @@ class GlucoseAnalysisReport:
     """血糖分析报告生成器"""
 
     @staticmethod
-    def generate_report(meal_analyses: List[Dict], general_suggestions: List[str]) -> str:
+    def generate_report(meal_analyses: List[Dict]):
         """生成分析报告"""
         report = "=== 血糖管理分析报告 ===\n\n"
         report += "【餐食分析】\n"
-
+        periods = []
         for analysis in meal_analyses:
-            meal_time = analysis['meal_time']
-            meal_type = analysis['meal_type']
-            components = analysis['components']
+            # meal_time = analysis['meal_time']
+            # meal_type = analysis['meal_type']
+            # components = analysis['components']
             glucose_period = analysis['glucose_period']
-            suggestions = analysis.get('suggestions', [])
-
-            report += f"\n■ {meal_type}（{meal_time}）\n"
-            report += f"食材组成：{', '.join(components)}\n"
+            # suggestions = analysis.get('suggestions', [])
+            #
+            # report += f"\n■ {meal_type}（{meal_time}）\n"
+            # report += f"食材组成：{', '.join(components)}\n"
 
             if glucose_period:
                 report += f"相关血糖升高时段：{glucose_period}\n"
-                if suggestions:
-                    report += "建议：\n"
-                    for idx, suggestion in enumerate(suggestions, 1):
-                        report += f"{idx}. {suggestion}\n"
-                else:
-                    report += "建议：建议记录更多餐食细节以提供更精确的分析\n"
+                periods.append(f"相关血糖升高时段：{glucose_period}")
+                # if suggestions:
+                #     report += "建议：\n"
+                #     for idx, suggestion in enumerate(suggestions, 1):
+                #         report += f"{idx}. {suggestion}\n"
+                # else:
+                #     report += "建议：建议记录更多餐食细节以提供更精确的分析\n"
             else:
                 report += "血糖反应：正常范围内\n"
+                periods.append("血糖反应：正常范围内")
 
-        report += "\n【通用建议】\n"
-        for suggestion in general_suggestions:
-            report += f"• {suggestion}\n"
 
-        return report
+        # return report
+        return periods
+
 
 
 def generate_suggestions(meal_analysis: Dict, has_glucose_issue: bool) -> List[str]:
@@ -286,17 +301,45 @@ def generate_suggestions(meal_analysis: Dict, has_glucose_issue: bool) -> List[s
     return suggestions
 
 
-def analyze_diet_and_glucose(meals: List[Dict], glucose_periods: List[str]) -> str:
+def get_meal_increase_glucose_periods(meals: List[Dict], glucose_data):
+    # 首先合并临近的血糖异常时段
+    glucose_data = [{'time':i['time'].split(' ')[-1][:5], 'value':i['value']} for i in glucose_data]
+    meals = [{'time':i['diet_time'].split(' ')[-1][:5]} for i in meals]
+    glucose_periods = find_rising_periods(glucose_data)
+    merged_glucose_periods = merge_glucose_periods(glucose_periods)
+    meal_analyses = []
+    for meal in meals:
+        has_glucose_issue = False
+        relevant_periods = []  # 改为列表以存储多个相关时段
+        meal_time = datetime.strptime(meal['time'], '%H:%M')
+
+        for period in merged_glucose_periods:
+            start, end = map(lambda x: datetime.strptime(x.strip(), '%H:%M'), period.split('-'))
+            if meal_time <= start <= meal_time + timedelta(hours=2):
+                has_glucose_issue = True
+                relevant_periods.append(period)
+        meal_analyses.append({
+            'meal_time': meal['time'],
+            'glucose_period': '; '.join(relevant_periods) if relevant_periods else None,
+        })
+
+    return GlucoseAnalysisReport.generate_report(meal_analyses)
+
+
+
+def analyze_diet_and_glucose(meals: List[Dict], glucose_data):
     """主分析函数"""
     analyzer = MealAnalyzer()
     meal_analyses = []
 
     # 首先合并临近的血糖异常时段
+    glucose_periods = find_rising_periods(glucose_data)
     merged_glucose_periods = merge_glucose_periods(glucose_periods)
 
     # 分析每一餐
+    meal_analyses = []
     for meal in meals:
-        meal_analysis = analyzer.analyze_meal(meal)
+        # meal_analysis = analyzer.analyze_meal(meal)
 
         # 检查是否存在相关的血糖异常
         has_glucose_issue = False
@@ -310,15 +353,15 @@ def analyze_diet_and_glucose(meals: List[Dict], glucose_periods: List[str]) -> s
                 relevant_periods.append(period)
 
         # 生成建议
-        suggestions = generate_suggestions(meal_analysis, has_glucose_issue)
+        # suggestions = generate_suggestions(meal_analysis, has_glucose_issue)
 
         meal_analyses.append({
             'meal_time': meal['time'],
-            'meal_type': meal_analysis['type'],
-            'components': meal_analysis['foods_analysis'],
+            #'meal_type': meal_analysis['type'],
+            #'components': meal_analysis['foods_analysis'],
             'glucose_period': '; '.join(relevant_periods) if relevant_periods else None,
-            'suggestions': suggestions,
-            'categories': meal_analysis['categories']
+            # 'suggestions': suggestions,
+            # 'categories': meal_analysis['categories']
         })
 
     # 生成通用建议
@@ -331,7 +374,7 @@ def analyze_diet_and_glucose(meals: List[Dict], glucose_periods: List[str]) -> s
     ]
 
     # 生成报告
-    return GlucoseAnalysisReport.generate_report(meal_analyses, general_suggestions)
+    return GlucoseAnalysisReport.generate_report(meal_analyses)
 
 
 # 测试代码
@@ -352,5 +395,5 @@ if __name__ == "__main__":
     ]
 
     # 生成分析报告
-    report = analyze_diet_and_glucose(meals, glucose_periods)
-    print(report)
+    # report = analyze_diet_and_glucose(meals, glucose_data)
+    # print(report)
