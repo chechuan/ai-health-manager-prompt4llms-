@@ -270,4 +270,4 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
             content += text_stream
             yield {'message': text_stream, 'end': False}
     logger.debug("一日饮食评估建议模型输出： " + content)
-    yield {'message': "", 'end': True}
+    yield {'message': "", 'prompt': prompt.format(userInfo_str, daily_diet_str, bg_str,management_tag), 'end': True}

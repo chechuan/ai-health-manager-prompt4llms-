@@ -54,14 +54,16 @@ def get_daily_key_bg(bg_info, diet_info):
     day_high = {}
     peaks = []
     for key in buckets.keys():
-        if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]):
-            for i in buckets[key]:
-                if img_time.split(':')[1] == i['time'].split(' ')[-1].split(':')[1]:
-                    res.append(i)
-                    break
-                elif img_time.split(':')[1] < i['time'].split(' ')[-1].split(':')[1]:
-                    res.append(i)
-                    break
+        for i in img_time:
+            if (int(key) == int(i.split(':')[0]) + 1) or (int(key) == int(i.split(':')[0]) + 2):
+                # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
+                for j in buckets[key]:
+                    if i.split(':')[1] == j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
+                    elif i.split(':')[1] < j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
         if int(key) < 6 or int(key) > 21:  # 夜间时段
             for i in buckets[key]:
                 if not night_low:
@@ -72,14 +74,14 @@ def get_daily_key_bg(bg_info, diet_info):
                 res.append(buckets[key][0])
         elif 5 < int(key) < 22:      # 白天时段
             peak_idxes, _ = find_peaks([i['value'] for i in buckets[key]], height=0)
-            peaks.extend([x for i, x in enumerate(buckets[key][0]) if i in peak_idxes])
+            peaks.extend([x for i, x in enumerate(buckets[key]) if i in peak_idxes])
             res.append(buckets[key][0])
             for i,x in enumerate(buckets[key]):
                 if not day_high:
                     day_high = x
                 elif day_high['value'] < x['value']:
                     day_high = x
-    res.append(sorted(peaks, key=lambda i: i['value'], reverse=True)[:3])
+    res.extend(sorted(peaks, key=lambda i: i['value'], reverse=True)[:3])
     res.append(night_low)
     # res.append(day_high)
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
