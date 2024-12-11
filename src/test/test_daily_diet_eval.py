@@ -5,6 +5,63 @@ import requests
 import json
 import time
 import xlsxwriter
+from typing import OrderedDict
+from scipy.signal import find_peaks
+
+def get_daily_key_bg(bg_info, diet_info):
+    res = []
+    buckets = OrderedDict()
+    for info in bg_info:
+        time = info.get('time', '').split(' ')[-1]
+        key = buckets.get(time.split(':')[0], '')
+        if not key:
+            buckets[time.split(':')[0]] = [info]
+        else:
+            buckets[time.split(':')[0]].append(info)
+    img_time = []
+    for info in diet_info:
+        time_key = info.get('diet_time', '').split(' ')[-1].split(':')[0]
+        if time_key:
+            img_time.append(info.get('diet_time', '').split(' ')[-1])
+    night_low = {}
+    day_high = {}
+    peaks = []
+    for key in buckets.keys():
+        if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]):
+            for i in buckets[key]:
+                if img_time.split(':')[1] == i['time'].split(' ')[-1].split(':')[1]:
+                    res.append(i)
+                    break
+                elif img_time.split(':')[1] < i['time'].split(' ')[-1].split(':')[1]:
+                    res.append(i)
+                    break
+        if int(key) < 6 or int(key) > 21:  # 夜间时段
+            for i in buckets[key]:
+                if not night_low:
+                    night_low = i
+                elif night_low['value'] > i['value']:
+                    night_low = i
+            if int(key) % 2 == 0:
+                res.append(buckets[key][0])
+        elif 5 < int(key) < 22:      # 白天时段
+            peak_idxes, _ = find_peaks([i['value'] for i in buckets[key]], height=0)
+            peaks.extend([x for i, x in enumerate(buckets[key][0]) if i in peak_idxes])
+            res.append(buckets[key][0])
+            for i,x in enumerate(buckets[key]):
+                if not day_high:
+                    day_high = x
+                elif day_high['value'] < x['value']:
+                    day_high = x
+    res.append(sorted(peaks, key=lambda i: i['value'], reverse=True)[:3])
+    res.append(night_low)
+    # res.append(day_high)
+    unique_tuples = set(tuple(sorted(d.items())) for d in res)
+    res = [dict(t) for t in unique_tuples]
+    res = sorted(res, key=lambda item: item.get('time', ''))
+    return res
+
+
+
 
 url = 'http://127.0.0.1:6500/func_eval/daily_diet_eval'
 def req(url, param):
@@ -93,13 +150,20 @@ for key in d_b.keys():
 
 # wb = xlwt.Workbook()
 # sh = wb.add_sheet('sheet1')
-wb = xlsxwriter.Workbook('daily_diet_eval_batch_1205.xlsx')
+wb = xlsxwriter.Workbook('daily_diet_eval_batch_1210.xlsx')
+# wb = xlsxwriter.Workbook('bgs.xlsx')
 sh = wb.add_worksheet('sheet1')
 for x, i in enumerate(buckets):
     daily_bg_data = i['daily_blood_glucose']
     daily_bg_data = [{'time':i['time'], 'value':i['value'].replace('number:', '').strip()} for i in daily_bg_data]
     daily_diet_info = i['daily_diet_info']
     management_tag = "血糖管理"
+
+    bgs = get_daily_key_bg(daily_bg_data, daily_diet_info)
+    bgs = '\n'.join([json.dumps(bg) for bg in bgs])
+    sh.write(x, 1, bgs)
+    #
+    # continue
     try:
         param = {
             "daily_blood_glucose": daily_bg_data,
@@ -115,8 +179,8 @@ for x, i in enumerate(buckets):
             diet += f"{j['diet_time']} {j['diet_image']}\n"
 
         sh.write(x, 0, bg)
-        sh.write(x, 1, diet)
-        sh.write(x, 2, ret)
+        sh.write(x, 2, diet)
+        sh.write(x, 3, ret)
     except Exception as e:
         continue
 wb.close()

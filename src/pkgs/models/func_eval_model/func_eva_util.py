@@ -1,5 +1,6 @@
 import yaml, os
 from collections import OrderedDict
+from scipy.signal import find_peaks
 
 def get_func_eval_prompt(name):
     file_path = 'data/prompt_data/func_eval_prompt.yaml'
@@ -48,20 +49,20 @@ def get_daily_key_bg(bg_info, diet_info):
     for info in diet_info:
         time_key = info.get('diet_time', '').split(' ')[-1].split(':')[0]
         if time_key:
-            img_time.append(time_key)
+            img_time.append(info.get('diet_time', '').split(' ')[-1])
     night_low = {}
     day_high = {}
+    peaks = []
     for key in buckets.keys():
-        if int(key) in [int(i) - 1 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) in [int(i) + 1 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) in [int(i) + 2 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) < 6 or int(key) > 21:
+        if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]):
+            for i in buckets[key]:
+                if img_time.split(':')[1] == i['time'].split(' ')[-1].split(':')[1]:
+                    res.append(i)
+                    break
+                elif img_time.split(':')[1] < i['time'].split(' ')[-1].split(':')[1]:
+                    res.append(i)
+                    break
+        if int(key) < 6 or int(key) > 21:  # 夜间时段
             for i in buckets[key]:
                 if not night_low:
                     night_low = i
@@ -69,23 +70,25 @@ def get_daily_key_bg(bg_info, diet_info):
                     night_low = i
             if int(key) % 2 == 0:
                 res.append(buckets[key][0])
-        elif 5 < int(key) < 22:
+        elif 5 < int(key) < 22:      # 白天时段
+            peak_idxes, _ = find_peaks([i['value'] for i in buckets[key]], height=0)
+            peaks.extend([x for i, x in enumerate(buckets[key][0]) if i in peak_idxes])
             res.append(buckets[key][0])
-            for i in buckets[key]:
+            for i,x in enumerate(buckets[key]):
                 if not day_high:
-                    day_high = i
-                elif day_high['value'] < i['value']:
-                    day_high = i
+                    day_high = x
+                elif day_high['value'] < x['value']:
+                    day_high = x
+    res.append(sorted(peaks, key=lambda i: i['value'], reverse=True)[:3])
     res.append(night_low)
-    res.append(day_high)
+    # res.append(day_high)
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
     res = [dict(t) for t in unique_tuples]
     res = sorted(res, key=lambda item: item.get('time', ''))
     return res
 
 
-daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对我提交的一日食物信息做出合理评价和建议。
-
+daily_diet_eval_prompt = """# 已知信息
 ## 个人信息：
 {0}
 
@@ -118,14 +121,11 @@ daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对�
  - 避免输出123列表。
   
 # 输出示例
-【整体血糖分析】
+【血糖分析】
 看了你的血糖记录，午饭后血糖升得有点高呢，到14了。虽然后来是降下来了，不过还是比较高。
 你这一天血糖起伏挺大的，从早上的12到睡前的4，差了8多，得注意一下，尤其要当心晚上会不会低血糖。
-
-【原因分析】
 我看你午饭吃红薯啦？红薯升糖比较快，再配上咸菜，这个搭配不太合适。晚饭虽然吃的清淡，主要是蔬菜，血糖是平稳，但就是营养不太够，容易导致血糖降得太低。
-
-【建议】
+【饮食建议】
 午饭🍚的话，建议你换成全麦面包或者燕麦，再多吃点绿叶菜。至于晚饭🐟，得加点肉或豆腐补充蛋白质，主食也不能省，来点糙米饭或全麦面包。这样营养更均衡，血糖也不会忽高忽低的。
 记住🌟：每顿饭都要适量，别吃太多，这样血糖好控制。
 
