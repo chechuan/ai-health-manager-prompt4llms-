@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import json
+import time
 
 # 将项目根目录加入sys.path，方便单元测试
 # project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
@@ -70,7 +71,7 @@ class MultiModalModel:
             "content": f"{self.prompts['图片分类']} {image_caption}",
         }]
         classification_text = await acallLLM(
-            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
         )
 
         # 类别定义，大类分四种，子类别index对应types的编号
@@ -99,26 +100,18 @@ class MultiModalModel:
 
             # 后端建议，判断是否需要额外做饮食识别
             if diet_recog is True and json_data["desc"] == "饮食":
-                # 原本想直接用图片描述做菜品信息格式化来提高效率
-                # 但后来更换QWen模型，prompt略有不同，还是采用两步策略
-                messages = [{
-                    "role": "system",
-                    "content": self.prompts["菜品描述"]
-                }, {
-                    "role": "user",
-                    "content": [{"type": "image_url", "image_url": {"url": image_url}}]
-                }]
-                diet_text = await acallLLM(
-                    history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
-                )
-
+                # 直接调用多模态大模型识别菜品名称以及数量
                 messages = [{
                     "role": "user",
-                    "content": f"{self.prompts['菜品格式化']} {diet_text}",
+                    "content":[
+                        {"type": "text", "text": self.prompts["菜品直接识别"]},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ]
                 }]
                 generate_text = await acallLLM(
-                    history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+                    history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
                 )
+
                 # 处理结果
                 diet_info = None
                 try:  # 去掉json串中多余的内容
@@ -149,25 +142,16 @@ class MultiModalModel:
                 if not (response.status == 200):
                     return self._get_result(400, {}, "image_url is not accessible.")
 
-        # 先调用多模态大模型识别菜品名称以及数量
-        messages = [{
-            "role": "system",
-            "content": self.prompts["菜品描述"]
-        }, {
-            "role": "user",
-            "content": [{"type": "image_url", "image_url": {"url": image_url}}]
-        }]
-        diet_text = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
-        )
-
-        # 格式化菜品信息
+        # 直接调用多模态大模型识别菜品名称以及数量
         messages = [{
             "role": "user",
-            "content": f"{self.prompts['菜品格式化']} {diet_text}",
+            "content":[
+                {"type": "text", "text": self.prompts["菜品直接识别"]},
+                {"type": "image_url", "image_url": {"url": image_url}}
+            ]
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=1024, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+            history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
         )
 
         # 处理结果
@@ -192,7 +176,17 @@ class MultiModalModel:
         diet_info = kwargs.get("diet_info", []) or []
         management_tag = kwargs.get("management_tag", "") or ""
         diet_period = kwargs.get("diet_period", "") or ""
-        logger.debug(f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period}")
+        diet_time = kwargs.get("diet_time", time.time())
+        logger.debug(f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period} diet_time: {diet_time}")
+
+        # 将unix时间转换为日期格式
+        try:
+            diet_time = int(diet_time)
+            logger.debug(f"diet_eval diet_time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(diet_time))}")
+            diet_time = time.strftime('%H:%M', time.localtime(diet_time))
+        except Exception as _:
+            logger.error("diet_eval error diet_time: {0}".format(diet_time))
+            return self._get_result(400, {}, "diet_time param error.")
 
         # 初始化返回内容
         json_data = {
@@ -208,21 +202,19 @@ class MultiModalModel:
 
         # 拼接用户信息
         query = ""
-        if len(user_info.keys()) > 0:
-            query += f"用户基础信息：{json.dumps(user_info, ensure_ascii=False)}\n"
-        if diet_period in ["早餐", "午餐", "晚餐"]:
-            query += f"本餐餐段：{diet_period}\n"
-        query += f"本餐餐食信息：{json.dumps(diet_info, ensure_ascii=False)}\n"
-        if management_tag in ["血糖管理", "血压管理", "减脂减重管理"]:
-            query += f"用户目标：{management_tag}\n"
+        for key in [["age", "年龄"], ["gender", "性别"], ["height", "身高"], ["weight", "体重"], ["disease", "现患疾病"], ["allergy", "过敏史"]]:
+            query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"
+        query += f"用户管理标签：{management_tag}\n"
+        query += f"用餐时间：{diet_time}\n"
+        query += f"饮食信息：{json.dumps(diet_info, ensure_ascii=False)}"
 
         # 请求LLM
         messages = [{
             'role': 'user',
-            'content': f"{self.prompts['饮食一句话建议']} {query}",
+            'content': f"{self.prompts['饮食一句话建议'].format(query)}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
         )
         json_data["content"] = generate_text
 
@@ -261,6 +253,7 @@ class MultiModalModel:
             "图片内容": """简述图片中的场景和元素""",
             "图片分类": """请根据图片描述，判断内容属于"饮食"、"运动"、"报告"、"其他"中的哪一类。
 如果图片中主要是食物，则返回"饮食"。
+注意如果是饮食评估报告，则返回"报告"。
 如果图片中是运动器材、体能、健身的内容，则返回"运动"。
 如果图片中是包含体重、体脂的截图内容，则返回"报告"。
 如果图片中是药物、血压计血糖仪等医疗器械，或其他内容，则返回"其他"。
@@ -283,15 +276,50 @@ class MultiModalModel:
 尤其关注一下有没有主食，并过滤掉无法食用的内容。
 严格按照json的结构返回结果。
 """,
-            "饮食一句话建议": """请你扮演一位营养师，告知用户提交的信息内的食物是否可以吃完？需要添加什么食物，或者不需要吃图片中的什么食物。根据211法则判断本餐搭配是否合理，即蔬菜：蛋白质：主食=2：1：1。生成一句话建议，只返回建议不要其他内容，不超过50个字。
-以下是专业营养师饮食建议样例：
-如果用户提交食物为南瓜1个、黄瓜1根、虾4只，示例建议：本餐的蔬菜选择的是黄瓜，这里整体的分量不多，饱腹感不够的话可以再加1根黄瓜，蛋白稍微不够，虾再多加3-4只。
-如果用户提交食物为糙米饭1份、黄瓜1根、牛腩1份，示例建议：主食糙米饭团很不错，黄瓜可以放心吃完。牛腩只吃瘦肉部分，建议吃到一掌心的量。
-如果用户提交食物为清炒油菜1份、玉米1根、冬瓜排骨肉1份，示例建议：肉我们只吃瘦肉部分，分量上再加两块没问题，蔬菜和玉米分量可以。
-如果用户提交食物为清炒菜心1份、蒸鱼3块、白米饭1份，示例建议：鱼肉我们可以再加一小块，蔬菜全部吃完没问题，白米饭最后可以剩下来一两口，下次掺杂一点小米一起煮会更好哟。
-如果用户提交食物为豆腐脑1碗、鸡蛋2个，示例建议：蛋白质的量是可以的哈，豆腐脑卤有勾芡，把卤剩下一些哈。另外缺少蔬菜，早餐可以增加一份蔬菜，选择黄瓜或西红柿是可以的。
-以下是当前用户提交的信息：
-""",
+            "饮食一句话建议": """# 已知信息
+{0}
+
+# 任务描述
+请你扮演一名资深营养师的角色，分析评价我提供的饮食清单，考虑我的健康状态如现患疾病等信息，给出专业的指导话术。
+# 输出要求
+- 依据饮食清单，评估是否满足当前餐次的营养需求，请考虑疾病与健康状况。
+- 正餐的食物评价请根据“211法则”，调整蔬菜、蛋白质、主食比例至2:1:1，提出增减建议，增减建议给出量化标准，例如一个拳头大小，一个手掌心大小等，方便我理解。
+- 如果是加餐时间的食物，可以不遵循“211法则”，你可以评价加餐食物选择是否合理，食用量是否合理等。
+- 如果我提交的食物信息以及时间均利于我的健康管理，可以给予肯定话术，简单说明该餐的营养价值。
+- 输出的文本应该通顺、简单明了、符合营养学观点。
+- 输出内容不超过50字。
+# 输出示例参考
+- 你午餐选择的食材都很不错，但是蔬菜的量不足，你可以再增加1个拳头大小的深色绿叶蔬菜，比如凉拌菠菜。另外，可以再适当增加虾2-3只，补充蛋白质。
+
+Begins!""",
+            "菜品直接识别": """# 任务描述
+你是一名健康饮食管理助手，你需要识别出图中食物名称、数量、单位。
+
+# 输出要求：
+- 仔细分析图片，精确识别出所有可见的食材，并对每种食材进行详细的数量统计。
+- 食物名称要尽可能精确到具体食材（如炒花菜、豆芽炒肉、白米饭、紫米饭等），而非泛泛的类别。
+- 根据食材的特点，给出准确且恰当的数量描述和单位。例如，使用'个'来表示完整的水果（如'1个（小）苹果'、'2个橘子'），如果是一半根黄瓜则为'0.5根黄瓜'，用'片'来表示切片的食材（如'3片面包'），对于堆积的食物可以使用'堆'、'把'等（如'1堆瓜子'、'1把葡萄'），对于肉类可以用'掌心大小'、'克'、'块'等来表示分量，蔬菜类可以用'拳头大小'、'克'、'份'等来表示分量。确保所有计数均准确无误，单位使用得当。
+- 输出食物必须来自图片中，禁止自己创造。
+- 以json格式输出，严格按照`输出格式样例`形式。
+
+输出格式样例：
+```json
+[
+    {"foodname": "玉米", "count": "2", "unit": "根"},
+    {"foodname": "苹果", "count": "1", "unit": "个（小）"},
+    {"foodname": "苹果", "count": "1", "unit": "个（中等）"},
+    {"foodname": "黄瓜", "count": "0.5", "unit": "根"},
+    {"foodname": "鸡胸肉", "count": "1", "unit": "掌心大小"},
+    {"foodname": "炒花菜", "count": "1", "unit": "拳头大小"},
+    {"foodname": "芹菜炒肉", "count": "1", "unit": "份"},
+    {"foodname": "五花肉", "count": "3", "unit": "块"},
+    {"foodname": "米饭", "count": "1", "unit": "碗"},
+    {"foodname": "馒头", "count": "0.5", "unit": "块"},
+    {"foodname": "西红柿炒鸡蛋", "count": "1", "unit": "份"}
+]
+```
+
+Begins!""",
         }
 
     def _get_food_info_json(self, result):
@@ -307,17 +335,19 @@ class MultiModalModel:
         # 去掉json串中多余的markdown内容
         info = json.loads(result.replace("```", "").replace("json", "").replace("返回", "").replace("。", ""))
 
+        if isinstance(info, list):
+            info = {"foods": info}
         if "foods" not in info or not isinstance(info["foods"], list):
             raise Exception
         for i, food in enumerate(info["foods"]):
             if "foodname" not in food or "unit" not in food or "count" not in food:
                 raise Exception
-            try:  # 检查数量是否为数字，不是则默认为1
-                count = int(food["count"])
-                if count >= 30: # 数量超过30份，大概率是大模型输出有误，返回默认为1份
-                    food["count"] = "1"
-            except Exception as _:
-                food["count"] = "1"
+            # try:  # 检查数量是否为数字，不是则默认为1
+            #     count = int(food["count"])
+            #     if count >= 30: # 数量超过30份，大概率是大模型输出有误，返回默认为1份
+            #         food["count"] = "1"
+            # except Exception as _:
+            #     food["count"] = "1"
 
         return info
 
