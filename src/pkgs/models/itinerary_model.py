@@ -34,6 +34,7 @@ class ItineraryModel:
         self.gsr = gsr
         self.mysql_conn = MysqlConnector(**self.gsr.mysql_config)
         self.data = self.load_data()
+        self.regist_aigc_functions()
 
     def load_data(self):
         """
@@ -505,8 +506,8 @@ class ItineraryModel:
                 "name": "盐房",
                 "location": "来康温泉",
                 "activity_code": "ACT173738",
-                "external_id": "1861321439575711746",
-                "activity_link": "1854491188558483457",
+                "external_id": "1866732056750895106",
+                "activity_link": "1866685176708902914",
                 "extra_info": {
                 "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
                 "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -516,8 +517,8 @@ class ItineraryModel:
                 "name": "岩洞氧吧",
                 "location": "来康温泉",
                 "activity_code": "ACT268949",
-                "external_id": "1861321652046569473",
-                "activity_link": "1854490708579110913",
+                "external_id": "1866732695476285441",
+                "activity_link": "1866730997341007873",
                 "extra_info": {
                     "description": "抗氧化防衰老,可促进人体新陈代谢,具有提神、消除疲劳、提高免疫力的功效,从而增强抗病能力。",
                     "operation_tips": "体验时保持放松。"
@@ -527,8 +528,8 @@ class ItineraryModel:
                 "name": "香修体验",
                 "location": "七修书院",
                 "activity_code": "ACT698000",
-                "external_id": "1861320574441791489",
-                "activity_link": "1854495789122768897",
+                "external_id": "1861319971506397185",
+                "activity_link": "1854781310617178114",
                 "extra_info": {
                     "description": "了解香学文化及制作合香香品",
                     "operation_tips": "请在老师指导下操作。"
@@ -543,17 +544,6 @@ class ItineraryModel:
                 "extra_info": {
                     "description": "学习中式插花，享受宁静时光",
                     "operation_tips": "请提前预约花材。"
-                }
-            },
-            {
-                "name": "功修体验",
-                "location": "七修书院",
-                "activity_code": "ACT193928",
-                "external_id": "1861319659617951746",
-                "activity_link": "1854496041670201345",
-                "extra_info": {
-                    "description": "导引养生功，讲解带练每一招式要点",
-                    "operation_tips": "适合所有年龄段，活动轻松。"
                 }
             },
             {
@@ -606,8 +596,8 @@ class ItineraryModel:
                                 "name": "盐房",
                                 "location": "来康温泉",
                                 "activity_code": "ACT173738",
-                                "external_id": "1861321439575711746",
-                                "activity_link": "1854491188558483457",
+                                "external_id": "1866732056750895106",
+                                "activity_link": "1866685176708902914",
                                 "extra_info": {
                                     "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。",
                                     "operation_tips": "建议泡汤时间不超过30分钟。"
@@ -991,10 +981,10 @@ class ItineraryModel:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -1002,8 +992,47 @@ class ItineraryModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
+
+    async def call_function(self, **kwargs) -> Union[str, Generator]:
+        """调用函数
+        - Args:
+            intentCode (str): 意图代码
+            prompt (str): 问题
+            options (List[str]): 选项列表
+
+        - Returns:
+            str: 答案
+        """
+        intent_code = kwargs.get("intentCode")
+        # TODO intentCode -> funcCode
+        intent_code = (
+            self.gsr.intent_aigcfunc_map.get(intent_code)
+            if self.gsr.intent_aigcfunc_map.get(intent_code)
+            else intent_code
+        )
+        if not self.funcmap.get(intent_code):
+            logger.error(f"intentCode {intent_code} not found in funcmap")
+            raise RuntimeError(f"Code not supported.")
+
+        try:
+            func = self.funcmap.get(intent_code)
+            if asyncio.iscoroutinefunction(func):
+                content = await func(**kwargs)
+            else:
+                content = func(**kwargs)
+        except Exception as e:
+            logger.exception(f"call_function {intent_code} error: {e}")
+            raise e
+        return content
+
+    def regist_aigc_functions(self) -> None:
+        self.funcmap = {}
+        for obj_str in dir(self):
+            if obj_str.startswith("aigc_functions_") and not self.funcmap.get(obj_str):
+                self.funcmap[obj_str] = getattr(self, obj_str)
+
 
     async def aigc_functions_itinerary_description(self, day_itinerary: dict, **kwargs) -> dict:
         """
@@ -1432,6 +1461,54 @@ class ItineraryModel:
                 "plan_text": markdown
             }
         return response
+
+    async def aigc_functions_health_analysis_advice_generation(self, **kwargs) -> str:
+        """
+        生成健康分析与健康建议
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/a9E05BDRVQ9RMLlGsG3ZEmpwV63zgkYA
+
+        功能描述：
+        根据用户画像和检测数据生成健康分析报告及生活建议，帮助用户理解健康状况并提供改善建议。
+
+        参数:
+            kwargs (dict): 包含用户画像和检测数据的字典
+
+        返回:
+            str: 生成的健康分析与健康建议文本
+        """
+
+        _event = "健康分析与健康建议生成"
+
+        # 获取用户基本信息和检测数据
+        user_profile = kwargs.get("user_profile", {})
+        health_data = kwargs.get("health_data", [])
+
+        # 过滤和处理检测数据
+        health_data = [HealthDataItem(**item) for item in health_data]
+
+
+        # 构建健康分析与建议生成提示变量
+        prompt_vars_for_health_analysis = {
+            "user_profile": user_profile,
+            "health_data": health_data
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=0.5, repetition_penalty=1.0
+        )
+
+        # 调用AIGC函数生成健康分析与健康建议
+        content: str = await self.aaigc_functions_general(
+            _event=_event,
+            prompt_vars=prompt_vars_for_health_analysis,
+            model_args=model_args,
+            **kwargs
+        )
+
+        return content
+
 
 
 if __name__ == '__main__':

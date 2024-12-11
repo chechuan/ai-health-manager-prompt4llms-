@@ -952,6 +952,40 @@ class MealPlan(BaseModel):
     )
 
 
+class HealthDataItem(BaseModel):
+    name: Optional[str] = Field(None, alias="名称", description="检测项目名称", examples=["BMI"])
+    value: Optional[str] = Field(None, alias="结果", description="检测结果值", examples=["28.4"])
+    unit: Optional[str] = Field(None, alias="单位", description="检测单位", examples=["kg/m²"])
+    reference_range: Optional[str] = Field(
+        None,
+        alias="参考范围",
+        description="参考范围",
+        examples=["正常：18.5~23.9；偏瘦：<18.5；超重：24~27.9；肥胖：≥28"]
+    )
+    status: Optional[str] = Field(None, alias="结果状态", description="结果状态", examples=["肥胖"])
+
+    class Config:
+        populate_by_name = True
+        json_schema_extra = {
+            "examples": [
+                {
+                    "name": "BMI",
+                    "value": 28.4,
+                    "unit": "kg/m²",
+                    "reference_range": "正常：18.5~23.9；偏瘦：<18.5；超重：24~27.9；肥胖：≥28",
+                    "status": "肥胖"
+                },
+                {
+                    "name": "骨量",
+                    "value": 3.2,
+                    "unit": "kg",
+                    "reference_range": "成年女性：偏低：＜1.8；正常：1.8~2.5；偏高：＞2.5",
+                    "status": "正常"
+                }
+            ]
+        }
+
+
 class SanJiKangYangRequest(BaseModel):
     intentCode: Literal[
         "aigc_functions_sjkyn_guideline_generation",
@@ -974,6 +1008,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_sjkyn_guideline_generation_new",
         "aigc_functions_energy_treatment_guideline_generation",
         "aigc_functions_energy_treatment_detailed_generation",
+        "aigc_functions_health_analysis_advice_generation",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1340,3 +1375,44 @@ class BodyFatWeightManagementRequest(BaseModel):
         ],
     )
 
+
+class JunWangGongJianRequest(BaseModel):
+    intentCode: Literal[
+        "aigc_functions_health_analysis_advice_generation",
+    ] = Field(
+        description="意图编码/事件编码",
+        examples=[
+            "aigc_functions_sanji_plan_exercise_plan",
+            "aigc_functions_sanji_plan_exercise_regimen",
+        ],
+    )
+    user_profile: Optional[UserProfile] = Field(
+        None,
+        description="郡网共建项目用户画像，包含详细的用户信息",
+        examples=[{"age": 18, "gender": "男", "weight": "65kg"}],
+    )
+    model_args: Union[Dict, None] = Field(
+        None,
+        description="模型参数",
+        examples=[[{"stream": False}]],
+    )
+    health_data: Optional[List[HealthDataItem]] = Field(
+        None,
+        examples=[
+            {
+                "name": "BMI",
+                "value": 28.4,
+                "unit": "kg/m²",
+                "reference_range": "正常：18.5~23.9；偏瘦：<18.5；超重：24~27.9；肥胖：≥28",
+                "status": "肥胖"
+            },
+            {
+                "name": "骨量",
+                "value": 3.2,
+                "unit": "kg",
+                "reference_range": "成年女性：偏低：＜1.8；正常：1.8~2.5；偏高：＞2.5",
+                "status": "正常"
+            }
+        ],
+        description="健康检测数据"
+    )
