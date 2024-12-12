@@ -1288,6 +1288,9 @@ class expertModel:
             if '｜' in response:
                 user =response.split("｜",-1)[0]
                 kw = response.split("｜",-1)[1]
+            elif len(response)>0:
+                user =''
+                kw = response
             else:
                 user =''
                 kw = ''
