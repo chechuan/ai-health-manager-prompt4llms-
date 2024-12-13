@@ -1957,3 +1957,6 @@ async def filter_user_profile(user_profile):
     filtered_profile = {key: user_profile.get(key) for key in required_fields if key in user_profile}
 
     return filtered_profile
+
+import pydantic
+print(pydantic.__version__)
