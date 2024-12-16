@@ -61,9 +61,13 @@ class MultiModalModel:
             "role": "user",
             "content": [{"type": "image_url", "image_url": {"url": image_url}}]
         }]
-        image_caption = await acallLLM(
-            history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
-        )
+        try:
+            image_caption = await acallLLM(
+                history=messages, max_tokens=768, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+            )
+        except Exception as error:
+            logger.error("image_type_recog error recog image {0}".format(image_url))
+            image_caption = "图片识别失败"
 
         # 图片分类
         messages = [{
@@ -80,7 +84,7 @@ class MultiModalModel:
             ["其他"],
             ["其他", "餐食", "食材"],
             ["其他", "运动图片", "运动后的报告"],
-            ["其他", "体检报告", "检查报告", "检验报告", "体重报告", "血压报告", "血糖报告"],
+            ["其他报告", "体检报告", "检查报告", "检验报告", "体重报告", "血压报告", "血糖报告", "饮食报告"],
         ]
 
         # 分类结果处理
@@ -91,38 +95,71 @@ class MultiModalModel:
             if classification_text == "饮食":
                 json_data["subtype"] = 1
                 json_data["subdesc"] = "餐食"
-            elif classification_text == "运动":
-                json_data["subtype"] = 2
-                json_data["subdesc"] = "运动后的报告"
-            elif classification_text == "报告":
-                json_data["subtype"] = 4
-                json_data["subdesc"] = "体重报告"
 
-            # 后端建议，判断是否需要额外做饮食识别
-            if diet_recog is True and json_data["desc"] == "饮食":
-                # 直接调用多模态大模型识别菜品名称以及数量
+                # 后端给的改进建议建议，判断是否需要额外做饮食识别
+                if diet_recog is True:
+                    # 直接调用多模态大模型识别菜品名称以及数量
+                    messages = [{
+                        "role": "user",
+                        "content":[
+                            {"type": "text", "text": self.prompts["菜品直接识别"]},
+                            {"type": "image_url", "image_url": {"url": image_url}}
+                        ]
+                    }]
+                    try:
+                        generate_text = await acallLLM(
+                            history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+                        )
+                    except Exception as error:
+                        logger.error("image_type_recog error recog diet image {0}".format(image_url))
+                        generate_text = "" # 报错则返回空，表示未识别，进入后续异常处理
+
+                    # 处理结果
+                    diet_info = None
+                    try:  # 去掉json串中多余的内容
+                        diet_info = self._get_food_info_json(generate_text)
+                    except Exception as error:
+                        logger.error("image_type_recog error check json {0}".format(image_url))
+                    if diet_info:
+                        json_data["foods"] = diet_info["foods"]
+                    else:
+                        json_data["foods"] = []
+                        json_data["status"] = -1
+
+            elif classification_text == "运动":
+                # 调用大模型进一步区分报告类别
                 messages = [{
                     "role": "user",
-                    "content":[
-                        {"type": "text", "text": self.prompts["菜品直接识别"]},
-                        {"type": "image_url", "image_url": {"url": image_url}}
-                    ]
+                    "content": f"{self.prompts['运动分类']} {image_caption}",
                 }]
-                generate_text = await acallLLM(
-                    history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+                sub_type_text = await acallLLM(
+                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
                 )
 
-                # 处理结果
-                diet_info = None
-                try:  # 去掉json串中多余的内容
-                    diet_info = self._get_food_info_json(generate_text)
-                except Exception as error:
-                    logger.error("image_type_recog error check json {0}".format(image_url))
-                if diet_info:
-                    json_data["foods"] = diet_info["foods"]
+                # 判断返回值匹配类别
+                if sub_type_text in subtypes[types["运动"]]:
+                    json_data["subtype"] = subtypes[types["运动"]].index(sub_type_text)
+                    json_data["subdesc"] = sub_type_text
                 else:
-                    json_data["foods"] = []
-                    json_data["status"] = -1
+                    json_data["subtype"] = 0
+                    json_data["subdesc"] = "其他"
+            elif classification_text == "报告":
+                # 调用大模型进一步区分报告类别
+                messages = [{
+                    "role": "user",
+                    "content": f"{self.prompts['报告分类']} {image_caption}",
+                }]
+                sub_type_text = await acallLLM(
+                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
+                )
+
+                # 判断返回值匹配类别
+                if sub_type_text in subtypes[types["报告"]]:
+                    json_data["subtype"] = subtypes[types["报告"]].index(sub_type_text)
+                    json_data["subdesc"] = sub_type_text
+                else:
+                    json_data["subtype"] = 0
+                    json_data["subdesc"] = "其他报告"
 
         # 处理返回内容
         result = self._get_result(200, json_data, "")
@@ -150,9 +187,13 @@ class MultiModalModel:
                 {"type": "image_url", "image_url": {"url": image_url}}
             ]
         }]
-        generate_text = await acallLLM(
-            history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
-        )
+        try:
+            generate_text = await acallLLM(
+                history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+            )
+        except Exception as error:
+            logger.error("image_type_recog error recog diet image {0}".format(image_url))
+            generate_text = "" # 报错则返回空，表示未识别，进入后续异常处理
 
         # 处理结果
         json_result = None
@@ -257,6 +298,18 @@ class MultiModalModel:
 如果图片中是运动器材、体能、健身的内容，则返回"运动"。
 如果图片中是包含体重、体脂的截图内容，则返回"报告"。
 如果图片中是药物、血压计血糖仪等医疗器械，或其他内容，则返回"其他"。
+不要返回其他内容，仅返回类别名称。
+以下是图片描述：
+""",
+            "运动分类": """请根据图片描述，判断内容属于"运动图片"、"运动后的报告"。
+如果是健身器材或用具，则返回"运动图片"。
+如果是运动后具体的报告内容，则返回"运动后的报告"。
+如果以上均不符合，则返回"其他"。
+不要返回其他内容，仅返回类别名称。
+以下是图片描述：
+""",
+            "报告分类": """请根据图片描述，判断内容属于"体检报告"、"检查报告"、"检验报告"、"体重报告"、"血压报告"、"血糖报告"、"饮食报告"。
+如果以上均不符合，则返回"其他报告"。
 不要返回其他内容，仅返回类别名称。
 以下是图片描述：
 """,
