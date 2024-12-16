@@ -291,7 +291,7 @@ async def acallLLM(
                 else:
                     h = history
             kwds["messages"] = h
-        retry = 0
+        retry = 0 if not is_vl else 2 # vl相对较慢，不太好直接修改全局变量retry_times，所以增加起始计数，相当于减少vl重试次数
         while retry <= retry_times:
             try:
                 completion = await aclient.chat.completions.create(**kwds)
