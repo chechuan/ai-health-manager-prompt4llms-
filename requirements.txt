@@ -104,3 +104,4 @@ opentelemetry-sdk==1.26.0
 opentelemetry-instrumentation-aws-lambda==0.47b0
 opentelemetry-test-utils==0.47b0
 opencv-python
+scipy==1.13.1
