@@ -206,20 +206,21 @@ def mount_rule_endpoints(app: FastAPI):
         finally:
             return ret
         
-    @app.route("/health/qa", methods=["post"])
-    async def _health_qa(request: Request):
+    @app.route("/health/spe_qa", methods=["post"])
+    async def _health_spe_qa(request: Request):
         """问题回答"""
         try:
             param = await async_accept_param_purge(
-                request, endpoint="/health/qa"
+                request, endpoint="/health/spe_qa"
             )
-            ret = expert_model.health_qa(param)
+            ret = await expert_model.health_spe_qa(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+    
 
     @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
     async def _health_blood_glucose_trend_analysis(request: Request):

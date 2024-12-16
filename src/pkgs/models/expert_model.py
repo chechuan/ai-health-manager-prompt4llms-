@@ -1297,13 +1297,13 @@ class expertModel:
         return dict_
     
     @clock
-    async def health_qa(self, param: Dict) -> str:
+    async def health_spe_qa(self, param: Dict) -> str:
         """问题回答"""
         model = "Qwen1.5-32B-Chat"
         pro = param
         data= pro.get("messages", "")
-        prompt_template = OPEN_EXTRACT
-        prompt_vars = {"messages": data}
+        prompt_template = HEALTH_QA
+        prompt_vars = {"query": data}
         sys_prompt = prompt_template.format(**prompt_vars)
 
         history = []
