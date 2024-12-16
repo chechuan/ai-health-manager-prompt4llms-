@@ -1009,41 +1009,93 @@ GLUCOSE_WARNING = """用户血糖情况:
 
 OPEN_EXTRACT = """输入指令：
 {messages}
-请参考指令列表，抽取出输入指令的用户名（如果存在）和关键词。
-指令列表：
-1. 打开消息：openmessage
-2. 打开看板：openkanban
-3. 打开客户管理：opencustomer
-4. 打开寻客：opentarget
-5. 打开员工管理：openemployee
-6. 打开血糖入组评估问卷：openglucose
-7. 打开张三已填写入组评估问卷：张三｜openevaluation
-8. 打开李华三济评估报告：李华｜openreport
-9. 打开厘米三济评估报告：厘米｜openreport
-10. 打开梨花三济康养方案：梨花｜openwellness
-11. 打开常常常三济康养方案：常常常｜openwellness
-12. 打开梨花智能匹配专家：梨花｜openintelligent
-13. 打开小凳子叔叔任务日程：小凳子叔叔｜openschedule
-14. 打开首页：openfront
-对于每个指令，请返回以下格式的信息：
-用户名（如果不存在，则返回“无”）：
-关键词：
-思路：
-指令“打开下长智能匹配专家”中并没有明确的用户名，关键词部分根据指令列表匹配到了“打开梨花智能匹配专家：梨花｜openintelligent”，因此关键词为“openintelligent”。
-任何词汇都可以是用户名，所以用户名为“下长”，所以输出为：
-用户名：下长
-关键词：openintelligent
+系统提示：
+请基于指令模式识别，提取输入指令中的用户标识符（如存在）和操作关键词。同时处理同音字和相似表达的情况。
+一、指令模式定义：
+1. 基础操作指令：
+   - 消息查看：openmessage
+   - 看板查看：openkanban
+   - 首页查看：openfront
+   - 客户管理：opencustomer
+   - 寻客管理：opentarget
+   - 员工管理：openemployee
 
-例如，对于指令“打开张常常长已填写入组评估问卷”，应返回：
-用户名：张常常长
-关键词：openschedule
-对于指令“打开长长长三济康养方案”，应返回：
-用户名：长长长
-关键词：openwellness
+2. 评估类指令：
+   - 评估问卷：openglucose
+   - 个人已填写入组评估问卷：[UserName]|openevaluation
+   - 评估报告查看：[UserName]|openreport
+
+3. 方案类指令：
+   - 康养方案查看：[UserName]|openwellness
+   - 专家匹配查看：[UserName]|openintelligent
+
+4. 任务类指令：
+   - 日程安排查看：[UserName]|openschedule
+
+二、特殊表达处理规则：
+1. 同音字匹配：
+   "三济/三级/三基/三集" 均映射为标准表达 "wellness_plan"
+   示例：
+   - "三济康养方案" → wellness_plan
+   - "三级康养方案" → wellness_plan
+   - "三基康养方案" → wellness_plan
+
+2. 近似表达匹配：
+   - 康养/健康/养生 均视为同类操作
+   - 评估/评价/测评 均归一化处理
+
+三、解析规则：
+1. 用户标识符提取：
+   - 位于"打开"之后，操作类型之前
+   - 如无明确标识则返回"无"
+   
+2. 关键词匹配：
+   - 基于指令模式匹配对应操作码
+   - 优先完整匹配，次优模糊匹配
+
+四、判别逻辑：
+1. 基础指令：直接返回操作码
+2. 用户相关指令：提取用户标识符并匹配操作码
+3. 模糊匹配：基于最相似指令模式匹配
+
+五、输出格式：
+用户标识符：[提取结果]
+操作关键词：[匹配结果]
+
+六：提取须知：
+指令“打开下长智能匹配专家”中用户标识符很奇怪为“下长”但是任何词汇都可以是用户标识符，所以用户标识符为“下长”，所以输出为：
+用户标识符：下长
+操作关键词：openintelligent
+
+七、示例分析：
+1. 输入："打开用户A评估报告"
+   输出：
+   用户标识符：用户A
+   操作关键词：openreport
+
+2. 输入："打开李四三基评估报告"
+   输出：
+   用户标识符：李四
+   操作关键词：openreport
+
+3. 输入："打开消息"
+   输出：
+   用户标识符：无
+   操作关键词：openmessage
+
+4. 输入："打开张三三级康养方案"
+   输出：
+   用户标识符：张三
+   操作关键词：openwellness
+
+注意事项：
+1. 用户标识符可以是任意非指令关键词
+2. 同音字和近似表达应该统一映射到标准操作码
+3. 在模糊匹配情况下，选择最相近的指令模式
 
 ##返回格式##
-用户名：
-关键词：
+用户标识符：
+操作关键词：
 """
 
 CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY = """You are a helpful assistant.

@@ -1278,7 +1278,7 @@ class expertModel:
         )
         
         if "\n" in response:
-            content = response.split('\n',1)
+            content = response.split('\n',-1)
             if '：' in content[0]:
                 user =content[0].split("：",1)[1]
             else:
