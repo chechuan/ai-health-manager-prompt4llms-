@@ -121,7 +121,7 @@ def get_daily_key_bg(bg_info, diet_info):
     res = sorted(res, key=lambda item: item.get('time', ''))
     return res
 
-daily_diet_eval_prompt_3 = """# 已知信息
+daily_diet_eval_prompt = """# 已知信息
 ## 个人信息：
 {0}
 

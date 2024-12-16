@@ -151,8 +151,12 @@ class GlucoseAnalyzer:
         for info in raw_data:
             time_str = info['time']
             value = float(info['value'])
+            if '/' in time_str:
+                t = datetime.strptime(time_str, '%Y/%m/%d %H:%M:%S')
+            else:
+                t = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
             parsed_data.append({
-                'time': datetime.strptime(time_str, '%Y/%m/%d %H:%M:%S'),
+                'time': t,
                 'value': value
             })
         df_parsed = pd.DataFrame(parsed_data)
