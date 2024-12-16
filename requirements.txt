@@ -103,4 +103,12 @@ opentelemetry-api==1.26.0
 opentelemetry-sdk==1.26.0
 opentelemetry-instrumentation-aws-lambda==0.47b0
 opentelemetry-test-utils==0.47b0
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation==0.47b0
+opentelemetry-semantic-conventions==0.47b0
+opentelemetry-api==1.26.0
+opentelemetry-sdk==1.26.0
+opentelemetry-instrumentation-aws-lambda==0.47b0
+opentelemetry-test-utils==0.47b0
 opencv-python
