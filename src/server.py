@@ -874,6 +874,9 @@ def create_app():
         """一日饮食状态"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_status")
+            if not param.get("daily_diet_info", []) or not param.get("daily_blood_glucose", ''):
+                result = make_result(items={}, msg='请检查入参格式', head=402)
+                return result
             item = await daily_diet_degree(param.get("userInfo", {}),
                                    param.get("daily_diet_info", []),
                                    param.get("daily_blood_glucose", ''),
@@ -882,7 +885,7 @@ def create_app():
         except Exception as err:
             logger.exception(err)
             logger.error(traceback.format_exc())
-            result = make_result(msg=repr(err), items=param)
+            result = make_result(msg=repr(err), items=param,head=402)
         finally:
             return result
 
