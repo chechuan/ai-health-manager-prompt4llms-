@@ -260,6 +260,7 @@ async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, mana
     )
     logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     logger.debug("一日饮食等级模型输出： " + generate_text)
+    generate_text = generate_text[generate_text.index('Output')+7:].strip().split('\n')[0]
     if '欠佳' in generate_text:
         res = '欠佳'
     elif '尚可' in generate_text:
