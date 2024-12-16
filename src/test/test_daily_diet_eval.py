@@ -113,7 +113,7 @@ daily_bg_data = [{"time": "2024-12-03 00:00:14", "value": "6.8"}, {"time": "2024
 
 buckets = []
 
-rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/夏雨-验证大厅/血糖数据.xlsx")
+rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/血糖数据.xlsx")
 bg_sheet = rb.sheet_by_index(0)
 bg_rows = bg_sheet.nrows
 bg_cols = bg_sheet.ncols
@@ -129,7 +129,7 @@ for i in range(1, bg_rows):
                          'value': str(bg_sheet.cell(i, 1))})
 
 
-rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/夏雨-验证大厅/图片数据.xlsx")
+rb = xlrd.open_workbook("/Users/yuanhuachao/Downloads/沈美玲-群图片.xlsx")
 bg_sheet = rb.sheet_by_index(0)
 img_rows = bg_sheet.nrows
 img_cols = bg_sheet.ncols
@@ -145,7 +145,8 @@ for i in range(1, img_rows):
                          'diet_image': bg_sheet.cell(i, 1).value})
 
 for key in d_b.keys():
-    if i_b.get(key, []):
+    if i_b.get(key, []) and key in ['2024/12/03','2024/12/02','2024/11/27','2024/11/25','2024/11/23','2024/11/19',
+                                    '2024/11/17','2024/12/01']:
         i_b[key] = sorted(i_b[key], key=lambda x: x['diet_time'])
         d_b[key] = sorted(d_b[key], key=lambda x: x['time'])
         buckets.append({
@@ -153,13 +154,21 @@ for key in d_b.keys():
             'daily_blood_glucose': d_b[key]
         })
 
+from openpyxl import Workbook
+from openpyxl.drawing.image import Image
+from io import BytesIO
+from openpyxl.comments import Comment
+wb = Workbook()
+ws = wb.active
+ws.title = "Sheet1"
+
 # wb = xlwt.Workbook()
 # sh = wb.add_sheet('sheet1')
-wb = xlsxwriter.Workbook('daily_diet_eval_batch_1211_6.xlsx')
+# wb = xlsxwriter.Workbook('daily_diet_eval_batch_1212_6.xlsx')
 # wb = xlsxwriter.Workbook('bgs.xlsx')
-sh = wb.add_worksheet('sheet1')
+# sh = wb.add_worksheet('sheet1')
 for x, i in enumerate(buckets):
-    # if x > 1:
+    # if x > 0:
     #     break
     daily_bg_data = i['daily_blood_glucose']
     daily_bg_data = [{'time':i['time'], 'value':i['value'].replace('number:', '').strip()} for i in daily_bg_data]
@@ -171,37 +180,56 @@ for x, i in enumerate(buckets):
 
     #
     # continue
+    param = {
+        "userInfo":{
+            'gender': '男',
+            'height': '171cm',
+            'weight': '73kg',
+            'birthday': '1971/2/20',
+            'disease': '糖尿病'
+        },
+        "daily_blood_glucose": daily_bg_data,
+        "daily_diet_info": daily_diet_info,
+        "management_tag": management_tag
+    }
+    # for i in range(1):
     try:
-        param = {
-            "userInfo":{
-                'gender': '男',
-                'height': '171cm',
-                'weight': '73kg',
-                'birthday': '1971/2/20',
-                'disease': '糖尿病'
-            },
-            "daily_blood_glucose": daily_bg_data,
-            "daily_diet_info": daily_diet_info,
-            "management_tag": management_tag
-        }
         ret, prompt = req(url, param)
         bg = ''
         diet = ''
+        imgs = []
         for j in daily_bg_data:
             bg += f"{j['time']} {j['value']}\n"
-        for j in daily_diet_info:
+        for ji,j in enumerate(daily_diet_info):
             diet += f"{j['diet_time']} {j['diet_image']}\n"
+            response = requests.get(j['diet_image'])
+            img = Image(BytesIO(response.content))
+            img.height = 300
+            img.width = 300
+            imgs.append(img)
+            m = ['A','B','C','D','E','F','G','H']
+            cell = f'{m[ji]}{x*2+1}'
+            ws.add_image(img, cell)
 
-        sh.write(x, 0, bg)
-        sh.write(x, 1, bgs)
-        sh.write(x, 2, diet)
-        sh.write(x, 3, prompt)
-        sh.write(x, 4, ret)
+
+
+        # idx = 1 * x + i
+        idx = x
+        # sh.write(idx, 0, bg)
+        # sh.write(idx, 1, bgs)
+        # sh.write(idx, 2, diet)
+        # sh.write(idx, 3, prompt)
+        # sh.write(idx, 4, ret)
+        texts  = [bgs,diet,prompt,ret]
+        for i, text in enumerate(texts, start=1):
+            cell = ws.cell(row=2*x+2, column=i)
+            cell.value = text
+        # ws.append([bgs, diet, prompt, ret])
+
     except Exception as e:
         continue
-wb.close()
-
-# wb.save('daily_diet_eval_batch_1205.xlsx')
+# wb.close()
+wb.save('daily_diet_eval_batch_1213_2.xlsx')
 
 
 

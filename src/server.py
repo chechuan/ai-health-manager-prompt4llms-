@@ -59,11 +59,10 @@ from src.utils.module import (
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
-    image_recog,
-    diet_image_recog,
     schedule_tips_modify,
     sport_schedule_tips_modify,
     daily_diet_eval,
+    daily_diet_degree,
 )
 
 
@@ -862,6 +861,23 @@ def create_app():
             item = await sport_schedule_tips_modify(param.get("schedule", []),
                                               param.get("history", []),
                                               param.get("cur_time", ''))
+            result = make_result(items=item)
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param)
+        finally:
+            return result
+
+    @app.route("/func_eval/daily_diet_status", methods=["post"])
+    async def _daily_diet_status(request: Request):
+        """一日饮食状态"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/daily_diet_status")
+            item = await daily_diet_degree(param.get("userInfo", {}),
+                                   param.get("daily_diet_info", []),
+                                   param.get("daily_blood_glucose", ''),
+                                   param.get("management_tag", '血糖管理'))
             result = make_result(items=item)
         except Exception as err:
             logger.exception(err)

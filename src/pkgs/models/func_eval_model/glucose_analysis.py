@@ -202,42 +202,15 @@ class GlucoseAnalyzer:
         low_glucose_periods = [
             f"{start.strftime('%H:%M')} - {end.strftime('%H:%M')} 持续{int(duration.total_seconds() / 60)}分钟"
             for start, end, duration in report['日间分析']['low_glucose_periods']]
-        summary = f"""1. 总体血糖控制:  
-   - 平均血糖: {report['基础指标']['平均血糖']} mmol/L
-   - GMI指标: {report['基础指标']['GMI']}%
-   - 变异系数(CV): {report['基础指标']['变异系数(CV)']}%
-   - 血糖标准差(SDBG): {report['基础指标']['标准差(SDBG)']} mmol/L
+        summary = f"""1. 时间分布分析:
+   - 低血糖时段: {', '.join(low_glucose_periods) or '无'}
+   - 高血糖时段: {', '.join(high_glucose_periods) or '无'} 
 
-2. 时间分布分析:
-   - 目标范围内时间(TIR): {time_ranges['TIR']}% (目标>70%) 
-   - 低血糖时间(TBR):
-     * 1级低血糖: {time_ranges['TBR_L1']}% (目标<4%)
-     * 2级低血糖: {time_ranges['TBR_L2']}% (目标<1%)  
-     * 低血糖时段: {', '.join(low_glucose_periods) or '无'}
-   - 高血糖时间(TAR):
-     * 1级高血糖: {time_ranges['TAR_L1']}% (目标<20%)
-     * 2级高血糖: {time_ranges['TAR_L2']}% (目标<5%)
-     * 高血糖时段: {', '.join(high_glucose_periods) or '无'} 
-
-3. 血糖波动分析:  
+2. 血糖波动分析:  
    - 最小血糖值: {report['基础指标']['最低血糖']} mmol/L
    - 最大血糖值: {report['基础指标']['最高血糖']} mmol/L 
-   - 血糖最大波动幅度: {report['基础指标']['血糖最大波动幅度']} mmol/L (目标<4.4 mmol/L)
+   - 血糖最大波动幅度: {report['基础指标']['血糖最大波动幅度']} mmol/L (目标<4.4 mmol/L)"""
 
-4. 分时段分析:
-{chr(10).join([f'   - {period}: 均值{stats["mean"]} mmol/L, 变异系数{stats["cv"]}%, 标准差{stats["sdbg"]} mmol/L'
-               for period, stats in report['日间分析']['time_blocks'].items()])}
-
-5. 稳定性评估:
-{chr(10).join([f'   - {assessment}' for assessment in report['稳定性评估']])} 
-
-6. 建议:
-   - {'建议定期监测并记录血糖,保持良好的饮食和运动习惯' if time_ranges['TIR'] >= 70 else '需要加强血糖管理,建议咨询医生调整治疗方案'}  
-   - {'低血糖风险控制良好' if time_ranges['TBR_L1'] + time_ranges['TBR_L2'] <= 4 else '注意预防低血糖风险'}
-   - {'夜间低血糖风险较低' if '夜间' not in low_glucose_periods else '建议关注夜间低血糖问题'}
-   - {'餐后高血糖风险控制良好' if all(period not in high_glucose_periods for period in ['早餐', '午餐', '晚餐']) else '建议关注餐后高血糖问题'}
-   - {'血糖波动控制理想' if report['基础指标']['变异系数(CV)'] <= 36 else '需要重点关注血糖波动问题'} 
-"""
         return summary
 
 

@@ -99,7 +99,7 @@ async def extract_imgInfo(history, daily_diet_info):
             if info.get('diet_image', '') and not info.get('diet_info', ''):
                 img_info.append(info['diet_image'])
     for i, img_url in enumerate(img_info):
-        prompt = get_func_eval_prompt('img_sumUp_prompt') if history else get_func_eval_prompt('diet_image_recog_prompt')
+        prompt = get_func_eval_prompt('img_sumUp_prompt') if history else diet_image_recog_prompt
         messages = [
             {
                 "role": "user",
@@ -219,6 +219,60 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     else:
         return {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
 
+
+async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
+    """一日饮食状态"""
+    yield_item = extract_imgInfo(history=[], daily_diet_info=daily_diet_info)
+    daily_diet_info = []
+    async for item in yield_item:
+        daily_diet_info = item
+    daily_diet_str = get_daily_diet_str(daily_diet_info, daily_blood_glucose)
+    prompt = daily_diet_degree_prompt
+    userInfo_str = get_userInfo(userInfo)
+    daily_bg = get_daily_key_bg(daily_blood_glucose, daily_diet_info)
+    bg_str = get_daily_blood_glucose_str(daily_bg)
+    glucose_analyses = GlucoseAnalyzer().analyze_glucose_data(daily_blood_glucose)
+    messages = [
+        {
+            "role": "user",
+            "content": prompt.format(
+                userInfo_str,
+                daily_diet_str,
+                bg_str,
+                glucose_analyses.get('summary', ''),
+                management_tag,
+            ),
+        }
+    ]
+    logger.debug(
+        "一日饮食等级模型输入： " + prompt.format(userInfo_str, daily_diet_str, bg_str,
+                                                     glucose_analyses.get('summary', ''), management_tag)
+    )
+    start_time = time.time()
+    generate_text = await acallLLM(
+        history=messages,
+        max_tokens=1000,
+        top_p=0.9,
+        temperature=0.8,
+        # stream=True,
+        is_vl=True,
+        model="Qwen1.5-32B-Chat",
+    )
+    logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
+    logger.debug("一日饮食等级模型输出： " + generate_text)
+    if '欠佳' in generate_text:
+        res = '欠佳'
+    elif '尚可' in generate_text:
+        res = '尚可'
+    elif '极佳' in generate_text:
+        res = '极佳'
+    else:
+        res = '尚可'
+    return {"dietStatus": res}
+
+
+
+
 async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
     """一日饮食评估建议"""
     yield_item = extract_imgInfo(history=[], daily_diet_info=daily_diet_info)
@@ -226,6 +280,7 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
     async for item in yield_item:
         daily_diet_info = item
     daily_diet_str = get_daily_diet_str(daily_diet_info, daily_blood_glucose)
+
     # prompt = get_func_eval_prompt('daily_diet_eval_prompt')
     prompt = daily_diet_eval_prompt
     prompt = daily_diet_eval_prompt_3
