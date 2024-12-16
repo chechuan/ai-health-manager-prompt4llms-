@@ -1007,26 +1007,43 @@ GLUCOSE_WARNING = """用户血糖情况:
 你今日血糖值为10.0mmol/L血糖值较高，请严格按照专家指导规律的饮食、运动及用药。血糖持续处于一个非常高的状态可能导致糖尿病酮症酸中毒、高渗高血糖综合征等急性并发症，请你关注的同时不要紧张，我们也会密切关注你的血糖变化，及时给予调整建议。
 你今日血糖值为14.0mmol/L血糖值非常高，请严格按照专家指导规律的饮食、运动及用药，血糖持续处于一个非常高的状态可能导致糖尿病酮症酸中毒、高渗高血糖综合征等急性并发症，请你关注的同时不要紧张，我们也会密切关注你的血糖变化，及时给予调整建议。"""
 
-OPEN_EXTRACT = """用户发言：
+OPEN_EXTRACT = """输入指令：
 {messages}
-你要根据用户发言，明确用户意图，按照例子抽取出我需要的关键信息。
-例子里箭头后是用户名和关键词，最多为两个用｜隔开，没有用户名则关键词为一个
-一定要注意，用户名是多样的，关键词必须为例子中出现的关键词，你不要自己编造关键词
-箭头前是用户发言信息，你的输出为箭头后面的内容
-一定不要输出箭头和箭头前面的内容，输出抽取范例里箭头后面的内容
-抽取范例：
-打开首页：openfront
-打开消息：openmessage
-打开看板：openkanban
-打开客户管理：opencustomer
-打开寻客：opentarget
-打开员工管理：openemployee
-打开血糖入组评估问卷：openglucose
-打开张三已填写入组评估问卷：张三｜openevaluation
-打开李华三济评估报告：李华｜openreport
-打开梨花三济康养方案：梨花｜openwellness
-打开梨花智能匹配专家：梨花｜openintelligent
-打开小凳子叔叔任务日程：小凳子叔叔｜openschedule
+请参考指令列表，抽取出输入指令的用户名（如果存在）和关键词。
+指令列表：
+1. 打开消息：openmessage
+2. 打开看板：openkanban
+3. 打开客户管理：opencustomer
+4. 打开寻客：opentarget
+5. 打开员工管理：openemployee
+6. 打开血糖入组评估问卷：openglucose
+7. 打开张三已填写入组评估问卷：张三｜openevaluation
+8. 打开李华三济评估报告：李华｜openreport
+9. 打开厘米三济评估报告：厘米｜openreport
+10. 打开梨花三济康养方案：梨花｜openwellness
+11. 打开常常常三济康养方案：常常常｜openwellness
+12. 打开梨花智能匹配专家：梨花｜openintelligent
+13. 打开小凳子叔叔任务日程：小凳子叔叔｜openschedule
+14. 打开首页：openfront
+对于每个指令，请返回以下格式的信息：
+用户名（如果不存在，则返回“无”）：
+关键词：
+思路：
+指令“打开下长智能匹配专家”中并没有明确的用户名，关键词部分根据指令列表匹配到了“打开梨花智能匹配专家：梨花｜openintelligent”，因此关键词为“openintelligent”。
+任何词汇都可以是用户名，所以用户名为“下长”，所以输出为：
+用户名：下长
+关键词：openintelligent
+
+例如，对于指令“打开张常常长已填写入组评估问卷”，应返回：
+用户名：张常常长
+关键词：openschedule
+对于指令“打开长长长三济康养方案”，应返回：
+用户名：长长长
+关键词：openwellness
+
+##返回格式##
+用户名：
+关键词：
 """
 
 CUSTOM_CHAT_REPOR_TINTERPRETATION_SYS_PROMPT_END_SUMMARY = """You are a helpful assistant.

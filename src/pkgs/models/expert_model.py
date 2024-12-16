@@ -1263,7 +1263,7 @@ class expertModel:
     @clock
     async def health_open_extract(self, param: Dict) -> str:
         """打开页面信息抽取"""
-        model = "Qwen1.5-32B-Chat"
+        model = "Qwen2-72B-Instruct"
         pro = param
         data= pro.get("messages", "")
         prompt_template = OPEN_EXTRACT
@@ -1276,24 +1276,17 @@ class expertModel:
         response = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
-        if "：" in response:
-            content = response.split('：',1)[1]
-            if '｜' in content:
-                user =content.split("｜",-1)[0]
-                kw = content.split("｜",-1)[1]
+        
+        if "\n" in response:
+            content = response.split('\n',1)
+            if '：' in content[0]:
+                user =content[0].split("：",1)[1]
             else:
                 user =''
-                kw = content
-        else:
-            if '｜' in response:
-                user =response.split("｜",-1)[0]
-                kw = response.split("｜",-1)[1]
-            elif len(response)>0:
-                user =''
-                kw = response
+            if '：' in content[1]:
+                kw =content[1].split("：",1)[1]
             else:
-                user =''
-                kw = ''
+                kw =''
          
         dict_={}
         dict_['user']=user
