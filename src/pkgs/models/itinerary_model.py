@@ -174,8 +174,8 @@ class ItineraryModel:
                 logger.info(f"活动 {activity['activity_name']} 不适合当前季节。")
                 continue
 
-            start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-            end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+            start_date = datetime.strptime(service_time.get("start_date"), "%Y-%m-%d")
+            end_date = datetime.strptime(service_time.get("end_date"), "%Y-%m-%d")
             best_time = activity.get("best_time", "")
             reservation_days = self.normalize_value(activity.get("reservation_days"))
             opening_hours = {
@@ -217,8 +217,8 @@ class ItineraryModel:
         :param suitable_season: 活动适合的季节（例如：“春季、夏季”）
         :return: 是否符合季节要求
         """
-        start_month = datetime.strptime(service_time["start_date"], "%Y-%m-%d").month
-        end_month = datetime.strptime(service_time["end_date"], "%Y-%m-%d").month
+        start_month = datetime.strptime(service_time.get("start_date"), "%Y-%m-%d").month
+        end_month = datetime.strptime(service_time.get("end_date"), "%Y-%m-%d").month
 
         season_mapping = {
             "春季": [3, 4, 5],
@@ -389,8 +389,8 @@ class ItineraryModel:
         """
 
         async def calculate_price():
-            start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-            end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+            start_date = datetime.strptime(service_time.get("start_date"), "%Y-%m-%d")
+            end_date = datetime.strptime(service_time.get("end_date"), "%Y-%m-%d")
 
             total_price = 0  # 用于累加跨越多日的价格
             current_date = start_date
@@ -404,7 +404,7 @@ class ItineraryModel:
 
                     # 如果有按时长收费，计算总价
                     if price_info.get("unitPrice"):
-                        unit_price = price_info["unitPrice"]["amount"]
+                        unit_price = price_info.get("unitPrice").get("amount")
                         day_price += unit_price * float(duration)
 
                 total_price += day_price
@@ -414,6 +414,7 @@ class ItineraryModel:
 
         # 使用 asyncio.to_thread 将计算逻辑移到线程池中运行
         return await run_in_executor(calculate_price)
+
     async def generate_recommendation_basis(self, user_data, selected_accommodation, spa_activities):
         """
         根据用户输入和推荐结果生成推荐依据
@@ -454,8 +455,8 @@ class ItineraryModel:
 
         # 检查出行人员的类型并翻译
         if travelers:
-            traveler_types = set([age_group_translation.get(traveler["age_group"], traveler["age_group"])
-                                  for traveler in travelers if traveler["count"] > 0])
+            traveler_types = set([age_group_translation.get(traveler.get("age_group"), traveler.get("age_group"))
+                                  for traveler in travelers if traveler.get("count", 0) > 0])
             traveler_types_desc = "、".join(traveler_types)
             basis_parts.append(f"适合出行人员为{traveler_types_desc}")
         else:
@@ -471,6 +472,27 @@ class ItineraryModel:
 
         return basis
 
+    def process_extra_info(self, activity):
+        """
+        将活动的 location、prescription 和 reservation_note（作为 operation_tips）添加到 extra_info 中。
+        :param activity: 活动数据字典
+        :return: 修改后的活动数据
+        """
+        # 构建新的活动结构
+        activity_info = {
+            "name": activity.get("activity_name", ""),
+            "location": activity.get("location", ""),
+            "activity_code": activity.get("activity_code", ""),
+            "external_id": activity.get("external_id", ""),
+            "activity_link": activity.get("activity_link", ""),
+            "extra_info": {
+                "description": activity.get("description", ""),
+                "operation_tips": activity.get("reservation_note", "")  # 如果没有 reservation_note 默认是 "无"
+            }
+        }
+
+        return activity_info
+
     async def generate_default_itinerary(self, user_data, selected_hotel=None):
         """
         根据用户的服务时间，生成通用的行程方案，适合大多数人的默认安排。
@@ -479,8 +501,9 @@ class ItineraryModel:
         :return: 默认行程的列表
         """
         service_time = user_data.get("service_time", {})
-        start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-        end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+        # 使用 get() 获取时间，避免可能的 KeyError
+        start_date = datetime.strptime(service_time.get("start_date", ""), "%Y-%m-%d")
+        end_date = datetime.strptime(service_time.get("end_date", ""), "%Y-%m-%d")
 
         total_days = (end_date - start_date).days + 1
         current_date = start_date
@@ -488,87 +511,11 @@ class ItineraryModel:
 
         # 如果没有提供酒店信息，使用默认的酒店
         if not selected_hotel:
-            selected_hotel = {
-                "name": "汤泉逸墅 院线房",
-                "extra_info": {
-                    "description": None,
-                    "room_description": "院线房 61.66㎡-71.82㎡\n小院私汤，卧室有投影幕布，含双早"
-                },
-                "activity_code": "ACC992657",
-                "external_id": "1861325596038701057",
-                "activity_link": "1861325396494688258"
+            available_hotels = self.data.get("cleaned_accommodation", [])  # 假设从数据库加载的酒店数据
+            selected_hotel = random.choice(available_hotels)
 
-            }
-
-        # 已有的活动列表，用于随机选取
-        available_activities = [
-            {
-                "name": "盐房",
-                "location": "来康温泉",
-                "activity_code": "ACT173738",
-                "external_id": "1866732056750895106",
-                "activity_link": "1866685176708902914",
-                "extra_info": {
-                "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。盐疗对于哮喘、气管炎、咽炎、肺炎、鼻炎等有一定缓解作用。",
-                "operation_tips": "建议泡汤时间不超过30分钟。"
-                }
-            },
-            {
-                "name": "岩洞氧吧",
-                "location": "来康温泉",
-                "activity_code": "ACT268949",
-                "external_id": "1866732695476285441",
-                "activity_link": "1866730997341007873",
-                "extra_info": {
-                    "description": "抗氧化防衰老,可促进人体新陈代谢,具有提神、消除疲劳、提高免疫力的功效,从而增强抗病能力。",
-                    "operation_tips": "体验时保持放松。"
-                }
-            },
-            {
-                "name": "香修体验",
-                "location": "七修书院",
-                "activity_code": "ACT698000",
-                "external_id": "1861319971506397185",
-                "activity_link": "1854781310617178114",
-                "extra_info": {
-                    "description": "了解香学文化及制作合香香品",
-                    "operation_tips": "请在老师指导下操作。"
-                }
-            },
-            {
-                "name": "花修体验",
-                "location": "七修书院",
-                "activity_code": "ACT098692",
-                "external_id": "1861318693749432321",
-                "activity_link": "1854793377206161410",
-                "extra_info": {
-                    "description": "学习中式插花，享受宁静时光",
-                    "operation_tips": "请提前预约花材。"
-                }
-            },
-            {
-                "name": "书修体验",
-                "location": "七修书院",
-                "activity_code": "ACT796407",
-                "external_id": "1861320250339532801",
-                "activity_link": "1854502838028128257",
-                "extra_info": {
-                    "description": "拓印、静心抄经，体验传统书法的静心力量",
-                    "operation_tips": "建议提前预约，选择书法材料。"
-                }
-            },
-            {
-                "name": "食修体验",
-                "location": "七修书院",
-                "activity_code": "ACT875638",
-                "external_id": "1861319971506397185",
-                "activity_link": "1854781310617178114",
-                "extra_info": {
-                    "description": "学习制作药食同源的小点心，了解传统健康饮食文化",
-                    "operation_tips": "活动时间约1.5小时，请提前预约。"
-                }
-            }
-        ]
+        # 现有的活动列表，用于随机选择活动
+        available_activities = self.data.get('cleaned_activities', [])
 
         # 为每一天生成行程
         for day in range(1, total_days + 1):
@@ -592,17 +539,8 @@ class ItineraryModel:
                                     "operation_tips": "请提前确认入住时间，提醒需要预约等"
                                 }
                             },
-                            {
-                                "name": "盐房",
-                                "location": "来康温泉",
-                                "activity_code": "ACT173738",
-                                "external_id": "1866732056750895106",
-                                "activity_link": "1866685176708902914",
-                                "extra_info": {
-                                    "description": "经过加热以后盐会释放大量的钠离子成分,当人体置身在高温盐房环境里,毛孔全部打开,钠离子由毛孔进入人体的微循环,补充人体所需要的大量的微量元素。",
-                                    "operation_tips": "建议泡汤时间不超过30分钟。"
-                                }
-                            }
+                            self.process_extra_info(random.choice(available_activities))  # 随机选择一个活动
+
                         ]
                     }
                 ]
@@ -611,11 +549,11 @@ class ItineraryModel:
                 day_activities = [
                     {
                         "period": "上午",
-                        "activities": [random.choice(available_activities)]
+                        "activities": [self.process_extra_info(random.choice(available_activities))]
                     },
                     {
                         "period": "下午",
-                        "activities": [random.choice(available_activities)]
+                        "activities": [self.process_extra_info(random.choice(available_activities))]
                     }
                 ]
 
@@ -638,16 +576,17 @@ class ItineraryModel:
         if selected_accommodation:
             hotel = await self.select_random_activity(selected_accommodation)
             return {
-                "name": hotel["name"],
-                "location": "待定",
-                "activity_code": hotel["activity_code"],
-                "external_id": hotel["external_id"],
-                "activity_link": hotel["activity_link"],
+                "name": hotel.get("name", ""),
+                "location": hotel.get("name", ""),
+                "activity_code": hotel.get("activity_code", ""),
+                "external_id": hotel.get("external_id", ""),
+                "activity_link": hotel.get("activity_link", ""),
                 "extra_info": {
                     "description": hotel.get("hotel_description", "房型丰富、设施齐全、中医理疗特色"),
                     "room_description": hotel.get("room_description", "")
                 }
             }
+
         return {
             "name": "无合适酒店",
             "location": "",
@@ -673,8 +612,8 @@ class ItineraryModel:
         """
         itinerary = []
         service_time = user_data.get("service_time", {})
-        start_date = datetime.strptime(service_time["start_date"], "%Y-%m-%d")
-        end_date = datetime.strptime(service_time["end_date"], "%Y-%m-%d")
+        start_date = datetime.strptime(service_time.get("start_date", ""), "%Y-%m-%d")
+        end_date = datetime.strptime(service_time.get("end_date", ""), "%Y-%m-%d")
 
         total_days = (end_date - start_date).days + 1
         current_date = start_date
@@ -693,8 +632,8 @@ class ItineraryModel:
             :return: 是否最近安排过
             """
             for recent_activity in recent_activities:
-                if recent_activity["name"] == activity_name and (
-                        current_date - recent_activity["date"]).days < min_gap_days:
+                if recent_activity.get("name") == activity_name and (
+                        current_date - recent_activity.get("date")).days < min_gap_days:
                     return True
             return False
 
@@ -711,9 +650,9 @@ class ItineraryModel:
                         {
                             "name": "办理入住",
                             "location": selected_hotel.get("name", ""),
-                            "activity_code": selected_hotel["activity_code"],
-                            "external_id": selected_hotel["external_id"],
-                            "activity_link": selected_hotel["activity_link"],
+                            "activity_code": selected_hotel.get("activity_code", ""),
+                            "external_id": selected_hotel.get("external_id", ""),
+                            "activity_link": selected_hotel.get("activity_link"),
                             "extra_info": {
                                 "description": "请提前确认入住时间，提醒需要预约等",
                                 "room_description": selected_hotel["extra_info"].get("room_description", ""),
@@ -727,14 +666,14 @@ class ItineraryModel:
                 if spa_activities and spa_activity_count < max_spa_activities:
                     random_spa_activity = await self.select_random_activity(spa_activities)
                     day_activities[-1]["activities"].append({
-                        "name": random_spa_activity["activity_name"],
-                        "location": random_spa_activity["activity_category"],
-                        "activity_code": random_spa_activity["activity_code"],
-                        "external_id": random_spa_activity["external_id"],
-                        "activity_link": random_spa_activity["activity_link"],
+                        "name": random_spa_activity.get("activity_name", ""),
+                        "location": random_spa_activity.get("location", ""),
+                        "activity_code": random_spa_activity.get("activity_code", ""),
+                        "external_id": random_spa_activity.get("external_id", ""),
+                        "activity_link": random_spa_activity.get("activity_link", ""),
                         "extra_info": {
-                            "description": random_spa_activity["description"],
-                            "operation_tips": "建议泡汤时间不超过30分钟。"
+                            "description": random_spa_activity.get("description", ""),
+                            "operation_tips": random_spa_activity.get("reservation_note", "")
                         }
                     })
                     spa_activity_count += 1
@@ -751,13 +690,13 @@ class ItineraryModel:
                                 "period": period,
                                 "activities": [
                                     {
-                                        "name": activity["activity_name"],
-                                        "location": activity["activity_category"],
-                                        "activity_code": activity["activity_code"],
-                                        "external_id": activity["external_id"],
-                                        "activity_link": activity["activity_link"],
+                                        "name": activity.get("activity_name", ""),
+                                        "location": activity.get("location", ""),
+                                        "activity_code": activity.get("activity_code", ""),
+                                        "external_id": activity.get("external_id", ""),
+                                        "activity_link": activity.get("activity_link", ""),
                                         "extra_info": {
-                                            "description": activity["description"],
+                                            "description": activity.get("description", ""),
                                             "operation_tips": activity.get("reservation_note", "无")
                                         }
                                     }
@@ -773,13 +712,13 @@ class ItineraryModel:
                         "period": "上午",
                         "activities": [
                             {
-                                "name": random_activity["activity_name"],
-                                "location": random_activity["activity_category"],
-                                "activity_code": random_activity["activity_code"],
-                                "external_id": random_activity["external_id"],
-                                "activity_link": random_activity["activity_link"],
+                                "name": random_activity.get("activity_name", ""),
+                                "location": random_activity.get("location", ""),
+                                "activity_code": random_activity.get("activity_code", ""),
+                                "external_id": random_activity.get("external_id", ""),
+                                "activity_link": random_activity.get("activity_link", ""),
                                 "extra_info": {
-                                    "description": random_activity["description"],
+                                    "description": random_activity.get("description", ""),
                                     "operation_tips": random_activity.get("reservation_note", "无")
                                 }
                             }
@@ -807,8 +746,8 @@ class ItineraryModel:
 
         # 筛选出温泉类的活动
         spa_activities = [activity for activity in filtered_activities if
-                          "温泉" in activity["activity_name"] or "温泉" in activity["activity_category"]]
-
+                          "泉" in activity.get("activity_name", "") or "泉" in activity.get("activity_category",
+                                                                                                "")]
         # 2. 随机选择一个符合条件的酒店
         selected_accommodation = await self.filter_data("cleaned_accommodation", user_data)
         hotel = await self.select_random_hotel(selected_accommodation)
@@ -823,17 +762,18 @@ class ItineraryModel:
 
         # 5. 构建最终的响应结构
         response = {
-                "hotel": {
-                    "name": hotel["name"],
-                    "extra_info": hotel["extra_info"],
-                    "activity_code": hotel["activity_code"],
-                    "external_id": hotel["external_id"],
-                    "activity_link": hotel["activity_link"]
-                },
-                "recommendation_basis": recommendation_basis,
-                "itinerary": itinerary,
-                "msg": "行程生成成功"
-            }
+            "hotel": {
+                "name": hotel.get("name", ""),
+                "location": hotel.get("name", ""),
+                "extra_info": hotel.get("extra_info", {}),
+                "activity_code": hotel.get("activity_code", ""),
+                "external_id": hotel.get("external_id", ""),
+                "activity_link": hotel.get("activity_link", "")
+            },
+            "recommendation_basis": recommendation_basis,
+            "itinerary": itinerary,
+            "msg": "行程生成成功"
+        }
 
         return response
 
