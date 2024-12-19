@@ -178,16 +178,24 @@ for x, i in enumerate(buckets):
     bgs = get_daily_key_bg(daily_bg_data, daily_diet_info)
     bgs = '\n'.join([json.dumps(bg) for bg in bgs])
 
+    shenmeiling_info = {
+        'gender': '女',
+        'height': '150cm',
+        'weight': '52kg',
+        'birthday': '1973年1月14日',
+        'disease': '2型糖尿病'
+    }
+    xiayu_info = {
+        'gender': '男',
+        'height': '171cm',
+        'weight': '73kg',
+        'birthday': '1971/2/20',
+        'disease': '糖尿病'
+    }
     #
     # continue
     param = {
-        "userInfo":{
-            'gender': '男',
-            'height': '171cm',
-            'weight': '73kg',
-            'birthday': '1971/2/20',
-            'disease': '糖尿病'
-        },
+        "userInfo":shenmeiling_info,
         "daily_blood_glucose": daily_bg_data,
         "daily_diet_info": daily_diet_info,
         "management_tag": management_tag
@@ -229,7 +237,7 @@ for x, i in enumerate(buckets):
     except Exception as e:
         continue
 # wb.close()
-wb.save('daily_diet_eval_batch_1213_2.xlsx')
+wb.save('daily_diet_eval_batch_1218_2.xlsx')
 
 
 

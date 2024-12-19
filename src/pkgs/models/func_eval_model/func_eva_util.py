@@ -28,16 +28,17 @@ def get_daily_blood_glucose_str(daily_blood_glucose):
 
 def get_daily_diet_str(daily_diet_info, daily_blood_glucose):
     daily_diet_str = ''
-    periods_str = get_meal_increase_glucose_periods(daily_diet_info, daily_blood_glucose)
+    # periods_str = get_meal_increase_glucose_periods(daily_diet_info, daily_blood_glucose)
     for idx, i in enumerate(daily_diet_info):
         diet_info = ''
         for info in i.get('diet_info', []):
             if info:
                 diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('foodname', '')}，"
-        if len(periods_str) == len(daily_diet_info):
-            daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}。 {periods_str[idx]}\n"
-        else:
-            daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
+        daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
+        # if len(periods_str) == len(daily_diet_info):
+        #     daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}。 {periods_str[idx]}\n"
+        # else:
+        #     daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
 
     return daily_diet_str if daily_diet_str else '无'
 
@@ -138,24 +139,26 @@ daily_diet_eval_prompt = """# 已知信息
 {4}
 
 # 任务描述
-请你扮演一位经验丰富的营养师，请你对我提交的一日饮食信息做出合理评价和科学建议，并输出我当天饮食合理等级。
+请你扮演一位经验丰富的营养师，你正在协同医生、运动师、情志调理师、中医师，共同为慢病患者提供全方位的健康管理服务。帮助患者建立并维持健康的生活方式，例如合理饮食、适量运动、科学合理用药等，现在请你对患者提交的一日饮食信息做出合理评价和科学建议。
 
 # 输出要求
- - 你需要根据我的血糖数据、提交的饮食信息以及我的已知信息如疾病等因素综合分析，给予我分析与建议。
- - 输出可能包含的维度有：1.血糖趋势分析、2.营养优化建议2个维度。
- - 整体字数控制在250字以内。
+ - 请你根据患者的已知信息，如血糖数据、提交的饮食信息、现患疾病等因素综合分析，给予患者合理的分析与建议话术。
+ - 输出可能包含的维度有：1.血糖趋势分析、2.营养优化建议，2个维度。
  - 输出的内容要通俗易懂，简单明了，符合营养学观点。
  - 每个维度的评价可以换行显示，严格参考输出示例中的内容和格式。
 ## 血糖趋势分析输出要求
  - 血糖稳定性请参考餐前餐后血糖值波动、最低值最高值、最大血糖波动的维度来评估，说明具体的波动情况，要客观符合事实。
  - 可以指出餐后血糖波动可能与选择的食物的关系，评价食物选择是否合理，可以从碳水化合物、蛋白质、脂肪的维度进行评价。
  - 识别异常血糖信息，并给予提醒，比如对低血糖情况应给出建议。
+- 请关注餐后的时间段。
  - 如果没有血糖数据，该评价维度可忽略。
+- 字数不超过150字。
 ## 营养优化建议
  - 若血糖控制稳定，可输出继续保持均衡膳食的鼓励性话术。
  - 若血糖波动较大，血糖控制不佳，可输出指导应该避免哪类食物，选择哪类营养素或食物的话术。
  - 若一日某餐次的饮食信息有缺失，可以给予提醒规律用餐的重要性。
  - 避免输出123列表。
+- 字数不超过100字。
 
 # 输出示例
 【血糖趋势分析】
