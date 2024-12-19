@@ -244,7 +244,7 @@ def mount_rule_endpoints(app: FastAPI):
             param = await async_accept_param_purge(
                 request, endpoint="/health/blood_glucose_deal"
             )
-            ret = expert_model.health_blood_glucose_trend_analysis(param)
+            ret = expert_model.health_blood_glucose_deal(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
