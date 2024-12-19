@@ -6,20 +6,22 @@
 @Contact :   chechuan1204@gmail.com
 """
 
+import inspect
 import asyncio
 import json
 import json5
 import re
 from copy import deepcopy
 from datetime import datetime
-from typing import Generator, Dict, Union, List, Literal
+from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 from src.utils.module import (
     check_aigc_functions_body_fat_weight_management_consultation, check_and_calculate_bmr,
     calculate_and_format_diet_plan, calculate_standard_weight, convert_meal_plan_to_text,
     curr_time, determine_recent_solar_terms, format_historical_meal_plans, format_historical_meal_plans_v2,
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
-    determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day
+    determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
+    filter_user_profile, replace_you
 )
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
@@ -58,10 +60,10 @@ class HealthExpertModel:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -69,18 +71,20 @@ class HealthExpertModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
 
     async def __compose_user_msg__(
         self,
         mode: Literal[
             "user_profile",
+            "user_profile_new",
             "messages",
             "drug_plan",
             "medical_records",
             "ietary_guidelines",
             "key_indicators",
+            "user_profile"
         ],
         user_profile: UserProfile = None,
         medical_records: MedicalRecords = None,
@@ -96,6 +100,11 @@ class HealthExpertModel:
                 for key, value in user_profile.items():
                     if value and USER_PROFILE_KEY_MAP.get(key):
                         content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "user_profile_new":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP_SANJI.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP_SANJI[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
@@ -1700,32 +1709,33 @@ class HealthExpertModel:
             List[str]: 用户可能提问的三个相关问题
         """
         _event = "猜你想问"
+        kwargs = deepcopy(kwargs)
 
         # 获取用户提问信息
         user_question = kwargs.get("user_question", "")
-        if not user_question:
-            raise ValueError(f"user_question不能为空")
+        user_messages = kwargs.get("messages", "")
+
+        prompt_parts = []
+
+        if user_question:
+            prompt_parts.append(f"## 用户问题\n{user_question}")
+
+        if user_messages:
+            # 处理会话记录
+            messages = await self.__compose_user_msg__("messages", messages=user_messages,
+                                                       role_map={"assistant": "Assistant", "user": "User"})
+            prompt_parts.append(f"## 用户会话记录\n{messages}")
+
+        prompt_message = "\n".join(prompt_parts) if prompt_parts else ""
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", "")
 
-        # # 获取健康关键指标
-        # health_key_indicators = kwargs.get("health_key_indicators", {}).get("data", [])
-        #
-        # # 根据管理目标提取近7日的关键指标数据
-        # management_goals = user_profile.get("management_goals", "")
-        # if management_goals:
-        #     recent_indicators = [indicator for indicator in health_key_indicators if
-        #                          indicator['date'] >= (datetime.today() - timedelta(days=7)).strftime('%Y-%m-%d')]
-        # else:
-        #     recent_indicators = []
-
         # 拼接用户画像信息字符串
         user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 
-        # 构建提示变量
         prompt_vars = {
-            "user_question": user_question,
+            "messages": prompt_message,
             "user_profile": user_profile_str,
             "datetime": datetime.today().strftime("%Y-%m-%d %H:%M:%S")
         }
@@ -1848,7 +1858,7 @@ class HealthExpertModel:
             str: 每日问候开场白文本
         """
 
-        _event = "生成每日问候开场白"
+        _event = "生成每日问候开场白新版"
 
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", {})
@@ -2205,6 +2215,181 @@ class HealthExpertModel:
         content = await parse_generic_content(content)
         return content
 
+    async def aigc_functions_sjkyn_guideline_generation_new(self, **kwargs) -> str:
+        """
+        三济康养方案总则生成与能量调理话术生成
+
+        功能描述：
+        根据用户的画像信息和病历数据生成三济康养方案总则，并附加个性化的能量调理话术。
+
+        参数:
+            kwargs (dict): 包含用户基本信息、病历信息、健康指标等的字典
+
+        返回:
+            Union[str, AsyncGenerator]: 返回字符串或异步生成器
+        """
+
+        _event = "三济康养方案总则新版"
+        kwargs = deepcopy(kwargs)
+
+        model_args = kwargs.get("model_args", {})
+
+        # 必填字段和至少需要一项的参数列表
+        required_fields = {
+            "user_profile": ["age", "gender", "height", "weight", "bmi", "current_diseases"],
+        }
+        at_least_one = ["user_profile", "medical_records", "key_indicators"]
+
+        # 验证必填字段
+        if not any(kwargs.get(param) for param in at_least_one):
+            raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
+
+        # 获取用户基本信息
+        user_profile = kwargs.get("user_profile", {})
+
+        # 检查并确保必填字段完整
+        missing_fields = [
+            field for field in required_fields["user_profile"] if not user_profile.get(field)
+        ]
+        if missing_fields:
+            raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
+
+        # 组合用户基本信息字符串
+        user_profile_str = await self.__compose_user_msg__(
+            "user_profile", user_profile=user_profile
+        )
+
+        # 计算基础代谢率
+        bmr = await check_and_calculate_bmr(user_profile)
+        user_profile_str += f"基础代谢:\n{bmr}\n"
+
+        # 组合病历信息字符串
+        medical_records_str = await self.__compose_user_msg__(
+            "medical_records", medical_records=kwargs.get("medical_records")
+        )
+
+        # 组合附加信息字符串（原messages部分不变）
+        additional_info_str = await self.__compose_user_msg__(
+            "messages", messages=kwargs.get("messages", "")
+        )
+
+        # 构建总则生成提示变量
+        prompt_vars_for_total_guideline = {
+            "user_profile": user_profile_str,
+            "messages": additional_info_str,
+            "current_date": datetime.today().strftime("%Y-%m-%d"),
+            "medical_records": medical_records_str,
+        }
+
+        # 更新模型参数
+        generation_params_for_total_guideline = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用AIGC函数生成总则
+        total_guideline: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars_for_total_guideline,
+            model_args=generation_params_for_total_guideline, **kwargs
+        )
+
+        # 生成能量调理话术
+        kwargs["intentCode"] = "aigc_functions_energy_treatment_guideline_generation"
+        kwargs["model_args"] = model_args
+
+        # 用户基本信息处理
+        filtered_user_profile = await filter_user_profile(user_profile)
+
+        # 组合过滤后的用户基本信息字符串
+        filtered_user_profile_str = await self.__compose_user_msg__(
+            "user_profile_new", user_profile=filtered_user_profile
+        )
+
+        # 构建能量调理话术提示变量
+        prompt_vars_for_energy_guideline = {
+            "user_profile": filtered_user_profile_str
+        }
+
+        # 更新模型参数
+        generation_params_for_energy_guideline = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用AIGC函数生成能量调理话术
+        energy_treatment_guideline: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars_for_energy_guideline,
+            model_args=generation_params_for_energy_guideline, **kwargs
+        )
+        logger.info(f"total_guideline + energy_treatment_guideline: {total_guideline, energy_treatment_guideline}")
+
+        kwargs["model_args"] = model_args
+        # 根据是否需要流式响应返回不同类型
+        if kwargs.get("model_args") and kwargs["model_args"].get("stream") is True:
+            async def combined_stream():
+                async for chunk in total_guideline:
+                    yield chunk
+                async for chunk in energy_treatment_guideline:
+                    yield chunk
+
+            return combined_stream()  # 返回异步生成器
+        else:
+            # 组合总则和能量调理话术为一个字符串
+            combined_response = f"{total_guideline}{energy_treatment_guideline}"
+            return combined_response  # 返回字符串
+
+    async def aigc_functions_energy_treatment_detailed_generation(self, **kwargs) -> str:
+        """
+        生成中医调理细则
+
+        功能描述：
+        根据用户画像信息生成个性化的中医调理细则，用于精准调理身体的能量平衡。
+
+        参数:
+            kwargs (dict): 包含用户基本信息的字典
+
+        返回:
+            str: 生成的中医调理细则
+        """
+
+        _event = "中医调理细则生成"
+
+        # 必填字段检查
+        required_fields = {
+            "user_profile": ["gender", "current_diseases"],
+        }
+
+        # 获取用户基本信息
+        user_profile = kwargs.get("user_profile", {})
+        user_profile_new = await filter_user_profile(user_profile)
+
+        # 检查并确保必填字段完整
+        missing_fields = [
+            field for field in required_fields["user_profile"] if not user_profile.get(field)
+        ]
+        if missing_fields:
+            raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
+
+        # 组合用户基本信息字符串
+        user_profile_str = await self.__compose_user_msg__(
+            "user_profile_new", user_profile=user_profile_new
+        )
+
+        # 构建中医调理细则生成提示变量
+        prompt_vars_for_energy_treatment = {
+            "user_profile": user_profile_str
+        }
+
+        # 更新模型参数
+        generation_params_for_energy_treatment = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用AIGC函数生成中医调理细则
+        energy_treatment_detailed_guideline: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars_for_energy_treatment,
+            model_args=generation_params_for_energy_treatment, **kwargs
+        )
+
+        return energy_treatment_detailed_guideline
 
 if __name__ == "__main__":
     gsr = InitAllResource()

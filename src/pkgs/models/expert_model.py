@@ -1261,6 +1261,60 @@ class expertModel:
         return dict_
 
     @clock
+    async def health_open_extract(self, param: Dict) -> str:
+        """打开页面信息抽取"""
+        model = "Qwen2-72B-Instruct"
+        pro = param
+        data= pro.get("messages", "")
+        prompt_template = OPEN_EXTRACT
+        prompt_vars = {"messages": data}
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"打开页面信息抽取: {dumpJS(history)}")
+        response = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        
+        if "\n" in response:
+            content = response.split('\n',-1)
+            if '：' in content[0]:
+                user =content[0].split("：",1)[1]
+            else:
+                user =''
+            if '：' in content[1]:
+                kw =content[1].split("：",1)[1]
+            else:
+                kw =''
+         
+        dict_={}
+        dict_['user']=user
+        if kw not in ['openfront','openkanban','opencustomer','openmessage','opentarget','openemployee',
+                      'openglucose','openevaluation','openreport','openwellness','openintelligent','openschedule']:
+            kw='other'
+        dict_['kw']= kw
+        return dict_
+    
+    @clock
+    async def health_spe_qa(self, param: Dict) -> str:
+        """问题回答"""
+        model = "Qwen1.5-32B-Chat"
+        pro = param
+        data= pro.get("messages", "")
+        prompt_template = HEALTH_QA
+        prompt_vars = {"query": data}
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"问题回答: {dumpJS(history)}")
+        response = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        return response
+
+    @clock
     async def health_literature_generation(self, param: Dict) -> str:
         model = self.gsr.model_config["blood_pressure_trend_analysis"]
         messages = param["history"]

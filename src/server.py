@@ -44,6 +44,7 @@ from src.utils.api_protocal import (
     RolePlayRequest,
     SanJiKangYangRequest,
     TestRequest,
+    JunWangGongJianRequest
 )
 from src.utils.Logger import logger
 from src.utils.resources import InitAllResource
@@ -203,6 +204,22 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route("/health/spe_qa", methods=["post"])
+    async def _health_spe_qa(request: Request):
+        """问题回答"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/spe_qa"
+            )
+            ret = await expert_model.health_spe_qa(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+    
 
     @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
     async def _health_blood_glucose_trend_analysis(request: Request):
@@ -272,6 +289,21 @@ def mount_rule_endpoints(app: FastAPI):
                 request, endpoint="/health/blood_glucose_warning"
             )
             ret = await expert_model.health_blood_glucose_warning(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/open_extract", methods=["post"])
+    async def _health_open_extract(request: Request):
+        """页面打开"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/open_extract"
+            )
+            ret = await expert_model.health_open_extract(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -458,7 +490,7 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)
 
-    async def _aigc_functions_outpatient_support(
+    async def _async_aigc_functions_outpatient_support(
             request_model: OutpatientSupportRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """处理西医决策支持的AIGC函数"""
@@ -503,46 +535,87 @@ def mount_aigc_functions(app: FastAPI):
 
     async def _async_aigc_functions_sanji_kangyang(
             request_model: SanJiKangYangRequest,
-    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+    ) -> Response:
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
         try:
-            param = await async_accept_param_purge(
-                request_model, endpoint=endpoint
-            )
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应
-                _return = response_generator(response)
+                # 处理流式响应，直接返回 StreamingResponse
+                generator = response_generator(response)
+                return StreamingResponse(generator, media_type="text/event-stream")
             else:
-                # 非流式响应
-                response = replace_you(response)  # 直接替换“您”为“你”
+                # 处理非流式响应
+                response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await
                 if isinstance(response, str):
-                    ret = AigcFunctionsCompletionResponse(
-                        head=200, items=response
-                    )
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
                 else:
-                    ret = AigcFunctionsCompletionResponse(
-                        head=200, items=response
-                    )
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
                 logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
-
+                return build_aigc_functions_response(_return)
         except Exception as err:
             # 错误处理
-            msg = repr(err)
-            msg = replace_you(msg)  # 错误消息统一替换
+            msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                _return = response_generator(msg, error=True)  # 流式错误响应
+                # 流式错误响应
+                generator = response_generator(msg, error=True)
+                return StreamingResponse(generator, media_type="text/event-stream")
             else:
-                ret = AigcFunctionsCompletionResponse(
-                    head=601, msg=msg, items=None
-                )
-                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
-        finally:
-            return build_aigc_functions_response(_return)  # 确保返回值有赋值
+                # 非流式错误响应
+                ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+                return build_aigc_functions_response(_return)
+
+    async def _async_aigc_functions_junwang_gongjian(
+            request_model: JunWangGongJianRequest,
+    ) -> Response:
+        """
+        郡网共建健康分析与建议AIGC函数的启动接口文件示例
+        """
+
+        endpoint = "/aigc/junwang/gongjian"
+        try:
+            # 清洗和获取参数
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
+
+            # 调用AIGC模型生成健康分析与建议
+            response: Union[str, AsyncGenerator] = await itinerary_model.call_function(**param)
+
+            # 根据参数决定是否使用流式响应
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 流式输出
+                generator = response_generator(response)
+                return StreamingResponse(generator, media_type="text/event-stream")
+            else:
+                # 非流式输出
+                response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await replace_you(response)
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+                return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            # 异常处理
+            msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await replace_you(repr(err))
+            # 判断是否为流式请求
+            if 'param' in locals() and param.get("model_args") and param["model_args"].get("stream") is True:
+                # 流式错误响应
+                generator = response_generator(msg, error=True)
+                return StreamingResponse(generator, media_type="text/event-stream")
+            else:
+                # 非流式错误响应
+                ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+                return build_aigc_functions_response(_return)
 
     async def _aigc_functions_generate_itinerary(request: Request):
         try:
@@ -630,9 +703,11 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/sanji")(_async_aigc_sanji)
 
-    app.post("/aigc/outpatient_support")(_aigc_functions_outpatient_support)
+    app.post("/aigc/outpatient_support")(_async_aigc_functions_outpatient_support)
 
     app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
+
+    app.post("/aigc/junwang/gongjian")(_async_aigc_functions_junwang_gongjian)
 
     app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
 

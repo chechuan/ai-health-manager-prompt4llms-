@@ -1943,3 +1943,20 @@ async def truncate_to_limit(text: str, limit: int) -> str:
         truncated = truncated.rstrip() + "。"
 
     return truncated
+
+
+async def filter_user_profile(user_profile):
+    # 只保留需要的字段
+    required_fields = [
+        "age", "gender", "height", "weight", "allergic_history", "surgery_history",
+        "chinese_medicine_disease", "chinese_medicine_symptom", "current_diseases",
+        "severity", "traditional_chinese_medicine_constitution", "constitution_symptom"
+    ]
+
+    # 创建一个新的字典，只保留所需字段
+    filtered_profile = {key: user_profile.get(key) for key in required_fields if key in user_profile}
+
+    return filtered_profile
+
+import pydantic
+print(pydantic.__version__)
