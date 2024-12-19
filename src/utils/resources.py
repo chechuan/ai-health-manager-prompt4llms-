@@ -21,7 +21,7 @@ import requests
 
 # 本地模块导入
 from data.constrant import CACHE_DIR
-from src.utils.module import clock, load_yaml, loadJS
+from src.utils.module import clock, load_yaml, loadJS, intent_init
 from src.utils.database import MysqlConnector
 
 try:
@@ -49,6 +49,7 @@ class InitAllResource:
         self.aclient = openai.AsyncOpenAI()
 
         self.weather_api_config = self.__load_weather_api_config__()
+        self.all_intent, self.com_intent = intent_init()
 
     def __parse_args__(
         self,

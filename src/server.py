@@ -236,6 +236,21 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route("/health/blood_glucose_deal", methods=["post"])
+    async def _health_blood_glucose_deal(request: Request):
+        """血糖预警处理"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_glucose_deal"
+            )
+            ret = expert_model.health_blood_glucose_trend_analysis(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
 
     @app.route("/health/key_extraction", methods=["post"])
     async def _key_extraction(request: Request):

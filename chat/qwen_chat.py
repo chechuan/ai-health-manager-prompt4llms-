@@ -499,9 +499,10 @@ class Chat:
 
         if task == 'verify' and input_prompt:
             intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
-                input_prompt))
+                input_prompt),self.global_share_resource.all_intent,self.global_share_resource.com_intent)
         else:
-            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs),
+                                      self.global_share_resource.all_intent,self.global_share_resource.com_intent)
         if self.intent_map['callout'].get(intent):
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',

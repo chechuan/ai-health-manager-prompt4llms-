@@ -1162,6 +1162,32 @@ class expertModel:
         return pc
 
     @clock
+    async def health_blood_glucose_deal(self, param: Dict) -> str:
+
+        model = "Qwen1.5-32B-Chat"
+        pro = param
+        user_pro = pro.get("user_profile", {})
+        gl = pro.get("gl", "")
+        gl_code = pro.get("gl_code", "")
+        result,content,agent_content,t=glucose_type(gl_code, gl)
+        prompt_template = GLUCOSE_WARNING
+        prompt_vars = {"glucose_data": t+gl+"mmol/L。"+result}
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"血糖预警t: {dumpJS(history)}")
+        response = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        dict_={}
+        dict_['front']=content
+        dict_['user_warning']="血糖结果"+str(float(gl))+"mmol/L。"+content
+        dict_['user_content']=response
+        dict_['sug_agent']=agent_content
+        return dict_
+
+    @clock
     async def health_blood_glucose_warning(self, param: Dict) -> str:
         
         def glucose_type(time, glucose):
@@ -1291,7 +1317,8 @@ class expertModel:
         dict_={}
         dict_['user']=user
         if kw not in ['openfront','openkanban','opencustomer','openmessage','opentarget','openemployee',
-                      'openglucose','openevaluation','openreport','openwellness','openintelligent','openschedule']:
+                      'openglucose','openevaluation','openreport','openwellness','openintelligent',
+                      'openschedule','openfacetonguereport','openpulsereport']:
             kw='other'
         dict_['kw']= kw
         return dict_
