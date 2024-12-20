@@ -161,6 +161,7 @@ class DrugPlanItem(BaseModel):
 
 class JiaheUserProfile(BaseModel):
     age: str = Field("未知", description="年龄")
+    birthday: str = Field("未知", description="出生年月")
     gender: str = Field("未知", description="性别")
     height: str = Field("未知", description="身高")
     weight: str = Field("未知", description="体重")

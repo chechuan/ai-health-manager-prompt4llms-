@@ -1731,18 +1731,6 @@ class HealthExpertModel:
         # 获取用户画像信息
         user_profile = kwargs.get("user_profile", "")
 
-        # # 获取健康关键指标
-        # health_key_indicators = kwargs.get("health_key_indicators", {}).get("data", [])
-        #
-        # # 根据管理目标提取近7日的关键指标数据
-        # management_goals = user_profile.get("management_goals", "")
-        # if management_goals:
-        #     recent_indicators = [indicator for indicator in health_key_indicators if
-        #                          indicator['date'] >= (datetime.today() - timedelta(days=7)).strftime('%Y-%m-%d')]
-        # else:
-        #     recent_indicators = []
-
-
         # 拼接用户画像信息字符串
         user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
 

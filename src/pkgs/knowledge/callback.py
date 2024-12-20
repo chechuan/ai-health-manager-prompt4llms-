@@ -316,7 +316,7 @@ class FuncCall:
         assert cur_time, ValueError("修改日程 time can't be none")
 
         try:
-            task_time_ori = [i for i in schedule if i["task"] == task][0]["time"]
+            task_time_ori = [i for i in schedule if task in i['task']][0]["time"]
         except Exception as err:
             logger.exception(err)
             logger.error(

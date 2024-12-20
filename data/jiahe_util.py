@@ -21,7 +21,8 @@ jiahe_userInfo_map = {
     'taste_preference':'口味偏好',
     'is_specific_menstrual_period':'是否特殊生理期',
     'constitution': '中医体质',
-    'taste_taboo': '口味禁忌'
+    'taste_taboo': '口味禁忌',
+    'birthday': '出生日期'
 }
 
 

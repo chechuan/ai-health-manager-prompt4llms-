@@ -1,5 +1,7 @@
 import yaml, os
 from collections import OrderedDict
+from scipy.signal import find_peaks
+from src.pkgs.models.func_eval_model.daily_image_analysis import get_meal_increase_glucose_periods
 
 def get_func_eval_prompt(name):
     file_path = 'data/prompt_data/func_eval_prompt.yaml'
@@ -24,14 +26,20 @@ def get_daily_blood_glucose_str(daily_blood_glucose):
         bg_str += f"测量时间：{i.get('time', '')}  测量值：{i.get('value', '')}\n"
     return bg_str
 
-def get_daily_diet_str(daily_diet_info):
+def get_daily_diet_str(daily_diet_info, daily_blood_glucose):
     daily_diet_str = ''
-    for i in daily_diet_info:
+    # periods_str = get_meal_increase_glucose_periods(daily_diet_info, daily_blood_glucose)
+    for idx, i in enumerate(daily_diet_info):
         diet_info = ''
         for info in i.get('diet_info', []):
             if info:
                 diet_info += f"{info.get('count', '')}{info.get('unit', '')}{info.get('foodname', '')}，"
         daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
+        # if len(periods_str) == len(daily_diet_info):
+        #     daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}。 {periods_str[idx]}\n"
+        # else:
+        #     daily_diet_str += f"就餐时间：{i.get('diet_time', '')} 就餐食物：{diet_info}。医生当餐评价：{i.get('diet_eval', '无')}\n"
+
     return daily_diet_str if daily_diet_str else '无'
 
 def get_daily_key_bg(bg_info, diet_info):
@@ -48,20 +56,43 @@ def get_daily_key_bg(bg_info, diet_info):
     for info in diet_info:
         time_key = info.get('diet_time', '').split(' ')[-1].split(':')[0]
         if time_key:
-            img_time.append(time_key)
+            img_time.append(info.get('diet_time', '').split(' ')[-1])
     night_low = {}
     day_high = {}
+    peaks = []
+    troughs = []
+    for i in img_time:
+        after_meal_data = []
+        for key in buckets.keys():
+            if int(key) == (int(i.split(':')[0]) - 1):
+                meal_trough_idxs, _ = find_peaks([-float(i['value']) for i in buckets[key]], height=-100)
+                meal_troughs = [x for i, x in enumerate(buckets[key]) if i in meal_trough_idxs]
+                res.extend(sorted(meal_troughs, key=lambda i: float(i['value']))[:3])
+            if (int(key) == int(i.split(':')[0]) + 1) or (int(key) == int(i.split(':')[0]) + 2):
+                after_meal_data.extend(buckets[key])
+                # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
+        meal_peak_idxs, _ = find_peaks([i['value'] for i in after_meal_data], height=0)
+        meal_peaks = [x for i, x in enumerate(after_meal_data) if i in meal_peak_idxs]
+        meal_peaks = sorted(meal_peaks, key=lambda i: float(i['value']), reverse=True)
+        if meal_peaks and float(meal_peaks[0]['value']) > 10.0:
+            res.extend(meal_peaks[:5])
+        else:
+            res.extend(meal_peaks[:3])
+
     for key in buckets.keys():
-        if int(key) in [int(i) - 1 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) in [int(i) + 1 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) in [int(i) + 2 for i in img_time]:
-            res.append(buckets[key][len(buckets[key]) // 3])
-            res.append(buckets[key][len(buckets[key]) // 3 * 2])
-        if int(key) < 6 or int(key) > 21:
+        for i in img_time:
+            if (int(key) == int(i.split(':')[0]) + 1) or (int(key) == int(i.split(':')[0]) + 2):
+                # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
+                for j in buckets[key]:
+                    if i.split(':')[1] == j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
+                    elif i.split(':')[1] < j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
+        if int(key) < 6 or int(key) > 21:  # 夜间时段
+            trough_idxes, _ = find_peaks([-float(i['value']) for i in buckets[key]], height=-100)
+            troughs.extend([x for i, x in enumerate(buckets[key]) if i in trough_idxes])
             for i in buckets[key]:
                 if not night_low:
                     night_low = i
@@ -69,65 +100,134 @@ def get_daily_key_bg(bg_info, diet_info):
                     night_low = i
             if int(key) % 2 == 0:
                 res.append(buckets[key][0])
-        elif 5 < int(key) < 22:
+        elif 5 < int(key) < 22:      # 白天时段
+            peak_idxes, _ = find_peaks([i['value'] for i in buckets[key]], height=0)
+            peaks.extend([x for i, x in enumerate(buckets[key]) if i in peak_idxes])
             res.append(buckets[key][0])
-            for i in buckets[key]:
-                if not day_high:
-                    day_high = i
-                elif day_high['value'] < i['value']:
-                    day_high = i
+            # for i,x in enumerate(buckets[key]):
+            #     if not day_high:
+            #         day_high = x
+            #     elif day_high['value'] < x['value']:
+            #         day_high = x
+    res.extend(sorted(peaks, key=lambda i: float(i['value']), reverse=True)[:3])
+    if len(troughs) > 0:
+        if float(troughs[0]['value']) < 3.9:
+            res.extend(troughs[:3])
+        else:
+            res.append(troughs[0])
     res.append(night_low)
-    res.append(day_high)
+    # res.append(day_high)
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
     res = [dict(t) for t in unique_tuples]
     res = sorted(res, key=lambda item: item.get('time', ''))
     return res
 
-
-daily_diet_eval_prompt = """# 请你扮演一位经验丰富的营养师，对我提交的一日食物信息做出合理评价和建议。
-
+daily_diet_eval_prompt = """# 已知信息
 ## 个人信息：
 {0}
 
 ## 当天饮食及每餐评价信息：
 {1}
 
-## 一日血糖信息：
+## 当天1日关键血糖值：
 {2}
 
-## 管理场景：
+## 当天1日动态血糖分析报告：
 {3}
 
+## 管理场景：
+{4}
+
 # 任务描述
-请你扮演一位经验丰富的营养师，请你对我提交的一日饮食信息做出合理评价和科学建议。
+请你扮演一位经验丰富的营养师，你正在协同医生、运动师、情志调理师、中医师，共同为慢病患者提供全方位的健康管理服务。帮助患者建立并维持健康的生活方式，例如合理饮食、适量运动、科学合理用药等，现在请你对患者提交的一日饮食信息做出合理评价和科学建议。
 
 # 输出要求
- - 你需要根据我的血糖数据、提交的饮食信息以及我的已知信息如疾病等因素综合分析，来输出饮食评价和建议。
- - 输出可能包含的维度有：1.血糖稳定性评估、2.饮食待改善建议2个维度。
- - 整体字数控制在250字以内。
+ - 请你根据患者的已知信息，如血糖数据、提交的饮食信息、现患疾病等因素综合分析，给予患者合理的分析与建议话术。
+ - 输出可能包含的维度有：1.血糖趋势分析、2.营养优化建议，2个维度。
  - 输出的内容要通俗易懂，简单明了，符合营养学观点。
  - 每个维度的评价可以换行显示，严格参考输出示例中的内容和格式。
-## 血糖稳定性评估输出要求
+## 血糖趋势分析输出要求
  - 血糖稳定性请参考餐前餐后血糖值波动、最低值最高值、最大血糖波动的维度来评估，说明具体的波动情况，要客观符合事实。
- - 可以指出餐后血糖波动可能与选择的食物的关系，评价食物选择是否合理。
+ - 可以指出餐后血糖波动可能与选择的食物的关系，评价食物选择是否合理，可以从碳水化合物、蛋白质、脂肪的维度进行评价。
  - 识别异常血糖信息，并给予提醒，比如对低血糖情况应给出建议。
+- 请关注餐后的时间段。
  - 如果没有血糖数据，该评价维度可忽略。
-## 饮食待改善建议
- - 饮食待改善建议主要针对可以优化的问题点着重指导，例如从用餐时间、用餐规律性、食物搭配等维度输出改善建议。
+- 字数不超过150字。
+## 营养优化建议
+ - 若血糖控制稳定，可输出继续保持均衡膳食的鼓励性话术。
+ - 若血糖波动较大，血糖控制不佳，可输出指导应该避免哪类食物，选择哪类营养素或食物的话术。
  - 若一日某餐次的饮食信息有缺失，可以给予提醒规律用餐的重要性。
  - 避免输出123列表。
-  
+- 字数不超过100字。
+
 # 输出示例
-【整体血糖分析】
-看了你的血糖记录，午饭后血糖升得有点高呢，到14了。虽然后来是降下来了，不过还是比较高。
-你这一天血糖起伏挺大的，从早上的12到睡前的4，差了8多，得注意一下，尤其要当心晚上会不会低血糖。
+【血糖趋势分析】
+监测显示{{用餐时段}}后血糖升至{{num_high}}mmol/L。从{{time_start}}的{{num_start}}mmol/L到{{time_end}}的{{num_end}}mmol/L，血糖波动幅度达到{{num_diff}}mmol/L，需要关注夜间低血糖风险。
+分析数据表明，{{meal_time}}餐食中{{nutrient_type}}含量较高，且营养搭配比例欠合理。{{meal_time_2}}营养素构成虽有助于血糖平稳，但{{missing_nutrient}}摄入不足，可能影响血糖稳定性。
+【营养优化建议】
+建议调整{{meal_time}}餐食构成，选择{{low_gi_type}}类食材，适当增加{{fiber_type}}的摄入。{{meal_time_2}}可补充{{protein_type}}，注意保持主食供能。保持{{timing}}用餐规律，控制适量，有助于血糖的稳定。
+可以根据具体情况填入相应的数值和营养素类型，避免具体食物示例带来的误导
+Begins!"""
 
-【原因分析】
-我看你午饭吃红薯啦？红薯升糖比较快，再配上咸菜，这个搭配不太合适。晚饭虽然吃的清淡，主要是蔬菜，血糖是平稳，但就是营养不太够，容易导致血糖降得太低。
 
-【建议】
-午饭🍚的话，建议你换成全麦面包或者燕麦，再多吃点绿叶菜。至于晚饭🐟，得加点肉或豆腐补充蛋白质，主食也不能省，来点糙米饭或全麦面包。这样营养更均衡，血糖也不会忽高忽低的。
-记住🌟：每顿饭都要适量，别吃太多，这样血糖好控制。
+
+daily_diet_degree_prompt = """# 已知信息
+## 个人信息：
+{0}
+
+## 当天饮食及每餐评价信息：
+{1}
+
+## 当天1日关键血糖值：
+{2}
+
+## 当天1日动态血糖分析报告：
+{3}
+
+## 管理场景：
+{4}
+
+# 任务描述
+请你扮演一位经验丰富的营养师，请你对我提交的一日饮食信息做出当天饮食合理等级判定。
+
+# 输出要求
+- 针对用户的一日饮食情况，充分结合用户自身血糖情况，给出用户饮食合理等级。
+- 饮食合理等级列表：['欠佳','尚可','极佳']，输出必须从列表中选择，禁止自己创造。
+
+## 遵循以下格式回复:
+Thought: 结合用户血糖情况和饮食情况,思考当日饮食合理等级
+Output: 输出饮食合理等级
+
+Begins!"""
+
+
+
+diet_image_recog_prompt = """# 你扮演一名健康饮食管理助手，你需要识别出图中食物名称、数量、单位。
+
+## 输出要求：
+- 仔细分析图片，精确识别出所有可见的食材，并对每种食材进行详细的数量统计。
+- 食物名称要尽可能精确到具体食材（如炒花菜、豆芽炒肉、白米饭、紫米饭等），而非泛泛的类别。
+- 根据食材的特点，给出准确且恰当的数量描述和单位。例如，使用'个'来表示完整的水果（如'1个（小）苹果'、'2个橘子'），如果是一半根黄瓜则为'0.5根黄瓜'，用'片'来表示切片的食材（如'3片面包'），对于堆积的食物可以使用'堆'、'把'等（如'1堆瓜子'、'1把葡萄'），对于肉类可以用'掌心大小'、'克'、'块'等来表示分量，蔬菜类可以用'拳头大小'、'克'、'份'等来表示分量。确保所有计数均准确无误，单位使用得当。
+- 输出食物必须来自图片中，禁止自己创造。
+- 如果图片中有不确定种类的食材，则忽略该食材，不输出。
+- 以json格式输出，严格按照`输出格式样例`形式。
+
+## 输出格式样例：
+```json
+[
+    {"foodname": "玉米", "count": "2", "unit": "根"},
+    {"foodname": "苹果", "count": "1", "unit": "个（小）"},
+    {"foodname": "苹果", "count": "1", "unit": "个（中等）"},
+    {"foodname": "黄瓜", "count": "0.5", "unit": "根"},
+    {"foodname": "鸡胸肉", "count": "1", "unit": "掌心大小"},
+    {"foodname": "炒花菜", "count": "1", "unit": "拳头大小"},
+    {"foodname": "芹菜炒肉", "count": "1", "unit": "份"},
+    {"foodname": "五花肉", "count": "3", "unit": "块"},
+    {"foodname": "米饭", "count": "1", "unit": "碗"},
+    {"foodname": "馒头", "count": "0.5", "unit": "块"},
+    {"foodname": "西红柿炒鸡蛋", "count": "1", "unit": "份"}
+]
+```
 
 Begins!"""
 

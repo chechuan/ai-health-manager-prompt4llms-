@@ -217,7 +217,7 @@ def get_intent(text):
         desc = "辅助诊断"
     elif "问诊" in text:
         code = "auxiliary_diagnosis"
-        desc = ("辅助诊断",)
+        desc = "辅助诊断"
     elif "用药" in text:
         code = "drug_rec"
         desc = "用药咨询"
@@ -332,9 +332,9 @@ def get_intent(text):
     # elif "高血压" in text:
     #     code = "chronic_qa"
     #     desc = "高血压知识问答"
-    elif "低血压" in text:
-        code = "hypotensive_consultation"
-        desc = "低血压咨询"
+    elif "血压" in text:
+        code = "bp_consultation"
+        desc = "血压咨询"
     elif "非会议日程管理" in text:
         code = "other_schedule"
         desc = "非会议日程管理"

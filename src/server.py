@@ -60,11 +60,10 @@ from src.utils.module import (
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
-    image_recog,
-    diet_image_recog,
     schedule_tips_modify,
     sport_schedule_tips_modify,
     daily_diet_eval,
+    daily_diet_degree,
 )
 
 
@@ -205,6 +204,22 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
+        
+    @app.route("/health/spe_qa", methods=["post"])
+    async def _health_spe_qa(request: Request):
+        """问题回答"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/spe_qa"
+            )
+            ret = await expert_model.health_spe_qa(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+    
 
     @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
     async def _health_blood_glucose_trend_analysis(request: Request):
@@ -274,6 +289,21 @@ def mount_rule_endpoints(app: FastAPI):
                 request, endpoint="/health/blood_glucose_warning"
             )
             ret = await expert_model.health_blood_glucose_warning(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
+    @app.route("/health/open_extract", methods=["post"])
+    async def _health_open_extract(request: Request):
+        """页面打开"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/open_extract"
+            )
+            ret = await expert_model.health_open_extract(param)
             ret = make_result(items=ret)
         except Exception as err:
             logger.exception(err)
@@ -911,6 +941,26 @@ def create_app():
             logger.exception(err)
             logger.error(traceback.format_exc())
             result = make_result(msg=repr(err), items=param)
+        finally:
+            return result
+
+    @app.route("/func_eval/daily_diet_status", methods=["post"])
+    async def _daily_diet_status(request: Request):
+        """一日饮食状态"""
+        try:
+            param = await accept_param(request, endpoint="/func_eval/daily_diet_status")
+            if not param.get("daily_diet_info", []) or not param.get("daily_blood_glucose", ''):
+                result = make_result(items={}, msg='请检查入参格式', head=402)
+                return result
+            item = await daily_diet_degree(param.get("userInfo", {}),
+                                   param.get("daily_diet_info", []),
+                                   param.get("daily_blood_glucose", ''),
+                                   param.get("management_tag", '血糖管理'))
+            result = make_result(items=item)
+        except Exception as err:
+            logger.exception(err)
+            logger.error(traceback.format_exc())
+            result = make_result(msg=repr(err), items=param,head=402)
         finally:
             return result
 

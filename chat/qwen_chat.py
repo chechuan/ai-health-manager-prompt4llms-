@@ -261,32 +261,33 @@ class Chat:
     def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
-        open_sch_list = ['打开','日程']
-        market_list = ['打开','集市']
-        home_list = ['打开','家居']
-        bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
-        food_purch_list = ['打开食材采购','食材采购','买什么食材','买什么食物', '买点什么食材', '买点什么食物']
-        inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互','语音交互页面','查看聊天','聊天页面', '我的聊天', '看看聊天']
-        # st_key, ed_key = "<|im_start|>", "<|im_end|>"
-        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        gc = ['商量', '医院', '去', '到']
-        # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
-        if sum([1 for i in gc if i in history[-1]['content']]) >= 3:
-            return '拉群共策'
-        if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:
-            return '打开功能页面'
-        if sum([1 for i in inter_info_list if i in history[-1]['content']]) > 0:
-            return '打开功能页面'
-        if sum([1 for i in food_purch_list if i in history[-1]['content']]) > 0:
-            return '生成食材采购清单'
-        if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
-            return '打开功能页面'
-        if sum([1 for i in market_list if i in history[-1]['content']]) >= 2:
-            return '打开功能页面'
-        if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
-            return '打开功能页面'
-        if '换回' in history[-1]['content'] and ('数字人' in history[-1]['content'] or '形象' in history[-1]['content'] or '皮肤' in history[-1]['content']):
-            return '换回数字人皮肤'
+        if kwargs.get('scene_code', 'default') != 'doctor':
+            open_sch_list = ['打开','日程']
+            market_list = ['打开','集市']
+            home_list = ['打开','家居']
+            bp_list = ['血压趋势图','血压录入','血压添加','入录血压','添加血压','历史血压','血压历史']
+            food_purch_list = ['打开食材采购','食材采购','买什么食材','买什么食物', '买点什么食材', '买点什么食物']
+            inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互','语音交互页面','查看聊天','聊天页面', '我的聊天', '看看聊天']
+            # st_key, ed_key = "<|im_start|>", "<|im_end|>"
+            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
+            gc = ['商量', '医院', '去', '到']
+            # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+            if sum([1 for i in gc if i in history[-1]['content']]) >= 3:
+                return '拉群共策'
+            if sum([1 for i in bp_list if i in history[-1]['content']]) > 0:
+                return '打开功能页面'
+            if sum([1 for i in inter_info_list if i in history[-1]['content']]) > 0:
+                return '打开功能页面'
+            if sum([1 for i in food_purch_list if i in history[-1]['content']]) > 0:
+                return '生成食材采购清单'
+            if sum([1 for i in open_sch_list if i in history[-1]['content']]) >= 2:
+                return '打开功能页面'
+            if sum([1 for i in market_list if i in history[-1]['content']]) >= 2:
+                return '打开功能页面'
+            if sum([1 for i in home_list if i in history[-1]['content']]) >= 2:
+                return '打开功能页面'
+            if '换回' in history[-1]['content'] and ('数字人' in history[-1]['content'] or '形象' in history[-1]['content'] or '皮肤' in history[-1]['content']):
+                return '换回数字人皮肤'
         if len(history) > 1:
             h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
                 + f": {i['content']}" for i in history[-5:-1]])
