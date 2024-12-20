@@ -702,6 +702,7 @@ class Chat_v2:
     def pre_fill_param(self, *args, **kwargs):
         """结合业务逻辑，预构建输入"""
         intentCode = kwargs.get("intentCode")
+        print(self.prompt_meta_data["event"])
         if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
             "weight_meas",
             "blood_meas",
