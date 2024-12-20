@@ -309,8 +309,8 @@ def get_intent(text):
         code = "news"
         desc = "新闻"
     elif "BMI" in text:
-        code = "BMI"
-        desc = "BMI"
+        code = "bmi_query"
+        desc = "BMI查询"
     elif "万年历" in text:
         code = "calendar"
         desc = "万年历"

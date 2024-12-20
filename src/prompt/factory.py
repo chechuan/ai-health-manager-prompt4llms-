@@ -175,6 +175,8 @@ class CustomPromptEngine:
             if not kwds.get("tool_in_use"):
                 functions = [all_funcsets[name] for name in function_names if all_funcsets.get(name)]
             else:
+                print(all_funcsets)
+                print(kwds.get("tool_in_use"))
                 functions = [all_funcsets[name] for name in kwds['tool_in_use'] if all_funcsets.get(name)]
         return sys_prompt, functions
 
