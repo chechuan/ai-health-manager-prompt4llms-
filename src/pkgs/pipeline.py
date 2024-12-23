@@ -632,10 +632,11 @@ class Chat_v2:
         input_prompt = kwargs.get("prompt", [])
         if task == "verify" and input_prompt:
             intent, desc = get_intent(
-                self.cls_intent_verify(history, mid_vars, input_prompt)
-            )
+                self.cls_intent_verify(history, mid_vars, input_prompt),
+                self.gsr.all_intent,self.gsr.com_intent)
         else:
-            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs),
+                                      self.gsr.all_intent,self.gsr.com_intent)
         if self.intent_map["callout"].get(intent):
             out_text = {
                 "message": get_doc_role(intent),
