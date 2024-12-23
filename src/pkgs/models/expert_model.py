@@ -1164,28 +1164,29 @@ class expertModel:
     @clock
     async def health_blood_glucose_deal(self, param: Dict) -> str:
 
-        model = "Qwen1.5-32B-Chat"
+        model = "Qwen2-72B-Instruct"
         pro = param
         user_pro = pro.get("user_profile", {})
         gl = pro.get("gl", "")
-        gl_code = pro.get("gl_code", "")
-        result,content,agent_content,t=glucose_type(gl_code, gl)
-        prompt_template = GLUCOSE_WARNING
-        prompt_vars = {"glucose_data": t+gl+"mmol/L。"+result}
+        gl_code = pro.get("gl_code","")
+        today_sport = pro.get("today_sport", "")
+        today_diet = pro.get("today_diet","")
+        prompt_template = GLUCOSE_DEAL
+        prompt_vars = {
+            "user_profile": user_pro,
+            "glucose_data": gl_code + gl + "mmol/L。",
+            "today_sport": today_sport,
+            "today_diet": today_diet}
         sys_prompt = prompt_template.format(**prompt_vars)
 
         history = []
         history.append({"role": "system", "content": sys_prompt})
-        logger.debug(f"血糖预警t: {dumpJS(history)}")
+        logger.debug(f"血糖预警处理: {dumpJS(history)}")
         response = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
-        dict_={}
-        dict_['front']=content
-        dict_['user_warning']="血糖结果"+str(float(gl))+"mmol/L。"+content
-        dict_['user_content']=response
-        dict_['sug_agent']=agent_content
-        return dict_
+        
+        return response
 
     @clock
     async def health_blood_glucose_warning(self, param: Dict) -> str:
