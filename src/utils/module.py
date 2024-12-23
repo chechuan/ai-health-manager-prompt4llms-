@@ -294,6 +294,8 @@ def get_intent(text, all_intent, com_intent):
     for condition, intent in com_intent:
         if condition(text):
             code, desc = intent
+            logger.debug(f"识别出的意图:{text} code:{code}")
+            return code, desc
 
     # 2. 检查简单映射
     for keyword, intent in all_intent:
