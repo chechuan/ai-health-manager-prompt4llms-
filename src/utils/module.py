@@ -161,6 +161,9 @@ def get_intent(text):
     elif "医疗" in text:
         code = "med_health"
         desc = "医疗健康"
+    elif "健康知识" in text:
+        code = "health_qa"
+        desc = "健康知识科普"
     elif "血压测量" in text or "测量血压" in text:
         code = "remind_take_blood_pressure"
         desc = "提醒他人测量血压"
