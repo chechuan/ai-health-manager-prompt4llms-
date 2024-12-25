@@ -298,9 +298,9 @@ def get_intent(text, all_intent, com_intent):
             return code, desc
 
     # 2. 检查简单映射
-    for keyword, intent in all_intent:
+    for keyword in all_intent.keys():
         if keyword in text:
-            code, desc = intent
+            (code, desc) = all_intent[keyword]
             logger.debug(f"识别出的意图:{text} code:{code}")
             return code, desc
 
