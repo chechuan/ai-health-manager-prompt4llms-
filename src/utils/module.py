@@ -173,6 +173,7 @@ def intent_init():
             "血糖": ("blood_glucose_counseling", "血糖咨询"),
             "低血压": ("hypotensive_consultation", "低血压咨询"),
             "BMI": ("BMI", "BMI"),
+            "健康知识咨询": ("health_qa", "健康知识科普"),
         }
 
         # ==================== 饮食营养相关 ====================

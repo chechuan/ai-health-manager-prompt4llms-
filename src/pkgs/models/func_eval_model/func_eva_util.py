@@ -167,7 +167,7 @@ daily_diet_eval_prompt = """# 已知信息
 【营养优化建议】
 建议调整{{meal_time}}餐食构成，选择{{low_gi_type}}类食材，适当增加{{fiber_type}}的摄入。{{meal_time_2}}可补充{{protein_type}}，注意保持主食供能。保持{{timing}}用餐规律，控制适量，有助于血糖的稳定。
 可以根据具体情况填入相应的数值和营养素类型，避免具体食物示例带来的误导
-Begins!
+
 Begins!"""
 
 
