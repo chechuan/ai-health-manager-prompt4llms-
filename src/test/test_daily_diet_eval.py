@@ -1,10 +1,10 @@
 import sys, os
 import xlrd
-import xlwt
+# import xlwt
 import requests
 import json
 import time
-import xlsxwriter
+# import xlsxwriter
 from typing import OrderedDict
 from scipy.signal import find_peaks
 

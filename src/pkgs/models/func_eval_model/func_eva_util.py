@@ -2,6 +2,7 @@ import yaml, os
 from collections import OrderedDict
 from scipy.signal import find_peaks
 from src.pkgs.models.func_eval_model.daily_image_analysis import get_meal_increase_glucose_periods
+from datetime import datetime
 
 def get_func_eval_prompt(name):
     file_path = 'data/prompt_data/func_eval_prompt.yaml'
@@ -42,6 +43,17 @@ def get_daily_diet_str(daily_diet_info, daily_blood_glucose):
 
     return daily_diet_str if daily_diet_str else '无'
 
+def get_meal_name(time_str):
+    meal_time = datetime.strptime(time_str, '%H:%M:%S')
+    if meal_time <= datetime.strptime('10:30:00', '%H:%M:%S'):
+        return '早餐'
+    elif datetime.strptime('14:30:00', '%H:%M:%S') > meal_time > datetime.strptime('10:30:00', '%H:%M:%S'):
+        return '午餐'
+    elif datetime.strptime('17:30:00', '%H:%M:%S') < meal_time < datetime.strptime('22:00:00', '%H:%M:%S'):
+        return '晚餐'
+    else:
+        return '加餐'
+
 def get_daily_key_bg(bg_info, diet_info):
     res = []
     buckets = OrderedDict()
@@ -61,6 +73,7 @@ def get_daily_key_bg(bg_info, diet_info):
     day_high = {}
     peaks = []
     troughs = []
+    meals_minmax_bg = {}
     for i in img_time:
         after_meal_data = []
         for key in buckets.keys():
@@ -68,12 +81,33 @@ def get_daily_key_bg(bg_info, diet_info):
                 meal_trough_idxs, _ = find_peaks([-float(i['value']) for i in buckets[key]], height=-100)
                 meal_troughs = [x for i, x in enumerate(buckets[key]) if i in meal_trough_idxs]
                 res.extend(sorted(meal_troughs, key=lambda i: float(i['value']))[:3])
-            if (int(key) == int(i.split(':')[0]) + 1) or (int(key) == int(i.split(':')[0]) + 2):
+            target_time = datetime.strptime(i, '%H:%M:%S')
+            if int(key) == int(i.split(':')[0]):
+                target_time = datetime.strptime(i, '%H:%M:%S')
+                after_meal_data.extend([entry for entry in buckets[key] if datetime.strptime(entry['time'].split(' ')[1].strip(), '%H:%M:%S') >= target_time])
+            if int(key) == int(i.split(':')[0]) + 2:
+                target_time = datetime.strptime(i[3:].strip(), '%M:%S')
+                after_meal_data.extend([entry for entry in buckets[key] if datetime.strptime(entry['time'].split(' ')[1][3:].strip(), '%M:%S') <= target_time])
+            if int(key) == int(i.split(':')[0]) + 1:
                 after_meal_data.extend(buckets[key])
                 # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
         meal_peak_idxs, _ = find_peaks([i['value'] for i in after_meal_data], height=0)
         meal_peaks = [x for i, x in enumerate(after_meal_data) if i in meal_peak_idxs]
         meal_peaks = sorted(meal_peaks, key=lambda i: float(i['value']), reverse=True)
+
+        min_bg = ''
+        max_bg = ''
+        for d in after_meal_data:
+            if not min_bg:
+                min_bg = d['value']
+            if float(d['value']) < float(min_bg):
+                min_bg = d['value']
+            if not max_bg:
+                max_bg = d['value']
+            if float(d['value']) > float(max_bg):
+                max_bg = d['value']
+        meals_minmax_bg[get_meal_name(i)] = [min_bg, max_bg]
+
         if meal_peaks and float(meal_peaks[0]['value']) > 10.0:
             res.extend(meal_peaks[:5])
         else:
@@ -120,7 +154,14 @@ def get_daily_key_bg(bg_info, diet_info):
     unique_tuples = set(tuple(sorted(d.items())) for d in res)
     res = [dict(t) for t in unique_tuples]
     res = sorted(res, key=lambda item: item.get('time', ''))
+    return res, get_meals_bg_str(meals_minmax_bg)
+
+def get_meals_bg_str(bg):
+    res = '\n3. 餐后2小时内血糖极值变化：\n'
+    for key in bg.keys():
+        res += f'   - {key}后2小时内: 血糖最小值：{bg[key][0]}   血糖最大值：{bg[key][1]}\n'
     return res
+
 
 daily_diet_eval_prompt = """# 已知信息
 ## 个人信息：
@@ -134,9 +175,10 @@ daily_diet_eval_prompt = """# 已知信息
 
 ## 当天1日动态血糖分析报告：
 {3}
+{4}
 
 ## 管理场景：
-{4}
+{5}
 
 # 任务描述
 请你扮演一位经验丰富的营养师，你正在协同医生、运动师、情志调理师、中医师，共同为慢病患者提供全方位的健康管理服务。帮助患者建立并维持健康的生活方式，例如合理饮食、适量运动、科学合理用药等，现在请你对患者提交的一日饮食信息做出合理评价和科学建议。
