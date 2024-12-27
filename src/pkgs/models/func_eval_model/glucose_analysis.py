@@ -147,6 +147,8 @@ class GlucoseAnalyzer:
     def analyze_glucose_data(self, raw_data) -> Dict[str, Any]:
         """主分析函数"""
         # 解析数据
+        if not raw_data:
+            return {}
         parsed_data = []
         for info in raw_data:
             time_str = info['time']

@@ -24,6 +24,8 @@ def get_sch_str(schedule):
 def get_daily_blood_glucose_str(daily_blood_glucose):
     bg_str = ''
     for i in daily_blood_glucose:
+        if not i:
+            continue
         bg_str += f"测量时间：{i.get('time', '')}  测量值：{i.get('value', '')}\n"
     return bg_str
 
@@ -226,9 +228,10 @@ daily_diet_degree_prompt = """# 已知信息
 
 ## 当天1日动态血糖分析报告：
 {3}
+{4}
 
 ## 管理场景：
-{4}
+{5}
 
 # 任务描述
 请你扮演一位经验丰富的营养师，请你对我提交的一日饮食信息做出当天饮食合理等级判定。

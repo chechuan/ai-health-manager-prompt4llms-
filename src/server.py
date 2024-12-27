@@ -964,7 +964,7 @@ def create_app():
         """一日饮食状态"""
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_status")
-            if not param.get("daily_diet_info", []) or not param.get("daily_blood_glucose", ''):
+            if not param.get("daily_diet_info", []):
                 result = make_result(items={}, msg='请检查入参格式', head=402)
                 return result
             item = await daily_diet_degree(param.get("userInfo", {}),
