@@ -229,7 +229,7 @@ async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, mana
     daily_diet_str = get_daily_diet_str(daily_diet_info, daily_blood_glucose)
     prompt = daily_diet_degree_prompt
     userInfo_str = get_userInfo(userInfo)
-    daily_bg = get_daily_key_bg(daily_blood_glucose, daily_diet_info)
+    daily_bg, meal_minmax_bg = get_daily_key_bg(daily_blood_glucose, daily_diet_info)
     bg_str = get_daily_blood_glucose_str(daily_bg)
     glucose_analyses = GlucoseAnalyzer().analyze_glucose_data(daily_blood_glucose)
     messages = [
@@ -240,13 +240,14 @@ async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, mana
                 daily_diet_str,
                 bg_str,
                 glucose_analyses.get('summary', ''),
+                meal_minmax_bg,
                 management_tag,
             ),
         }
     ]
     logger.debug(
         "一日饮食等级模型输入： " + prompt.format(userInfo_str, daily_diet_str, bg_str,
-                                                     glucose_analyses.get('summary', ''), management_tag)
+                                                     glucose_analyses.get('summary', ''),meal_minmax_bg, management_tag)
     )
     start_time = time.time()
     generate_text = await acallLLM(
