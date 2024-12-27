@@ -24,6 +24,8 @@ def get_sch_str(schedule):
 def get_daily_blood_glucose_str(daily_blood_glucose):
     bg_str = ''
     for i in daily_blood_glucose:
+        if not i:
+            continue
         bg_str += f"测量时间：{i.get('time', '')}  测量值：{i.get('value', '')}\n"
     return bg_str
 
