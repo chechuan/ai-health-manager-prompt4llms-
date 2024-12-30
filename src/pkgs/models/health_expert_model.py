@@ -27,6 +27,7 @@ from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
+from langfuse import Langfuse
 
 
 class HealthExpertModel:
@@ -35,44 +36,100 @@ class HealthExpertModel:
         self.gsr = gsr
         self.regist_aigc_functions()
 
+    from typing import Union, Dict, Generator
+    from langfuse import Langfuse
+    import time
+    import logging
+
+    logger = logging.getLogger(__name__)
+
     async def aaigc_functions_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
+
+        # 获取事件和模型
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
-        model_args: dict = (
-            {
-                "temperature": 0,
-                "top_p": 1,
-                "repetition_penalty": 1.0,
-            }
-            if not model_args
-            else model_args
-        )
-        prompt_template: str = (
-            prompt_template
-            if prompt_template
-            else self.gsr.get_event_item(event)["description"]
-        )
-        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+        model_args: dict = model_args or {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        }
 
-        prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
-
-        content: Union[str, Generator] = await acallLLM(
-            model=model,
-            query=prompt,
-            **model_args,
+        # 初始化 Langfuse 客户端
+        langfuse_client = Langfuse(
+            secret_key="sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af",
+            public_key="pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206",
+            host="http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cn"
         )
-        if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
-        return content
+
+        # 创建 Trace 对象，追踪本次调用
+        trace = langfuse_client.trace(
+            name=f"{_event}_trace",  # 追踪名称
+            user_id=kwargs.get("user_id", "unknown_user"),  # 用户ID
+            release="v1.0.0"  # 版本号
+        )
+
+        try:
+            # 尝试从 Langfuse 获取 Prompt
+            try:
+                prompt_template = langfuse_client.get_prompt(event).compile(**prompt_vars)
+                logger.info(f"Prompt fetched and compiled from Langfuse for event '{event}': {prompt_template}")
+            except Exception as e:
+                # 如果 Langfuse 调用失败，则回退到本地逻辑
+                logger.error(f"Error fetching prompt from Langfuse for event '{event}': {e}")
+                prompt_template = (
+                    prompt_template
+                    if prompt_template
+                    else self.gsr.get_event_item(event)["description"]
+                )
+
+            # 如果没有获取到有效 Prompt，抛出异常
+            if not prompt_template:
+                raise ValueError(f"Failed to retrieve prompt for event: {_event}")
+
+            logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+
+            # 替换变量生成最终 Prompt
+            prompt = prompt_template.format(**prompt_vars)
+
+            # 在 Trace 中记录 Prompt 信息
+            trace.log_event("Prompt Info", {"prompt": prompt, "model_args": model_args})
+
+            # 调用大模型并记录时间
+            start_time = time.time()
+            content: Union[str, Generator] = await acallLLM(
+                model=model,
+                query=prompt,
+                **model_args,
+            )
+            end_time = time.time()
+
+            # 在 Trace 中记录模型输出
+            trace.log_event("LLM Output", {"model": model, "output": content})
+            trace.log_event("Duration", {"time_taken": end_time - start_time})
+
+            # 记录输出日志
+            if isinstance(content, str):
+                logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+
+            return content
+
+        except Exception as e:
+            # 捕获异常并记录到 Trace
+            trace.log_event("Error", {"error": str(e)})
+            logger.error(f"Error during AIGC generation: {e}")
+            raise
+
+        finally:
+            # 提交 Trace
+            trace.end()
 
     async def __compose_user_msg__(
         self,
