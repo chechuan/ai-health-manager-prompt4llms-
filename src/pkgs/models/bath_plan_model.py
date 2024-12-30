@@ -43,7 +43,7 @@ class BathPlanModel:
         spring_effects_data = self.data['bath_category_effects']
 
         # 将温泉作用数据转换为字典
-        spring_effects_dict = {row['category']: row['effect'] for row in spring_effects_data}
+        spring_effects_dict = {row['category']: row for row in spring_effects_data}
         # 将泡浴方案数据转换为字典
         bath_plan_dict = {row['problem_combination']: row['bath_plan'] for row in bath_plan_data}
 
@@ -66,13 +66,14 @@ class BathPlanModel:
 
             suggested_time = main_pool_time if pool_type == "主池" else secondary_pool_time
 
-            effect = spring_effects_data.get(spring_name, "未知作用")
+            effect_data = spring_effects_data.get(spring_name, {"effect": "未知作用", "code": None})
 
             bath_plan.append({
                 "spring_name": spring_name,
                 "pool_type": pool_type,
                 "suggested_time": suggested_time,
-                "effect": effect
+                "effect": effect_data.get("effect"),
+                "code": effect_data.get("code")
             })
 
         if not is_default:
@@ -80,11 +81,13 @@ class BathPlanModel:
                 extra_spring = "男士泉" if gender == "男" else "女士泉"
                 pool_type = "主池" if random.choice([True, False]) else "副池"
                 suggested_time = main_pool_time if pool_type == "主池" else secondary_pool_time
+                extra_effect_data = spring_effects_data.get(extra_spring, {"effect": "未知作用", "code": None})
                 bath_plan.append({
                     "spring_name": extra_spring,
                     "pool_type": pool_type,
                     "suggested_time": suggested_time,
-                    "effect": spring_effects_data.get(extra_spring, "未知作用")
+                    "effect": extra_effect_data.get("effect"),
+                    "code": extra_effect_data.get("code")
                 })
 
         return bath_plan
