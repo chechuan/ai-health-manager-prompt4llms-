@@ -106,3 +106,4 @@ opentelemetry-test-utils==0.47b0
 opencv-python
 scipy==1.13.1
 pillow
+langfuse
