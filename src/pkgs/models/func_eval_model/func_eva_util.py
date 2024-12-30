@@ -59,6 +59,8 @@ def get_meal_name(time_str):
 def get_daily_key_bg(bg_info, diet_info):
     res = []
     buckets = OrderedDict()
+    if not bg_info:
+        bg_info = []
     for info in bg_info:
         time = info.get('time', '').split(' ')[-1]
         key = buckets.get(time.split(':')[0], '')
