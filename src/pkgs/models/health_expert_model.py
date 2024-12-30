@@ -27,6 +27,8 @@ from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
+from langfuse import Langfuse
+import time
 
 
 class HealthExpertModel:
@@ -36,12 +38,12 @@ class HealthExpertModel:
         self.regist_aigc_functions()
 
     async def aaigc_functions_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
@@ -73,6 +75,128 @@ class HealthExpertModel:
         if isinstance(content, str):
             logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
+
+    async def aaigc_functions_general_new(
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+
+        # 初始化 Langfuse 客户端
+        langfuse_client = Langfuse(
+            secret_key="sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af",
+            public_key="pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206",
+            host="http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cn"
+        )
+
+        # 创建 Trace 对象
+        trace = langfuse_client.trace(
+            name=f"{_event}_trace",
+            user_id=kwargs.get("user_id", "unknown_user"),
+            release="v1.0.0"
+        )
+
+        # 获取事件和模型
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = model_args or {
+            "temperature": 0,
+            "top_p": 1,
+            "repetition_penalty": 1.0,
+        }
+
+        # 初始化 Prompt
+        try:
+            # 尝试从 Langfuse 获取 Prompt
+            prompt_template = langfuse_client.get_prompt(event).compile(**prompt_vars)
+            trace.event(
+                name="Langfuse Prompt Success",
+                input={"event": event, "prompt_vars": prompt_vars},
+                output={"prompt_template": prompt_template}
+            )
+            logger.info(f"Successfully fetched and compiled prompt from Langfuse for event: {event}")
+            print(f"Prompt template fetched from Langfuse: {prompt_template}")  # 打印提示模板
+
+        except Exception as e:
+            # 如果 Langfuse 调用失败，回退到本地逻辑
+            logger.error(f"Failed to fetch prompt from Langfuse for event: {event}, using fallback. Error: {e}")
+            trace.event(
+                name="Langfuse Prompt Fallback",
+                input={"event": event},
+                output={"error": str(e)}
+            )
+            prompt_template = (
+                prompt_template
+                if prompt_template
+                else self.gsr.get_event_item(event)["description"]
+            )
+
+        # 如果 Prompt 模板依然为空，抛出异常
+        if not prompt_template:
+            trace.event(
+                name="Prompt Failure",
+                input={"event": event},
+                output={"error": "Prompt template is empty after fallback"}
+            )
+            raise ValueError(f"Failed to retrieve prompt template for event: {_event}")
+
+        # 替换变量生成最终 Prompt
+        try:
+            prompt = prompt_template.format(**prompt_vars)
+            trace.event(
+                name="Prompt Compilation",
+                input={"prompt_template": prompt_template, "prompt_vars": prompt_vars},
+                output={"compiled_prompt": prompt}
+            )
+            print(f"Final assembled prompt: {prompt}")  # 打印组装后的提示内容
+        except KeyError as e:
+            logger.error(f"Error formatting prompt: missing key {e}")
+            trace.event(
+                name="Prompt Compilation Error",
+                input={"prompt_template": prompt_template, "prompt_vars": prompt_vars},
+                output={"error": f"Missing key: {e}"}
+            )
+            raise
+
+        # 调用大模型
+        try:
+            start_time = time.time()
+            content: Union[str, Generator] = await acallLLM(
+                model=model,
+                query=prompt,
+                **model_args,
+            )
+            end_time = time.time()
+            trace.event(
+                name="Model Invocation",
+                input={"model": model, "prompt": prompt, "model_args": model_args},
+                output={"output": content, "time_taken": end_time - start_time}
+            )
+
+            # 记录模型返回内容
+            if isinstance(content, str):
+                logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+            return content
+
+        except Exception as e:
+            logger.error(f"Error during model invocation for event: {event}, Error: {e}")
+            trace.event(
+                name="Model Invocation Error",
+                input={"model": model, "prompt": prompt, "model_args": model_args},
+                output={"error": str(e)}
+            )
+            raise
+
+        finally:
+            # 提交 Trace
+            trace.update(
+                state="completed" if "content" in locals() else "error",
+                properties={"final_status": "success" if "content" in locals() else "failed"}
+            )
 
     async def __compose_user_msg__(
         self,
@@ -619,6 +743,89 @@ class HealthExpertModel:
         )
 
         return content
+
+    async def aigc_functions_test1230(self, **kwargs) -> str:
+        """
+        三济康养方案总则
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxllc1eq0ukitru9tjf
+
+        根据用户画像和病历信息生成康养方案总则。
+
+        参数:
+            kwargs (dict): 包含用户画像和病历信息的参数字典
+
+        返回:
+            str: 生成的康养方案总则内容
+        """
+
+        # # 必填字段和至少需要一项的参数列表
+        # required_fields = {
+        #     "user_profile": [
+        #         "age",
+        #         "gender",
+        #         "height",
+        #         "weight",
+        #         "bmi",
+        #         "current_diseases",
+        #     ]
+        # }
+        # at_least_one = ["user_profile", "medical_records", "key_indicators"]
+        #
+        # # 验证必填字段
+        # if not any(kwargs.get(param) for param in at_least_one):
+        #     raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
+        #
+        # # 如果提供了 user_profile，则检查 required_fields 是否完整
+        # if kwargs.get("user_profile"):
+        #     user_profile = kwargs["user_profile"]
+        #     missing_fields = [
+        #         field for field in required_fields["user_profile"] if not user_profile.get(field)
+        #     ]
+        #     if missing_fields:
+        #         raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
+        #
+        # # 获取用户画像信息
+        # user_profile = kwargs.get("user_profile", {})
+        #
+        # # 组合用户画像信息字符串
+        # user_profile_str = await self.__compose_user_msg__(
+        #     "user_profile", user_profile=user_profile
+        # )
+        #
+        # # 使用工具类方法检查并计算基础代谢率（BMR）
+        # bmr = await check_and_calculate_bmr(user_profile)
+        # user_profile_str += f"基础代谢:\n{bmr}\n"
+        #
+        # # 组合病历信息字符串
+        # medical_records_str = await self.__compose_user_msg__(
+        #     "medical_records", medical_records=kwargs.get("medical_records")
+        # )
+        #
+        # # 组合消息字符串
+        # messages_str = await self.__compose_user_msg__(
+        #     "messages", messages=kwargs.get("messages", "")
+        # )
+        _event = "三济康养方案"
+        tag = kwargs.get("tag")
+
+        # 构建提示变量
+        prompt_vars = {
+            "tag": tag
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用的 AIGC 函数并返回内容
+        content: str = await self.aaigc_functions_general_new(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        return content
+
 
     async def aigc_functions_dietary_guidelines_generation(self, **kwargs) -> str:
         """饮食调理原则生成"""

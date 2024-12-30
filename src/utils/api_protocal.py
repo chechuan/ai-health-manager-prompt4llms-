@@ -1010,6 +1010,7 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_energy_treatment_guideline_generation",
         "aigc_functions_energy_treatment_detailed_generation",
         "aigc_functions_health_analysis_advice_generation",
+        "aigc_functions_test1230"
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1261,6 +1262,13 @@ class SanJiKangYangRequest(BaseModel):
         description="食物质量",
         examples=[
             '2片'
+        ],
+    )
+    tag: Union[str, None] = Field(
+        None,
+        description="",
+        examples=[
+            ''
         ],
     )
     diet_status: Union[str, None] = Field(
