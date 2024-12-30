@@ -181,7 +181,8 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
         his = item
     his_str = get_history_info(his[-2:])
     sch_str = get_sch_str(schedule)
-    prompt = get_func_eval_prompt('sport_schedule_recog_prompt')
+    # prompt = get_func_eval_prompt('sport_schedule_recog_prompt')
+    prompt = sport_schedule_recog_prompt
     messages = [
         {
             "role": "user",
@@ -215,9 +216,9 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}') + 1].replace('\n\\', '').replace('\n', '').replace(' ', '')
     content = json.loads(generate_text.strip())
     if not content.get('is_modify'):
-        return {"is_modify":False, "modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
+        return {"is_modify":False, "category": "","modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
     else:
-        return {"is_modify":True, "modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
+        return {"is_modify":True, "category": content.get('category', ''),"modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
 
 
 async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
