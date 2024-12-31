@@ -218,7 +218,8 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     if not content.get('is_modify'):
         return {"is_modify":False, "category": "","modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
     else:
-        return {"is_modify":True, "category": content.get('category', ''),"modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
+        cat_code = sport_category_mapping.get(content.get('category', ''),'HS002')
+        return {"is_modify":True, "category": cat_code,"modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
 
 
 async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):

@@ -4,6 +4,21 @@ from scipy.signal import find_peaks
 from src.pkgs.models.func_eval_model.daily_image_analysis import get_meal_increase_glucose_periods
 from datetime import datetime
 
+sport_category_mapping = {
+    '血糖异常提示': 'HS001',
+    '身体不适': 'HS002',
+    '急性疾病': 'HS003',
+    '慢性病急性发作': 'HS004',
+    '检查异常': 'HS005',
+    '低血糖症状': 'HS006',
+    '糖尿病并发症': 'HS007',
+    '环境因素': 'HS008',
+    '生活习惯': 'HS009',
+    '不适症状': 'HS010',
+    '女性特殊时期': 'HS011',
+    '突发事件': 'HS012'
+}
+
 def get_func_eval_prompt(name):
     file_path = 'data/prompt_data/func_eval_prompt.yaml'
     dic = yaml.load(open(file_path, encoding="utf-8"), Loader=yaml.FullLoader)
