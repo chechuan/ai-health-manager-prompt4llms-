@@ -193,6 +193,12 @@ class CustomChatAuxiliary(CustomChatModel):
                 else:
                     content = f"Observation: {i['content']}"
                 messages.append(DeltaMessage(role="user", content=content))
+            if i["role"] == "doctor":
+                if i.get("function_call"):
+                    content = f"Thought: {i['content']}\nDoctor: {i['function_call']['arguments']}"
+                else:
+                    content = f"{i['content']}"
+                messages.append(DeltaMessage(role="assistant", content=content))
         messages = [system_message] + messages
         for idx, n in enumerate(messages):
             messages[idx] = n.dict()
