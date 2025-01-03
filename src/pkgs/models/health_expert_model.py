@@ -21,14 +21,19 @@ from src.utils.module import (
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
-    filter_user_profile, replace_you
+    filter_user_profile, replace_you, prepare_question_list
 )
+from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 from langfuse import Langfuse
 import time
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import re
+from Levenshtein import ratio
 
 
 class HealthExpertModel:
@@ -2597,6 +2602,161 @@ class HealthExpertModel:
         )
 
         return energy_treatment_detailed_guideline
+
+    def retrieve_answer(self, user_question: str, threshold: float = 0.8) -> Dict[
+        str, Union[str, List[str], bool]]:
+        """
+        使用多种匹配方式（正则、编辑距离、TF-IDF）检索答案，动态调整权重和阈值
+
+        参数:
+            user_question (str): 用户的问题
+            threshold (float): 匹配的最低相似度阈值（默认 0.7）
+
+        返回:
+            dict: 包含答案及猜你想问的结构
+        """
+        best_match = None
+        highest_score = 0
+
+        question_list = []
+        question_map = {}
+
+        # 构建问题列表及映射
+        for item in self.gsr.jia_kang_bao_data:
+            main_question = item.get("question", "")
+            question_list.append(main_question)
+            question_map[main_question] = item
+            for similar_question in item.get("similar_questions", []):
+                question_list.append(similar_question)
+                question_map[similar_question] = item
+
+        # 优先尝试正则匹配
+        for question in question_list:
+            if re.search(re.escape(user_question), question, re.IGNORECASE):
+                return {
+                    "answer": question_map[question].get("answer", "未找到答案"),
+                    "output_guess": question_map[question].get("tags", {}).get("output_guess", False),
+                    "guess_you_want": question_map[question].get("guess_you_want", []),
+                }
+
+        # 尝试编辑距离匹配
+        for question in question_list:
+            score = ratio(user_question.lower(), question.lower())
+            if score > highest_score:
+                highest_score = score
+                best_match = question_map[question]
+
+        # 如果编辑距离匹配分数达到阈值，返回结果
+        if highest_score >= threshold:
+            return {
+                "answer": best_match.get("answer", "未找到答案"),
+                "output_guess": best_match.get("tags", {}).get("output_guess", False),
+                "guess_you_want": best_match.get("guess_you_want", []),
+            }
+
+        # 最后尝试 TF-IDF
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(question_list + [user_question])
+        cosine_similarities = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1]).flatten()
+        tfidf_highest_index = cosine_similarities.argmax()
+        tfidf_highest_score = cosine_similarities[tfidf_highest_index]
+
+        if tfidf_highest_score >= threshold:
+            best_match_question = question_list[tfidf_highest_index]
+            best_match_item = question_map[best_match_question]
+            return {
+                "answer": best_match_item.get("answer", "未找到答案"),
+                "output_guess": best_match_item.get("tags", {}).get("output_guess", False),
+                "guess_you_want": best_match_item.get("guess_you_want", []),
+            }
+
+        # 如果未匹配到，返回默认结果
+        return None
+
+    async def aigc_functions_jia_kang_bao_support(self, **kwargs) -> Dict:
+        """
+        家康宝问题检索支持（带有猜你想问的逻辑）
+
+        参数:
+            kwargs: 包含以下键的参数字典：
+                - user_question (str): 用户的问题
+                其他可选参数
+
+        返回:
+            dict: 包含答案和猜你想问的结构
+        """
+        # 获取用户问题
+        user_question = kwargs.get("user_question", "")
+        if not user_question:
+            raise ValueError("参数 user_question 不能为空")
+
+        # 首先尝试使用正则匹配
+        answer = self.retrieve_answer(user_question)
+        if answer:
+            return answer
+
+        # 如果正则未匹配，调用模型生成
+        messages = await self.__compose_user_msg__(
+            "messages", messages=kwargs.get("messages", ""), role_map={"assistant": "助手", "user": "客户"}
+        )
+
+        question_list = prepare_question_list(self.gsr.jia_kang_bao_data)
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        prompt_vars = {
+            "question_list": question_list,
+            "user_question": user_question,
+            "messages": messages,
+        }
+
+        # 使用通用生成方法调用模型
+        result = await self.aaigc_functions_general(
+            _event="家康宝问题检索支持",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs,
+        )
+
+        # 模型返回结果处理
+        try:
+            # 使用正则解析输出，提取 `Matched Question`
+            matched_question = self.parse_matched_question(result)
+
+            if matched_question:
+                # 查找匹配问题的 ID 或直接返回答案
+                return self.retrieve_answer(matched_question)
+
+        except Exception as e:
+            # 记录错误日志
+            logger.error(f"解析模型输出失败: {e}")
+
+        # 如果未匹配，返回默认结构
+        return {
+            "answer": None,
+            "output_guess": False,
+            "guess_you_want": [],
+        }
+
+    def parse_matched_question(self, output: str) -> str:
+        """
+        从模型输出中提取 `Matched Question`
+
+        参数:
+            output (str): 模型输出的完整文本
+
+        返回:
+            str: 提取的匹配问题
+        """
+        import re
+
+        matched_question_pattern = r"Matched Question: (.+)"
+        match = re.search(matched_question_pattern, output)
+        return match.group(1) if match else None
+
 
 if __name__ == "__main__":
     gsr = InitAllResource()

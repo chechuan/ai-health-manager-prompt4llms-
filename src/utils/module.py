@@ -191,12 +191,9 @@ def get_intent(text):
     elif "温泉知识" in text:
         code = "spa_knowledge"
         desc = "温泉知识"
-    elif "查看行程方案结果" in text:
-        code = "itinerary_result_view"
-        desc = "查看行程方案结果"
-    elif "查看温泉方案结果" in text:
-        code = "spa_plan_result_view"
-        desc = "查看温泉方案结果"
+    elif "家康宝" in text:
+        code = "jkbao_consult"
+        desc = "家康宝服务咨询"
     elif "功能页面" in text and "打开" in text:
         code = "open_Function"
         desc = "打开功能页面"
@@ -601,27 +598,30 @@ def replace_you(text) -> str:
         return f"替换过程中发生错误: {str(e)}"
 
 
-async def response_generator(response, error: bool = False) -> AsyncGenerator:
+async def response_generator(response, error: bool = False, replace: bool = True) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
     """
     if not error:
         async for chunk in response:
-            # if chunk.object == "text_completion":
             if not chunk.object or "chat" not in chunk.object:
                 content = chunk.choices[0].text
             else:
                 content = chunk.choices[0].delta.content
             if content:
-                # 替换“您” -> “你”
-                content = replace_you(content)  # 在这里调用统一替换方法
+                # 根据参数控制是否替换
+                if replace:
+                    content = replace_you(content)
                 chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
                 yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
         chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     else:
         chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
-        chunk_resp.message = replace_you(response)  # 错误消息替换
+        # 根据参数控制是否替换
+        if replace:
+            chunk_resp.message = replace_you(response)
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
+
 
 
 async def construct_naive_response_generator(response: str) -> AsyncGenerator:
@@ -1958,5 +1958,52 @@ async def filter_user_profile(user_profile):
 
     return filtered_profile
 
-import pydantic
-print(pydantic.__version__)
+
+def prepare_question_list(data):
+    """
+    准备问题列表，将 `question` 和 `similar_questions` 合并，形成一个换行格式的字符串列表。
+    同时排除 `guess_you_want` 中的内容被包含在其他问题或相似问题中的条目，
+    或者当 `guess_you_want` 为空时，检查主问题是否已存在。
+
+    参数:
+        data (list): 原始 JSON 数据
+
+    返回:
+        str: 格式化为换行字符串的所有问题列表
+    """
+    # 构建全局的问题集合
+    all_questions = set()  # 使用集合来自动去重
+
+    for item in data:
+        # 获取主问题和相似问题的列表
+        combined_questions = [item.get("question", "")]
+        combined_questions.extend(item.get("similar_questions", []))
+
+        # 将当前条目的问题加入到集合中
+        all_questions.update(combined_questions)
+
+    # 将集合转换为格式化的字符串
+    formatted_list = "[\n"
+    for question in sorted(all_questions):  # 排序以保持输出一致
+        formatted_list += f'    "{question}",\n'
+    formatted_list = formatted_list.rstrip(",\n")  # 去掉最后的逗号和换行符
+    formatted_list += "\n]"
+
+    return formatted_list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

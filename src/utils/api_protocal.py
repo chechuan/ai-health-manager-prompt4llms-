@@ -796,6 +796,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_physician_consultation_decision_support_v2",
         "aigc_functions_bp_warning_generation",
         "aigc_functions_tcm_consultation_decision_support",
+        "aigc_functions_jia_kang_bao_support"
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -803,6 +804,7 @@ class OutpatientSupportRequest(BaseModel):
         examples=[[{"stream": False}]],
     )
     user_profile: Optional[UserProfile] = None
+    user_question: Optional[str] = Field(None, description="用户家康宝问题")
     messages: Optional[List[ChatMessage]] = Field(
         None,
         description="对话历史",

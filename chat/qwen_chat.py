@@ -295,6 +295,8 @@ class Chat:
             h_p = "无"
         prefix = "Question" if history[-1]['role'] == "user" else "Answer"
         query = f"{prefix}: {history[-1]['content']}"
+        print(history)
+        print(h_p)
 
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
@@ -313,7 +315,7 @@ class Chat:
         temperature=0, do_sample=False, stop=['\nThought'], model='Qwen1.5-32B-Chat')
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = 0
-        if 'Intent:' in  generate_text:
+        if 'Intent:' in generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
             intentIdx = generate_text.find("\n意图:") + 4 

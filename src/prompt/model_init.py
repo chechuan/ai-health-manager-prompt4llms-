@@ -191,7 +191,7 @@ async def acallLLM(
         history: List[Dict] = [],
         temperature=0.5,
         top_p=0.5,
-        max_tokens=1024,
+        max_tokens=512,
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
