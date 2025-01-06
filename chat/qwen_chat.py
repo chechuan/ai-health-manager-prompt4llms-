@@ -211,7 +211,7 @@ class Chat:
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'))
+            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default')
             prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
 
             # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
@@ -241,7 +241,7 @@ class Chat:
             if kwargs.get('subIntentPrompt', ''):
                 prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
             else:
-                scene_prompt = get_sub_scene_intent_v2(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'), intent)
+                scene_prompt = get_sub_scene_intent_v2(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default', intent)
                 prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
                 # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
@@ -716,3 +716,5 @@ if __name__ == '__main__':
                                                       intentCode=intentCode,
                                                       customId=customId,
                                                       orgCode=orgCode))
+
+
