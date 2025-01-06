@@ -13,7 +13,7 @@ import os
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict
+from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 
 # 第三方库导入
 import openai
@@ -50,6 +50,10 @@ class InitAllResource:
 
         self.weather_api_config = self.__load_weather_api_config__()
         self.all_intent, self.com_intent = intent_init()
+
+        self.jia_kang_bao_data = self.__load_jia_kang_bao_data__()
+        self.jia_kang_bao_data_id_item = {item["id"]: item for item in self.jia_kang_bao_data}
+
 
     def __parse_args__(
         self,
@@ -178,6 +182,18 @@ class InitAllResource:
         """加载天气 API 配置"""
         weather_api = load_yaml(Path("config", "weather_config.yaml"))["weather_api"]
         return weather_api
+
+    def __load_jia_kang_bao_data__(self) -> List[Dict]:
+        """
+        加载家康宝数据
+
+        返回:
+            List[Dict]: 家康宝数据列表
+        """
+        jiakangbao_path = Path("data", "qa_data", "jia_kang_bao_qa.json")  # 文件路径
+        with jiakangbao_path.open("r", encoding="utf-8") as file:
+            data = json.load(file)
+        return data
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:

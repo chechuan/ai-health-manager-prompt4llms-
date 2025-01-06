@@ -10,7 +10,6 @@ import json
 import sys
 import time
 import re
-from shapely import get_srid
 import yaml
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -73,7 +72,7 @@ def param_check(check_params: List[AnyStr] = []):
 
 
 def update_mid_vars(
-    mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs
+        mid_vars, input_text=Any, output_text=Any, key="节点名", model="调用模型", **kwargs
 ):
     """更新中间变量"""
     lth = len(mid_vars) + 1
@@ -91,7 +90,7 @@ def update_mid_vars(
 
 
 def make_meta_ret(
-    end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs
+        end=False, msg="", code=None, type="Result", init_intent: bool = False, **kwargs
 ):
     ret = {
         "end": end,
@@ -152,162 +151,225 @@ class NpEncoder(json.JSONEncoder):
             return obj.tolist()
         else:
             return super(NpEncoder, self).default(obj)
-        
-def intent_init():
-        # ==================== 固安来康郡相关 ====================
-        LAKANG_INTENTS = {
-            "温泉推荐": ("spa_rec", "温泉推荐"),
-            "温泉知识": ("spa_knowledge", "温泉知识"),
-            "查看温泉方案结果": ("spa_plan_result_view", "查看温泉方案结果"),
-            "行程推荐": ("route_rec", "行程推荐"),
-            "查看行程方案结果": ("itinerary_result_view", "查看行程方案结果"),
-            "固安来康郡": ("gu_an_laikangjun", "固安来康郡"),
-        }
-
-        # ==================== 医疗健康相关 ====================
-        MEDICAL_INTENTS = {
-            "医疗": ("med_health", "医疗健康"),
-            "辅助诊断": ("auxiliary_diagnosis", "辅助诊断"),
-            "问诊": ("auxiliary_diagnosis", "辅助诊断",),
-            "用药": ("drug_rec", "用药咨询"),
-            "血糖": ("blood_glucose_counseling", "血糖咨询"),
-            "低血压": ("hypotensive_consultation", "低血压咨询"),
-            "BMI": ("BMI", "BMI"),
-            "健康知识咨询": ("health_qa", "健康知识科普"),
-        }
-
-        # ==================== 饮食营养相关 ====================
-        FOOD_INTENTS = {
-            "饮食营养": ("food_nutri", "饮食营养"),
-            "饮食处方": ("food_rec", "饮食处方推荐"),
-            "饮食评价": ("food_eval", "饮食评价"),
-            "营养其他": ("nutri_other", "营养其他"),
-            "菜谱": ("cookbook", "菜谱"),
-        }
-
-        # ==================== 食材采购相关 ====================
-        PURCHASE_INTENTS = {
-            "食材采购": ("food_purchasing", "食材采购"),         
-        }
-
-        # ==================== 专业人员咨询 ====================
-        EXPERT_INTENTS = {
-            "医师": ("call_doctor", "呼叫医师"),
-            "医生": ("call_doctor", "呼叫医师"),
-            "运动师": ("call_sportMaster", "呼叫运动师"),
-            "心理": ("call_psychologist", "呼叫情志师"),
-            "情志": ("call_psychologist", "呼叫情志师"),
-            "营养师": ("call_dietista", "呼叫营养师"),
-            "健管师": ("call_health_manager", "呼叫健管师"),
-            "五师": ("wushi", "呼叫五师"),
-            "呼叫其他": ("call_other", "呼叫其他"),
-        }
-
-        # ==================== 内容服务相关 ====================
-        CONTENT_INTENTS = {
-            "音乐": ("musicX", "音乐播放"),
-            "音频": ("audio", "音频播放"),
-            "新闻": ("news", "新闻"),
-            "故事": ("story", "故事"),
-            "圣经": ("AIUI.Bible", "圣经"),
-            "戏曲": ("drama", "戏曲"),
-            "评书": ("storyTelling", "评书"),
-            "有声书": ("AIUI.audioBook", "有声书"),
-            "笑话": ("joke", "笑话"),
-        }
-
-        # ==================== 实用工具相关 ====================
-        UTILITY_INTENTS = {
-            "天气": ("weather", "天气查询"),
-            "网络": ("websearch", "网络搜索"),
-            "彩票": ("lottery", "彩票"),
-            "解梦": ("dream", "周公解梦"),
-            "计算器": ("AIUI.calc", "计算器"),
-            "翻译": ("translation", "翻译"),
-            "垃圾": ("garbageClassifyPro", "垃圾分类"),
-            "尾号限行": ("carNumber", "尾号限行"),
-            "单位换算": ("AIUI.unitConversion", "单位换算"),
-            "汇率": ("AIUI.forexPro", "汇率"),
-            "眼保健操":("AIUI.ocularGym","眼保健操"),
-            "时间日期": ("datetimePro", "时间日期"),
-            "万年历": ("calendar", "万年历"),
-        }
-        # ==================== 日程管理 ====================
-        DAYLY_INTENTS={
-            "日程管理" :("schedule_manager","日程管理"),}
-   
-
-        # ==================== 其他功能 ====================
-        OTHER_INTENTS = {
-            "拉群共策": ("shared_decision", "拉群共策"),
-            "新奥百科": ("enn_wiki", "新奥百科知识"),
-            "猜你想问": ("aigc_functions_generate_related_questions", "猜你想问"),
-        }        
-
-        # 复合条件意图
-        COMPOUND_INTENTS = [
-            (lambda t: "血压测量" in t or "测量血压" in t, 
-             ("remind_take_blood_pressure", "提醒他人测量血压")),
-            (lambda t: "运动切换" in t or "切换运动" in t, 
-             ("switch_exercise", "运动切换")),
-            (lambda t: "数字人" in t and "换回" in t, 
-             ("digital_image_back", "换回数字人皮肤")),
-            (lambda t: "数字人" in t and "切换" in t, 
-             ("digital_image_switch", "切换数字人皮肤")),
-            (lambda t: "功能页面" in t and "打开" in t, 
-             ("open_Function", "打开功能页面")),
-            (lambda t: "页面" in t and "打开" in t, 
-             ("open_page", "打开页面")),
-            (lambda t: "非会议" in t and "日程管理" in t, 
-             ("other_schedule", "非会议日程管理")),
-            (lambda t: "会议" in t and "日程管理" in t and "非会议" not in t, 
-             ("meeting_schedule", "会议日程管理")),
-            (lambda t: "食材采购清单" in t and "管理" in t, 
-             ("food_purchasing_list_management", "食材采购清单管理")),
-            (lambda t: "食材采购清单" in t and "确认" in t, 
-             ("food_purchasing_list_verify", "食材采购清单确认")),
-            (lambda t: "食材采购清单" in t and "关闭" in t, 
-             ("food_purchasing_list_close", "食材采购清单关闭")),
-            (lambda t: "食材采购清单" in t and "生成" in t, 
-             ("create_food_purchasing_list", "生成食材采购清单")),
-        ]
-
-        # 合并所有简单意图
-        ALL_INTENTS = {}
-        for intent_dict in [
-            LAKANG_INTENTS,
-            MEDICAL_INTENTS,
-            FOOD_INTENTS,
-            PURCHASE_INTENTS,
-            EXPERT_INTENTS,
-            CONTENT_INTENTS,
-            UTILITY_INTENTS,
-            DAYLY_INTENTS,
-            OTHER_INTENTS,
-        ]:
-            ALL_INTENTS.update(intent_dict)
-        return ALL_INTENTS,COMPOUND_INTENTS
 
 
-def get_intent(text, all_intent, com_intent):
+def get_intent(text):
     """通过关键词解析意图->code"""
-    # 1. 检查复合条件
-    for condition, intent in com_intent:
-        if condition(text):
-            code, desc = intent
-            logger.debug(f"识别出的意图:{text} code:{code}")
-            return code, desc
-
-    # 2. 检查简单映射
-    for keyword in all_intent.keys():
-        if keyword in text:
-            (code, desc) = all_intent[keyword]
-            logger.debug(f"识别出的意图:{text} code:{code}")
-            return code, desc
-
-    # 3. 默认返回
-    logger.debug(f"识别出的意图:{text} code:other")
-    return "other", "日常对话"
+    if "饮食营养" in text:
+        code = "food_nutri"
+        desc = "饮食营养"
+    elif "医疗" in text:
+        code = "med_health"
+        desc = "医疗健康"
+    elif "血压测量" in text or "测量血压" in text:
+        code = "remind_take_blood_pressure"
+        desc = "提醒他人测量血压"
+    elif "运动切换" in text or "切换运动" in text:
+        code = "switch_exercise"
+        desc = "运动切换"
+    elif "数字人" in text and "换回" in text:
+        code = "digital_image_back"
+        desc = "换回数字人皮肤"
+    elif "数字人" in text and "切换" in text:
+        code = "digital_image_switch"
+        desc = "切换数字人皮肤"
+    # elif "运动评价" in text:
+    #     code = "sport_eval"
+    #     desc = "运动评价"
+    # elif "运动咨询" in text:
+    #     code = "sport_rec"
+    #     desc = "运动咨询"
+    elif "温泉推荐" in text:
+        code = "spa_rec"
+        desc = "温泉推荐"
+    elif "行程推荐" in text:
+        code = "route_rec"
+        desc = "行程推荐"
+    elif "固安来康郡" in text:
+        code = "gu_an_laikangjun"
+        desc = "固安来康郡"
+    elif "温泉知识" in text:
+        code = "spa_knowledge"
+        desc = "温泉知识"
+    elif "家康宝" in text:
+        code = "jkbao_consult"
+        desc = "家康宝服务咨询"
+    elif "功能页面" in text and "打开" in text:
+        code = "open_Function"
+        desc = "打开功能页面"
+    elif "页面" in text and "打开" in text:
+        code = "open_page"
+        desc = "打开页面"
+    elif "菜谱" in text:
+        code = "cookbook"
+        desc = "菜谱"
+    elif "音乐" in text:
+        code = "musicX"
+        desc = "音乐播放"
+    elif "天气" in text:
+        code = "weather"
+        desc = "天气查询"
+    elif "辅助诊断" in text:
+        code = "auxiliary_diagnosis"
+        desc = "辅助诊断"
+    elif "问诊" in text:
+        code = "auxiliary_diagnosis"
+        desc = "辅助诊断"
+    elif "用药" in text:
+        code = "drug_rec"
+        desc = "用药咨询"
+    elif "血糖" in text:
+        code = "blood_glucose_counseling"
+        desc = "血糖咨询"
+    # elif "营养知识" in text:
+    #     code = "nutri_knowledge_rec"
+    #     desc = "营养知识咨询"
+    elif "饮食处方" in text:
+        code = "food_rec"
+        desc = "饮食处方推荐"
+    elif "饮食评价" in text:
+        code = "food_eval"
+        desc = "饮食评价"
+    elif "医师" in text or "医生" in text:
+        code = "call_doctor"
+        desc = "呼叫医师"
+    elif "运动师" in text:
+        code = "call_sportMaster"
+        desc = "呼叫运动师"
+    elif "心理" in text or "情志" in text:
+        code = "call_psychologist"
+        desc = "呼叫情志师"
+    elif "营养师" in text:
+        code = "call_dietista"
+        desc = "呼叫营养师"
+    elif "健管师" in text:
+        code = "call_health_manager"
+        desc = "呼叫健管师"
+    elif "网络" in text:
+        code = "websearch"
+        desc = "网络搜索"
+    # elif "首都" in text:
+    #     code = "KLLI3.captialInfo"
+    #     desc = "首都查询"
+    elif "彩票" in text:
+        code = "lottery"
+        desc = "彩票"
+    elif "解梦" in text:
+        code = "dream"
+        desc = "周公解梦"
+    elif "计算器" in text:
+        code = "AIUI.calc"
+        desc = "计算器"
+    # elif "国内城市查询" in text:
+    #     code = "LEIQIAO.cityOfPro"
+    #     desc = "国内城市查询"
+    # elif "省会查询" in text:
+    #     code = "ZUOMX.queryCapital"
+    #     desc = "省会查询"
+    elif "翻译" in text:
+        code = "translation"
+        desc = "翻译"
+    elif "垃圾" in text:
+        code = "garbageClassifyPro"
+        desc = "垃圾分类"
+    elif "尾号限行" in text:
+        code = "carNumber"
+        desc = "尾号限行"
+    elif "单位换算" in text:
+        code = "AIUI.unitConversion"
+        desc = "单位换算"
+    elif "汇率" in text:
+        code = "AIUI.forexPro"
+        desc = "汇率"
+    elif "时间日期" in text:
+        code = "datetimePro"
+        desc = "时间日期"
+    elif "眼保健操" in text:
+        code = "AIUI.ocularGym"
+        desc = "眼保健操"
+    elif "故事" in text:
+        code = "story"
+        desc = "故事"
+    elif "圣经" in text:
+        code = "AIUI.Bible"
+        desc = "圣经"
+    elif "戏曲" in text:
+        code = "drama"
+        desc = "戏曲"
+    elif "评书" in text:
+        code = "storyTelling"
+        desc = "评书"
+    elif "有声书" in text:
+        code = "AIUI.audioBook"
+        desc = "有声书"
+    elif "新闻" in text:
+        code = "news"
+        desc = "新闻"
+    elif "BMI" in text:
+        code = "bmi_query"
+        desc = "BMI查询"
+    elif "万年历" in text:
+        code = "calendar"
+        desc = "万年历"
+    elif "音频" in text:
+        code = "audio"
+        desc = "音频播放"
+    elif "笑话" in text:
+        code = "joke"
+        desc = "笑话"
+    elif "五师" in text:
+        code = "wushi"
+        desc = "呼叫五师"
+    elif "呼叫其他" in text:
+        code = "call_other"
+        desc = "呼叫其他"
+    elif "营养其他" in text:
+        code = "nutri_other"
+        desc = "营养其他"
+    # elif "高血压" in text:
+    #     code = "chronic_qa"
+    #     desc = "高血压知识问答"
+    elif "血压" in text:
+        code = "bp_consultation"
+        desc = "血压咨询"
+    elif "非会议日程管理" in text:
+        code = "other_schedule"
+        desc = "非会议日程管理"
+    elif "会议日程管理" in text:
+        code = "meeting_schedule"
+        desc = "会议日程管理"
+    elif "日程管理" in text:
+        code = "schedule_manager"
+        desc = "日程管理"
+    elif "食材采购清单管理" in text:
+        code = "food_purchasing_list_management"
+        desc = "食材采购清单管理"
+    elif "生成食材采购清单" in text:
+        code = "create_food_purchasing_list"
+        desc = "生成食材采购清单"
+    elif "食材采购" in text:
+        code = "food_purchasing"
+        desc = "食材采购"
+    elif "食材采购清单确认" in text:
+        code = "food_purchasing_list_verify"
+        desc = "食材采购清单确认"
+    elif "食材采购清单关闭" in text:
+        code = "food_purchasing_list_close"
+        desc = "食材采购清单关闭"
+    elif "拉群共策" in text:
+        code = "shared_decision"
+        desc = "拉群共策"
+    elif "新奥百科" in text:
+        code = "enn_wiki"
+        desc = "新奥百科知识"
+    elif "猜你想问" in text:
+        code = "aigc_functions_generate_related_questions"
+        desc = "猜你想问"
+    else:
+        code = "other"
+        desc = "日常对话"
+    logger.debug(f"识别出的意图:{text} code:{code}")
+    return code, desc
 
 
 def get_doc_role(code):
@@ -332,7 +394,7 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
     k = (
         text.find("\nObservation:")
         if text.find("\nObservation:") > 0
-        else j + len("\nAction Input:") + text[j + len("\nAction Input:") :].find("\n")
+        else j + len("\nAction Input:") + text[j + len("\nAction Input:"):].find("\n")
     )
     l = text.find("\nFinal Answer:")
     if 0 <= i < j:  # If the text has `Action` and `Action input`,
@@ -342,18 +404,18 @@ def _parse_latest_plugin_call(text: str) -> Tuple[str, str]:
             text = text.rstrip() + "\nObservation:"  # Add it back.
             k = text.rfind("\nObservation:")
     if 0 <= i < j < k:
-        plugin_thought = text[h + len("Thought:") : i].strip()
-        plugin_name = text[i + len("\nAction:") : j].strip()
-        plugin_args = text[j + len("\nAction Input:") : k].strip()
+        plugin_thought = text[h + len("Thought:"): i].strip()
+        plugin_name = text[i + len("\nAction:"): j].strip()
+        plugin_args = text[j + len("\nAction Input:"): k].strip()
         return plugin_thought, plugin_name, plugin_args
     elif l > 0:
         if h > 0:
-            plugin_thought = text[h + len("Thought:") : l].strip()
-            plugin_args = text[l + len("\nFinal Answer:") :].strip()
+            plugin_thought = text[h + len("Thought:"): l].strip()
+            plugin_args = text[l + len("\nFinal Answer:"):].strip()
             plugin_args.split("\n")[0]
             return plugin_thought, "直接回复用户问题", plugin_args
         else:
-            plugin_args = text[l + len("\nFinal Answer:") :].strip()
+            plugin_args = text[l + len("\nFinal Answer:"):].strip()
             return "I know the final answer.", "直接回复用户问题", plugin_args
     return "", ""
 
@@ -377,26 +439,26 @@ def parse_latest_plugin_call(text: str, plugin_name: str = "AskHuman"):
             text = text.rstrip() + "\nThought:"  # Add it back.
             k = text.rfind("\nThought:")
     if 0 <= i < j < k:
-        plugin_thought = text[h + len("\nThought:") : i].strip()
-        plugin_name = text[i + len("\nAction:") : j].strip()
-        plugin_args = text[j + len("\nAction Input:") : k].strip()
+        plugin_thought = text[h + len("\nThought:"): i].strip()
+        plugin_name = text[i + len("\nAction:"): j].strip()
+        plugin_args = text[j + len("\nAction Input:"): k].strip()
     elif l > 0:
         if h > 0:
-            plugin_thought = text[h + len("Thought:") : l].strip()
-            plugin_args = text[l + len("\nFinal Answer:") :].strip()
+            plugin_thought = text[h + len("Thought:"): l].strip()
+            plugin_args = text[l + len("\nFinal Answer:"):].strip()
             plugin_args.split("\n")[0]
         else:
-            plugin_args = text[l + len("\nFinal Answer:") :].strip()
+            plugin_args = text[l + len("\nFinal Answer:"):].strip()
             plugin_thought = "I know the final answer."
     else:
         m = text.find("\nAnswer: ")
-        next_thought_index = text[m + len("\nAnswer: ") :].find("\nThought:")
+        next_thought_index = text[m + len("\nAnswer: "):].find("\nThought:")
         if next_thought_index == -1:
             n = len(text)
         else:
             n = m + len("\nAnswer: ") + next_thought_index
-        plugin_thought = text[len("\nThought: ") : m].strip()
-        plugin_args = text[m + len("\nAnswer: ") : n].strip()
+        plugin_thought = text[len("\nThought: "): m].strip()
+        plugin_args = text[m + len("\nAnswer: "): n].strip()
     return [plugin_thought, plugin_name, plugin_args]
 
 
@@ -415,6 +477,7 @@ def date_after(**kwargs):
     date_after = (now + timedelta(**kwargs)).strftime("%Y-%m-%d %H:%M:%S")
     return date_after
 
+
 def this_sunday():
     """返回下周一0点0分0秒"""
     today = datetime.strptime(datetime.now().strftime("%Y%m%d"), "%Y%m%d")
@@ -422,9 +485,11 @@ def this_sunday():
         today + timedelta(7 - today.weekday()), "%Y-%m-%d %H:%M:%S"
     )
 
+
 def curr_weekday():
     today = date.today().strftime("%A")
     return today
+
 
 def dumpJS(obj, ensure_ascii=False, **kwargs):
     return json.dumps(obj, ensure_ascii=ensure_ascii, **kwargs)
@@ -498,10 +563,11 @@ def apply_chat_template(prompt: str, template: str = "chatml"):
     """
     if template == "chatml":
         prompt = (
-            "<|im_start|>system\n" + "You are a helpful assistant.<|im_end|>\n"
-            "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
+                "<|im_start|>system\n" + "You are a helpful assistant.<|im_end|>\n"
+                                         "<|im_start|>user\n" + f"{prompt}<|im_end|>\n" + "<|im_start|>assistant\n"
         )
     return prompt
+
 
 async def extract_clean_output(response: str) -> str:
     # 提取 <|im_start|>assistant 到 <|im_end|> 之间的内容
@@ -536,26 +602,28 @@ def replace_you(text) -> str:
         return f"替换过程中发生错误: {str(e)}"
 
 
-async def response_generator(response, error: bool = False) -> AsyncGenerator:
+async def response_generator(response, error: bool = False, replace: bool = True) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
     """
     if not error:
         async for chunk in response:
-            # if chunk.object == "text_completion":
             if not chunk.object or "chat" not in chunk.object:
                 content = chunk.choices[0].text
             else:
                 content = chunk.choices[0].delta.content
             if content:
-                # 替换“您” -> “你”
-                content = replace_you(content)  # 在这里调用统一替换方法
+                # 根据参数控制是否替换
+                if replace:
+                    content = replace_you(content)
                 chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
                 yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
         chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     else:
         chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
-        chunk_resp.message = replace_you(response)  # 错误消息替换
+        # 根据参数控制是否替换
+        if replace:
+            chunk_resp.message = replace_you(response)
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 
@@ -584,11 +652,11 @@ async def async_accept_param_purge(request: Request):
 
 
 def MakeFastAPIOffline(
-    app: FastAPI,
-    static_dir=Path(__file__).parents[1] / "static",
-    static_url="/static-offline-docs",
-    docs_url: Optional[str] = "/docs",
-    redoc_url: Optional[str] = "/redoc",
+        app: FastAPI,
+        static_dir=Path(__file__).parents[1] / "static",
+        static_url="/static-offline-docs",
+        docs_url: Optional[str] = "/docs",
+        redoc_url: Optional[str] = "/redoc",
 ) -> None:
     """patch the FastAPI obj that doesn't rely on CDN for the documentation page"""
     from fastapi import Request
@@ -702,6 +770,7 @@ def calculate_bmr(weight: float, height: float, age: int, gender: str) -> float:
     else:
         raise ValueError("Invalid gender")
 
+
 def parse_measurement(value_str: str, measure_type: str) -> float:
     """解析测量值字符串，支持体重和身高"""
     if measure_type == "weight":
@@ -766,6 +835,7 @@ def async_clock(func):
         arg_str = ', '.join(repr(arg) for arg in args)
         print(f'[{elapsed:.8f}s] {name}({arg_str}) -> {result}')
         return result
+
     return clocked
 
 
@@ -1161,6 +1231,7 @@ async def determine_recent_solar_terms(date_str: str = None):
         print(f"Error: {e}")
         return "无"
 
+
 def determine_recent_solar_terms_sanji():
     date = datetime.now()
     lunar = Lunar.fromDate(date)
@@ -1175,20 +1246,20 @@ def determine_recent_solar_terms_sanji():
     pre_jieqi = lunar.getPrevJieQi(True)
     if next_jieqi:
         next_jieqi_solar = next_jieqi.getSolar()
-        
+
         next_jieqi_date = datetime(next_jieqi_solar.getYear(), next_jieqi_solar.getMonth(), next_jieqi_solar.getDay())
         delta_days = (next_jieqi_date - date).days
 
         if pre_jieqi:
             pre_jieqi_solar = pre_jieqi.getSolar()
             pre_jieqi_date = datetime(pre_jieqi_solar.getYear(), pre_jieqi_solar.getMonth(), pre_jieqi_solar.getDay())
-            pre_delta_days = (date-pre_jieqi_date).days
-            if pre_delta_days<delta_days:
+            pre_delta_days = (date - pre_jieqi_date).days
+            if pre_delta_days < delta_days:
                 return f"{pre_jieqi_date.strftime('%Y-%m-%d')} {pre_jieqi.getName()}"
         return f"{next_jieqi_date.strftime('%Y-%m-%d')} {next_jieqi.getName()}"
 
     pre_jieqi_solar = pre_jieqi.getSolar()
-    pre_jieqi_date = datetime(pre_jieqi_solar.getYear(), pre_jieqi_solar.getMonth(), pre_jieqi_solar.getDay())  
+    pre_jieqi_date = datetime(pre_jieqi_solar.getYear(), pre_jieqi_solar.getMonth(), pre_jieqi_solar.getDay())
     return pre_jieqi_date
 
 
@@ -1385,7 +1456,8 @@ def remove_empty_dicts(data):
     if isinstance(data, list):
         return [remove_empty_dicts(item) for item in data if not (isinstance(item, dict) and len(item) == 0)]
     elif isinstance(data, dict):
-        return {key: remove_empty_dicts(value) for key, value in data.items() if not (isinstance(value, dict) and len(value) == 0)}
+        return {key: remove_empty_dicts(value) for key, value in data.items() if
+                not (isinstance(value, dict) and len(value) == 0)}
     else:
         return data
 
@@ -1409,8 +1481,9 @@ async def handle_calories(content: dict, **kwargs) -> dict:
         content["quantity"] = kwargs["food_quantity"]
     return content
 
+
 async def check_aigc_functions_body_fat_weight_management_consultation(params: dict
-) -> List:
+                                                                       ) -> List:
     """检查参数是否满足需求
 
 - Args
@@ -1572,7 +1645,7 @@ async def get_highest_data_per_day(blood_pressure_data: List[Dict]) -> List[Dict
             current_record = highest_data_per_day[date]
             # 比较当前记录与已有记录的收缩压和舒张压值，优先选择收缩压高的记录
             if (entry['sbp'] > current_record['sbp']) or (
-                entry['sbp'] == current_record['sbp'] and entry['dbp'] > current_record['dbp']):
+                    entry['sbp'] == current_record['sbp'] and entry['dbp'] > current_record['dbp']):
                 highest_data_per_day[date] = entry
 
     # 返回按日期排序后的列表
@@ -1789,6 +1862,7 @@ async def assemble_frontend_format_with_fixed_items(overview: dict) -> dict:
 
 def log_with_source(func):
     """异步装饰器，用于根据 source 动态绑定日志"""
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         source = kwargs.get("source", "user")
@@ -1801,6 +1875,7 @@ def log_with_source(func):
 
         kwargs["logger"] = logger_with_source  # 确保绑定后的 logger 传递
         return await func(*args, **kwargs)
+
     return wrapper
 
 
@@ -1825,26 +1900,27 @@ async def determine_weight_status(user_profile, bmi_value):
         else:
             return "属于肥胖状态", "偏高", "减脂"
 
+
 async def determine_body_fat_status(gender: str, body_fat_rate: float):
-        """确定体脂率状态和目标"""
-        if gender == "男":
-            if body_fat_rate < 10:
-                return "偏低状态", "增重"
-            elif 10 <= body_fat_rate < 20:
-                return "正常范围", "保持体重"
-            elif 20 <= body_fat_rate < 25:
-                return "偏高状态", "减脂"
-            else:
-                return "肥胖状态", "减脂"
-        elif gender == "女":
-            if body_fat_rate < 15:
-                return "偏低状态", "增重"
-            elif 15 <= body_fat_rate < 25:
-                return "正常范围", "保持体重"
-            elif 25 <= body_fat_rate < 30:
-                return "偏高状态", "减脂"
-            else:
-                return "肥胖状态", "减脂"
+    """确定体脂率状态和目标"""
+    if gender == "男":
+        if body_fat_rate < 10:
+            return "偏低状态", "增重"
+        elif 10 <= body_fat_rate < 20:
+            return "正常范围", "保持体重"
+        elif 20 <= body_fat_rate < 25:
+            return "偏高状态", "减脂"
+        else:
+            return "肥胖状态", "减脂"
+    elif gender == "女":
+        if body_fat_rate < 15:
+            return "偏低状态", "增重"
+        elif 15 <= body_fat_rate < 25:
+            return "正常范围", "保持体重"
+        elif 25 <= body_fat_rate < 30:
+            return "偏高状态", "减脂"
+        else:
+            return "肥胖状态", "减脂"
 
 
 async def truncate_to_limit(text: str, limit: int) -> str:
@@ -1893,5 +1969,35 @@ async def filter_user_profile(user_profile):
 
     return filtered_profile
 
-import pydantic
-print(pydantic.__version__)
+
+def prepare_question_list(data):
+    """
+    准备问题列表，将 `question` 和 `similar_questions` 合并，形成一个换行格式的字符串列表。
+    同时排除 `guess_you_want` 中的内容被包含在其他问题或相似问题中的条目，
+    或者当 `guess_you_want` 为空时，检查主问题是否已存在。
+
+    参数:
+        data (list): 原始 JSON 数据
+
+    返回:
+        str: 格式化为换行字符串的所有问题列表
+    """
+    # 构建全局的问题集合
+    all_questions = set()  # 使用集合来自动去重
+
+    for item in data:
+        # 获取主问题和相似问题的列表
+        combined_questions = [item.get("question", "")]
+        combined_questions.extend(item.get("similar_questions", []))
+
+        # 将当前条目的问题加入到集合中
+        all_questions.update(combined_questions)
+
+    # 将集合转换为格式化的字符串
+    formatted_list = "[\n"
+    for question in sorted(all_questions):  # 排序以保持输出一致
+        formatted_list += f'    "{question}",\n'
+    formatted_list = formatted_list.rstrip(",\n")  # 去掉最后的逗号和换行符
+    formatted_list += "\n]"
+
+    return formatted_list

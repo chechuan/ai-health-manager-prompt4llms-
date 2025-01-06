@@ -585,6 +585,48 @@ def mount_aigc_functions(app: FastAPI):
                 _return = ret.model_dump_json(exclude_unset=True)
                 return build_aigc_functions_response(_return)
 
+    async def _async_aigc_functions_jia_kang_bao_support(
+            request_model: OutpatientSupportRequest,
+    ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
+        """处理西医决策支持的AIGC函数"""
+        endpoint = "/aigc/jkbao"
+        try:
+            param = await async_accept_param_purge(
+                request_model, endpoint=endpoint
+            )
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应
+                _return = response_generator(response, replace=False)
+            else:
+                # 非流式响应
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(
+                        head=200, items=response
+                    )
+                    _return = ret.model_dump_json(exclude_unset=False)
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+
+        except Exception as err:
+            # 错误处理
+            msg = repr(err)
+            msg = replace_you(msg)  # 错误消息统一替换
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                _return = response_generator(msg, error=True, replace=False)  # 流式错误响应
+            else:
+                ret = AigcFunctionsCompletionResponse(
+                    head=601, msg=msg, items=None
+                )
+                _return = ret.model_dump_json(exclude_unset=True)  # 非流式错误响应
+        finally:
+            return build_aigc_functions_response(_return)  # 确保返回值有赋值
+
     async def _async_aigc_functions_junwang_gongjian(
             request_model: JunWangGongJianRequest,
     ) -> Response:
@@ -720,7 +762,9 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/outpatient_support")(_async_aigc_functions_outpatient_support)
 
-    app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
+    app.post("/aigc/jkbao")(_async_aigc_functions_jia_kang_bao_support)
+
+    app.post("/aigc/sanji/kangyang", description="家康宝")(_async_aigc_functions_sanji_kangyang)
 
     app.post("/aigc/junwang/gongjian")(_async_aigc_functions_junwang_gongjian)
 
