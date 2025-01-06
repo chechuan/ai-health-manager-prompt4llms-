@@ -107,7 +107,6 @@ opencv-python
 scipy==1.13.1
 pillow
 langfuse
-scikit-learn>=0.24.0
 scikit-learn
 python-Levenshtein
 
