@@ -2004,6 +2004,3 @@ def prepare_question_list(data):
 
 
 
-
-
-

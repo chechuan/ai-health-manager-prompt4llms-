@@ -2,6 +2,7 @@
 
 import json, asyncio
 import sys
+from copy import deepcopy
 
 sys.path.append('.')
 
@@ -88,7 +89,7 @@ class Chat:
                     prompt += f"{msg['role']}: {msg['content']}\n"
                 else:
                     prompt += f"\nQuestion: {msg['content']}\n"
-        return prompt    
+        return prompt
 
     def chat_react(self, query: str = "", history=[], max_tokens=200, **kwargs):
         """调用模型生成答案,解析ReAct生成的结果
@@ -99,10 +100,10 @@ class Chat:
         logger.debug(f"辅助诊断 Input:\n{prompt}")
         model_output = callLLM(prompt, temperature=0.7, top_p=0.5, max_tokens=max_tokens)
         model_output = "\nThought: " + model_output
-        self.update_mid_vars(kwargs.get("mid_vars"), 
-                             key="辅助诊断", 
-                             input_text=prompt, 
-                             output_text=model_output, 
+        self.update_mid_vars(kwargs.get("mid_vars"),
+                             key="辅助诊断",
+                             input_text=prompt,
+                             output_text=model_output,
                              model="Qwen-14B-Chat")
         logger.debug(f"辅助诊断 Gen Output:\n{model_output}")
 
@@ -114,31 +115,31 @@ class Chat:
                     "3. 语义相似的可以合并重新规划语言\n" + \
                     "4. 直接输出结果\n\n输入:\n" + \
                     model_output + "\n输出:\n"
-            
+
             logger.debug('ReAct regenerate input: ' + prompt)
             model_output = callLLM(prompt, repetition_penalty=1.3, max_tokens=max_tokens)
-            
-            self.update_mid_vars(kwargs.get("mid_vars"), 
-                                 key="辅助诊断 改写修正", 
-                                 input_text=prompt, 
-                                 output_text=model_output, 
+
+            self.update_mid_vars(kwargs.get("mid_vars"),
+                                 key="辅助诊断 改写修正",
+                                 input_text=prompt,
+                                 output_text=model_output,
                                  model="Qwen-14B-Chat")
-            
+
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
-            
+
         out_text = list(out_text)
-        # 特殊处理规则 
+        # 特殊处理规则
         ## 1. 生成\nEnd.字符
         out_text[2] = out_text[2].split("\nEnd")[0]
 
         history.append({
-            "role": "assistant", 
-            "content": out_text[2], 
+            "role": "assistant",
+            "content": out_text[2],
             "function_call": {"name": out_text[1],"arguments": out_text[0]}
             })
         return history
-    
+
     def compose_input_history(self, history, external_information, **kwargs):
         """拼装sys_prompt里
         """
@@ -150,14 +151,14 @@ class Chat:
 
     def history_compose(self, history):
         return [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-    
+
     def update_mid_vars(self, mid_vars, **kwargs):
         """更新中间变量
         """
         lth = len(mid_vars) + 1
         mid_vars.append({"id": lth, **kwargs})
         return mid_vars
-    
+
     def get_parent_intent_name(self, text):
         if '五师' in text:
             return '呼叫五师'
@@ -261,6 +262,7 @@ class Chat:
     def cls_intent(self, history, mid_vars, **kwargs):
         """意图识别
         """
+        kwargs = deepcopy(kwargs)
         if kwargs.get('scene_code', 'default') != 'doctor':
             open_sch_list = ['打开','日程']
             market_list = ['打开','集市']
@@ -295,15 +297,15 @@ class Chat:
             h_p = "无"
         prefix = "Question" if history[-1]['role'] == "user" else "Answer"
         query = f"{prefix}: {history[-1]['content']}"
-        print(history)
-        print(h_p)
 
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
             prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
         else:
-            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'))
+            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default')
+            # logger.debug(f"Generated scene_prompt: {scene_prompt}")
             prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+            # logger.debug(f"Generated Prompt: {prompt}")
 
             # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
             #     scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
@@ -318,7 +320,7 @@ class Chat:
         if 'Intent:' in generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
         elif '意图:' in generate_text:
-            intentIdx = generate_text.find("\n意图:") + 4 
+            intentIdx = generate_text.find("\n意图:") + 4
         elif '\nFunction:' in generate_text:
             intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
@@ -332,7 +334,7 @@ class Chat:
             if kwargs.get('subIntentPrompt', ''):
                 prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
             else:
-                scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code', 'default'), parant_intent)
+                scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default', parant_intent)
                 prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
                 # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
@@ -410,16 +412,16 @@ class Chat:
             content = content[content.find('Output')+6].split('\n')[0].strip()
         self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False), output_text=content)
         return content
-    
+
     def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
         """获取用户信息
         """
         logger.debug(f'信息提取prompt:\n{prompt}')
-        model_output = callLLM(prompt, 
-                                 verbose=False, 
-                                 temperature=0, 
+        model_output = callLLM(prompt,
+                                 verbose=False,
+                                 temperature=0,
                                  top_p=0.8,
-                                 max_tokens=200, 
+                                 max_tokens=200,
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
         content = model_output
@@ -451,12 +453,12 @@ class Chat:
             ...
         finally:
             return out_text, mid_vars
-    
-    def chat_auxiliary_diagnosis(self, 
-                                 history=[], 
-                                 intentCode="auxiliary_diagnosis", 
-                                 sys_prompt="", 
-                                 mid_vars=[], 
+
+    def chat_auxiliary_diagnosis(self,
+                                 history=[],
+                                 intentCode="auxiliary_diagnosis",
+                                 sys_prompt="",
+                                 mid_vars=[],
                                  **kwargs):
         """辅助诊断子流程
         """
@@ -476,12 +478,12 @@ class Chat:
             thought = out_history[-1]['function_call']['arguments']
             yield make_meta_ret(msg=tool_name, type="Tool", code=intentCode), mid_vars
             yield make_meta_ret(msg=thought, type="Thought", code=intentCode), mid_vars
-        
+
             if tool_name == '进一步询问用户的情况':
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
             elif tool_name == '直接回复用户问题':
-                out_text = make_meta_ret(end=True, 
-                                         msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(), 
+                out_text = make_meta_ret(end=True,
+                                         msg=output_text.split('Final Answer:')[-1].split('\n\n')[0].strip(),
                                          code=intentCode,
                                          init_intent=True)
             elif tool_name == '调用外部知识库':
@@ -493,7 +495,7 @@ class Chat:
                 out_text = make_meta_ret(end=True, msg=output_text, code=intentCode)
                 # logger.exception(out_history)
         yield out_text, mid_vars
-   
+
     def intent_query(self, history, **kwargs):
         mid_vars = kwargs.get('mid_vars', [])
         task = kwargs.get('task', '')
@@ -559,7 +561,7 @@ class Chat:
             "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'schedule_qry_up', 'auxiliary_diagnosis', "other"]
         }
         return intent_code_map
-    
+
     def yield_result(self, *args, **kwargs):
         """处理最终的输出
         """
@@ -600,8 +602,8 @@ class Chat:
         3. 模型生成结果
 
         - Args
-            
-            history (List[Dict[str, str]]) required 
+
+            history (List[Dict[str, str]]) required
                 对话历史信息
             mid_vars (List[Dict])
                 中间变量
@@ -612,7 +614,7 @@ class Chat:
             out_text (Dict[str, str])
                 返回的输出结果
         """
-        
+
         history, mid_vars, intentCode, sys_prompt = self.__init_log__(*args, **kwargs)
 
         if self.intent_map['tips'].get(intentCode):
@@ -621,10 +623,10 @@ class Chat:
             desc = '智能标签'
         else:
             desc = intentCode_desc_map.get(intentCode, '日常对话')
-        
+
         if self.intent_map['userinfo'].get(intentCode):
             out_text = self.get_userInfo_msg(sys_prompt, history, intentCode, mid_vars)
-        elif self.intent_map['tips'].get(intentCode): 
+        elif self.intent_map['tips'].get(intentCode):
             out_text = self.get_reminder_tips(sys_prompt, history, intentCode, mid_vars=mid_vars)
         elif intentCode in ['BMI']:
             if not kwargs.get('userInfo', {}).get('askHeight', '') or not kwargs.get('userInfo', {}).get('askWeight', ''):
@@ -698,19 +700,19 @@ if __name__ == '__main__':
     intentCode = ori_input_param['intentCode']
     customId = ori_input_param['customId']
     orgCode = ori_input_param['orgCode']
-    out_text, mid_vars = next(chat.chat_gen(history=history, 
-                                            sys_prompt=prompt, 
-                                            verbose=True, 
-                                            intentCode=intentCode, 
-                                            customId=customId, 
+    out_text, mid_vars = next(chat.chat_gen(history=history,
+                                            sys_prompt=prompt,
+                                            verbose=True,
+                                            intentCode=intentCode,
+                                            customId=customId,
                                             orgCode=orgCode))
     while True:
         history.append({"role": "3", "content": out_text['message']})
         conv = history[-1]
         history.append({"role": "0", "content": input("user: ")})
-        out_text, mid_vars = next(chat.chat_gen(history=history, 
-                                                      sys_prompt=prompt, 
-                                                      verbose=True, 
-                                                      intentCode=intentCode, 
-                                                      customId=customId, 
+        out_text, mid_vars = next(chat.chat_gen(history=history,
+                                                      sys_prompt=prompt,
+                                                      verbose=True,
+                                                      intentCode=intentCode,
+                                                      customId=customId,
                                                       orgCode=orgCode))
