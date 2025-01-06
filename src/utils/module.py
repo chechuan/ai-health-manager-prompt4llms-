@@ -10,6 +10,7 @@ import json
 import sys
 import time
 import re
+from shapely import get_srid
 import yaml
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -153,223 +154,158 @@ class NpEncoder(json.JSONEncoder):
             return super(NpEncoder, self).default(obj)
 
 
-def get_intent(text):
+def intent_init():
+    # ==================== 固安来康郡相关 ====================
+    LAKANG_INTENTS = {
+        "温泉推荐": ("spa_rec", "温泉推荐"),
+        "温泉知识": ("spa_knowledge", "温泉知识"),
+        "行程推荐": ("route_rec", "行程推荐"),
+        "固安来康郡": ("gu_an_laikangjun", "固安来康郡"),
+    }
+
+    # ==================== 医疗健康相关 ====================
+    MEDICAL_INTENTS = {
+        "医疗": ("med_health", "医疗健康"),
+        "辅助诊断": ("auxiliary_diagnosis", "辅助诊断"),
+        "问诊": ("auxiliary_diagnosis", "辅助诊断",),
+        "用药": ("drug_rec", "用药咨询"),
+        "血糖": ("blood_glucose_counseling", "血糖咨询"),
+        "低血压": ("hypotensive_consultation", "低血压咨询"),
+        "BMI": ("BMI", "BMI"),
+        "健康知识咨询": ("health_qa", "健康知识科普"),
+    }
+
+    # ==================== 饮食营养相关 ====================
+    FOOD_INTENTS = {
+        "饮食营养": ("food_nutri", "饮食营养"),
+        "饮食处方": ("food_rec", "饮食处方推荐"),
+        "饮食评价": ("food_eval", "饮食评价"),
+        "营养其他": ("nutri_other", "营养其他"),
+        "菜谱": ("cookbook", "菜谱"),
+    }
+
+    # ==================== 食材采购相关 ====================
+    PURCHASE_INTENTS = {
+        "食材采购": ("food_purchasing", "食材采购"),
+    }
+
+    # ==================== 专业人员咨询 ====================
+    EXPERT_INTENTS = {
+        "医师": ("call_doctor", "呼叫医师"),
+        "医生": ("call_doctor", "呼叫医师"),
+        "运动师": ("call_sportMaster", "呼叫运动师"),
+        "心理": ("call_psychologist", "呼叫情志师"),
+        "情志": ("call_psychologist", "呼叫情志师"),
+        "营养师": ("call_dietista", "呼叫营养师"),
+        "健管师": ("call_health_manager", "呼叫健管师"),
+        "五师": ("wushi", "呼叫五师"),
+        "呼叫其他": ("call_other", "呼叫其他"),
+    }
+
+    # ==================== 内容服务相关 ====================
+    CONTENT_INTENTS = {
+        "音乐": ("musicX", "音乐播放"),
+        "音频": ("audio", "音频播放"),
+        "新闻": ("news", "新闻"),
+        "故事": ("story", "故事"),
+        "圣经": ("AIUI.Bible", "圣经"),
+        "戏曲": ("drama", "戏曲"),
+        "评书": ("storyTelling", "评书"),
+        "有声书": ("AIUI.audioBook", "有声书"),
+        "笑话": ("joke", "笑话"),
+    }
+
+    # ==================== 实用工具相关 ====================
+    UTILITY_INTENTS = {
+        "天气": ("weather", "天气查询"),
+        "网络": ("websearch", "网络搜索"),
+        "彩票": ("lottery", "彩票"),
+        "解梦": ("dream", "周公解梦"),
+        "计算器": ("AIUI.calc", "计算器"),
+        "翻译": ("translation", "翻译"),
+        "垃圾": ("garbageClassifyPro", "垃圾分类"),
+        "尾号限行": ("carNumber", "尾号限行"),
+        "单位换算": ("AIUI.unitConversion", "单位换算"),
+        "汇率": ("AIUI.forexPro", "汇率"),
+        "眼保健操": ("AIUI.ocularGym", "眼保健操"),
+        "时间日期": ("datetimePro", "时间日期"),
+        "万年历": ("calendar", "万年历"),
+    }
+    # ==================== 日程管理 ====================
+    DAYLY_INTENTS = {
+        "日程管理": ("schedule_manager", "日程管理"), }
+
+    # ==================== 其他功能 ====================
+    OTHER_INTENTS = {
+        "拉群共策": ("shared_decision", "拉群共策"),
+        "新奥百科": ("enn_wiki", "新奥百科知识"),
+        "猜你想问": ("aigc_functions_generate_related_questions", "猜你想问"),
+    }
+
+    # 复合条件意图
+    COMPOUND_INTENTS = [
+        (lambda t: "血压测量" in t or "测量血压" in t,
+         ("remind_take_blood_pressure", "提醒他人测量血压")),
+        (lambda t: "运动切换" in t or "切换运动" in t,
+         ("switch_exercise", "运动切换")),
+        (lambda t: "数字人" in t and "换回" in t,
+         ("digital_image_back", "换回数字人皮肤")),
+        (lambda t: "数字人" in t and "切换" in t,
+         ("digital_image_switch", "切换数字人皮肤")),
+        (lambda t: "功能页面" in t and "打开" in t,
+         ("open_Function", "打开功能页面")),
+        (lambda t: "页面" in t and "打开" in t,
+         ("open_page", "打开页面")),
+        (lambda t: "非会议" in t and "日程管理" in t,
+         ("other_schedule", "非会议日程管理")),
+        (lambda t: "会议" in t and "日程管理" in t and "非会议" not in t,
+         ("meeting_schedule", "会议日程管理")),
+        (lambda t: "食材采购清单" in t and "管理" in t,
+         ("food_purchasing_list_management", "食材采购清单管理")),
+        (lambda t: "食材采购清单" in t and "确认" in t,
+         ("food_purchasing_list_verify", "食材采购清单确认")),
+        (lambda t: "食材采购清单" in t and "关闭" in t,
+         ("food_purchasing_list_close", "食材采购清单关闭")),
+        (lambda t: "食材采购清单" in t and "生成" in t,
+         ("create_food_purchasing_list", "生成食材采购清单")),
+    ]
+
+    # 合并所有简单意图
+    ALL_INTENTS = {}
+    for intent_dict in [
+        LAKANG_INTENTS,
+        MEDICAL_INTENTS,
+        FOOD_INTENTS,
+        PURCHASE_INTENTS,
+        EXPERT_INTENTS,
+        CONTENT_INTENTS,
+        UTILITY_INTENTS,
+        DAYLY_INTENTS,
+        OTHER_INTENTS,
+    ]:
+        ALL_INTENTS.update(intent_dict)
+    return ALL_INTENTS, COMPOUND_INTENTS
+
+
+def get_intent(text, all_intent, com_intent):
     """通过关键词解析意图->code"""
-    if "饮食营养" in text:
-        code = "food_nutri"
-        desc = "饮食营养"
-    elif "医疗" in text:
-        code = "med_health"
-        desc = "医疗健康"
-    elif "血压测量" in text or "测量血压" in text:
-        code = "remind_take_blood_pressure"
-        desc = "提醒他人测量血压"
-    elif "运动切换" in text or "切换运动" in text:
-        code = "switch_exercise"
-        desc = "运动切换"
-    elif "数字人" in text and "换回" in text:
-        code = "digital_image_back"
-        desc = "换回数字人皮肤"
-    elif "数字人" in text and "切换" in text:
-        code = "digital_image_switch"
-        desc = "切换数字人皮肤"
-    # elif "运动评价" in text:
-    #     code = "sport_eval"
-    #     desc = "运动评价"
-    # elif "运动咨询" in text:
-    #     code = "sport_rec"
-    #     desc = "运动咨询"
-    elif "温泉推荐" in text:
-        code = "spa_rec"
-        desc = "温泉推荐"
-    elif "行程推荐" in text:
-        code = "route_rec"
-        desc = "行程推荐"
-    elif "固安来康郡" in text:
-        code = "gu_an_laikangjun"
-        desc = "固安来康郡"
-    elif "温泉知识" in text:
-        code = "spa_knowledge"
-        desc = "温泉知识"
-    elif "家康宝" in text:
-        code = "jkbao_consult"
-        desc = "家康宝服务咨询"
-    elif "功能页面" in text and "打开" in text:
-        code = "open_Function"
-        desc = "打开功能页面"
-    elif "页面" in text and "打开" in text:
-        code = "open_page"
-        desc = "打开页面"
-    elif "菜谱" in text:
-        code = "cookbook"
-        desc = "菜谱"
-    elif "音乐" in text:
-        code = "musicX"
-        desc = "音乐播放"
-    elif "天气" in text:
-        code = "weather"
-        desc = "天气查询"
-    elif "辅助诊断" in text:
-        code = "auxiliary_diagnosis"
-        desc = "辅助诊断"
-    elif "问诊" in text:
-        code = "auxiliary_diagnosis"
-        desc = "辅助诊断"
-    elif "用药" in text:
-        code = "drug_rec"
-        desc = "用药咨询"
-    elif "血糖" in text:
-        code = "blood_glucose_counseling"
-        desc = "血糖咨询"
-    # elif "营养知识" in text:
-    #     code = "nutri_knowledge_rec"
-    #     desc = "营养知识咨询"
-    elif "饮食处方" in text:
-        code = "food_rec"
-        desc = "饮食处方推荐"
-    elif "饮食评价" in text:
-        code = "food_eval"
-        desc = "饮食评价"
-    elif "医师" in text or "医生" in text:
-        code = "call_doctor"
-        desc = "呼叫医师"
-    elif "运动师" in text:
-        code = "call_sportMaster"
-        desc = "呼叫运动师"
-    elif "心理" in text or "情志" in text:
-        code = "call_psychologist"
-        desc = "呼叫情志师"
-    elif "营养师" in text:
-        code = "call_dietista"
-        desc = "呼叫营养师"
-    elif "健管师" in text:
-        code = "call_health_manager"
-        desc = "呼叫健管师"
-    elif "网络" in text:
-        code = "websearch"
-        desc = "网络搜索"
-    # elif "首都" in text:
-    #     code = "KLLI3.captialInfo"
-    #     desc = "首都查询"
-    elif "彩票" in text:
-        code = "lottery"
-        desc = "彩票"
-    elif "解梦" in text:
-        code = "dream"
-        desc = "周公解梦"
-    elif "计算器" in text:
-        code = "AIUI.calc"
-        desc = "计算器"
-    # elif "国内城市查询" in text:
-    #     code = "LEIQIAO.cityOfPro"
-    #     desc = "国内城市查询"
-    # elif "省会查询" in text:
-    #     code = "ZUOMX.queryCapital"
-    #     desc = "省会查询"
-    elif "翻译" in text:
-        code = "translation"
-        desc = "翻译"
-    elif "垃圾" in text:
-        code = "garbageClassifyPro"
-        desc = "垃圾分类"
-    elif "尾号限行" in text:
-        code = "carNumber"
-        desc = "尾号限行"
-    elif "单位换算" in text:
-        code = "AIUI.unitConversion"
-        desc = "单位换算"
-    elif "汇率" in text:
-        code = "AIUI.forexPro"
-        desc = "汇率"
-    elif "时间日期" in text:
-        code = "datetimePro"
-        desc = "时间日期"
-    elif "眼保健操" in text:
-        code = "AIUI.ocularGym"
-        desc = "眼保健操"
-    elif "故事" in text:
-        code = "story"
-        desc = "故事"
-    elif "圣经" in text:
-        code = "AIUI.Bible"
-        desc = "圣经"
-    elif "戏曲" in text:
-        code = "drama"
-        desc = "戏曲"
-    elif "评书" in text:
-        code = "storyTelling"
-        desc = "评书"
-    elif "有声书" in text:
-        code = "AIUI.audioBook"
-        desc = "有声书"
-    elif "新闻" in text:
-        code = "news"
-        desc = "新闻"
-    elif "BMI" in text:
-        code = "bmi_query"
-        desc = "BMI查询"
-    elif "万年历" in text:
-        code = "calendar"
-        desc = "万年历"
-    elif "音频" in text:
-        code = "audio"
-        desc = "音频播放"
-    elif "笑话" in text:
-        code = "joke"
-        desc = "笑话"
-    elif "五师" in text:
-        code = "wushi"
-        desc = "呼叫五师"
-    elif "呼叫其他" in text:
-        code = "call_other"
-        desc = "呼叫其他"
-    elif "营养其他" in text:
-        code = "nutri_other"
-        desc = "营养其他"
-    # elif "高血压" in text:
-    #     code = "chronic_qa"
-    #     desc = "高血压知识问答"
-    elif "血压" in text:
-        code = "bp_consultation"
-        desc = "血压咨询"
-    elif "非会议日程管理" in text:
-        code = "other_schedule"
-        desc = "非会议日程管理"
-    elif "会议日程管理" in text:
-        code = "meeting_schedule"
-        desc = "会议日程管理"
-    elif "日程管理" in text:
-        code = "schedule_manager"
-        desc = "日程管理"
-    elif "食材采购清单管理" in text:
-        code = "food_purchasing_list_management"
-        desc = "食材采购清单管理"
-    elif "生成食材采购清单" in text:
-        code = "create_food_purchasing_list"
-        desc = "生成食材采购清单"
-    elif "食材采购" in text:
-        code = "food_purchasing"
-        desc = "食材采购"
-    elif "食材采购清单确认" in text:
-        code = "food_purchasing_list_verify"
-        desc = "食材采购清单确认"
-    elif "食材采购清单关闭" in text:
-        code = "food_purchasing_list_close"
-        desc = "食材采购清单关闭"
-    elif "拉群共策" in text:
-        code = "shared_decision"
-        desc = "拉群共策"
-    elif "新奥百科" in text:
-        code = "enn_wiki"
-        desc = "新奥百科知识"
-    elif "猜你想问" in text:
-        code = "aigc_functions_generate_related_questions"
-        desc = "猜你想问"
-    else:
-        code = "other"
-        desc = "日常对话"
-    logger.debug(f"识别出的意图:{text} code:{code}")
-    return code, desc
+    # 1. 检查复合条件
+    for condition, intent in com_intent:
+        if condition(text):
+            code, desc = intent
+            logger.debug(f"识别出的意图:{text} code:{code}")
+            return code, desc
+
+    # 2. 检查简单映射
+    for keyword in all_intent.keys():
+        if keyword in text:
+            (code, desc) = all_intent[keyword]
+            logger.debug(f"识别出的意图:{text} code:{code}")
+            return code, desc
+
+    # 3. 默认返回
+    logger.debug(f"识别出的意图:{text} code:other")
+    return "other", "日常对话"
 
 
 def get_doc_role(code):
@@ -602,28 +538,26 @@ def replace_you(text) -> str:
         return f"替换过程中发生错误: {str(e)}"
 
 
-async def response_generator(response, error: bool = False, replace: bool = True) -> AsyncGenerator:
+async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
     """
     if not error:
         async for chunk in response:
+            # if chunk.object == "text_completion":
             if not chunk.object or "chat" not in chunk.object:
                 content = chunk.choices[0].text
             else:
                 content = chunk.choices[0].delta.content
             if content:
-                # 根据参数控制是否替换
-                if replace:
-                    content = replace_you(content)
+                # 替换“您” -> “你”
+                content = replace_you(content)  # 在这里调用统一替换方法
                 chunk_resp = AigcFunctionsResponse(message=content, code=200, end=False)
                 yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
         chunk_resp = AigcFunctionsResponse(message="", code=200, end=True)
     else:
         chunk_resp = AigcFunctionsResponse(message=response, code=601, end=True)
-        # 根据参数控制是否替换
-        if replace:
-            chunk_resp.message = replace_you(response)
+        chunk_resp.message = replace_you(response)  # 错误消息替换
     yield f"data: {chunk_resp.model_dump_json(exclude_unset=False)}\n\n"
 
 
@@ -2001,3 +1935,7 @@ def prepare_question_list(data):
     formatted_list += "\n]"
 
     return formatted_list
+
+import pydantic
+
+print(pydantic.__version__)
