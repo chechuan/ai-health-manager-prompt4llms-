@@ -12,6 +12,7 @@ import sys
 from os.path import basename
 from pathlib import Path
 from typing import AsyncGenerator, Generator
+from copy import deepcopy
 
 import json5
 from fastapi.exceptions import ValidationException
@@ -230,6 +231,8 @@ class Agents:
                 "medical_records",
                 "ietary_guidelines",
                 "key_indicators",
+                "group_report",
+                "interaction_data",
             ],
             user_profile: UserProfile = None,
             medical_records: MedicalRecords = None,
@@ -306,6 +309,16 @@ class Agents:
                 body_fat_rate = measurements.get("体脂率", {}).get("value", "")
                 row = f"| {date} | {time} | {weight} | {bmi} | {body_fat_rate} |\n"
                 content += row
+        elif mode == "group_report":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and GROUP_REPORT_MAPPING.get(key):
+                        content += f"{GROUP_REPORT_MAPPING[key]}: {value}\n"
+        elif mode == "interaction_data":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and INTERACTION_DATA_MAPPING.get(key):
+                        content += f"{INTERACTION_DATA_MAPPING[key]}: {value}\n"
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -1646,6 +1659,202 @@ class Agents:
         new_prompt = f"请你帮我判断用户输入的句子是否为疑问句：'{prompt}'，疑问句:'1',非疑问句:'0'"
         answer = self.aigc_functions_single_choice(new_prompt, options)
         return answer
+
+    async def aigc_functions_customer_conversion(self, **kwargs) -> dict:
+        """
+        客户转化推荐分析
+
+        需求文档:
+            https://alidocs.dingtalk.com/i/nodes/amweZ92PV6BD4ZlzHEol2Pw0VxEKBD6p?utm_medium=wiki_feed_notification&utm_source=im_SYSTEM
+
+        能力说明:
+            根据客户的不同类型（体检（门诊）客户、已出组客户、未出组客户），动态生成已知信息和输出要求，
+            调用大模型完成转化分析并将输出解析为结构化字段，返回转化评估情况、沟通话术及方式方法。
+
+        参数:
+            kwargs (dict): 包含以下键的参数字典：
+                - intentCode (str): 意图编码，用于动态获取模板。
+                - customer_type (str): 客户类型，支持 "体检（门诊）客户"、"已出组客户"、"未出组客户"。
+                - user_profile (dict, optional): 用户画像，包含客户的基本信息（如年龄、性别、身高、体重等）。
+                - report_summary (str, optional): 客户体检报告总结部分，仅体检（门诊）客户需要。
+                - diagnosis (str, optional): 门诊病历内容，仅体检（门诊）客户需要。
+                - group_report (dict, optional): 出组报告，仅已出组客户需要，包含数据充分性、血糖达标分析和波动情况。
+                - interaction_data (dict, optional): 群聊互动数据，仅未出组客户需要，包含发言次数、图片发送次数等。
+
+        返回:
+            dict: 包含解析后模型输出的字段：
+                - conversion_evaluation (str): 转化评估情况，包括短期和长期转化可能性。
+                - communication_script (str): 沟通话术，用于与客户交流时的推荐话术。
+                - methods (str): 方式方法，包含具体的转化方案建议。
+
+        示例:
+            请求参数:
+            {
+                "intentCode": "aigc_functions_customer_conversion",
+                "customer_type": "体检（门诊）客户",
+                "user_profile": {
+                    "age": 45,
+                    "gender": "男",
+                    "height": "170cm",
+                    "weight": "70kg",
+                    "current_diseases": "高血糖",
+                    "history": "无"
+                },
+                "report_summary": "客户空腹血糖偏高，推荐进一步检查糖耐量",
+                "diagnosis": "糖尿病前期，需监测"
+            }
+
+            响应结果:
+            {
+                "conversion_evaluation": "短期转化可能性：中等\n长期转化可能性：高",
+                "communication_script": "尊敬的客户，你好！根据你的体检报告和门诊记录，你的空腹血糖已经偏高，并且被诊断为糖尿病前期...",
+                "methods": "1. 建议客户使用动态血糖仪进行实时监测。\n2. 提供五师团队服务，包含饮食、运动、心理支持等。\n3. 鼓励客户加入健康管理群组，与其他客户共享经验。"
+            }
+        """
+        _event = "客户转化推荐分析"
+        kwargs = deepcopy(kwargs)
+        intent_code = kwargs.get("intentCode")
+
+        customer_type = kwargs.get("customer_type")
+        if not customer_type:
+            raise ValueError("客户类型不能为空")
+
+        # Step 1: 从 MySQL 动态获取模板
+        prompt_template = self.gsr.get_event_item(intent_code).get("description")
+
+        # Step 2: 动态生成两部分内容
+        known_info = await self._generate_known_info(customer_type, kwargs)
+        output_requirements = await self._generate_output_requirements(customer_type)
+
+        # Step 3: 合并所有部分
+        prompt = prompt_template.format(
+            known_info=known_info,
+            output_requirements=output_requirements
+        )
+
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_template=prompt, model_args=model_args, **kwargs
+        )
+
+        result = await self._parse_model_output(content)
+        return result
+
+    async def _parse_model_output(self, content: str) -> dict:
+        """
+        解析大模型返回的内容，将结果分解为结构化字段：转化评估情况、沟通话术、方式方法。
+
+        参数:
+            content (str): 大模型返回的完整字符串。
+
+        返回:
+            dict: 包含解析后字段的字典。
+                - conversion_evaluation: 转化评估情况
+                - communication_script: 沟通话术
+                - methods: 方式方法
+        """
+        # 初始化返回结构
+        parsed_result = {
+            "conversion_evaluation": None,
+            "communication_script": None,
+            "methods": None
+        }
+
+        # 根据分隔符解析内容
+        sections = content.split("\n\n")
+
+        # 遍历每一段内容
+        for section in sections:
+            if section.startswith("转化评估情况："):
+                # 提取转化评估情况
+                parsed_result["conversion_evaluation"] = section.replace("转化评估情况：", "").strip()
+            elif section.startswith("沟通话术："):
+                # 提取沟通话术
+                parsed_result["communication_script"] = section.replace("沟通话术：", "").strip()
+            elif section.startswith("方式方法："):
+                # 提取方式方法
+                parsed_result["methods"] = section.replace("方式方法：", "").strip()
+
+        # 返回解析后的内容
+        return parsed_result
+
+    async def _generate_known_info(self, customer_type: Optional[str], params: dict) -> str:
+        """
+        动态生成 # 已知信息，根据客户类型选择性生成内容。
+        """
+        # 提取字段值
+        user_profile = params.get("user_profile", {})
+        report_summary = params.get("report_summary")
+        diagnosis = params.get("diagnosis")
+        group_report = params.get("group_report", {})
+        interaction_data = params.get("interaction_data", {})
+
+        # 使用通用组装方法生成用户画像内容
+        user_profile_str = self.__compose_user_msg__("user_profile",
+                                                           user_profile=user_profile) if user_profile else None
+
+        # 处理出组报告内容
+        group_report_str = self.__compose_user_msg__(
+            mode="group_report",
+            user_profile=group_report
+        ) if group_report and customer_type == "已出组客户" else None
+
+        # 处理群聊互动数据内容
+        interaction_data_str =  self.__compose_user_msg__(
+            mode="interaction_data",
+            user_profile=interaction_data
+        ) if interaction_data and customer_type == "未出组客户" else None
+
+        # 根据客户类型动态构造已知信息段落
+        known_info_parts = [
+            f"# 已知信息\n## 客户来源类型：{customer_type}" if customer_type else None,
+            f"## 用户画像\n{user_profile_str}".strip() if user_profile_str else None,
+        ]
+
+        # 针对体检（门诊）客户，拼接体检报告或门诊病历
+        if customer_type == "体检（门诊）客户":
+            if report_summary:
+                known_info_parts.append(f"## 客户体检报告\n- {report_summary}")
+            if diagnosis:
+                known_info_parts.append(f"## 门诊病历\n- {diagnosis}")
+
+        # 针对已出组客户，拼接出组报告
+        if customer_type == "已出组客户":
+            if group_report_str:
+                known_info_parts.append(f"## 出组报告\n{group_report_str}")
+
+        # 针对未出组客户，拼接群聊互动数据
+        if customer_type == "未出组客户":
+            if interaction_data_str:
+                known_info_parts.append(f"## 群聊互动数据\n{interaction_data_str}")
+
+        # 过滤掉 None 的部分并拼接
+        return "\n\n".join(filter(None, known_info_parts))
+
+    async def _generate_output_requirements(self, customer_type: str) -> str:
+        """
+        动态生成 # 输出要求
+        """
+        requirements = {
+            "体检（门诊）客户": (
+                "- 分析待转化客户是否已诊断糖尿病，血糖是否管理不佳（血糖是否异常，糖化血红蛋白是否异常）。\n"
+                "- 期望结论：无糖尿病诊断&血糖异常用户，转化重心：暂无转化可能性，转化方向：来院就诊，明确糖尿病诊断；\n"
+                "  有糖尿病诊断&血糖异常用户，转化重心：转化可能性中，转化方向：培养血糖管理意识。"
+            ),
+            "已出组客户": (
+                "- 分析管理效果，包括依从性和管理效果（血糖波动、达标情况）。\n"
+                "- 期望结论：根据依从性和管理效果判定短期和长期转化可能性。\n"
+                "- 提供优化方案建议。"
+            ),
+            "未出组客户": (
+                "- 分析当前管理数据，判断是否存在改进空间。\n"
+                "- 提供当前阶段的转化可能性分析和改进方向。"
+            ),
+        }
+
+        return f"# 输出要求\n{requirements.get(customer_type, '未知客户类型')}\n"
 
 
 if __name__ == "__main__":

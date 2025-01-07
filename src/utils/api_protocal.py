@@ -140,12 +140,26 @@ USER_PROFILE_KEY_MAP_SANJI = {
 }
 
 
-
 DIETARY_GUIDELINES_KEY_MAP = {
     "focus_issues": "重点关注问题",
     "suitable_foods": "适宜吃",
     "unsuitable_foods": "不宜吃",
     "basic_nutritional_needs": "基础营养需求"
+}
+
+
+GROUP_REPORT_MAPPING = {
+        "data_sufficiency": "数据充分性说明",
+        "glucose_control": "血糖达标分析",
+        "glucose_fluctuation": "血糖波动情况",
+    }
+
+
+INTERACTION_DATA_MAPPING = {
+    "message_count": "发言次数",
+    "image_count": "图片发送次数",
+    "diet_image_count": "饮食图片发送次数",
+    "exercise_image_count": "运动图片发送次数",
 }
 
 
@@ -279,6 +293,7 @@ class AigcFunctionsRequest(BaseModel):
         "aigc_functions_auxiliary_diagnosis",
         "aigc_functions_relevant_inspection",
         "aigc_functions_judge_question",
+        "aigc_functions_customer_conversion",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -429,6 +444,49 @@ class AigcFunctionsRequest(BaseModel):
         None,
         description="专家修改后的方案",
         examples=["专家方案示例"],
+    )
+    customer_type: Optional[str] = Field(
+        None,
+        description="客户来源类型",
+        examples=["体检（门诊）客户", "已出组客户", "未出组客户"]
+    )
+    report_summary: Optional[str] = Field(
+        None,
+        description="体检或门诊报告总结部分，需包含糖尿病相关内容及推荐原因",
+        examples=["客户空腹血糖偏高，推荐进一步检查糖耐量"]
+    )
+    # fasting_glucose: Optional[float] = Field(
+    #     None,
+    #     description="空腹血糖检查结果（mmol/L）",
+    #     examples=[5.6, 10.2]
+    # )
+    # hba1c: Optional[float] = Field(
+    #     None,
+    #     description="糖化血红蛋白检查结果",
+    #     examples=[6.5, 8.2]
+    # )
+    group_report: Optional[dict] = Field(
+        None,
+        description="出组报告，包含数据充分性、血糖达标分析、血糖波动情况",
+        examples=[
+            {
+                "data_sufficiency": "充分",
+                "glucose_control": "血糖达标",
+                "glucose_fluctuation": "轻微波动",
+            }
+        ],
+    )
+    interaction_data: Optional[dict] = Field(
+        None,
+        description="群聊互动数据，包含发言次数、图片发送次数等",
+        examples=[
+            {
+                "message_count": 30,
+                "image_count": 10,
+                "diet_image_count": 5,
+                "exercise_image_count": 5,
+            }
+        ],
     )
 
 
@@ -796,7 +854,7 @@ class OutpatientSupportRequest(BaseModel):
         "aigc_functions_physician_consultation_decision_support_v2",
         "aigc_functions_bp_warning_generation",
         "aigc_functions_tcm_consultation_decision_support",
-        "aigc_functions_jia_kang_bao_support"
+        "aigc_functions_jia_kang_bao_support",
     ] = Field(description="意图编码/事件编码")
     model_args: Union[Dict, None] = Field(
         None,
@@ -899,7 +957,6 @@ class OutpatientSupportRequest(BaseModel):
             {"date": "2024-08-29 19:11:31", "sbp": 145.0, "dbp": 83.0}
         ],
     )
-
     tcm_four_diagnoses: Optional[TcmFourDiagnoses] = Field(
         None,
         description="中医四诊信息，包括脉象采集、面象采集和舌象采集",

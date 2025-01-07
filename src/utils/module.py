@@ -1935,7 +1935,3 @@ def prepare_question_list(data):
     formatted_list += "\n]"
 
     return formatted_list
-
-import pydantic
-
-print(pydantic.__version__)

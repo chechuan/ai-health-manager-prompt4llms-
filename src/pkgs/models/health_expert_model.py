@@ -67,10 +67,10 @@ class HealthExpertModel:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -78,7 +78,7 @@ class HealthExpertModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
         return content
 
     async def aaigc_functions_general_new(
@@ -213,7 +213,6 @@ class HealthExpertModel:
             "medical_records",
             "ietary_guidelines",
             "key_indicators",
-            "user_profile"
         ],
         user_profile: UserProfile = None,
         medical_records: MedicalRecords = None,
