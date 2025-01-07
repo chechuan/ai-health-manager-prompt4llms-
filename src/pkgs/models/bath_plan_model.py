@@ -192,7 +192,7 @@ class BathPlanModel:
 
         # 判断是否有温泉池，并生成方案部分
         for idx, step in enumerate(full_plan):
-            if idx == 0:  # 第一条为重点推荐
+            if step['pool_type'] == "主池":  # 第一条为重点推荐
                 markdown += f"- **{step['spring_name']}（重点推荐）**\n"
             else:  # 其余为普通推荐，没有括号内容
                 markdown += f"- **{step['spring_name']}**\n"
