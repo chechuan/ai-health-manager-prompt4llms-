@@ -2737,7 +2737,7 @@ class HealthExpertModel:
         return {
             "answer": None,
             "output_guess": False,
-            "guess_you_want": [],
+            "guess_you_want": []
         }
 
     def parse_matched_question(self, output: str) -> str:

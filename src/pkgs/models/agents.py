@@ -1724,7 +1724,7 @@ class Agents:
 
         # Step 2: 动态生成两部分内容
         known_info = await self._generate_known_info(customer_type, kwargs)
-        output_requirements = await self._generate_output_requirements(customer_type)
+        output_requirements = await self._generate_output_requirements(CUSTOMER_TYPE_MAPPING.get(customer_type))
 
         # Step 3: 合并所有部分
         prompt = prompt_template.format(
@@ -1784,6 +1784,9 @@ class Agents:
         """
         动态生成 # 已知信息，根据客户类型选择性生成内容。
         """
+        # 将字符串客户类型映射为文字描述
+        customer_type_desc = CUSTOMER_TYPE_MAPPING.get(customer_type)
+
         # 提取字段值
         user_profile = params.get("user_profile", {})
         report_summary = params.get("report_summary")
@@ -1809,31 +1812,31 @@ class Agents:
 
         # 根据客户类型动态构造已知信息段落
         known_info_parts = [
-            f"# 已知信息\n## 客户来源类型：{customer_type}" if customer_type else None,
+            f"# 已知信息\n## 客户来源类型：{customer_type_desc}" if customer_type else None,
             f"## 用户画像\n{user_profile_str}".strip() if user_profile_str else None,
         ]
 
         # 针对体检（门诊）客户，拼接体检报告或门诊病历
-        if customer_type == "体检（门诊）客户":
+        if customer_type == "1":
             if report_summary:
                 known_info_parts.append(f"## 客户体检报告\n- {report_summary}")
             if diagnosis:
                 known_info_parts.append(f"## 门诊病历\n- {diagnosis}")
 
         # 针对已出组客户，拼接出组报告
-        if customer_type == "已出组客户":
+        if customer_type == "2":
             if group_report_str:
                 known_info_parts.append(f"## 出组报告\n{group_report_str}")
 
         # 针对未出组客户，拼接群聊互动数据
-        if customer_type == "未出组客户":
+        if customer_type == "3":
             if interaction_data_str:
                 known_info_parts.append(f"## 群聊互动数据\n{interaction_data_str}")
 
         # 过滤掉 None 的部分并拼接
         return "\n\n".join(filter(None, known_info_parts))
 
-    async def _generate_output_requirements(self, customer_type: str) -> str:
+    async def _generate_output_requirements(self, customer_type_desc: str) -> str:
         """
         动态生成 # 输出要求
         """
@@ -1854,7 +1857,7 @@ class Agents:
             ),
         }
 
-        return f"# 输出要求\n{requirements.get(customer_type, '未知客户类型')}\n"
+        return f"# 输出要求\n{requirements.get(customer_type_desc)}\n"
 
 
 if __name__ == "__main__":
