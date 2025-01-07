@@ -163,6 +163,13 @@ INTERACTION_DATA_MAPPING = {
 }
 
 
+CUSTOMER_TYPE_MAPPING = {
+    "1": "体检（门诊）客户",
+    "2": "已出组客户",
+    "3": "未出组客户"
+}
+
+
 class DrugPlanItem(BaseModel):
     drug_name: str  # 药品名称
     dosage: str  # 剂量
