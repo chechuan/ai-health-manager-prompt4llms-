@@ -2714,7 +2714,7 @@ class HealthExpertModel:
 
         # 使用通用生成方法调用模型
         result = await self.aaigc_functions_general(
-            _event="家康宝问题检索支持",
+            _event="家康宝服务咨询",
             prompt_vars=prompt_vars,
             model_args=model_args,
             **kwargs,
@@ -2722,8 +2722,10 @@ class HealthExpertModel:
 
         # 模型返回结果处理
         try:
-            # 使用正则解析输出，提取 `Matched Question`
-            matched_question = self.parse_matched_question(result)
+            # 使用增强的解析方法提取 `Matched Question` 和 `Thought`
+            parsed_result = self.parse_model_output(result)
+            matched_question = parsed_result.get("matched_question")
+            thought = parsed_result.get("thought")
 
             if matched_question:
                 # 查找匹配问题的 ID 或直接返回答案
@@ -2737,24 +2739,47 @@ class HealthExpertModel:
         return {
             "answer": None,
             "output_guess": False,
-            "guess_you_want": []
+            "guess_you_want": [],
+            "thought": thought
         }
 
-    def parse_matched_question(self, output: str) -> str:
+    def parse_model_output(self, output: str) -> Dict[str, str]:
         """
-        从模型输出中提取 `Matched Question`
+        从模型输出中提取 `Matched Question` 和 `Thought`
 
         参数:
             output (str): 模型输出的完整文本
 
         返回:
-            str: 提取的匹配问题
+            dict: 包含提取结果的字典，结构如下：
+                {
+                    "matched_question": 提取的匹配问题或 None,
+                    "thought": 提取的模型思路或 None,
+                }
         """
         import re
 
+        # 定义正则模式
         matched_question_pattern = r"Matched Question: (.+)"
-        match = re.search(matched_question_pattern, output)
-        return match.group(1) if match else None
+        thought_pattern = r"Thought: (.+)"
+
+        # 初始化返回字典
+        result = {
+            "matched_question": None,
+            "thought": None,
+        }
+
+        # 匹配 `Matched Question`
+        matched_question_match = re.search(matched_question_pattern, output)
+        if matched_question_match:
+            result["matched_question"] = matched_question_match.group(1).strip()
+
+        # 匹配 `Thought`
+        thought_match = re.search(thought_pattern, output)
+        if thought_match:
+            result["thought"] = thought_match.group(1).strip()
+
+        return result
 
 
 if __name__ == "__main__":

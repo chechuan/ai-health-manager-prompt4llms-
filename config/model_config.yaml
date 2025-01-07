@@ -80,7 +80,7 @@ local:
         - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
         - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
         - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
-        - aigc_functions_jia_kang_bao_support # 2024年1月3日 家康宝问题检索支持
+        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
     Qwen1.5-72B-Chat:
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 
@@ -165,7 +165,7 @@ dev:
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
         - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
-        - aigc_functions_jia_kang_bao_support # 2024年1月3日 家康宝问题检索支持
+        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
     Qwen1.5-72B-Chat:
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 

@@ -171,7 +171,7 @@ def intent_init():
         "用药": ("drug_rec", "用药咨询"),
         "血糖": ("blood_glucose_counseling", "血糖咨询"),
         "低血压": ("hypotensive_consultation", "低血压咨询"),
-        "BMI": ("BMI", "BMI"),
+        "BMI": ("bmi_query", "BMI"),
         "健康知识咨询": ("health_qa", "健康知识科普"),
         "家康宝服务咨询": ("jia_kang_bao", "家康宝服务咨询"),
     }
