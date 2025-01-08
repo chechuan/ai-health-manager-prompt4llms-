@@ -1456,19 +1456,30 @@ class Chat_v2:
                 health_expert = HealthExpertModel(self.gsr)
                 response = await health_expert.aigc_functions_jia_kang_bao_support(**kwargs)
                 if response is None:
-                    response_content = "服务暂时不可用，请稍后再试。"
+                    # 修改所有相关 intentCode 为 "other"
+                    intentCode = "other"
+                    kwargs["intentCode"] = "other"
+                    for msg in kwargs.get("messages", []):
+                        msg["intentCode"] = "other"
+                    for history_item in kwargs.get("history", []):
+                        history_item["intentCode"] = "other"
+
+                    # 切换到闲聊逻辑
+                    out_history = self.chatter_gaily_new(
+                        mid_vars, **kwargs, return_his=True
+                    )
                 else:
                     response_content = response.get("answer")
-                out_history = kwargs["messages"] + [{
-                    "role": "assistant",
-                    "content": response.get("thought", "基于知识库检索"),
-                    "function_call": {
-                        "name": "convComplete",
-                        "arguments": response_content
-                    },
-                    "intentCode": intentCode
-                }]
-                appendData = {"guessQuestions": response["guess_you_want"]} if response.get("guess_you_want") else {}
+                    out_history = kwargs["messages"] + [{
+                        "role": "assistant",
+                        "content": response.get("thought", "基于知识库检索"),
+                        "function_call": {
+                            "name": "convComplete",
+                            "arguments": response_content
+                        },
+                        "intentCode": intentCode
+                    }]
+                    appendData = {"guessQuestions": response["guess_you_want"]} if response.get("guess_you_want") else {}
         if not out_history:
             out_history = self.chat_react(
                 mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs
