@@ -201,8 +201,8 @@ class UserProfile(BaseModel):
     # gender: Literal["男", "女"] = Field(None, description="性别", examples=["男", "女"])
     age: Optional[int] = None
     gender: Optional[str] = None
-    height: str = Field(None, description="身高", examples=["175cm", "1.8米"])
-    weight: str = Field(None, description="体重", examples=["65kg", "90斤"])
+    height: Optional[str] = Field(None, description="身高", examples=["175cm", "1.8米"])
+    weight: Optional[str] = Field(None, description="体重", examples=["65kg", "90斤"])
     target_weight: str = Field(None, description="目标体重", examples=["65kg", "90斤"])
     weight_evaluation: Optional[str] = Field(
         None, description="体重评价", examples=["正常"]
