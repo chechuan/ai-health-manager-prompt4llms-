@@ -1468,7 +1468,7 @@ class Chat_v2:
                     },
                     "intentCode": intentCode
                 }]
-                appendData = {"guessQuestions": response.get("guess_you_want", [])}
+                appendData = {"guessQuestions": response["guess_you_want"]} if response.get("guess_you_want") else {}
         if not out_history:
             out_history = self.chat_react(
                 mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs
