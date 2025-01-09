@@ -1,0 +1,52 @@
+# src/langfuse_prompt_manager.py
+
+from typing import Dict, Any
+from langfuse import Langfuse
+
+
+class LangfusePromptManager:
+    """
+    工具类：用于从 Langfuse 获取 Prompt，失败时回退到服务启动时预加载的 prompt_meta_data。
+    """
+    def __init__(self, langfuse_client: Langfuse, prompt_meta_data: Dict[str, Any]) -> None:
+        """
+        初始化 LangfusePromptManager。
+
+        :param langfuse_client: Langfuse 客户端实例
+        :param prompt_meta_data: 服务启动时预加载的 prompt 数据
+        """
+        self.langfuse = langfuse_client
+        self.prompt_meta_data = prompt_meta_data
+
+    async def get_formatted_prompt(self, event_code: str, prompt_vars: Dict[str, Any]) -> str:
+        """
+        获取并格式化提示词（优先从 Langfuse 获取，失败则回退到预加载数据）。
+
+        :param event_code: 事件代码，用于标识 prompt
+        :param prompt_vars: 动态替换变量
+        :return: 格式化后的提示词
+        """
+        try:
+            # 从 Langfuse 获取 Prompt 对象并进行插值编译
+            prompt_obj = self.langfuse.get_prompt(event_code)
+            return prompt_obj.compile(**prompt_vars)  # Langfuse 自带插值逻辑
+        except Exception as e:
+            # 如果 Langfuse 调用失败，回退到预加载数据
+            print(f"[LangfusePromptManager] Langfuse 获取失败，改用预加载 prompt_meta_data: {e}")
+            return self._get_formatted_prompt_from_preloaded(event_code, prompt_vars)
+
+    def _get_formatted_prompt_from_preloaded(self, event_code: str, prompt_vars: Dict[str, Any]) -> str:
+        """
+        从预加载的 prompt_meta_data 获取并格式化提示词。
+
+        :param event_code: 事件代码
+        :param prompt_vars: 动态替换变量
+        :return: 格式化后的提示词
+        """
+        event_item = self.prompt_meta_data.get("event", {}).get(event_code, {})
+        base_prompt = event_item.get("description", f"[No preloaded prompt for {event_code}]")
+        try:
+            return base_prompt.format(**prompt_vars)  # 使用 format 替换变量
+        except KeyError as e:
+            raise ValueError(f"Missing variable {e} for prompt formatting.") from e
+

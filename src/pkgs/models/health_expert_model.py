@@ -28,6 +28,7 @@ from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
+from src.utils.langfuse_prompt_manager import LangfusePromptManager
 from langfuse import Langfuse
 import time
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -40,6 +41,10 @@ class HealthExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         # 初始化实例属性
         self.gsr = gsr
+        self.langfuse_prompt_manager = LangfusePromptManager(
+            langfuse_client=self.gsr.langfuse_client,
+            prompt_meta_data=self.gsr.prompt_meta_data,
+        )
         self.regist_aigc_functions()
 
     async def aaigc_functions_general(
@@ -62,15 +67,19 @@ class HealthExpertModel:
             if not model_args
             else model_args
         )
-        prompt_template: str = (
-            prompt_template
-            if prompt_template
-            else self.gsr.get_event_item(event)["description"]
-        )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
-        prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+
+        if prompt_template:
+            try:
+                prompt = prompt_template.format(**prompt_vars)
+            except KeyError as e:
+                return f"Error: Missing placeholder for {e} in prompt_vars."
+        else:
+            # 没有提供 prompt_template，使用 LangfusePromptManager 获取并格式化
+            prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
+
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -78,7 +87,7 @@ class HealthExpertModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
 
     async def aaigc_functions_general_new(
@@ -749,67 +758,6 @@ class HealthExpertModel:
         return content
 
     async def aigc_functions_test1230(self, **kwargs) -> str:
-        """
-        三济康养方案总则
-
-        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncvz122LqV3kdP0wQ?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxllc1eq0ukitru9tjf
-
-        根据用户画像和病历信息生成康养方案总则。
-
-        参数:
-            kwargs (dict): 包含用户画像和病历信息的参数字典
-
-        返回:
-            str: 生成的康养方案总则内容
-        """
-
-        # # 必填字段和至少需要一项的参数列表
-        # required_fields = {
-        #     "user_profile": [
-        #         "age",
-        #         "gender",
-        #         "height",
-        #         "weight",
-        #         "bmi",
-        #         "current_diseases",
-        #     ]
-        # }
-        # at_least_one = ["user_profile", "medical_records", "key_indicators"]
-        #
-        # # 验证必填字段
-        # if not any(kwargs.get(param) for param in at_least_one):
-        #     raise ValueError(f"至少需要提供其中一个参数: {', '.join(at_least_one)}")
-        #
-        # # 如果提供了 user_profile，则检查 required_fields 是否完整
-        # if kwargs.get("user_profile"):
-        #     user_profile = kwargs["user_profile"]
-        #     missing_fields = [
-        #         field for field in required_fields["user_profile"] if not user_profile.get(field)
-        #     ]
-        #     if missing_fields:
-        #         raise ValueError(f"user_profile 中缺少以下必需字段: {', '.join(missing_fields)}")
-        #
-        # # 获取用户画像信息
-        # user_profile = kwargs.get("user_profile", {})
-        #
-        # # 组合用户画像信息字符串
-        # user_profile_str = await self.__compose_user_msg__(
-        #     "user_profile", user_profile=user_profile
-        # )
-        #
-        # # 使用工具类方法检查并计算基础代谢率（BMR）
-        # bmr = await check_and_calculate_bmr(user_profile)
-        # user_profile_str += f"基础代谢:\n{bmr}\n"
-        #
-        # # 组合病历信息字符串
-        # medical_records_str = await self.__compose_user_msg__(
-        #     "medical_records", medical_records=kwargs.get("medical_records")
-        # )
-        #
-        # # 组合消息字符串
-        # messages_str = await self.__compose_user_msg__(
-        #     "messages", messages=kwargs.get("messages", "")
-        # )
         _event = "三济康养方案"
         tag = kwargs.get("tag")
 
@@ -824,7 +772,7 @@ class HealthExpertModel:
         )
 
         # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general_new(
+        content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 

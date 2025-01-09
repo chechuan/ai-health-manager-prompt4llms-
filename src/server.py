@@ -779,7 +779,6 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
 
 
-
 def mount_multimodal_endpoints(app: FastAPI):
 
     @app.route("/func_eval/image_type_recog", methods=["post"])

@@ -1,0 +1,14 @@
+local:
+  LANGFUSE_SECRET_KEY: sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af
+  LANGFUSE_PUBLIC_KEY: pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206
+  LANGFUSE_HOST: http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cn
+
+dev:
+  LANGFUSE_SECRET_KEY: sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af
+  LANGFUSE_PUBLIC_KEY: pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206
+  LANGFUSE_HOST: http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cnm
+
+prod:
+  LANGFUSE_SECRET_KEY: sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af
+  LANGFUSE_PUBLIC_KEY: pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206
+  LANGFUSE_HOST: http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cnm
