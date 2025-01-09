@@ -543,7 +543,6 @@ async def response_generator(response, error: bool = False) -> AsyncGenerator:
     """异步生成器
     处理`openai.AsyncStream`
     """
-    logger.info(response)
     if not error:
         async for chunk in response:
             # if chunk.object == "text_completion":
