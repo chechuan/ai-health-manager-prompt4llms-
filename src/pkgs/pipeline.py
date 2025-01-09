@@ -1455,7 +1455,7 @@ class Chat_v2:
 
                 health_expert = HealthExpertModel(self.gsr)
                 response = await health_expert.aigc_functions_jia_kang_bao_support(**kwargs)
-                if response is None:
+                if response is None or not response.get("answer"):
                     # 修改所有相关 intentCode 为 "other"
                     intentCode = "other"
                     kwargs["intentCode"] = "other"

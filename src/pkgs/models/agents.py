@@ -22,6 +22,7 @@ from langchain.prompts.prompt import PromptTemplate
 sys.path.append(Path(__file__).parents[4].as_posix())
 from data.jiahe_util import *
 from data.test_param.test import testParam
+from data.customer_conversion_prompt import *
 from src.prompt.model_init import acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
@@ -311,14 +312,42 @@ class Agents:
                 content += row
         elif mode == "group_report":
             if user_profile:
+                # 初始化内容
+                content = ""
+
+                # 如果有在管天数，先插入最前面
+                if "management_days" in user_profile and user_profile.get("management_days"):
+                    content += f"在管天数：{user_profile.get('management_days')}天\n"
+
+                # 拼接其余部分内容
                 for key, value in user_profile.items():
-                    if value and GROUP_REPORT_MAPPING.get(key):
-                        content += f"{GROUP_REPORT_MAPPING[key]}: {value}\n"
+                    if key != "management_days" and value and key in GROUP_REPORT_MAPPING:
+                        # 拼接标题和内容
+                        content += f"### {GROUP_REPORT_MAPPING[key]}\n{value}\n"
+
+                # 去掉多余换行符
+                content = content.strip()
         elif mode == "interaction_data":
             if user_profile:
+                # 初始化内容
+                content = ""
+
+                # 组装基础互动数据
                 for key, value in user_profile.items():
-                    if value and INTERACTION_DATA_MAPPING.get(key):
-                        content += f"{INTERACTION_DATA_MAPPING[key]}: {value}\n"
+                    if value and key in INTERACTION_DATA_MAPPING and key not in {"diet_image_count",
+                                                                                 "exercise_image_count"}:
+                        content += INTERACTION_DATA_MAPPING[key].format(value=value) + "\n"
+
+                # 处理饮食和运动图片发送次数
+                diet_count = user_profile.get("diet_image_count", 0)
+                exercise_count = user_profile.get("exercise_image_count", 0)
+                if diet_count or exercise_count:
+                    content += INTERACTION_DATA_MAPPING["diet_and_exercise_count"].format(
+                        diet_count=diet_count, exercise_count=exercise_count
+                    ) + "\n"
+
+                # 确保只有一个空行
+                content = content.strip() + "\n"
         else:
             logger.error(f"Compose user profile error: mode {mode} not supported")
         return content
@@ -1541,10 +1570,10 @@ class Agents:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -1552,7 +1581,7 @@ class Agents:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
 
     async def sanji_general(
@@ -1790,7 +1819,6 @@ class Agents:
         # 提取字段值
         user_profile = params.get("user_profile", {})
         report_summary = params.get("report_summary")
-        diagnosis = params.get("diagnosis")
         group_report = params.get("group_report", {})
         interaction_data = params.get("interaction_data", {})
 
@@ -1802,36 +1830,51 @@ class Agents:
         group_report_str = self.__compose_user_msg__(
             mode="group_report",
             user_profile=group_report
-        ) if group_report and customer_type == "已出组客户" else None
+        ) if group_report and customer_type in ["2", "3"] else None
 
         # 处理群聊互动数据内容
-        interaction_data_str =  self.__compose_user_msg__(
+        interaction_data_str = self.__compose_user_msg__(
             mode="interaction_data",
             user_profile=interaction_data
-        ) if interaction_data and customer_type == "未出组客户" else None
+        ) if interaction_data and customer_type in ["2", "3"] else None
 
         # 根据客户类型动态构造已知信息段落
         known_info_parts = [
             f"# 已知信息\n## 客户来源类型：{customer_type_desc}" if customer_type else None,
-            f"## 用户画像\n{user_profile_str}".strip() if user_profile_str else None,
+            f"## 用户画像\n{user_profile_str}".strip() if user_profile_str and customer_type != "2" else None,
         ]
 
         # 针对体检（门诊）客户，拼接体检报告或门诊病历
         if customer_type == "1":
             if report_summary:
-                known_info_parts.append(f"## 客户体检报告\n- {report_summary}")
-            if diagnosis:
-                known_info_parts.append(f"## 门诊病历\n- {diagnosis}")
+                known_info_parts.append(f"## 客户体检报告或门诊病历\n- {report_summary}")
 
         # 针对已出组客户，拼接出组报告
         if customer_type == "2":
+            # 拼接用户画像与出组报告，没有换行
+            if user_profile_str:
+                user_profile_str = user_profile_str.strip()
+                known_info_parts.append(f"## 用户画像\n{user_profile_str}")
+
             if group_report_str:
-                known_info_parts.append(f"## 出组报告\n{group_report_str}")
+                group_report_str = group_report_str.strip()
+                # 直接拼接到用户画像部分后
+                known_info_parts[-1] += f"\n# 已知信息\n## 出组报告\n{group_report_str}"
+
+            # 互动情况仍保持单独段落
+            if interaction_data_str:
+                interaction_data_str = interaction_data_str.strip()
+                known_info_parts.append(f"## 互动情况\n{interaction_data_str}")
 
         # 针对未出组客户，拼接群聊互动数据
         if customer_type == "3":
+            if group_report_str:
+                known_info_parts.append(f"## 在管期间管理情况\n{group_report_str}")
+
+            # 互动情况仍保持单独段落
             if interaction_data_str:
-                known_info_parts.append(f"## 群聊互动数据\n{interaction_data_str}")
+                interaction_data_str = interaction_data_str.strip()
+                known_info_parts.append(f"### 互动情况\n{interaction_data_str}")
 
         # 过滤掉 None 的部分并拼接
         return "\n\n".join(filter(None, known_info_parts))
@@ -1840,25 +1883,17 @@ class Agents:
         """
         动态生成 # 输出要求
         """
-        requirements = {
-            "体检（门诊）客户": (
-                "- 分析待转化客户是否已诊断糖尿病，血糖是否管理不佳（血糖是否异常，糖化血红蛋白是否异常）。\n"
-                "- 期望结论：无糖尿病诊断&血糖异常用户，转化重心：暂无转化可能性，转化方向：来院就诊，明确糖尿病诊断；\n"
-                "  有糖尿病诊断&血糖异常用户，转化重心：转化可能性中，转化方向：培养血糖管理意识。"
-            ),
-            "已出组客户": (
-                "- 分析管理效果，包括依从性和管理效果（血糖波动、达标情况）。\n"
-                "- 期望结论：根据依从性和管理效果判定短期和长期转化可能性。\n"
-                "- 提供优化方案建议。"
-            ),
-            "未出组客户": (
-                "- 分析当前管理数据，判断是否存在改进空间。\n"
-                "- 提供当前阶段的转化可能性分析和改进方向。"
-            ),
+        # 定义映射关系
+        requirements_map = {
+            "体检（门诊）客户": ti_jian_prompt,
+            "已出组客户": yi_chu_zu_prompt,
+            "未出组客户": wei_chu_zu_prompt,
         }
 
-        return f"# 输出要求\n{requirements.get(customer_type_desc)}\n"
+        # 获取对应的提示词
+        output = requirements_map.get(customer_type_desc)
 
+        return output
 
 if __name__ == "__main__":
     gsr = InitAllResource()
