@@ -152,14 +152,14 @@ GROUP_REPORT_MAPPING = {
         "data_sufficiency": "数据充分性说明",
         "glucose_control": "血糖达标分析",
         "glucose_fluctuation": "血糖波动情况",
+        "management_days": "在管天数"
     }
 
 
 INTERACTION_DATA_MAPPING = {
-    "message_count": "发言次数",
-    "image_count": "图片发送次数",
-    "diet_image_count": "饮食图片发送次数",
-    "exercise_image_count": "运动图片发送次数",
+    "message_count": "21天群聊内发言次数（文字+图片）：{value}次",
+    "image_count": "21天群聊内图片发送次数（认定为饮食、运动打卡次数）：{value}次",
+    "diet_and_exercise_count": "21天群聊内不同类型图片发送次数：饮食打卡次数：{diet_count}次，运动打卡次数：{exercise_count}次",
 }
 
 
@@ -480,6 +480,7 @@ class AigcFunctionsRequest(BaseModel):
                 "data_sufficiency": "充分",
                 "glucose_control": "血糖达标",
                 "glucose_fluctuation": "轻微波动",
+                "management_days": "在管天数",
             }
         ],
     )
