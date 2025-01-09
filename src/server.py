@@ -889,7 +889,8 @@ def create_app():
                         item["backend_history"] = yield_item["history"]
                     else:
                         item["backend_history"] = []
-                res = json.dumps(item, ensure_ascii=False).replace('您', '你')
+                res = json.dumps(item, ensure_ascii=False).replace('您', '你') if item.get(
+                    "intentCode") != "jia_kang_bao" else json.dumps(item, ensure_ascii=False)
                 yield format_sse_chat_complete(
                     res, "delta"
                 )
