@@ -57,13 +57,21 @@ class HealthExpertModel:
     ) -> Union[str, Generator]:
         """通用生成"""
 
-        # 创建 Trace 对象
+        # 创建 Trace 对象，并添加更多的追踪参数
         trace = self.gsr.langfuse_client.trace(
             name=f"{_event}_trace",
             user_id=kwargs.get("user_id", "unknown_user"),
             session_id=kwargs.get("session_id", "3af64bfd-eee0-b94f-154a-53a18ce230e7"),
-            release="v1.0.0"
+            release="v1.0.0",
+            tags=["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
+            metadata={
+                "environment": kwargs.get("environment", "production"),
+                "version": kwargs.get("version", "v1.0.0"),
+                "description": f"Processing event {_event}"
+            }
         )
+
+        # 获取模型及配置
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (
@@ -76,58 +84,105 @@ class HealthExpertModel:
             else model_args
         )
 
-        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
 
+        # 格式化 prompt
         if prompt_template:
             try:
                 prompt = prompt_template.format(**prompt_vars)
             except KeyError as e:
                 return f"Error: Missing placeholder for {e} in prompt_vars."
         else:
-            # 没有提供 prompt_template，使用 LangfusePromptManager 获取并格式化
+            # 使用 LangfusePromptManager 获取并格式化
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
+        # 添加成功获取 Prompt 的记录，并增加参数
         trace.event(
             name="Langfuse Prompt Success",
-            input={"event": event, "prompt_vars": prompt_vars},
-            output={"prompt_template": prompt}
+            input={
+                "event": event,
+                "prompt_vars": prompt_vars
+            },
+            output={
+                "prompt_template": prompt
+            },
+            metadata={
+                "tags": ["Prompt", "Langfuse"],
+                "description": "Successfully fetched and formatted prompt."
+            }
         )
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
+
         # 调用大模型
         try:
-            start_time = time.time()
+            start_time = time.time()  # 开始计时
             content: Union[str, Generator] = await acallLLM(
                 model=model,
                 query=prompt,
                 **model_args,
             )
-            end_time = time.time()
+            end_time = time.time()  # 结束计时
+
+            # 添加模型调用成功的记录，并增加额外参数
             trace.event(
                 name="Model Invocation",
-                input={"model": model, "prompt": prompt, "model_args": model_args},
-                output={"output": content, "time_taken": end_time - start_time}
+                input={
+                    "model": model,
+                    "prompt": prompt,
+                    "model_args": model_args,
+                },
+                output={
+                    "output": content,
+                    "time_taken": end_time - start_time
+                },
+                metadata={
+                    "tags": ["Model", "Invocation"],
+                    "latency": end_time - start_time,
+                    "model_version": "Qwen2-72B-Instruct"
+                }
             )
 
-            # 记录模型返回内容
+            # 日志记录模型返回的内容
             if isinstance(content, str):
                 logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+
             return content
 
         except Exception as e:
+            # 捕获并记录异常，添加更多上下文
             logger.error(f"Error during model invocation for event: {event}, Error: {e}")
             trace.event(
                 name="Model Invocation Error",
-                input={"model": model, "prompt": prompt, "model_args": model_args},
-                output={"error": str(e)}
+                input={
+                    "model": model,
+                    "prompt": prompt,
+                    "model_args": model_args,
+                },
+                output={
+                    "error": str(e)
+                },
+                metadata={
+                    "tags": ["Error", "Model"],
+                    "description": f"An error occurred during invocation for {_event}."
+                }
             )
-            raise
+            raise  # 继续向上抛出异常
 
         finally:
-            # 提交 Trace
+            # 提交 Trace，并增加参数
             trace.update(
                 state="completed" if "content" in locals() else "error",
-                properties={"final_status": "success" if "content" in locals() else "failed"}
+                properties={
+                    "final_status": "success" if "content" in locals() else "failed",
+                    "event": _event,
+                    "environment": kwargs.get("environment", "production"),
+                    "version": kwargs.get("version", "v1.0.0")
+                },
+                metadata={
+                    "tags": ["Trace", "Completion"],
+                    "description": f"Trace completed for {_event}."
+                }
             )
 
     async def aaigc_functions_general_new(

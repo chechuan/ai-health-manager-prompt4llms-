@@ -1,8 +1,15 @@
-# src/langfuse_prompt_manager.py
+# -*- encoding: utf-8 -*-
+"""
+@Time    :   2025-1-9 16:48:19
+@desc    :   Langfuse 提示词管理功能
+@Author  :   车川
+@Contact :   1163317515@qq.com
+"""
 
+import re
 from typing import Dict, Any
 from langfuse import Langfuse
-
+from src.utils.Logger import logger
 
 class LangfusePromptManager:
     """
@@ -32,7 +39,7 @@ class LangfusePromptManager:
             return self._restore_static_placeholders(prompt_obj.compile(**prompt_vars))  # Langfuse 自带插值逻辑
         except Exception as e:
             # 如果 Langfuse 调用失败，回退到预加载数据
-            print(f"[LangfusePromptManager] Langfuse 获取失败，改用预加载 prompt_meta_data: {e}")
+            logger.info(f"[LangfusePromptManager] Langfuse 获取失败，改用预加载 prompt_meta_data: {e}")
             return self._get_formatted_prompt_from_preloaded(event_code, prompt_vars)
 
     def _get_formatted_prompt_from_preloaded(self, event_code: str, prompt_vars: Dict[str, Any]) -> str:
