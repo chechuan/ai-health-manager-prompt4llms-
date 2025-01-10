@@ -56,6 +56,14 @@ class HealthExpertModel:
             **kwargs,
     ) -> Union[str, Generator]:
         """通用生成"""
+
+        # 创建 Trace 对象
+        trace = self.gsr.langfuse_client.trace(
+            name=f"{_event}_trace",
+            user_id=kwargs.get("user_id", "unknown_user"),
+            session_id=kwargs.get("session_id", "3af64bfd-eee0-b94f-154a-53a18ce230e7"),
+            release="v1.0.0"
+        )
         event = kwargs.get("intentCode")
         model = self.gsr.get_model(event)
         model_args: dict = (
@@ -79,16 +87,48 @@ class HealthExpertModel:
             # 没有提供 prompt_template，使用 LangfusePromptManager 获取并格式化
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
-
-        content: Union[str, Generator] = await acallLLM(
-            model=model,
-            query=prompt,
-            **model_args,
+        trace.event(
+            name="Langfuse Prompt Success",
+            input={"event": event, "prompt_vars": prompt_vars},
+            output={"prompt_template": prompt}
         )
-        if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
-        return content
+
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        # 调用大模型
+        try:
+            start_time = time.time()
+            content: Union[str, Generator] = await acallLLM(
+                model=model,
+                query=prompt,
+                **model_args,
+            )
+            end_time = time.time()
+            trace.event(
+                name="Model Invocation",
+                input={"model": model, "prompt": prompt, "model_args": model_args},
+                output={"output": content, "time_taken": end_time - start_time}
+            )
+
+            # 记录模型返回内容
+            if isinstance(content, str):
+                logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+            return content
+
+        except Exception as e:
+            logger.error(f"Error during model invocation for event: {event}, Error: {e}")
+            trace.event(
+                name="Model Invocation Error",
+                input={"model": model, "prompt": prompt, "model_args": model_args},
+                output={"error": str(e)}
+            )
+            raise
+
+        finally:
+            # 提交 Trace
+            trace.update(
+                state="completed" if "content" in locals() else "error",
+                properties={"final_status": "success" if "content" in locals() else "failed"}
+            )
 
     async def aaigc_functions_general_new(
             self,

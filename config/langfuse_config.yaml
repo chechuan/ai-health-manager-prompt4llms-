@@ -1,6 +1,6 @@
 local:
-  LANGFUSE_SECRET_KEY: sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af
-  LANGFUSE_PUBLIC_KEY: pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206
+  LANGFUSE_SECRET_KEY: sk-lf-f9521b53-4dc8-4870-8213-21a4d8d9e57a
+  LANGFUSE_PUBLIC_KEY: pk-lf-30bf24cf-3353-44be-8269-1cabeaf90955
   LANGFUSE_HOST: http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cn
 
 dev:

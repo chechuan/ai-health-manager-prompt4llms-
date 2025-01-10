@@ -29,7 +29,7 @@ class LangfusePromptManager:
         try:
             # 从 Langfuse 获取 Prompt 对象并进行插值编译
             prompt_obj = self.langfuse.get_prompt(event_code)
-            return prompt_obj.compile(**prompt_vars)  # Langfuse 自带插值逻辑
+            return self._restore_static_placeholders(prompt_obj.compile(**prompt_vars))  # Langfuse 自带插值逻辑
         except Exception as e:
             # 如果 Langfuse 调用失败，回退到预加载数据
             print(f"[LangfusePromptManager] Langfuse 获取失败，改用预加载 prompt_meta_data: {e}")
@@ -49,4 +49,21 @@ class LangfusePromptManager:
             return base_prompt.format(**prompt_vars)  # 使用 format 替换变量
         except KeyError as e:
             raise ValueError(f"Missing variable {e} for prompt formatting.") from e
+
+    def _restore_static_placeholders(self, template: str, compiled_prompt: str) -> str:
+        """
+        还原静态占位符 {{{variable}}} 为 {variable}。
+
+        :param template: 原始提示词模板（含 {{{variable}}}）
+        :param compiled_prompt: Langfuse 替换后的提示词
+        :return: 最终提示词
+        """
+        # 匹配 {{{variable}}} 的静态占位符
+        static_placeholder_pattern = re.compile(r"{{{(.*?)}}}")
+        static_placeholders = static_placeholder_pattern.findall(template)
+
+        # 按顺序将静态占位符替换回原内容
+        for placeholder in static_placeholders:
+            compiled_prompt = compiled_prompt.replace(f"{{{{{placeholder}}}}}", f"{{{placeholder}}}")
+        return compiled_prompt
 

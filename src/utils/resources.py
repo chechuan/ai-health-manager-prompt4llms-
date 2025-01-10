@@ -89,6 +89,7 @@ class InitAllResource:
             public_key=langfuse_config["LANGFUSE_PUBLIC_KEY"],
             host=langfuse_config["LANGFUSE_HOST"]
         )
+        logger.info(langfuse_config)
         logger.info("Langfuse client initialized successfully.")
         return lf_client
 
