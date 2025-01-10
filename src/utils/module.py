@@ -173,7 +173,7 @@ def intent_init():
         "低血压": ("hypotensive_consultation", "低血压咨询"),
         "BMI": ("bmi_query", "BMI"),
         "健康知识咨询": ("health_qa", "健康知识科普"),
-        "家康宝服务咨询": ("jia_kang_bao", "家康宝服务咨询"),
+        "家康宝": ("jia_kang_bao", "家康宝服务咨询"),
     }
 
     # ==================== 饮食营养相关 ====================
