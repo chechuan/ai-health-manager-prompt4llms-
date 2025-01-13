@@ -24,7 +24,7 @@ from src.utils.module import (
     filter_user_profile, replace_you, prepare_question_list
 )
 from data.test_param.test import testParam
-from src.prompt.model_init import acallLLM, acallLLMTrace
+from src.prompt.model_init import acallLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
