@@ -36,7 +36,16 @@ class LangfusePromptManager:
         try:
             # 从 Langfuse 获取 Prompt 对象并进行插值编译
             prompt_obj = self.langfuse.get_prompt(event_code)
-            return self._restore_static_placeholders(prompt_obj.compile(**prompt_vars))  # Langfuse 自带插值逻辑
+
+            # 提取 Langfuse 原始提示词内容
+            prompt_template = prompt_obj.prompt
+
+            # 替换动态占位符 {{variable}}
+            compiled_prompt = prompt_obj.compile(**prompt_vars)
+
+            # 还原静态占位符 {{{variable}}} 为 {variable}
+            return self._restore_static_placeholders(prompt_template, compiled_prompt)
+
         except Exception as e:
             # 如果 Langfuse 调用失败，回退到预加载数据
             logger.info(f"[LangfusePromptManager] Langfuse 获取失败，改用预加载 prompt_meta_data: {e}")
