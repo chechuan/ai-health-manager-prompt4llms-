@@ -97,7 +97,7 @@ class HealthExpertModel:
 
         logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
 
-        content: Union[str, Generator] = await acallLLMTrace(
+        content: Union[str, Generator] = await acallLLM(
             model=model,
             query=prompt,
             extra_params=extra_params,
