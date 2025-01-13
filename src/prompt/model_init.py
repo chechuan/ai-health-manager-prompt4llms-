@@ -196,6 +196,7 @@ async def acallLLM(
         stop=[],
         stream=False,
         is_vl=False,
+        extra_params = {},
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921
@@ -222,12 +223,31 @@ async def acallLLM(
     """
     kwargs = pre_process_model_args(**kwargs)
     aclient = openai.AsyncOpenAI()
-    # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
-    # if model != default_model:
-    #     logger.warning(
-    #         f"There will change Model: {model} to {default_model}."
-    #         + "Please manually check your code use config file to manage which model to use."
-    #     )
+    # 从 extra_params 提取追踪相关信息
+    langfuse = extra_params.get("langfuse")
+    trace = langfuse.trace(
+        name=extra_params.get("trace_name", "default_trace"),
+        user_id=extra_params.get("user_id", "unknown_user"),
+        session_id=extra_params.get("session_id", "default-session"),
+        release=extra_params.get("release", "v1.0.0"),
+        tags=extra_params.get("tags", ["acallLLM", "model-invocation"]),
+        metadata=extra_params.get("metadata", {"description": "LLM invocation"})
+    )
+
+    generation = trace.generation(
+        name="qwen-completion",
+        model="Qwen2-72B-Instruct",
+    )
+
+    logger.debug(f"Extra params for trace: {extra_params}")
+
+    # 开始追踪：记录请求的输入
+    generation.update(
+        name="Model Invocation Start",
+        input=query,
+        metadata={"description": "Starting model invocation"}
+    )
+
     if stream and stop:
         logger.warning(
             "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
@@ -318,6 +338,27 @@ async def acallLLM(
 
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
+
+    logger.debug(completion.usage)
+    # 提取模型使用情况
+    usage_details = {
+        "input": completion.usage.prompt_tokens,
+        "output": completion.usage.completion_tokens,
+        "total": completion.usage.total_tokens
+    }
+    cost_details = {
+        "input": usage_details["input"] * 0.00001,
+        "output": usage_details["output"] * 0.00002,
+    }
+
+    # 添加追踪记录：成功调用
+    generation.update(
+        name="Model Invocation Success",
+        output=ret,
+        usage_details=usage_details,
+        cost_details=cost_details
+    )
+
     logger.info(
         f"Model {model} generate costs summary: "
         + f"prompt_tokens:{completion.usage.prompt_tokens}, "
@@ -325,6 +366,12 @@ async def acallLLM(
         + f"total_tokens:{completion.usage.total_tokens}, "
           f"cost: {time_cost}s"
     )
+    # 提交追踪信息
+    generation.update(
+        state="completed",
+        properties={"status": "success" if "ret" in locals() else "failed"}
+    )
+    langfuse.flush()
     return ret
 
 
