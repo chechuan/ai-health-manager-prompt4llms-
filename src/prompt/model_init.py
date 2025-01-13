@@ -191,6 +191,148 @@ async def acallLLM(
         history: List[Dict] = [],
         temperature=0.5,
         top_p=0.5,
+        max_tokens=1024,
+        model: str = DEFAULT_MODEL,
+        stop=[],
+        stream=False,
+        is_vl=False,
+        **kwargs,
+):
+    """chat with qwen api which is serve at http://10.228.67.99:26921
+
+    List options
+
+    Args:
+        query (string or null, Required):
+            Can be None or emtpy string.
+            If query, history will append {{"role":"user", "content": query}}
+        history (`array[Dict]`, [], Required):
+            A list of messages comprising the conversation so far.
+        top_p (`number` or `null` Optional Defaults to 0.5):
+            An alternative to sampling with temperature, called nucleus sampling, where the model considers the results of the tokens with top_p probability mass.
+            So 0.1 means only the tokens comprising the top 10% probability mass are considered.
+            We generally recommend altering this or temperature but not both.
+        temperature (number or null Optional Defaults to 0.7):
+            What sampling temperature to use, between 0 and 2.
+            Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic.
+        stop (List[str], optional, defaults to []):
+            A list of stop words to stop the chat.
+        stream (bool, optional, defaults to False):
+            Whether to stream the response or return the full response at once.
+    """
+    kwargs = pre_process_model_args(**kwargs)
+    aclient = openai.AsyncOpenAI()
+    # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
+    # if model != default_model:
+    #     logger.warning(
+    #         f"There will change Model: {model} to {default_model}."
+    #         + "Please manually check your code use config file to manage which model to use."
+    #     )
+    if stream and stop:
+        logger.warning(
+            "Stop is not supported in stream mode, please remove stop parameter or set stream to False. Otherwise, stop won't be work fine."
+        )
+    # model = default_model
+    t_st = time.time()
+    kwds = {
+        "model": model,
+        "top_p": top_p,
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+        "stop": stop,
+        "stream": stream,
+        "timeout": 240,
+        **kwargs,
+    }
+    logger.trace(f"callLLM with {dumpJS(kwds)}")
+
+    if not history:
+        if "qwen" in model.lower():
+            query = apply_chat_template(query)
+        kwds["prompt"] = query
+        retry = 0
+        while retry <= retry_times:
+            try:
+                completion = await aclient.completions.create(**kwds)
+                break
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
+
+        if stream:
+            return completion
+        retry = 0
+        while not completion.choices and retry <= retry_times:
+            try:
+                completion = await aclient.completions.create(**kwds)
+                retry += 1
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
+            logger.info(f"Model generate completion:{repr(completion)}")
+
+        ret = completion.choices[0].text
+    else:
+        if is_vl:
+            kwds["messages"] = history
+        else:
+            if query and not isinstance(query, object):
+                history += [{"role": "user", "content": query}]
+            msg = ""
+            for i, n in enumerate(list(reversed(history))):
+                msg += n["content"]
+                if len(msg) > 1800:
+                    h = history[-i:]
+                    break
+                else:
+                    h = history
+            kwds["messages"] = h
+        retry = 0 if not is_vl else 2 # vl相对较慢，不太好直接修改全局变量retry_times，所以增加起始计数，相当于减少vl重试次数
+        while retry <= retry_times:
+            try:
+                completion = await aclient.chat.completions.create(**kwds)
+                break
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
+        logger.info(f"Model generate completion:{repr(completion)}")
+        if stream:
+            return completion
+        retry = 0
+        while not completion.choices and retry <= retry_times:
+            try:
+                completion = await aclient.chat.completions.create(**kwds)
+                retry += 1
+            except Exception as e:
+                retry += 1
+                logger.info(f"call llm error:{repr(e)}")
+                logger.info(f"request llm model error, retry to request")
+                continue
+            logger.info(f"Model generate completion:{repr(completion)}")
+
+        ret = completion.choices[0].message.content.strip()
+    time_cost = round(time.time() - t_st, 1)
+    logger.info(
+        f"Model {model} generate costs summary: "
+        + f"prompt_tokens:{completion.usage.prompt_tokens}, "
+        + f"completion_tokens:{completion.usage.completion_tokens}, "
+        + f"total_tokens:{completion.usage.total_tokens}, "
+          f"cost: {time_cost}s"
+    )
+    return ret
+
+
+async def acallLLtrace(
+        query: str = "",
+        history: List[Dict] = [],
+        temperature=0.5,
+        top_p=0.5,
         max_tokens=512,
         model: str = DEFAULT_MODEL,
         stop=[],
