@@ -24,7 +24,7 @@ from src.utils.module import (
     filter_user_profile, replace_you, prepare_question_list
 )
 from data.test_param.test import testParam
-from src.prompt.model_init import acallLLM
+from src.prompt.model_init import acallLLM, acallLLtrace
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
@@ -97,7 +97,7 @@ class HealthExpertModel:
 
         logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
 
-        content: Union[str, Generator] = await acallLLM(
+        content: Union[str, Generator] = await acallLLtrace(
             model=model,
             query=prompt,
             extra_params=extra_params,
