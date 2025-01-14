@@ -108,8 +108,6 @@ class HealthExpertModel:
 
         return content
 
-
-
     async def aaigc_functions_general_new(
             self,
             _event: str = "",
