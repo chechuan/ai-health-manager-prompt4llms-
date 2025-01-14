@@ -1034,24 +1034,7 @@ class HealthDataItem(BaseModel):
 
     class Config:
         populate_by_name = True
-        json_schema_extra = {
-            "examples": [
-                {
-                    "name": "BMI",
-                    "value": 28.4,
-                    "unit": "kg/m²",
-                    "reference_range": "正常：18.5~23.9；偏瘦：<18.5；超重：24~27.9；肥胖：≥28",
-                    "status": "肥胖"
-                },
-                {
-                    "name": "骨量",
-                    "value": 3.2,
-                    "unit": "kg",
-                    "reference_range": "成年女性：偏低：＜1.8；正常：1.8~2.5；偏高：＞2.5",
-                    "status": "正常"
-                }
-            ]
-        }
+        extra = "allow"  # 忽略多余字段
 
 
 class SanJiKangYangRequest(BaseModel):

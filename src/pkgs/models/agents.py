@@ -1786,24 +1786,37 @@ class Agents:
         """
         # 初始化返回结构
         parsed_result = {
-            "conversion_evaluation": None,
-            "communication_script": None,
-            "methods": None
+            "conversion_evaluation": "",
+            "communication_script": "",
+            "methods": ""
         }
 
-        # 根据分隔符解析内容
-        sections = content.split("\n\n")
+        # 清理多余空格和换行符
+        content = "\n".join(line.strip() for line in content.splitlines() if line.strip())
+
+        # 分段：允许 thought:、\n\n 或 \n 作为分隔符
+        sections = re.split(r"(thought：|转化评估情况：|方式方法：|沟通话术：)", content)
+
+        # 合并段落内容
+        structured_sections = []
+        current_section = ""
+        for section in sections:
+            if section in ["thought：", "转化评估情况：", "方式方法：", "沟通话术："]:
+                if current_section:
+                    structured_sections.append(current_section)
+                current_section = section
+            else:
+                current_section += section
+        if current_section:
+            structured_sections.append(current_section)
 
         # 遍历每一段内容
-        for section in sections:
-            if section.startswith("转化评估情况："):
-                # 提取转化评估情况
+        for section in structured_sections:
+            if "转化评估情况：" in section:
                 parsed_result["conversion_evaluation"] = section.replace("转化评估情况：", "").strip()
-            elif section.startswith("沟通话术："):
-                # 提取沟通话术
+            elif "沟通话术：" in section:
                 parsed_result["communication_script"] = section.replace("沟通话术：", "").strip()
-            elif section.startswith("方式方法："):
-                # 提取方式方法
+            elif "方式方法：" in section:
                 parsed_result["methods"] = section.replace("方式方法：", "").strip()
 
         # 返回解析后的内容
