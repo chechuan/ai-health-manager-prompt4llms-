@@ -276,6 +276,7 @@ prod:
         aigc_functions_sjkyn_guideline_generation_new: 0.0.1
         aigc_functions_energy_treatment_guideline_generation: 0.0.1
         aigc_functions_energy_treatment_detailed_generation: 0.0.1
+        aigc_functions_customer_conversion: 0.0.1
     character:
     tool:
         创建日程: 0.2.0
