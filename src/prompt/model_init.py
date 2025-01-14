@@ -367,6 +367,8 @@ async def acallLLtrace(
     aclient = openai.AsyncOpenAI()
     # 从 extra_params 提取追踪相关信息
     langfuse = extra_params.get("langfuse")
+    logger.debug(f"Langfuse parameters: {extra_params}")
+
     trace = langfuse.trace(
         name=extra_params.get("trace_name", "default_trace"),
         user_id=extra_params.get("user_id", "unknown_user"),
@@ -389,6 +391,8 @@ async def acallLLtrace(
         input=query,
         metadata={"description": "Starting model invocation"}
     )
+
+    logger.info(f"Starting model invocation with query: {query}")
 
     if stream and stop:
         logger.warning(
@@ -492,6 +496,9 @@ async def acallLLtrace(
         "input": usage_details["input"] * 0.00001,
         "output": usage_details["output"] * 0.00002,
     }
+
+    logger.debug(f"Usage details: {usage_details}")
+    logger.debug(f"Cost details: {cost_details}")
 
     # 添加追踪记录：成功调用
     generation.update(

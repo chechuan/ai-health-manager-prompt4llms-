@@ -161,6 +161,7 @@ dev:
         - aigc_functions_tcm_consultation_decision_support # 2024年11月05日 中医决策-医师问诊决策支持
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
+        - aigc_functions_test1230
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
