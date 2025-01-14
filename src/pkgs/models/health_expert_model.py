@@ -24,12 +24,12 @@ from src.utils.module import (
     filter_user_profile, replace_you, prepare_question_list
 )
 from data.test_param.test import testParam
-from src.prompt.model_init import acallLLM
+from src.prompt.model_init import acallLLM, acallLLtrace
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
-# from src.utils.langfuse_prompt_manager import LangfusePromptManager
-# from langfuse import Langfuse
+from src.utils.langfuse_prompt_manager import LangfusePromptManager
+from langfuse import Langfuse
 import time
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -41,75 +41,21 @@ class HealthExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         # 初始化实例属性
         self.gsr = gsr
-        # self.langfuse_prompt_manager = LangfusePromptManager(
-        #     langfuse_client=self.gsr.langfuse_client,
-        #     prompt_meta_data=self.gsr.prompt_meta_data,
-        # )
+        self.langfuse_prompt_manager = LangfusePromptManager(
+            langfuse_client=self.gsr.langfuse_client,
+            prompt_meta_data=self.gsr.prompt_meta_data,
+        )
         self.regist_aigc_functions()
 
-    async def aaigc_functions_general(
-        self,
-        _event: str = "",
-        prompt_vars: dict = {},
-        model_args: Dict = {},
-        prompt_template: str = "",
-        **kwargs,
-    ) -> Union[str, Generator]:
-        """通用生成"""
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        model_args: dict = (
-            {
-                "temperature": 0,
-                "top_p": 1,
-                "repetition_penalty": 1.0,
-            }
-            if not model_args
-            else model_args
-        )
-        prompt_template: str = (
-            prompt_template
-            if prompt_template
-            else self.gsr.get_event_item(event)["description"]
-        )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
-
-        prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
-
-        content: Union[str, Generator] = await acallLLM(
-            model=model,
-            query=prompt,
-            **model_args,
-        )
-        if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
-        return content
-
     # async def aaigc_functions_general(
-    #         self,
-    #         _event: str = "",
-    #         prompt_vars: dict = {},
-    #         model_args: Dict = {},
-    #         prompt_template: str = "",
-    #         **kwargs,
+    #     self,
+    #     _event: str = "",
+    #     prompt_vars: dict = {},
+    #     model_args: Dict = {},
+    #     prompt_template: str = "",
+    #     **kwargs,
     # ) -> Union[str, Generator]:
     #     """通用生成"""
-    #
-    #     # extra_params = {
-    #     #     "name": f"{_event}_trace",
-    #     #     "user_id": kwargs.get("user_id", "unknown_user"),
-    #     #     "session_id": kwargs.get("session_id", "3af64bfd-eee0-b94f-154a-53a18ce230e7"),
-    #     #     "release": "v1.0.0",
-    #     #     "tag": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
-    #     #     "metadata": {
-    #     #         "environment": kwargs.get("environment", "production"),
-    #     #         "version": kwargs.get("version", "v1.0.0"),
-    #     #         "description": f"Processing event {_event}"
-    #     #     },
-    #     #     "langfuse": self.gsr.langfuse_client
-    #     # }
-    #     # 获取模型及配置
     #     event = kwargs.get("intentCode")
     #     model = self.gsr.get_model(event)
     #     model_args: dict = (
@@ -121,31 +67,85 @@ class HealthExpertModel:
     #         if not model_args
     #         else model_args
     #     )
-    #     logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+    #     prompt_template: str = (
+    #         prompt_template
+    #         if prompt_template
+    #         else self.gsr.get_event_item(event)["description"]
+    #     )
+    #     logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
     #
-    #     # 格式化 prompt
-    #     if prompt_template:
-    #         try:
-    #             prompt = prompt_template.format(**prompt_vars)
-    #         except KeyError as e:
-    #             return f"Error: Missing placeholder for {e} in prompt_vars."
-    #     else:
-    #         # 使用 LangfusePromptManager 获取并格式化
-    #         prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
+    #     prompt = prompt_template.format(**prompt_vars)
+    #     logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
     #
-    #
-    #     logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
-    #
-    #     content: Union[str, Generator] = await acallLLtrace(
+    #     content: Union[str, Generator] = await a(
     #         model=model,
     #         query=prompt,
-    #         # extra_params=extra_params,
-    #         **model_args
+    #         **model_args,
     #     )
-    #
-    #     logger.info(f"AIGC Functions {_event} LLM Output: {content}")
-    #
+    #     if isinstance(content, str):
+    #         logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
     #     return content
+
+    async def aaigc_functions_general(
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+
+        extra_params = {
+            "name": f"{_event}_trace",
+            "user_id": kwargs.get("user_id", "unknown_user"),
+            "session_id": kwargs.get("session_id", "3af64bfd-eee0-b94f-154a-53a18ce230e7"),
+            "release": "v1.0.0",
+            "tag": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
+            "metadata": {
+                "environment": kwargs.get("environment", "production"),
+                "version": kwargs.get("version", "v1.0.0"),
+                "description": f"Processing event {_event}"
+            },
+            "langfuse": self.gsr.langfuse_client
+        }
+        # 获取模型及配置
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+
+        # 格式化 prompt
+        if prompt_template:
+            try:
+                prompt = prompt_template.format(**prompt_vars)
+            except KeyError as e:
+                return f"Error: Missing placeholder for {e} in prompt_vars."
+        else:
+            # 使用 LangfusePromptManager 获取并格式化
+            prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
+
+
+        logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
+
+        content: Union[str, Generator] = await acallLLtrace(
+            model=model,
+            query=prompt,
+            extra_params=extra_params,
+            **model_args
+        )
+
+        logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+
+        return content
 
     async def __compose_user_msg__(
         self,
