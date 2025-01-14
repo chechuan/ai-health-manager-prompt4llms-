@@ -118,7 +118,7 @@ class ItineraryModel:
 
             # 1.1 筛选适用人群是否匹配
             if not self.is_applicable_for_travelers(travelers, applicable_people):
-                logger.info(f"住宿 {accommodation['name']} 不符合适用人群。")
+                # logger.info(f"住宿 {accommodation['name']} 不符合适用人群。")
                 continue
 
             # # 1.2 计算住宿的总价格并筛选
@@ -129,7 +129,7 @@ class ItineraryModel:
 
             # 如果通过所有条件筛选，将住宿添加到结果列表
             filtered_accommodations.append(accommodation)
-            logger.info(f"住宿 {accommodation['name']} 符合用户条件。")
+            # logger.info(f"住宿 {accommodation['name']} 符合用户条件。")
 
         return filtered_accommodations
 
@@ -160,7 +160,7 @@ class ItineraryModel:
 
             # 1.1 筛选偏好匹配
             if not any(pref in activity_preferences for pref in preferences):
-                logger.info(f"活动 {activity['activity_name']} 不符合用户偏好。")
+                # logger.info(f"活动 {activity['activity_name']} 不符合用户偏好。")
                 continue
 
             # # 1.2 获取活动价格并筛选
@@ -171,7 +171,7 @@ class ItineraryModel:
 
             # 1.3 检查季节是否符合
             if not self.matches_season(service_time, activity["suitable_season"]):
-                logger.info(f"活动 {activity['activity_name']} 不适合当前季节。")
+                # logger.info(f"活动 {activity['activity_name']} 不适合当前季节。")
                 continue
 
             start_date = datetime.strptime(service_time.get("start_date"), "%Y-%m-%d")
@@ -186,27 +186,27 @@ class ItineraryModel:
 
             # 2. 检查是否在用户时间范围内开放
             if not self.is_open_in_user_range(start_date, end_date, opening_hours):
-                logger.debug(f"由于开放时间不符，跳过活动 {activity['activity_name']}")
+                # logger.debug(f"由于开放时间不符，跳过活动 {activity['activity_name']}")
                 continue
 
             # 3. 检查最佳时段是否在开放时间内
             if not self.is_best_time_available(best_time, opening_hours):
-                logger.debug(f"由于最佳时段不在开放时间内，跳过活动 {activity['activity_name']}")
+                # logger.debug(f"由于最佳时段不在开放时间内，跳过活动 {activity['activity_name']}")
                 continue
 
             # 4. 检查是否满足预约要求
             if not self.check_reservation_requirements(reservation_days, start_date):
-                logger.debug(f"由于预约要求不满足，跳过活动 {activity['activity_name']}")
+                # logger.debug(f"由于预约要求不满足，跳过活动 {activity['activity_name']}")
                 continue
 
             # 5. 检查适用人群是否匹配
             if not self.is_applicable_for_travelers(travelers, applicable_people):
-                logger.debug(f"由于适用人群不匹配，跳过活动 {activity['activity_name']}")
+                # logger.debug(f"由于适用人群不匹配，跳过活动 {activity['activity_name']}")
                 continue
 
             # 如果通过所有条件筛选，将活动添加到结果列表
             filtered_activities.append(activity)
-            logger.info(f"活动 {activity['activity_name']} 符合用户偏好和条件。")
+            # logger.info(f"活动 {activity['activity_name']} 符合用户偏好和条件。")
 
         return filtered_activities
 
@@ -921,10 +921,10 @@ class ItineraryModel:
             if prompt_template
             else self.gsr.get_event_item(event)["description"]
         )
-        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+        logger.debug(f"Prompt Vars Before Formatting: {(prompt_vars)}")
 
         prompt = prompt_template.format(**prompt_vars)
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
 
         content: Union[str, Generator] = await acallLLM(
             model=model,
@@ -932,7 +932,7 @@ class ItineraryModel:
             **model_args,
         )
         if isinstance(content, str):
-            logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+            logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
         return content
 
     async def call_function(self, **kwargs) -> Union[str, Generator]:
@@ -1406,32 +1406,50 @@ class ItineraryModel:
         """
         生成健康分析与健康建议
 
-        需求文档：https://alidocs.dingtalk.com/i/nodes/a9E05BDRVQ9RMLlGsG3ZEmpwV63zgkYA
-
         功能描述：
         根据用户画像和检测数据生成健康分析报告及生活建议，帮助用户理解健康状况并提供改善建议。
-
-        参数:
-            kwargs (dict): 包含用户画像和检测数据的字典
-
-        返回:
-            str: 生成的健康分析与健康建议文本
         """
-
         _event = "健康分析与健康建议生成"
 
         # 获取用户基本信息和检测数据
         user_profile = kwargs.get("user_profile", {})
         health_data = kwargs.get("health_data", [])
 
-        # 过滤和处理检测数据
-        health_data = [HealthDataItem(**item) for item in health_data]
+        # 日志打印原始数据
+        logger.info(f"User Profile: {user_profile}")
+        logger.info(f"Raw Health Data: {health_data}")
 
+        # 转换 HealthDataItem 对象为带中文键名的格式
+        def map_health_data_to_chinese_format(health_data):
+            """
+            将健康数据映射为带中文键名的格式
+            """
+            mapped_data = []
+            for item in health_data:
+                # 构造映射后的数据
+                mapped_item = {
+                    "名称": item.get("name", ""),
+                    "结果": item.get("value", ""),
+                    "单位": item.get("unit", ""),
+                    "参考范围": item.get("reference_range", ""),
+                    "结果状态": item.get("status", "")
+                }
+                # 过滤掉完全空或仅包含空字符串的项目
+                if all(value == "" for value in mapped_item.values()):
+                    continue
+                mapped_data.append({k: v for k, v in mapped_item.items() if v != ""})
+            return mapped_data
+
+        # 转换健康数据
+        processed_health_data = map_health_data_to_chinese_format(health_data)
+
+        # 日志记录转换后的健康数据
+        logger.info(f"Processed Health Data: {processed_health_data}")
 
         # 构建健康分析与建议生成提示变量
         prompt_vars_for_health_analysis = {
-            "user_profile": user_profile,
-            "health_data": health_data
+            "user_profile": json.dumps(user_profile, ensure_ascii=False, indent=4),
+            "health_data": json.dumps(processed_health_data, ensure_ascii=False, indent=4)
         }
 
         # 更新模型参数
@@ -1447,8 +1465,10 @@ class ItineraryModel:
             **kwargs
         )
 
-        return content
+        # 打印生成的内容
+        logger.info(f"Generated Health Analysis and Advice: {content}")
 
+        return content
 
 
 if __name__ == '__main__':
