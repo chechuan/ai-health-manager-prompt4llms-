@@ -16,7 +16,7 @@ from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 
 import openai
 import requests
-from langfuse import Langfuse
+# from langfuse import Langfuse
 
 from data.constrant import CACHE_DIR
 from src.utils.module import clock, load_yaml, loadJS, intent_init
@@ -39,7 +39,7 @@ class InitAllResource:
 
         self.__load_config__()
         self.__knowledge_connect_check__()
-        self.langfuse_client = self.__init_langfuse__()
+        # self.langfuse_client = self.__init_langfuse__()
 
         self.prompt_meta_data = self.req_prompt_data_from_mysql()
 
@@ -81,17 +81,17 @@ class InitAllResource:
         # os.environ["env"] = self.args.env
         logger.info(f"Initialize args: {self.args}")
 
-    def __init_langfuse__(self) -> Langfuse:
-        """初始化 Langfuse 客户端"""
-        langfuse_config = load_yaml(Path("config", "langfuse_config.yaml"))[self.args.env]
-        lf_client = Langfuse(
-            secret_key=langfuse_config["LANGFUSE_SECRET_KEY"],
-            public_key=langfuse_config["LANGFUSE_PUBLIC_KEY"],
-            host=langfuse_config["LANGFUSE_HOST"]
-        )
-        logger.info(langfuse_config)
-        logger.info("Langfuse client initialized successfully.")
-        return lf_client
+    # def __init_langfuse__(self) -> Langfuse:
+    #     """初始化 Langfuse 客户端"""
+    #     langfuse_config = load_yaml(Path("config", "langfuse_config.yaml"))[self.args.env]
+    #     lf_client = Langfuse(
+    #         secret_key=langfuse_config["LANGFUSE_SECRET_KEY"],
+    #         public_key=langfuse_config["LANGFUSE_PUBLIC_KEY"],
+    #         host=langfuse_config["LANGFUSE_HOST"]
+    #     )
+    #     logger.info(langfuse_config)
+    #     logger.info("Langfuse client initialized successfully.")
+    #     return lf_client
 
     def __init_model_supplier__(self) -> None:
         """初始化模型供应商"""
