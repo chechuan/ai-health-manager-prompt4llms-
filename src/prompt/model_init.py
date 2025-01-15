@@ -497,8 +497,8 @@ async def acallLLtrace(
 
     generation.end(
         output=ret,
-        usage_details=usage_details,
-        cost_details=cost_details,
+        usage=usage_details,
+        total_cost=cost_details,
     )
 
     logger.info(
