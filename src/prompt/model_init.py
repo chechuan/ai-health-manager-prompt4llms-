@@ -367,29 +367,28 @@ async def acallLLtrace(
     aclient = openai.AsyncOpenAI()
     # 从 extra_params 提取追踪相关信息
     langfuse = extra_params.get("langfuse")
-    logger.debug(f"Langfuse parameters: {extra_params}")
 
+    # Trace 和 Generation 的更新
     trace = langfuse.trace(
         name=extra_params.get("trace_name", "default_trace"),
         user_id=extra_params.get("user_id", "unknown_user"),
         session_id=extra_params.get("session_id", "default-session"),
         release=extra_params.get("release", "v1.0.0"),
-        tags=extra_params.get("tags", ["acallLLM", "model-invocation"]),
+        tags=extra_params.get("tags", ["LLM", "model-invocation"]),
         metadata=extra_params.get("metadata", {"description": "LLM invocation"})
     )
 
+    # 创建 Generation
     generation = trace.generation(
-        name="qwen-completion",
-        model="Qwen2-72B-Instruct",
-    )
-
-    logger.debug(f"Extra params for trace: {extra_params}")
-
-    # 开始追踪：记录请求的输入
-    generation.update(
-        name="Model Invocation Start",
-        input=query,
-        metadata={"description": "Starting model invocation"}
+        name="llm-generation",
+        model=model,
+        model_parameters={
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+        },
+        input={"query": query, "history": history},
+        metadata={"streaming": stream}
     )
 
     logger.info(f"Starting model invocation with query: {query}")
@@ -485,7 +484,6 @@ async def acallLLtrace(
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
 
-    logger.debug(completion.usage)
     # 提取模型使用情况
     usage_details = {
         "input": completion.usage.prompt_tokens,
@@ -497,15 +495,10 @@ async def acallLLtrace(
         "output": usage_details["output"] * 0.00002,
     }
 
-    logger.debug(f"Usage details: {usage_details}")
-    logger.debug(f"Cost details: {cost_details}")
-
-    # 添加追踪记录：成功调用
-    generation.update(
-        name="Model Invocation Success",
+    generation.end(
         output=ret,
         usage_details=usage_details,
-        cost_details=cost_details
+        cost_details=cost_details,
     )
 
     logger.info(
@@ -515,12 +508,13 @@ async def acallLLtrace(
         + f"total_tokens:{completion.usage.total_tokens}, "
           f"cost: {time_cost}s"
     )
-    # 提交追踪信息
-    generation.update(
-        state="completed",
-        properties={"status": "success" if "ret" in locals() else "failed"}
-    )
-    langfuse.flush()
+
+    # 确保 Flush 成功
+    try:
+        langfuse.flush()
+        logger.info("Langfuse flush executed successfully.")
+    except Exception as e:
+        logger.error(f"Langfuse flush failed: {e}")
     return ret
 
 
