@@ -1415,6 +1415,12 @@ class ItineraryModel:
         user_profile = kwargs.get("user_profile", {})
         health_data = kwargs.get("health_data", [])
 
+        # 修改空腹血糖参考范围和名称
+        for item in health_data:
+            if item.get("name") == "空腹血糖":
+                item["name"] = "血糖"
+                item["reference_range"] = "血糖过低：<3.9；正常：3.9~11.1；血糖过高>11.1"
+
         # 日志打印原始数据
         logger.info(f"User Profile: {user_profile}")
         logger.info(f"Raw Health Data: {health_data}")
