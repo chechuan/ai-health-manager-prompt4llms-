@@ -1068,6 +1068,16 @@ class SanJiKangYangRequest(BaseModel):
             "aigc_functions_sanji_plan_exercise_regimen",
         ],
     )
+    user_id: Union[str, None] = Field(
+        None,
+        description="user id",
+        examples=[]
+    )
+    session_id: Union[str, None] = Field(
+        None,
+        description="session ID",
+        examples=[]
+    )
     user_profile: Optional[UserProfile] = Field(
         None,
         description="三济康养方案用户画像，包含详细的用户信息",
