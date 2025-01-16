@@ -1936,3 +1936,125 @@ def prepare_question_list(data):
     formatted_list += "\n]"
 
     return formatted_list
+
+
+async def monitor_interface(**kwargs):
+    """
+    通用接口监控函数，通过 **kwargs 传递参数。
+
+    Args:
+        **kwargs: 动态参数，包括以下必需字段：
+            - interface_name (str): 接口名称。
+            - user_id (str): 用户 ID。
+            - session_id (str): 会话 ID。
+            - request_input (Any): 请求输入。
+            - response_output (Any): 响应输出。
+
+    Returns:
+        None: 仅用于记录和追踪。
+    """
+    # 校验必需参数
+    required_keys = ["request_input", "response_output"]
+    for key in required_keys:
+        if key not in kwargs:
+            raise ValueError(f"Missing required parameter: {key}")
+
+    # 解构参数，使用 .get() 方法
+    interface_name = kwargs.get("interface_name")
+    user_id = kwargs.get("user_id")
+    session_id = kwargs.get("session_id")
+    request_input = kwargs.get("request_input")
+    response_output = kwargs.get("response_output")
+    langfuse = kwargs.get("langfuse")
+    release = kwargs.get("release", "v1.0.0")  # 可以设置默认值
+    model = kwargs.get("model")  # 默认模型名称
+    metadata = kwargs.get("metadata", {"description": f"Monitoring {interface_name}"})
+
+    # 初始化 Langfuse Trace
+    if not langfuse:
+        raise ValueError("Missing required parameter: langfuse")
+    trace = langfuse.trace(
+        name=interface_name,
+        user_id=user_id,
+        session_id=session_id,
+        release=release,
+        tags=[interface_name],
+        metadata=metadata
+    )
+
+    # 创建追踪 Generation 对象
+    generation = trace.generation(
+        name=interface_name,
+        model=model
+    )
+
+    t_start = time.time()
+    try:
+        # 更新 trace：记录请求输入
+        trace.update(
+            name=f"{interface_name} Trace Input",
+            input=request_input,
+            metadata={"description": f"Trace input for {interface_name}"}
+        )
+        logger.info(f"Trace input recorded for {interface_name}: {request_input}")
+
+        # 更新 generation：记录请求输入
+        generation.update(
+            name=f"{interface_name} Generation Input",
+            input=request_input,
+            metadata={"description": f"Generation input for {interface_name}"}
+        )
+        logger.info(f"Generation input recorded for {interface_name}: {request_input}")
+
+        # 模拟处理时间
+        t_cost = round(time.time() - t_start, 2)
+
+        # 更新 trace：记录响应输出
+        trace.update(
+            name=f"{interface_name} Trace Output",
+            output=response_output,
+            properties={"status": "success"},
+            metadata={"response_time": t_cost, "description": f"Trace output for {interface_name}"}
+        )
+        logger.info(f"Trace output recorded for {interface_name}: {response_output}")
+
+        # 更新 generation：记录响应输出
+        generation.update(
+            name=f"{interface_name} Generation Output",
+            output=response_output,
+            properties={"status": "success"},
+            metadata={"response_time": t_cost, "description": f"Generation output for {interface_name}"}
+        )
+        logger.info(f"Generation output recorded for {interface_name}: {response_output}")
+
+    except Exception as e:
+        t_cost = round(time.time() - t_start, 2)
+
+        # 更新 trace：记录失败状态
+        trace.update(
+            name=f"{interface_name} Trace Failure",
+            properties={"status": "failure", "error": str(e)},
+            metadata={"response_time": t_cost}
+        )
+        logger.error(f"Trace failed for {interface_name} after {t_cost}s with error: {repr(e)}")
+
+        # 更新 generation：记录失败状态
+        generation.update(
+            name=f"{interface_name} Generation Failure",
+            properties={"status": "failure", "error": str(e)},
+            metadata={"response_time": t_cost}
+        )
+        logger.error(f"Generation failed for {interface_name} after {t_cost}s with error: {repr(e)}")
+        raise e  # 继续抛出异常
+
+    finally:
+        # 提交追踪状态
+        trace.update(
+            state="completed",
+            properties={"final_status": "success" if response_output else "failure"}
+        )
+        generation.update(
+            state="completed",
+            properties={"final_status": "success" if response_output else "failure"}
+        )
+        langfuse.flush()

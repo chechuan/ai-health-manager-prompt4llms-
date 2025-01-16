@@ -56,14 +56,15 @@ from src.utils.module import (
     dumpJS,
     format_sse_chat_complete,
     response_generator,
-    replace_you
+    replace_you,
+    monitor_interface
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
     schedule_tips_modify,
     sport_schedule_tips_modify,
     daily_diet_eval,
-    daily_diet_degree,
+    daily_diet_degree
 )
 
 
@@ -1458,6 +1459,18 @@ def create_app():
             )
             result = decorate_chat_complete(
                 generator, return_mid_vars=False, return_backend_history=True
+            )
+
+            await monitor_interface(
+                interface_name="chat_gen",
+                user_id=param.get("user_id"),
+                session_id=param.get("session_id"),
+                request_input=param,
+                response_output=result,
+                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+                release="v1.0.0",
+                # model="Qwen2-72B-Instruct",
+                metadata={"team": "AI", "project": "chat_service"}
             )
         except Exception as err:
             logger.exception(err)
