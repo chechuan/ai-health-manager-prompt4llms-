@@ -333,7 +333,7 @@ async def acallLLtrace(
         history: List[Dict] = [],
         temperature=0.5,
         top_p=0.5,
-        max_tokens=512,
+        max_tokens=1024,
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
