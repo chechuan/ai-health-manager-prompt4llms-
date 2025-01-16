@@ -1936,3 +1936,139 @@ def prepare_question_list(data):
     formatted_list += "\n]"
 
     return formatted_list
+
+def glucose_type(time, glucose):
+    # 血糖值分类
+    glucose=float(glucose)
+    if time == "1":
+        t= '空腹血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='你血糖非常低，请立即补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='你血糖较低，请尽快补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
+        elif 3.9 <= glucose <=7:
+            result = "血糖正常"
+            content='血糖正常，请继续保持'
+            agent_content=""
+        elif 7.0 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='今日空腹血糖值偏高，请遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日空腹血糖非常高，请严格遵医嘱！"
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    elif time == "2" and time != "":
+        t= '餐后2小时血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='你血糖非常低，请立即补充含糖食物'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='你血糖较低，请尽快补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=10:
+            result = "血糖正常"
+            content='当前血糖正常，请继续保持，适量运动'
+            agent_content=""
+        elif 10 < glucose <= 16.7:
+            result = "血糖控制高"
+            content='餐后2小时血糖值偏高，请遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日餐后2小时血糖值非常高，请严格遵医嘱"
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    else:
+        t= '动态血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='你血糖值非常低，请立即补充含糖食物'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='你血糖较低，请尽快补充含糖食物'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=10:
+            result = "血糖正常"
+            content='当前血糖正常，请继续保持，适量运动'
+            agent_content=""
+        elif 10 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='随机血糖值偏高，请遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+        elif 13.9 < glucose < 16.7:
+            result = "血糖控制中危"
+            content='随机血糖值较高，请严格遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+        else:
+            result = "血糖控制高危"
+            content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+    return result,content,agent_content,t
+
+def extract_glucose(recent_time,glucose_data):
+    # 假设当前时间
+    try:
+        recent_time = datetime.strptime(recent_time, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        recent_time = datetime.now()
+
+    # 将时间字符串转换为datetime对象
+    for entry in glucose_data:
+        entry["exam_time"] = datetime.strptime(entry["exam_time"], "%Y-%m-%d %H:%M:%S")
+
+    # 按时间排序
+    glucose_data.sort(key=lambda x: x["exam_time"])
+
+    # 过滤出在rencent_time前3小时内的数据
+    recent_3h_data = [entry for entry in glucose_data if entry["exam_time"] >= recent_time - timedelta(hours=3) and entry["exam_time"] <= recent_time]
+
+    # 采样逻辑
+    sampled_data = []
+    time_threshold_2h = recent_time.replace(second=0, microsecond=0) - timedelta(hours=2)
+    time_threshold_3h = recent_time.replace(second=0, microsecond=0) - timedelta(hours=3)
+
+    # 近2h内，每5分钟取一个
+    last_2h_samples = []
+    current_time = time_threshold_2h
+    while current_time < time_threshold_2h + timedelta(hours=2):
+        for entry in recent_3h_data:
+            if entry["exam_time"].replace(second=0, microsecond=0) == current_time:
+                last_2h_samples.append(entry)
+                break
+        current_time += timedelta(minutes=5)
+
+    # 近3h-2h内，每10分钟取一个
+    last_3h_2h_samples = []
+    current_time = time_threshold_3h
+    while current_time < time_threshold_2h:
+        for entry in recent_3h_data:
+            if entry["exam_time"].replace(second=0, microsecond=0) == current_time:
+                last_3h_2h_samples.append(entry)
+                break
+        current_time += timedelta(minutes=10)
+
+    # 合并采样数据
+    sampled_data.extend(last_2h_samples)
+    sampled_data.extend(last_3h_2h_samples)
+
+    # 找出波峰波谷
+    def find_peaks_and_valleys(data):
+        peaks = []
+        valleys = []
+        for i in range(1, len(data)-1):
+            if data[i]["item_value"] > data[i-1]["item_value"] and data[i]["item_value"] > data[i+1]["item_value"]:
+                peaks.append(("波峰数据",data[i]["exam_time"], data[i]["item_value"]))
+            if data[i]["item_value"] < data[i-1]["item_value"] and data[i]["item_value"] < data[i+1]["item_value"]:
+                valleys.append(("波谷数据",data[i]["exam_time"], data[i]["item_value"]))
+        return peaks, valleys
+
+    peaks, valleys = find_peaks_and_valleys(recent_3h_data)
+
+    return sampled_data,peaks,valleys
