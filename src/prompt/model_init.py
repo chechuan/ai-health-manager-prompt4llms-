@@ -333,7 +333,7 @@ async def acallLLtrace(
         history: List[Dict] = [],
         temperature=0.5,
         top_p=0.5,
-        max_tokens=512,
+        max_tokens=1024,
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
@@ -370,11 +370,11 @@ async def acallLLtrace(
     logger.debug(f"Langfuse parameters: {extra_params}")
 
     trace = langfuse.trace(
-        name=extra_params.get("trace_name", "default_trace"),
-        user_id=extra_params.get("user_id", "unknown_user"),
-        session_id=extra_params.get("session_id", "default-session"),
+        name=extra_params.get("name"),
+        user_id=extra_params.get("user_id"),
+        session_id=extra_params.get("session_id"),
         release=extra_params.get("release", "v1.0.0"),
-        tags=extra_params.get("tags", ["acallLLM", "model-invocation"]),
+        tags=extra_params.get("tags"),
         metadata=extra_params.get("metadata", {"description": "LLM invocation"})
     )
 
@@ -390,6 +390,10 @@ async def acallLLtrace(
         name="Model Invocation Start",
         input=query,
         metadata={"description": "Starting model invocation"}
+    )
+
+    trace.update(
+        input=query
     )
 
     logger.info(f"Starting model invocation with query: {query}")
@@ -506,6 +510,10 @@ async def acallLLtrace(
         output=ret,
         usage_details=usage_details,
         cost_details=cost_details
+    )
+
+    trace.update(
+        output=ret,
     )
 
     logger.info(

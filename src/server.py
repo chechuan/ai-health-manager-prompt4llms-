@@ -133,6 +133,49 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
     yield res
 
 
+# 统一的监控记录函数
+async def record_monitoring_data(items, params):
+    """统一的异步记录监控数据"""
+    await monitor_interface(
+        tags=params.get("tags"),
+        interface_name=params.get('endpoint_name'),  # 接口名称
+        user_id=params.get("user_id"),
+        session_id=params.get("session_id"),
+        request_input=params,
+        response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
+        langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+        release="v1.0.0",
+        metadata={"team": "AI", "project": "health_service"}
+    )
+
+
+# 日志包装和流式输出逻辑
+async def logging_wrapper(gen: AsyncGenerator, param):
+    """包装生成器，记录输出到 all_items，并保持流式传递"""
+    all_items = []
+    try:
+        async for item in gen:
+            # 确保 item 是 JSON 字符串
+            if isinstance(item, dict):
+                item_str = json.dumps(item, ensure_ascii=False)
+            else:
+                item_str = str(item)  # 转换为字符串
+
+            # 打印日志并记录
+            # logger.info(f"[Streaming Output] {item_str}")
+            all_items.append(item_str)
+
+            # 将数据流式传递给下游
+            yield item
+    finally:
+        # 确保即使发生异常也执行监控记录
+        if param.get("endpoint_name") in ["daily_diet_eval"]:
+            await record_monitoring_data(all_items[-1:], param)
+        else:
+            await record_monitoring_data(all_items, param)
+
+
+
 def mount_rule_endpoints(app: FastAPI):
     # @app.route("/rules/blood_pressure_level", methods=["post"])
     # async def _rules_blood_pressure_level(request: Request):
@@ -221,20 +264,27 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-    
 
-    @app.route("/health/blood_glucose_trend_analysis", methods=["post"])
+    @app.route("/health/blood_glucose_trend_analysis", methods=["POST"])
     async def _health_blood_glucose_trend_analysis(request: Request):
         """血糖趋势分析"""
         try:
             param = await async_accept_param_purge(
                 request, endpoint="/health/blood_glucose_trend_analysis"
             )
+            param['endpoint_name'] = "health_blood_glucose_trend_analysis"
+            param['tags'] = ["health_blood_glucose_trend_analysis", "血糖趋势", "健康监测", "健康管理"]
             ret = expert_model.health_blood_glucose_trend_analysis(param)
+            resp = ret
             ret = make_result(items=ret)
+
+            await record_monitoring_data([resp], param)  # 记录到 Langfuse
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
+
+            # 记录错误监控数据
+            await record_monitoring_data([ret], param)  # 记录到 Langfuse
         finally:
             return ret
         
@@ -421,34 +471,51 @@ def mount_rec_endpoints(app: FastAPI):
 def mount_aigc_functions(app: FastAPI):
     """挂载aigc函数"""
 
+    @app.route("/aigc/functions", methods=["POST"])
     async def _async_aigc_functions(
-        request_model: AigcFunctionsRequest,
+            request_model: AigcFunctionsRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/functions"
             )
+            param["endpoint_name"] = "aigc_functions"
+            param["tags"] = ["aigc/functions", "AIGC", "智能服务", "人工智能"]
             response: Union[str, AsyncGenerator] = await agents.call_function(**param)
+
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
+
+                # 包装生成器，记录数据
+                wrapped_generator = logging_wrapper(_return, param)
+                return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=200, items=response
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
+
+                # 记录监控数据
+                await record_monitoring_data([response], param)
+                return build_aigc_functions_response(_return)
+
         except Exception as err:
             msg = repr(err)
             if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 流式错误响应
                 _return: AsyncGenerator = response_generator(msg, error=True)
+                return StreamingResponse(_return, media_type="text/event-stream")
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
                     head=601, msg=msg, items=None
                 )
-            _return: str = ret.model_dump_json(exclude_unset=True)
-        finally:
-            return build_aigc_functions_response(_return)
+                _return: str = ret.model_dump_json(exclude_unset=True)
+
+                # 记录错误监控数据
+                await record_monitoring_data([msg], param)
+                return build_aigc_functions_response(_return)
 
     async def _async_aigc_sanji(
         request_model: AigcSanjiRequest,
@@ -556,47 +623,16 @@ def mount_aigc_functions(app: FastAPI):
     ) -> Response:
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
-        all_items = []  # 用于记录生成器输出
-
-        async def logging_wrapper(gen: AsyncGenerator, param):
-            """包装生成器，记录输出到 all_items，并保持流式传递"""
-            try:
-                async for item in gen:
-                    # 确保 item 是 JSON 字符串
-                    if isinstance(item, dict):
-                        item_str = json.dumps(item, ensure_ascii=False)
-                    else:
-                        item_str = str(item)  # 转换为字符串
-
-                    # 打印日志并记录
-                    logger.info(f"[Streaming Output] {item_str}")
-                    all_items.append(item_str)
-
-                    # 将数据流式传递给下游
-                    yield item
-            finally:
-                # 确保即使发生异常也执行监控记录
-                await record_monitoring_data(all_items, param)
-
-        async def record_monitoring_data(items, params):
-            """异步记录监控数据"""
-            await monitor_interface(
-                interface_name="sanji_kangyang",  # 接口名称
-                user_id=params.get("user_id"),
-                session_id=params.get("session_id"),
-                request_input=params,
-                response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
-                release="v1.0.0",
-                metadata={"team": "AI", "project": "chat_service"}
-            )
 
         try:
             param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+            # 记录监控数据
+            param['endpoint_name'] = "sanji_kangyang"
+            param['tags'] = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
 
             if param.get("model_args") and param["model_args"].get("stream") is True:
-                # 处理流式响应，直接返回 StreamingResponse
+                # 处理流式响应 构造返回数据的AsyncGenerator
                 generator = response_generator(response)
 
                 # 包装生成器，记录数据
@@ -613,7 +649,6 @@ def mount_aigc_functions(app: FastAPI):
                     _return = ret.model_dump_json(exclude_unset=False)
                 logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
 
-                # 记录监控数据
                 await record_monitoring_data([response], param)
 
                 return build_aigc_functions_response(_return)
@@ -1079,47 +1114,11 @@ def create_app():
     async def _daily_diet_eval(request: Request):
         """一日血糖饮食建议"""
 
-        all_items = []  # 用于记录生成器输出
-
-        async def logging_wrapper(gen: AsyncGenerator):
-            """包装生成器，记录输出到 all_items，并保持流式传递"""
-            try:
-                async for item in gen:
-                    # 确保 item 是 JSON 字符串
-                    if isinstance(item, dict):
-                        item_str = json.dumps(item, ensure_ascii=False)
-                    else:
-                        item_str = str(item)  # 转换为字符串
-
-                    # 打印日志并记录
-                    logger.info(f"[Streaming Output] {item_str}")
-                    all_items.append(item_str)
-
-                    # 将数据流式传递给下游
-                    yield item
-            finally:
-                # 确保即使发生异常也执行监控记录
-                await record_monitoring_data(all_items[-1:], param)
-
-        # 异步记录监控数据
-        async def record_monitoring_data(items, params):
-            """异步记录监控数据"""
-            await monitor_interface(
-                interface_name="daily_diet_eval",  # 接口名称
-                user_id=params.get("user_id"),
-                session_id=params.get("session_id"),
-                request_input=params,
-                response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
-                release="v1.0.0",
-                metadata={"team": "AI", "project": "chat_service"}
-            )
-
         try:
-            # 获取参数
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
-
-            # 生成器返回结果
+            param['endpoint_name'] = "daily_diet_eval"
+            param['tags'] = ["daily_diet_eval", "饮食建议", "健康管理", "血糖控制"]
+            # 获取生成器
             generator: AsyncGenerator = daily_diet_eval(
                 param.get("userInfo", {}),
                 param.get("daily_diet_info", []),
@@ -1127,8 +1126,8 @@ def create_app():
                 param.get("management_tag", '血糖管理')
             )
 
-            # 包装生成器进行流式输出和日志记录
-            wrapped_generator = logging_wrapper(generator)
+            # 包装生成器，记录数据
+            wrapped_generator = logging_wrapper(generator, param)
 
             result = decorate_general_complete(
                 wrapped_generator
@@ -1144,7 +1143,6 @@ def create_app():
             async def error_generator():
                 yield json.dumps({"error": repr(err)}, ensure_ascii=False)
 
-            # 创建异步任务记录监控数据
             asyncio.create_task(record_monitoring_data([], param))
 
             return StreamingResponse(error_generator(), media_type="text/event-stream")
@@ -1555,44 +1553,12 @@ def create_app():
     async def get_chat_gen(request: Request):
         global chat
 
-        all_items = []  # 用于记录生成器输出
-
-        async def logging_wrapper(gen: AsyncGenerator):
-            """包装生成器，记录输出到 all_items，并保持流式传递"""
-            try:
-                async for item in gen:
-                    # 确保 item 是 JSON 字符串
-                    if isinstance(item, dict):
-                        item_str = json.dumps(item, ensure_ascii=False)
-                    else:
-                        item_str = str(item)  # 转换为字符串
-
-                    # 打印日志并记录
-                    logger.info(f"[Streaming Output] {item_str}")
-                    all_items.append(item_str)
-
-                    # 将数据流式传递给下游
-                    yield item
-            finally:
-                # 确保即使发生异常也执行监控记录
-                await record_monitoring_data(all_items[-1:], param)
-
-        async def record_monitoring_data(items, params):
-            """异步记录监控数据"""
-            await monitor_interface(
-                interface_name="chat_gen",
-                user_id=params.get("user_id"),
-                session_id=params.get("session_id"),
-                request_input=params,
-                response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
-                release="v1.0.0",
-                metadata={"team": "AI", "project": "chat_service"}
-            )
-
         try:
-            # 获取参数
+            # 获取参数并设置默认 tags 和 endpoint_name
             param = await accept_param(request, endpoint="/chat_gen")
+            param['tags'] = ["chat_gen", "会话生成", "对话管理", "用户交互"]
+            param['endpoint_name'] = "chat_gen"  # 设置端点名称
+
             generator: AsyncGenerator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
                 mid_vars=[],
@@ -1601,7 +1567,7 @@ def create_app():
             )
 
             # 包装生成器，记录数据
-            wrapped_generator = logging_wrapper(generator)
+            wrapped_generator = logging_wrapper(generator, param)
 
             # 原逻辑保持不变
             result = decorate_chat_complete(

@@ -1961,6 +1961,7 @@ async def monitor_interface(**kwargs):
 
     # 解构参数，使用 .get() 方法
     interface_name = kwargs.get("interface_name")
+    tags = kwargs.get("tags")
     user_id = kwargs.get("user_id")
     session_id = kwargs.get("session_id")
     request_input = kwargs.get("request_input")
@@ -1984,7 +1985,7 @@ async def monitor_interface(**kwargs):
         user_id=user_id,
         session_id=session_id,
         release=release,
-        tags=[interface_name],
+        tags=tags,
         metadata=metadata
     )
 
