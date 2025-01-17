@@ -311,6 +311,21 @@ def mount_rule_endpoints(app: FastAPI):
         finally:
             return ret
         
+    @app.route("/health/blood_pressure_warning", methods=["post"])
+    async def _health_blood_pressure_warning(request: Request):
+        """血糖预警"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_pressure_warning"
+            )
+            ret = await expert_model.health_blood_pressure_warning(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
     @app.route("/health/open_extract", methods=["post"])
     async def _health_open_extract(request: Request):
         """页面打开"""

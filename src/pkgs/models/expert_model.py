@@ -1195,6 +1195,46 @@ class expertModel:
         user_pro = pro.get("user_profile", {})
         all_glucose = pro.get("all_glucose", [])
         recent_time = pro.get("recent_time",'')
+        if all_glucose is None:
+            key_glucose=[]
+        else:
+            eg,peaks,valleys=extract_glucose(recent_time,all_glucose)
+            key_glucose =eg+peaks+valleys
+        gl = pro.get("gl", "")
+        gl_code = pro.get("gl_code","")
+        today_sport = pro.get("today_sport", "")
+        today_diet = pro.get("today_diet","")
+        result,content,agent_content,t=glucose_type(gl_code, gl)
+        prompt_template = GLUCOSE_WARNING
+        prompt_vars = {"glucose_data": t+gl+"mmol/L。"+result,  
+                       "user_profile": user_pro,
+                        "today_sport": today_sport,
+                        "today_diet": today_diet,
+                        "key_glucose":key_glucose,
+                        "recent_time":recent_time
+                        }
+        sys_prompt = prompt_template.format(**prompt_vars)
+
+        history = []
+        history.append({"role": "system", "content": sys_prompt})
+        logger.debug(f"血糖预警t: {dumpJS(history)}")
+        response = await acallLLM(
+            history=history, temperature=0.8, top_p=0.5, model=model, stream=False
+        )
+        dict_={}
+        dict_['front']=content
+        dict_['user_warning']="血糖结果"+str(float(gl))+"mmol/L。"+content
+        dict_['user_content']=response
+        dict_['sug_agent']=agent_content
+        return dict_
+    
+    @clock
+    async def health_blood_pressure_warning(self, param: Dict) -> str:
+        model = "Qwen1.5-32B-Chat"
+        pro = param
+        user_pro = pro.get("user_profile", {})
+        all_glucose = pro.get("all_glucose", [])
+        recent_time = pro.get("recent_time",'')
         eg,peaks,valleys=extract_glucose(recent_time,all_glucose)
         key_glucose =eg+peaks+valleys
         gl = pro.get("gl", "")
