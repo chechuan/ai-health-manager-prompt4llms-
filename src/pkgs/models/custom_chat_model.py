@@ -539,6 +539,8 @@ class CustomChatAuxiliary(CustomChatModel):
 
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
         thought, doctor = self.__parse_response__(content)
+        if doctor.startswith("Doctor: "):
+            doctor = doctor[len("Doctor: "):]
         # is_repeat = self.judge_repeat(history, doctor, model)
         # logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
         # if is_repeat:
