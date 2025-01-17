@@ -47,6 +47,45 @@ class HealthExpertModel:
         )
         self.regist_aigc_functions()
 
+    # async def aaigc_functions_general(
+    #     self,
+    #     _event: str = "",
+    #     prompt_vars: dict = {},
+    #     model_args: Dict = {},
+    #     prompt_template: str = "",
+    #     **kwargs,
+    # ) -> Union[str, Generator]:
+    #     """通用生成"""
+    #     event = kwargs.get("intentCode")
+    #     model = self.gsr.get_model(event)
+    #     model_args: dict = (
+    #         {
+    #             "temperature": 0,
+    #             "top_p": 1,
+    #             "repetition_penalty": 1.0,
+    #         }
+    #         if not model_args
+    #         else model_args
+    #     )
+    #     prompt_template: str = (
+    #         prompt_template
+    #         if prompt_template
+    #         else self.gsr.get_event_item(event)["description"]
+    #     )
+    #     logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+    #
+    #     prompt = prompt_template.format(**prompt_vars)
+    #     logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+    #
+    #     content: Union[str, Generator] = await a(
+    #         model=model,
+    #         query=prompt,
+    #         **model_args,
+    #     )
+    #     if isinstance(content, str):
+    #         logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+    #     return content
+
     async def aaigc_functions_general(
             self,
             _event: str = "",
@@ -62,7 +101,7 @@ class HealthExpertModel:
             "user_id": kwargs.get("user_id"),
             "session_id": kwargs.get("session_id"),
             "release": "v1.0.0",
-            "tag": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
+            "tags": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
             "metadata": {
                 "environment": kwargs.get("environment", "production"),
                 "version": kwargs.get("version", "v1.0.0"),
@@ -107,128 +146,6 @@ class HealthExpertModel:
         logger.info(f"AIGC Functions {_event} LLM Output: {content}")
 
         return content
-
-    async def aaigc_functions_general_new(
-            self,
-            _event: str = "",
-            prompt_vars: dict = {},
-            model_args: Dict = {},
-            prompt_template: str = "",
-            **kwargs,
-    ) -> Union[str, Generator]:
-        """通用生成"""
-
-        # 初始化 Langfuse 客户端
-        langfuse_client = Langfuse(
-            secret_key="sk-lf-a5e9f748-c8e7-4ff3-807b-f6e89baea0af",
-            public_key="pk-lf-39c714d8-d6ea-45f6-b538-e4290ba53206",
-            host="http://ai-health-manager-langfuse-web.data-engine-qa.laikang.enn.cn"
-        )
-
-        # 创建 Trace 对象
-        trace = langfuse_client.trace(
-            name=f"{_event}_trace",
-            user_id=kwargs.get("user_id", "unknown_user"),
-            release="v1.0.0"
-        )
-
-        # 获取事件和模型
-        event = kwargs.get("intentCode")
-        model = self.gsr.get_model(event)
-        model_args: dict = model_args or {
-            "temperature": 0,
-            "top_p": 1,
-            "repetition_penalty": 1.0,
-        }
-
-        # 初始化 Prompt
-        try:
-            # 尝试从 Langfuse 获取 Prompt
-            prompt_template = langfuse_client.get_prompt(event).compile(**prompt_vars)
-            trace.event(
-                name="Langfuse Prompt Success",
-                input={"event": event, "prompt_vars": prompt_vars},
-                output={"prompt_template": prompt_template}
-            )
-            logger.info(f"Successfully fetched and compiled prompt from Langfuse for event: {event}")
-            print(f"Prompt template fetched from Langfuse: {prompt_template}")  # 打印提示模板
-
-        except Exception as e:
-            # 如果 Langfuse 调用失败，回退到本地逻辑
-            logger.error(f"Failed to fetch prompt from Langfuse for event: {event}, using fallback. Error: {e}")
-            trace.event(
-                name="Langfuse Prompt Fallback",
-                input={"event": event},
-                output={"error": str(e)}
-            )
-            prompt_template = (
-                prompt_template
-                if prompt_template
-                else self.gsr.get_event_item(event)["description"]
-            )
-
-        # 如果 Prompt 模板依然为空，抛出异常
-        if not prompt_template:
-            trace.event(
-                name="Prompt Failure",
-                input={"event": event},
-                output={"error": "Prompt template is empty after fallback"}
-            )
-            raise ValueError(f"Failed to retrieve prompt template for event: {_event}")
-
-        # 替换变量生成最终 Prompt
-        try:
-            prompt = prompt_template.format(**prompt_vars)
-            trace.event(
-                name="Prompt Compilation",
-                input={"prompt_template": prompt_template, "prompt_vars": prompt_vars},
-                output={"compiled_prompt": prompt}
-            )
-            print(f"Final assembled prompt: {prompt}")  # 打印组装后的提示内容
-        except KeyError as e:
-            logger.error(f"Error formatting prompt: missing key {e}")
-            trace.event(
-                name="Prompt Compilation Error",
-                input={"prompt_template": prompt_template, "prompt_vars": prompt_vars},
-                output={"error": f"Missing key: {e}"}
-            )
-            raise
-
-        # 调用大模型
-        try:
-            start_time = time.time()
-            content: Union[str, Generator] = await acallLLM(
-                model=model,
-                query=prompt,
-                **model_args,
-            )
-            end_time = time.time()
-            trace.event(
-                name="Model Invocation",
-                input={"model": model, "prompt": prompt, "model_args": model_args},
-                output={"output": content, "time_taken": end_time - start_time}
-            )
-
-            # 记录模型返回内容
-            if isinstance(content, str):
-                logger.info(f"AIGC Functions {_event} LLM Output: {content}")
-            return content
-
-        except Exception as e:
-            logger.error(f"Error during model invocation for event: {event}, Error: {e}")
-            trace.event(
-                name="Model Invocation Error",
-                input={"model": model, "prompt": prompt, "model_args": model_args},
-                output={"error": str(e)}
-            )
-            raise
-
-        finally:
-            # 提交 Trace
-            trace.update(
-                state="completed" if "content" in locals() else "error",
-                properties={"final_status": "success" if "content" in locals() else "failed"}
-            )
 
     async def __compose_user_msg__(
         self,

@@ -367,30 +367,32 @@ async def acallLLtrace(
     aclient = openai.AsyncOpenAI()
     # 从 extra_params 提取追踪相关信息
     langfuse = extra_params.get("langfuse")
-    logger.debug(f"Langfuse parameters: {extra_params}")
+    user_id = extra_params.get("user_id")
+    session_id = extra_params.get("session_id")
+    # 如果存在 user_id 和 session_id，创建 trace
+    trace = None
+    generation = None
+    if user_id and session_id:
+        trace = langfuse.trace(
+            name=extra_params.get("name"),
+            user_id=user_id,
+            session_id=session_id,
+            release=extra_params.get("release"),
+            tags=extra_params.get("tags"),
+            metadata=extra_params.get("metadata")
+        )
 
-    trace = langfuse.trace(
-        name=extra_params.get("name"),
-        user_id=extra_params.get("user_id"),
-        session_id=extra_params.get("session_id"),
-        release=extra_params.get("release", "v1.0.0"),
-        tags=extra_params.get("tags"),
-        metadata=extra_params.get("metadata", {"description": "LLM invocation"})
-    )
-
-    generation = trace.generation(
-        name="qwen-completion",
-        model="Qwen2-72B-Instruct",
-    )
-
-    logger.debug(f"Extra params for trace: {extra_params}")
-
-    # 开始追踪：记录请求的输入
-    generation.update(
-        name="Model Invocation Start",
-        input=query,
-        metadata={"description": "Starting model invocation"}
-    )
+        # 创建 Generation
+        generation = trace.generation(
+            name="llm-generation",
+            model=model,
+            model_parameters={
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens,
+            },
+            metadata={"streaming": stream}
+        )
 
     trace.update(
         input=query
@@ -489,28 +491,36 @@ async def acallLLtrace(
         ret = completion.choices[0].message.content.strip()
     time_cost = round(time.time() - t_st, 1)
 
-    logger.debug(completion.usage)
-    # 提取模型使用情况
-    usage_details = {
-        "input": completion.usage.prompt_tokens,
-        "output": completion.usage.completion_tokens,
-        "total": completion.usage.total_tokens
-    }
-    cost_details = {
-        "input": usage_details["input"] * 0.00001,
-        "output": usage_details["output"] * 0.00002,
-    }
+    # 如果存在 trace 和 generation，则记录追踪信息
+    if trace and generation:
+        # 提取模型使用情况
+        usage_details = {
+            "input": completion.usage.prompt_tokens,
+            "output": completion.usage.completion_tokens,
+            "total": completion.usage.total_tokens
+        }
+        cost_details = {
+            "input": usage_details["input"] * 0.00001,
+            "output": usage_details["output"] * 0.00002,
+        }
 
-    logger.debug(f"Usage details: {usage_details}")
-    logger.debug(f"Cost details: {cost_details}")
+        logger.info(f"Output value being sent to Langfuse: {ret}")
 
-    # 添加追踪记录：成功调用
-    generation.update(
-        name="Model Invocation Success",
-        output=ret,
-        usage_details=usage_details,
-        cost_details=cost_details
-    )
+        generation.end(
+            usage=usage_details,
+            total_cost=cost_details,
+        )
+
+        generation.update(
+            input={"query": query, "history": history},
+        )
+
+        # 确保 Flush 成功
+        try:
+            langfuse.flush()
+            logger.info("Langfuse flush executed successfully.")
+        except Exception as e:
+            logger.error(f"Langfuse flush failed: {e}")
 
     trace.update(
         output=ret,
@@ -523,12 +533,7 @@ async def acallLLtrace(
         + f"total_tokens:{completion.usage.total_tokens}, "
           f"cost: {time_cost}s"
     )
-    # 提交追踪信息
-    generation.update(
-        state="completed",
-        properties={"status": "success" if "ret" in locals() else "failed"}
-    )
-    langfuse.flush()
+
     return ret
 
 

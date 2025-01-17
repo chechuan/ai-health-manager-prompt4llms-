@@ -7,6 +7,7 @@
 """
 
 import re
+import json
 from typing import Dict, Any
 from langfuse import Langfuse
 from src.utils.Logger import logger
@@ -44,6 +45,8 @@ class LangfusePromptManager:
             compiled_prompt = prompt_obj.compile(**prompt_vars)
 
             # 还原静态占位符 {{{variable}}} 为 {variable}
+            logger.info(prompt_template)
+            logger.info(compiled_prompt)
             return self._restore_static_placeholders(prompt_template, compiled_prompt)
 
         except Exception as e:
@@ -81,5 +84,14 @@ class LangfusePromptManager:
         # 按顺序将静态占位符替换回原内容
         for placeholder in static_placeholders:
             compiled_prompt = compiled_prompt.replace(f"{{{{{placeholder}}}}}", f"{{{placeholder}}}")
-        return compiled_prompt
+
+        # 如果 compiled_prompt 是一个 JSON 字符串，确保它只有一个层次的花括号
+        try:
+            # 尝试解析编译后的提示词作为一个 JSON 对象
+            json_obj = json.loads(compiled_prompt)
+            # 返回正确格式化的 JSON 字符串
+            return json.dumps(json_obj, ensure_ascii=False)
+        except json.JSONDecodeError:
+            # 如果不是一个有效的 JSON 字符串，则返回原始字符串
+            return compiled_prompt
 
