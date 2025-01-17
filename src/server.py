@@ -7,6 +7,7 @@
 """
 
 import asyncio
+import copy
 import json
 import sys
 import time
@@ -1445,11 +1446,47 @@ def create_app():
             # 返回构造的响应
             return build_aigc_functions_response(_return)
 
-    @app.route("/chat_gen", methods=["post"])
+    @app.route("/chat_gen", methods=["POST"])
     async def get_chat_gen(request: Request):
         global chat
 
+        all_items = []  # 用于记录生成器输出
+
+        async def logging_wrapper(gen: AsyncGenerator):
+            """包装生成器，记录输出到 all_items，并保持流式传递"""
+            try:
+                async for item in gen:
+                    # 确保 item 是 JSON 字符串
+                    if isinstance(item, dict):
+                        item_str = json.dumps(item, ensure_ascii=False)
+                    else:
+                        item_str = str(item)  # 转换为字符串
+
+                    # 打印日志并记录
+                    logger.info(f"[Streaming Output] {item_str}")
+                    all_items.append(item_str)
+
+                    # 将数据流式传递给下游
+                    yield item
+            finally:
+                # 确保即使发生异常也执行监控记录
+                await record_monitoring_data(all_items, param)
+
+        async def record_monitoring_data(items, params):
+            """异步记录监控数据"""
+            await monitor_interface(
+                interface_name="chat_gen",
+                user_id=params.get("user_id"),
+                session_id=params.get("session_id"),
+                request_input=params,
+                response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
+                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+                release="v1.0.0",
+                metadata={"team": "AI", "project": "chat_service"}
+            )
+
         try:
+            # 获取参数
             param = await accept_param(request, endpoint="/chat_gen")
             generator: AsyncGenerator = chat_v2.general_yield_result(
                 sys_prompt=param.get("prompt"),
@@ -1457,26 +1494,31 @@ def create_app():
                 use_sys_prompt=False,
                 **param,
             )
+
+            # 包装生成器，记录数据
+            wrapped_generator = logging_wrapper(generator)
+
+            # 原逻辑保持不变
             result = decorate_chat_complete(
-                generator, return_mid_vars=False, return_backend_history=True
+                wrapped_generator,  # 使用包装后的生成器
+                return_mid_vars=False,
+                return_backend_history=True
             )
 
-            await monitor_interface(
-                interface_name="chat_gen",
-                user_id=param.get("user_id"),
-                session_id=param.get("session_id"),
-                request_input=param,
-                response_output=result,
-                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
-                release="v1.0.0",
-                # model="Qwen2-72B-Instruct",
-                metadata={"team": "AI", "project": "chat_service"}
-            )
+            # 返回流式响应
+            return StreamingResponse(result, media_type="text/event-stream")
+
         except Exception as err:
             logger.exception(err)
-            result = yield_result(head=600, msg=repr(err), items=param)
-        finally:
-            return StreamingResponse(result, media_type="text/event-stream")
+
+            # 异常处理返回流式错误
+            async def error_generator():
+                yield json.dumps({"error": repr(err)}, ensure_ascii=False)
+
+            # 创建异步任务记录监控数据
+            asyncio.create_task(record_monitoring_data([], param))
+
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
 
     @app.route("/chat/complete", methods=["post"])
     async def _chat_complete(request: Request):

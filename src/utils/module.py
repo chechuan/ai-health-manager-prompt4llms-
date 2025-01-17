@@ -1970,11 +1970,17 @@ async def monitor_interface(**kwargs):
     model = kwargs.get("model")  # 默认模型名称
     metadata = kwargs.get("metadata", {"description": f"Monitoring {interface_name}"})
 
+    # 请求名称
+    request_name = f"post_{interface_name}"
+
+    # 响应名称
+    response_name = f"resp_post_{interface_name}"
+
     # 初始化 Langfuse Trace
     if not langfuse:
         raise ValueError("Missing required parameter: langfuse")
     trace = langfuse.trace(
-        name=interface_name,
+        name=request_name,
         user_id=user_id,
         session_id=session_id,
         release=release,
@@ -1984,7 +1990,7 @@ async def monitor_interface(**kwargs):
 
     # 创建追踪 Generation 对象
     generation = trace.generation(
-        name=interface_name,
+        name=response_name,
         model=model
     )
 
@@ -1992,7 +1998,6 @@ async def monitor_interface(**kwargs):
     try:
         # 更新 trace：记录请求输入
         trace.update(
-            name=f"{interface_name} Trace Input",
             input=request_input,
             metadata={"description": f"Trace input for {interface_name}"}
         )
@@ -2000,7 +2005,6 @@ async def monitor_interface(**kwargs):
 
         # 更新 generation：记录请求输入
         generation.update(
-            name=f"{interface_name} Generation Input",
             input=request_input,
             metadata={"description": f"Generation input for {interface_name}"}
         )
@@ -2011,7 +2015,6 @@ async def monitor_interface(**kwargs):
 
         # 更新 trace：记录响应输出
         trace.update(
-            name=f"{interface_name} Trace Output",
             output=response_output,
             properties={"status": "success"},
             metadata={"response_time": t_cost, "description": f"Trace output for {interface_name}"}
@@ -2020,7 +2023,6 @@ async def monitor_interface(**kwargs):
 
         # 更新 generation：记录响应输出
         generation.update(
-            name=f"{interface_name} Generation Output",
             output=response_output,
             properties={"status": "success"},
             metadata={"response_time": t_cost, "description": f"Generation output for {interface_name}"}
