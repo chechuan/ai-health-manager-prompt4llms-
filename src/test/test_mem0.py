@@ -19,9 +19,9 @@ config = {
     "llm": {
         "provider": "openai_structured",
         "config": {
-            "model": "Qwen2-7B-Instruct",
+            "model": "Qwen2.5-7B-Instruct",
             "api_key": "sk-fOQllxzXJ7SEHGVO2b426e829d2f496792Ac902b11Cd0525",
-            "openai_base_url": "http://10.228.67.99:26928/v1",
+            "openai_base_url": "http://10.228.67.99:26945/v1",
             "top_p": 0.5
         }
     },
@@ -31,7 +31,7 @@ config = {
             "model": "bce-embedding-base-v1",
             "openai_base_url": "http://10.228.67.99:26928/v1",
             "api_key": "sk-fOQllxzXJ7SEHGVO2b426e829d2f496792Ac902b11Cd0525",
-            "embedding_dims": 768
+            # "embedding_dims": 768
         }
     }
 }
@@ -40,9 +40,9 @@ print("正在初始化 Memory...")
 m = Memory.from_config(config)
 print("Memory 初始化成功")
 print("\n开始添加记忆...")
-message = "喜欢吃奶酪"
+message = "喜欢游泳"
 print(f"输入消息: {message}")
-result = m.add(message, user_id=uid, metadata={"category": "eat"})
+result = m.add(message, user_id=uid)
 print("添加完毕")
 
 history = m.history(memory_id=uid)
