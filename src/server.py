@@ -550,11 +550,47 @@ def mount_aigc_functions(app: FastAPI):
         finally:
             return build_aigc_functions_response(_return)  # 确保返回值有赋值
 
+    @app.route("/aigc/sanji/kangyang", methods=["POST"])
     async def _async_aigc_functions_sanji_kangyang(
             request_model: SanJiKangYangRequest,
     ) -> Response:
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
+        all_items = []  # 用于记录生成器输出
+
+        async def logging_wrapper(gen: AsyncGenerator, param):
+            """包装生成器，记录输出到 all_items，并保持流式传递"""
+            try:
+                async for item in gen:
+                    # 确保 item 是 JSON 字符串
+                    if isinstance(item, dict):
+                        item_str = json.dumps(item, ensure_ascii=False)
+                    else:
+                        item_str = str(item)  # 转换为字符串
+
+                    # 打印日志并记录
+                    logger.info(f"[Streaming Output] {item_str}")
+                    all_items.append(item_str)
+
+                    # 将数据流式传递给下游
+                    yield item
+            finally:
+                # 确保即使发生异常也执行监控记录
+                await record_monitoring_data(all_items, param)
+
+        async def record_monitoring_data(items, params):
+            """异步记录监控数据"""
+            await monitor_interface(
+                interface_name="sanji_kangyang",  # 接口名称
+                user_id=params.get("user_id"),
+                session_id=params.get("session_id"),
+                request_input=params,
+                response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
+                langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+                release="v1.0.0",
+                metadata={"team": "AI", "project": "chat_service"}
+            )
+
         try:
             param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
@@ -562,7 +598,10 @@ def mount_aigc_functions(app: FastAPI):
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应，直接返回 StreamingResponse
                 generator = response_generator(response)
-                return StreamingResponse(generator, media_type="text/event-stream")
+
+                # 包装生成器，记录数据
+                wrapped_generator = logging_wrapper(generator, param)
+                return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:
                 # 处理非流式响应
                 response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await
@@ -573,10 +612,17 @@ def mount_aigc_functions(app: FastAPI):
                     ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
                 logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+
+                # 记录监控数据
+                await record_monitoring_data([response], param)
+
                 return build_aigc_functions_response(_return)
+
         except Exception as err:
             # 错误处理
             msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await
+            logger.error(f"Error in {endpoint}: {msg}")
+
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 流式错误响应
                 generator = response_generator(msg, error=True)
@@ -585,6 +631,10 @@ def mount_aigc_functions(app: FastAPI):
                 # 非流式错误响应
                 ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
                 _return = ret.model_dump_json(exclude_unset=True)
+
+                # 记录错误监控数据
+                await record_monitoring_data([msg], param)
+
                 return build_aigc_functions_response(_return)
 
     async def _async_aigc_functions_jia_kang_bao_support(
@@ -1049,7 +1099,7 @@ def create_app():
                     yield item
             finally:
                 # 确保即使发生异常也执行监控记录
-                await record_monitoring_data(all_items, param)
+                await record_monitoring_data(all_items[-1:], param)
 
         # 异步记录监控数据
         async def record_monitoring_data(items, params):
@@ -1080,7 +1130,7 @@ def create_app():
             # 包装生成器进行流式输出和日志记录
             wrapped_generator = logging_wrapper(generator)
 
-            result = decorate_chat_complete(
+            result = decorate_general_complete(
                 wrapped_generator
             )
 
@@ -1525,7 +1575,7 @@ def create_app():
                     yield item
             finally:
                 # 确保即使发生异常也执行监控记录
-                await record_monitoring_data(all_items, param)
+                await record_monitoring_data(all_items[-1:], param)
 
         async def record_monitoring_data(items, params):
             """异步记录监控数据"""
