@@ -97,7 +97,7 @@ class HealthExpertModel:
         """通用生成"""
 
         extra_params = {
-            "name": f"{_event}_trace",
+            "name": _event,
             "user_id": kwargs.get("user_id"),
             "session_id": kwargs.get("session_id"),
             "release": "v1.0.0",

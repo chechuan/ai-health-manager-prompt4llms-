@@ -369,7 +369,6 @@ async def acallLLtrace(
     langfuse = extra_params.get("langfuse")
     user_id = extra_params.get("user_id")
     session_id = extra_params.get("session_id")
-
     # 如果存在 user_id 和 session_id，创建 trace
     trace = None
     generation = None
@@ -394,6 +393,10 @@ async def acallLLtrace(
             },
             metadata={"streaming": stream}
         )
+
+    trace.update(
+        input=query
+    )
 
     logger.info(f"Starting model invocation with query: {query}")
 
@@ -518,6 +521,10 @@ async def acallLLtrace(
             logger.info("Langfuse flush executed successfully.")
         except Exception as e:
             logger.error(f"Langfuse flush failed: {e}")
+
+    trace.update(
+        output=ret,
+    )
 
     logger.info(
         f"Model {model} generate costs summary: "
