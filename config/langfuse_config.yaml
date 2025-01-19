@@ -11,4 +11,4 @@ dev:
 prod:
   LANGFUSE_SECRET_KEY: sk-lf-5a74810a-1445-4839-a58d-b9582fa3b853
   LANGFUSE_PUBLIC_KEY: pk-lf-c5ffdb12-642c-4be2-81cf-06f67b0c791a
-  LANGFUSE_HOST: ai-health-manager-langfuse-web-pro.lk-danao-pro:3000
+  LANGFUSE_HOST: http://ai-health-manager-langfuse-web-pro.lk-danao-pro:3000

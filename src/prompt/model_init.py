@@ -394,9 +394,11 @@ async def acallLLtrace(
             metadata={"streaming": stream}
         )
 
-    trace.update(
-        input=query
-    )
+    # 确保 trace 不为 None
+    if trace is not None:
+        trace.update(input=query)
+    else:
+        logger.error("Trace object is None, skipping trace update.")
 
     logger.info(f"Starting model invocation with query: {query}")
 
@@ -522,9 +524,8 @@ async def acallLLtrace(
         except Exception as e:
             logger.error(f"Langfuse flush failed: {e}")
 
-    trace.update(
-        output=ret,
-    )
+    if trace is not None:
+        trace.update(output=ret)
 
     logger.info(
         f"Model {model} generate costs summary: "
