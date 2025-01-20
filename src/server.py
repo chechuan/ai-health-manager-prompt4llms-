@@ -134,8 +134,10 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
 
 
 # 统一的监控记录函数
-async def record_monitoring_data(items, params):
+async def record_monitoring_data(items, params, start_time, end_time=None):
     """统一的异步记录监控数据"""
+    if end_time is None:
+        end_time = time.time()
     await monitor_interface(
         tags=params.get("tags"),
         interface_name=params.get('endpoint_name'),  # 接口名称
@@ -143,14 +145,16 @@ async def record_monitoring_data(items, params):
         session_id=params.get("session_id"),
         request_input=params,
         response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-        langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+        langfuse=gsr.langfuse_client,
         release="v1.0.0",
-        metadata={"team": "AI", "project": "health_service"}
+        metadata={"team": "AI", "project": "health_service"},
+        start_time=start_time,  # 传递 start_time
+        end_time=end_time  # 传递 end_time
     )
 
 
 # 日志包装和流式输出逻辑
-async def logging_wrapper(gen: AsyncGenerator, param):
+async def logging_wrapper(gen: AsyncGenerator, param, start_time):
     """包装生成器，记录输出到 all_items，并保持流式传递"""
     all_items = []
     try:
@@ -169,10 +173,11 @@ async def logging_wrapper(gen: AsyncGenerator, param):
             yield item
     finally:
         # 确保即使发生异常也执行监控记录
+        end_time = time.time()
         if param.get("endpoint_name") in ["daily_diet_eval"]:
-            await record_monitoring_data(all_items[-1:], param)
+            await record_monitoring_data(all_items[-1:], param, start_time, end_time)
         else:
-            await record_monitoring_data(all_items, param)
+            await record_monitoring_data(all_items, param, start_time, end_time)
 
 
 
@@ -639,19 +644,32 @@ def mount_aigc_functions(app: FastAPI):
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
 
+        start_time = time.time()
+
         try:
             param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             # 记录监控数据
-            param['endpoint_name'] = "sanji_kangyang"
-            param['tags'] = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
+            # 获取 intent_code 并根据它获取 tags
+            intent_code = param.get("intentCode")
+            if intent_code:
+                # 使用 intent_code 获取对应的提示词 tag
+                prompt = gsr.langfuse_client.get_prompt(intent_code)
+                tags = prompt.tags if prompt else []
+                param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
+            else:
+                # 如果没有 intent_code，则使用默认值
+                tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
+                param['endpoint_name'] = "sanji_kangyang"
+
+            param['tags'] = tags
 
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 generator = response_generator(response)
 
                 # 包装生成器，记录数据
-                wrapped_generator = logging_wrapper(generator, param)
+                wrapped_generator = logging_wrapper(generator, param, start_time)
                 return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:
                 # 处理非流式响应
@@ -664,7 +682,8 @@ def mount_aigc_functions(app: FastAPI):
                     _return = ret.model_dump_json(exclude_unset=False)
                 logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
 
-                await record_monitoring_data([response], param)
+                end_time = time.time()
+                await record_monitoring_data([response], param, start_time, end_time)
 
                 return build_aigc_functions_response(_return)
 
