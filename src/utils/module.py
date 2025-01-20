@@ -1961,6 +1961,8 @@ async def monitor_interface(**kwargs):
 
     # 解构参数，使用 .get() 方法
     interface_name = kwargs.get("interface_name")
+    start_time = kwargs.get("start_time")
+    end_time = kwargs.get("end_time", time.time())
     tags = kwargs.get("tags")
     user_id = kwargs.get("user_id")
     session_id = kwargs.get("session_id")
@@ -1991,6 +1993,7 @@ async def monitor_interface(**kwargs):
 
     # 创建追踪 Generation 对象
     generation = trace.generation(
+        start_time=start_time,
         name=response_name,
         model=model
     )
@@ -1999,53 +2002,44 @@ async def monitor_interface(**kwargs):
     try:
         # 更新 trace：记录请求输入
         trace.update(
-            input=request_input,
-            metadata={"description": f"Trace input for {interface_name}"}
+            input=request_input
         )
-        logger.info(f"Trace input recorded for {interface_name}: {request_input}")
+        # logger.info(f"Trace input recorded for {interface_name}: {request_input}")
 
         # 更新 generation：记录请求输入
         generation.update(
-            input=request_input,
-            metadata={"description": f"Generation input for {interface_name}"}
+            input=request_input
         )
-        logger.info(f"Generation input recorded for {interface_name}: {request_input}")
-
-        # 模拟处理时间
-        t_cost = round(time.time() - t_start, 2)
+        # logger.info(f"Generation input recorded for {interface_name}: {request_input}")
 
         # 更新 trace：记录响应输出
         trace.update(
             output=response_output,
-            properties={"status": "success"},
-            metadata={"response_time": t_cost, "description": f"Trace output for {interface_name}"}
         )
-        logger.info(f"Trace output recorded for {interface_name}: {response_output}")
+        # logger.info(f"Trace output recorded for {interface_name}: {response_output}")
 
         # 更新 generation：记录响应输出
         generation.update(
-            output=response_output,
-            properties={"status": "success"},
-            metadata={"response_time": t_cost, "description": f"Generation output for {interface_name}"}
+            output=response_output
         )
-        logger.info(f"Generation output recorded for {interface_name}: {response_output}")
+
+        generation.end(
+            end_time=end_time
+        )
+        # logger.info(f"Generation output recorded for {interface_name}: {response_output}")
 
     except Exception as e:
         t_cost = round(time.time() - t_start, 2)
 
         # 更新 trace：记录失败状态
         trace.update(
-            name=f"{interface_name} Trace Failure",
-            properties={"status": "failure", "error": str(e)},
-            metadata={"response_time": t_cost}
+            name=f"{interface_name} Trace Failure"
         )
         logger.error(f"Trace failed for {interface_name} after {t_cost}s with error: {repr(e)}")
 
         # 更新 generation：记录失败状态
         generation.update(
-            name=f"{interface_name} Generation Failure",
-            properties={"status": "failure", "error": str(e)},
-            metadata={"response_time": t_cost}
+            name=f"{interface_name} Generation Failure"
         )
         logger.error(f"Generation failed for {interface_name} after {t_cost}s with error: {repr(e)}")
         raise e  # 继续抛出异常
