@@ -98,8 +98,8 @@ class HealthExpertModel:
 
         extra_params = {
             "name": _event,
-            "user_id": kwargs.get("user_id"),
-            "session_id": kwargs.get("session_id"),
+            "user_id": kwargs.get("user_id", "default"),
+            "session_id": kwargs.get("session_id", "default"),
             "release": "v1.0.0",
             "tags": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
             "metadata": {

@@ -143,7 +143,7 @@ async def record_monitoring_data(items, params):
         session_id=params.get("session_id"),
         request_input=params,
         response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-        langfuse=gsr.langfuse_client,  # 假设 Langfuse 已初始化
+        langfuse=gsr.langfuse_client,
         release="v1.0.0",
         metadata={"team": "AI", "project": "health_service"}
     )
