@@ -121,7 +121,7 @@ class HealthExpertModel:
             if not model_args
             else model_args
         )
-        logger.debug(f"Prompt Vars Before Formatting: {prompt_vars}")
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
 
         # 格式化 prompt
         if prompt_template:
@@ -134,7 +134,7 @@ class HealthExpertModel:
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {prompt}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
 
         content: Union[str, Generator] = await acallLLtrace(
             model=model,
@@ -143,7 +143,7 @@ class HealthExpertModel:
             **model_args
         )
 
-        logger.info(f"AIGC Functions {_event} LLM Output: {content}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
 
         return content
 
@@ -2002,15 +2002,20 @@ class HealthExpertModel:
         manageDays = kwargs.get("manageDays", '')
         dietStatus = kwargs.get("dietStatus", '')
 
-        if (groupSceneTag=='' or manageDays =='') and dietStatus !='':
-            cr = f"你昨日的饮食状态{dietStatus}"
-        elif groupSceneTag!='' and manageDays !='' and dietStatus !='':
-            cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天,昨日的饮食状态{dietStatus}"
-        elif groupSceneTag and manageDays !='' and dietStatus =='':
+        if dietStatus:
+            if groupSceneTag and manageDays:
+                cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天,昨日的饮食状态{dietStatus}"
+            else:
+                cr = f"你昨日的饮食状态{dietStatus}"
+        elif groupSceneTag and manageDays:
             cr = f"今天是你参与{groupSceneTag}管理服务的第{manageDays}天."
         else:
             cr = ""
 
+        if today_weather:
+            template = f"早上好/下午好/晚上好！{cr}今天天气xxx，请注意xxx。"
+        else:
+            template = f"早上好/下午好/晚上好！{cr}请注意xxx。"
         # 拼接用户画像信息字符串
         # user_profile_str = self.__compose_user_msg__("user_profile", user_profile=user_profile)
         # user_profile_section = f"## 用户画像\n{user_profile_str}" if user_profile_str else ""
@@ -2020,7 +2025,8 @@ class HealthExpertModel:
             "daily_schedule": daily_schedule_section,
             "key_indicators": key_indicators_section,
             "daily_info": daily_info_str,
-            "cr":cr
+            "cr": cr,
+            "template": template
         }
 
         # 更新模型参数

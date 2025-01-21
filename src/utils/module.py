@@ -1964,8 +1964,8 @@ async def monitor_interface(**kwargs):
     start_time = kwargs.get("start_time")
     end_time = kwargs.get("end_time", time.time())
     tags = kwargs.get("tags")
-    user_id = kwargs.get("user_id")
-    session_id = kwargs.get("session_id")
+    user_id = kwargs.get("user_id", "default")
+    session_id = kwargs.get("session_id", "default")
     request_input = kwargs.get("request_input")
     response_output = kwargs.get("response_output")
     langfuse = kwargs.get("langfuse")
@@ -2055,3 +2055,9 @@ async def monitor_interface(**kwargs):
             properties={"final_status": "success" if response_output else "failure"}
         )
         langfuse.flush()
+
+a = ""
+if a:
+    print(True)
+else:
+    print(False)

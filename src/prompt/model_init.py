@@ -506,7 +506,7 @@ async def acallLLtrace(
             "output": usage_details["output"] * 0.00002,
         }
 
-        logger.info(f"Output value being sent to Langfuse: {ret}")
+        # logger.info(f"Output value being sent to Langfuse: {ret}")
 
         generation.end(
             usage=usage_details,
