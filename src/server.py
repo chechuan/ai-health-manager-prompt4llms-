@@ -156,10 +156,12 @@ async def record_monitoring_data(items, params, start_time=None, end_time=None):
 
 
 # 日志包装和流式输出逻辑
-async def logging_wrapper(gen: AsyncGenerator, param, start_time=None):
+async def logging_wrapper(gen: AsyncGenerator, param, start_time=None, end_time=None):
     """包装生成器，记录输出到 all_items，并保持流式传递"""
     if start_time is None:
         start_time = time.time()
+    if end_time is None:
+        end_time = time.time()
     all_items = []
     try:
         async for item in gen:
@@ -177,7 +179,6 @@ async def logging_wrapper(gen: AsyncGenerator, param, start_time=None):
             yield item
     finally:
         # 确保即使发生异常也执行监控记录
-        end_time = time.time()
         if param.get("endpoint_name") in ["daily_diet_eval"]:
             await record_monitoring_data(all_items[-1:], param, start_time, end_time)
         else:
@@ -672,8 +673,9 @@ def mount_aigc_functions(app: FastAPI):
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 generator = response_generator(response)
 
+                end_time = time.time()
                 # 包装生成器，记录数据
-                wrapped_generator = logging_wrapper(generator, param, start_time)
+                wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
                 return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:
                 # 处理非流式响应
@@ -684,9 +686,10 @@ def mount_aigc_functions(app: FastAPI):
                 else:
                     ret = AigcFunctionsCompletionResponse(head=200, items=response)
                     _return = ret.model_dump_json(exclude_unset=False)
-                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
 
                 end_time = time.time()
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+
                 await record_monitoring_data([response], param, start_time, end_time)
 
                 return build_aigc_functions_response(_return)
@@ -1151,7 +1154,7 @@ def create_app():
     @app.route("/func_eval/daily_diet_eval", methods=["POST"])
     async def _daily_diet_eval(request: Request):
         """一日血糖饮食建议"""
-
+        s
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
             param['endpoint_name'] = "daily_diet_eval"
