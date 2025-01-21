@@ -2055,9 +2055,3 @@ async def monitor_interface(**kwargs):
             properties={"final_status": "success" if response_output else "failure"}
         )
         langfuse.flush()
-
-a = ""
-if a:
-    print(True)
-else:
-    print(False)
