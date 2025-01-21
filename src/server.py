@@ -134,10 +134,12 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
 
 
 # 统一的监控记录函数
-async def record_monitoring_data(items, params, start_time, end_time=None):
+async def record_monitoring_data(items, params, start_time=None, end_time=None):
     """统一的异步记录监控数据"""
     if end_time is None:
         end_time = time.time()
+    if start_time is None:
+        start_time = time.time()
     await monitor_interface(
         tags=params.get("tags"),
         interface_name=params.get('endpoint_name'),  # 接口名称
@@ -154,8 +156,10 @@ async def record_monitoring_data(items, params, start_time, end_time=None):
 
 
 # 日志包装和流式输出逻辑
-async def logging_wrapper(gen: AsyncGenerator, param, start_time):
+async def logging_wrapper(gen: AsyncGenerator, param, start_time=None):
     """包装生成器，记录输出到 all_items，并保持流式传递"""
+    if start_time is None:
+        start_time = time.time()
     all_items = []
     try:
         async for item in gen:
