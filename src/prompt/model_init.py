@@ -400,7 +400,7 @@ async def acallLLtrace(
     else:
         logger.error("Trace object is None, skipping trace update.")
 
-    logger.info(f"Starting model invocation with query: {query}")
+    # logger.info(f"Starting model invocation with query: {query}")
 
     if stream and stop:
         logger.warning(

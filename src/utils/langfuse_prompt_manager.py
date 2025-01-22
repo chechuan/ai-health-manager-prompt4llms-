@@ -45,8 +45,6 @@ class LangfusePromptManager:
             compiled_prompt = prompt_obj.compile(**prompt_vars)
 
             # 还原静态占位符 {{{variable}}} 为 {variable}
-            logger.info(prompt_template)
-            logger.info(compiled_prompt)
             return self._restore_static_placeholders(prompt_template, compiled_prompt)
 
         except Exception as e:
