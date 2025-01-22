@@ -962,7 +962,7 @@ class WeatherServiceError(Exception):
 def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
     """获取天气信息，增加错误处理、超时控制和日志"""
     try:
-        required_keys = ['key', 'weather_base_url', 'geo_base_url']
+        required_keys = ['key', 'weather_base_url', 'geo_base_url', 'air_quality_now_url']
         if not all(key in config for key in required_keys):
             logger.error("Missing required configuration keys")
             raise WeatherServiceError("Invalid configuration")
@@ -970,6 +970,7 @@ def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
         api_key = config['key']
         weather_base_url = config['weather_base_url']
         geoapi_url = config['geo_base_url']
+        air_quality_url = config['air_quality_now_url']
 
         logger.info(f"Getting weather info for city: {city}")
         city_id = get_city_id(city, geoapi_url, api_key)
@@ -989,23 +990,43 @@ def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
 
         required_weather_fields = [
             'textDay', 'tempMax', 'tempMin', 'windScaleDay',
-            'uvIndex', 'humidity', 'precip', 'pressure', 'vis'
+            'uvIndex'
         ]
 
         if not all(field in today_weather for field in required_weather_fields):
             logger.error("Missing required weather fields in response")
             return None
 
+        def get_uv_level(uvIndex):
+            uvIndex = uvIndex.strip()  # 去除两端的空格或换行符
+            try:
+                uvIndexInt = int(uvIndex)  # 尝试转换为整数
+            except ValueError:  # 如果转换失败，说明uvIndex不是有效的数字
+                return None
+
+            if uvIndexInt in [0, 1, 2]:
+                return '最弱'
+            elif uvIndexInt in [3, 4]:
+                return '较弱'
+            elif uvIndexInt in [5, 6]:
+                return '中等'
+            elif uvIndexInt in [7, 8, 9]:
+                return '较强'
+            elif uvIndexInt >= 10:
+                return '最强'
+            else:
+                return None
+
+        # 获取空气质量信息
+        air_quality_category = get_air_quality_info(air_quality_url, city_id, api_key)
+
         formatted_weather = (
             f"今日{city}天气{today_weather['textDay']}，"
             f"最高温度{today_weather['tempMax']}度，"
-            f"最低温度{today_weather['tempMin']}度，"
+            f"最低{today_weather['tempMin']}度，"
             f"风力{today_weather['windScaleDay']}级，"
-            f"紫外线强度指数{today_weather['uvIndex']}，"
-            f"湿度{today_weather['humidity']}%，"
-            f"降水量{today_weather['precip']}mm，"
-            f"气压{today_weather['pressure']}hPa，"
-            f"能见度{today_weather['vis']}km。"
+            f"紫外线强度{get_uv_level(today_weather['uvIndex'])}，"
+            f"空气质量{air_quality_category}。"
         )
 
         logger.info(f"Successfully got weather info for {city}")
@@ -1040,6 +1061,30 @@ def get_city_id(city: str, geoapi_url: str, api_key: str) -> Optional[str]:
         return None
     except Exception as e:
         logger.error(f"Unexpected error while getting city ID: {str(e)}")
+        return None
+
+
+def get_air_quality_info(air_quality_url: str, city_id: str, api_key: str) -> Optional[str]:
+    """获取空气质量信息，添加错误处理和日志"""
+    try:
+        with timing_logger("get_air_quality_info"):
+            url = f"{air_quality_url}?key={api_key}&location={city_id}"
+            data = make_http_request(url)
+
+            # 检查返回的数据中是否存在 'now' 且包含 'category'
+            if not data.get('now') or 'category' not in data['now']:
+                logger.warning("Air quality data not found or 'category' is missing in response.")
+                return None
+
+            air_quality_category = data['now']['category']
+            logger.info(f"Successfully got air quality category: {air_quality_category}")
+            return air_quality_category
+
+    except WeatherServiceError as e:
+        logger.error(f"Failed to get air quality info: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error while getting air quality info: {str(e)}")
         return None
 
 

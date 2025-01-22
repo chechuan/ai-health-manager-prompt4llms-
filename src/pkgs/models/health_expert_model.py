@@ -1877,11 +1877,6 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
         city = user_profile.get("city", "")
 
-        # 移除性别和年龄信息
-        user_profile.pop("gender", None)
-        user_profile.pop("age", None)
-        user_profile.pop("city", None)
-
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
         daily_schedule_str = await generate_daily_schedule(daily_schedule)
@@ -1895,10 +1890,6 @@ class HealthExpertModel:
         # 异步获取当天天气信息
         today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
         )
-
-        if not today_weather:
-            # 如果没有天气信息，删除城市信息
-            user_profile.pop("city", None)
 
         # 获取最近节气
         recent_solar_terms = await determine_recent_solar_terms()
@@ -1958,11 +1949,6 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
         city = user_profile.get("city", "")
 
-        # 移除性别和年龄信息
-        user_profile.pop("gender", None)
-        user_profile.pop("age", None)
-        user_profile.pop("city", None)
-
         # 获取当日剩余日程信息
         daily_schedule = kwargs.get("daily_schedule", [])
         daily_schedule_str = await generate_daily_schedule(daily_schedule)
@@ -1976,10 +1962,6 @@ class HealthExpertModel:
         # 异步获取当天天气信息
         today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
         )
-
-        if not today_weather:
-            # 如果没有天气信息，删除城市信息
-            user_profile.pop("city", None)
 
         # 获取最近节气
         recent_solar_terms = await determine_recent_solar_terms()
@@ -2012,8 +1994,12 @@ class HealthExpertModel:
         else:
             cr = ""
 
+        if not cr:
+            kwargs["intentCode"] = "aigc_functions_generate_greeting"
+            return await self.aigc_functions_generate_greeting(**kwargs)
+
         if today_weather:
-            template = f"早上好/下午好/晚上好！{cr}今天天气xxx，请注意xxx。"
+            template = f"早上好/下午好/晚上好！{cr}今天{city}天气xxx，请注意xxx。"
         else:
             template = f"早上好/下午好/晚上好！{cr}请注意xxx。"
         # 拼接用户画像信息字符串

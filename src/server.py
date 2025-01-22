@@ -278,6 +278,7 @@ def mount_rule_endpoints(app: FastAPI):
     @app.route("/health/blood_glucose_trend_analysis", methods=["POST"])
     async def _health_blood_glucose_trend_analysis(request: Request):
         """血糖趋势分析"""
+        start_time = curr_time()
         try:
             param = await async_accept_param_purge(
                 request, endpoint="/health/blood_glucose_trend_analysis"
@@ -285,16 +286,18 @@ def mount_rule_endpoints(app: FastAPI):
             param['endpoint_name'] = "health_blood_glucose_trend_analysis"
             param['tags'] = ["health_blood_glucose_trend_analysis", "血糖趋势", "健康监测", "健康管理"]
             ret = expert_model.health_blood_glucose_trend_analysis(param)
+            end_time = time.time()
             resp = ret
             ret = make_result(items=ret)
 
-            await record_monitoring_data([resp], param)  # 记录到 Langfuse
+            await record_monitoring_data([resp], param, start_time, end_time)  # 记录到 Langfuse
         except Exception as err:
             logger.exception(err)
             ret = make_result(head=500, msg=repr(err))
 
+            end_time = time.time()
             # 记录错误监控数据
-            await record_monitoring_data([ret], param)  # 记录到 Langfuse
+            await record_monitoring_data([ret], param, start_time, end_time)  # 记录到 Langfuse
         finally:
             return ret
         
@@ -486,6 +489,7 @@ def mount_aigc_functions(app: FastAPI):
             request_model: AigcFunctionsRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
+        start_time = time.time()
         try:
             param = await async_accept_param_purge(
                 request_model, endpoint="/aigc/functions"
@@ -498,8 +502,9 @@ def mount_aigc_functions(app: FastAPI):
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
 
+                end_time = time.time()
                 # 包装生成器，记录数据
-                wrapped_generator = logging_wrapper(_return, param)
+                wrapped_generator = logging_wrapper(_return, param, start_time, end_time)
                 return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
@@ -507,8 +512,9 @@ def mount_aigc_functions(app: FastAPI):
                 )
                 _return: str = ret.model_dump_json(exclude_unset=False)
 
+                end_time = time.time()
                 # 记录监控数据
-                await record_monitoring_data([response], param)
+                await record_monitoring_data([response], param, start_time, end_time)
                 return build_aigc_functions_response(_return)
 
         except Exception as err:
@@ -523,8 +529,9 @@ def mount_aigc_functions(app: FastAPI):
                 )
                 _return: str = ret.model_dump_json(exclude_unset=True)
 
+                end_time = time.time()
                 # 记录错误监控数据
-                await record_monitoring_data([msg], param)
+                await record_monitoring_data([msg], param, start_time, end_time)
                 return build_aigc_functions_response(_return)
 
     async def _async_aigc_sanji(
@@ -635,7 +642,6 @@ def mount_aigc_functions(app: FastAPI):
         endpoint = "/aigc/sanji/kangyang"
 
         start_time = time.time()
-
         try:
             param = await async_accept_param_purge(request_model, endpoint=endpoint)
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
@@ -693,9 +699,9 @@ def mount_aigc_functions(app: FastAPI):
                 ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
                 _return = ret.model_dump_json(exclude_unset=True)
 
+                end_time = time.time()
                 # 记录错误监控数据
-                await record_monitoring_data([msg], param)
-
+                await record_monitoring_data([msg], param, start_time, end_time)
                 return build_aigc_functions_response(_return)
 
     async def _async_aigc_functions_jia_kang_bao_support(
@@ -1139,7 +1145,8 @@ def create_app():
     @app.route("/func_eval/daily_diet_eval", methods=["POST"])
     async def _daily_diet_eval(request: Request):
         """一日血糖饮食建议"""
-        s
+
+        start_time = time.time()
         try:
             param = await accept_param(request, endpoint="/func_eval/daily_diet_eval")
             param['endpoint_name'] = "daily_diet_eval"
@@ -1152,8 +1159,9 @@ def create_app():
                 param.get("management_tag", '血糖管理')
             )
 
+            end_time = time.time()
             # 包装生成器，记录数据
-            wrapped_generator = logging_wrapper(generator, param)
+            wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
 
             result = decorate_general_complete(
                 wrapped_generator
@@ -1169,7 +1177,8 @@ def create_app():
             async def error_generator():
                 yield json.dumps({"error": repr(err)}, ensure_ascii=False)
 
-            asyncio.create_task(record_monitoring_data([], param))
+            end_time = time.time()
+            asyncio.create_task(record_monitoring_data([], param, start_time, end_time))
 
             return StreamingResponse(error_generator(), media_type="text/event-stream")
 
@@ -1579,6 +1588,7 @@ def create_app():
     async def get_chat_gen(request: Request):
         global chat
 
+        start_time = time.time()
         try:
             # 获取参数并设置默认 tags 和 endpoint_name
             param = await accept_param(request, endpoint="/chat_gen")
@@ -1592,8 +1602,9 @@ def create_app():
                 **param,
             )
 
+            end_time = time.time()
             # 包装生成器，记录数据
-            wrapped_generator = logging_wrapper(generator, param)
+            wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
 
             # 原逻辑保持不变
             result = decorate_chat_complete(
@@ -1612,8 +1623,9 @@ def create_app():
             async def error_generator():
                 yield json.dumps({"error": repr(err)}, ensure_ascii=False)
 
+            end_time = time.time()
             # 创建异步任务记录监控数据
-            asyncio.create_task(record_monitoring_data([], param))
+            asyncio.create_task(record_monitoring_data([], param, start_time, end_time))
 
             return StreamingResponse(error_generator(), media_type="text/event-stream")
 
