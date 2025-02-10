@@ -2004,13 +2004,14 @@ async def monitor_interface(**kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required parameter: {key}")
 
+    logger.debug(kwargs)
     # 解构参数，使用 .get() 方法
     interface_name = kwargs.get("interface_name")
     start_time = kwargs.get("start_time")
     end_time = kwargs.get("end_time", time.time())
     tags = kwargs.get("tags")
-    user_id = kwargs.get("user_id", "default")
-    session_id = kwargs.get("session_id", "default")
+    user_id = kwargs.get("user_id") or "default"
+    session_id = kwargs.get("session_id") or "default"
     request_input = kwargs.get("request_input")
     response_output = kwargs.get("response_output")
     langfuse = kwargs.get("langfuse")

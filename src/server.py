@@ -640,23 +640,28 @@ def mount_aigc_functions(app: FastAPI):
     ) -> Response:
         """三济康养方案的AIGC函数"""
         endpoint = "/aigc/sanji/kangyang"
+        endpoint_name = "sanji_kangyang"
 
         start_time = time.time()
         try:
             param = await async_accept_param_purge(request_model, endpoint=endpoint)
+            param["endpoint_name"] = endpoint_name
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             # 记录监控数据
             # 获取 intent_code 并根据它获取 tags
             intent_code = param.get("intentCode")
             if intent_code:
-                # 使用 intent_code 获取对应的提示词 tag
-                prompt = gsr.langfuse_client.get_prompt(intent_code)
-                tags = prompt.tags if prompt else []
-                param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
+                try:
+                    # 使用 intent_code 获取对应的提示词 tag
+                    prompt = gsr.langfuse_client.get_prompt(intent_code)
+                    tags = prompt.tags if prompt else []
+                except Exception as e:
+                    # 捕获 Langfuse 提示词获取失败的异常，设置为空
+                    logger.error(f"Error while fetching prompt for intent_code {intent_code}: {e}")
+                    tags = []
             else:
                 # 如果没有 intent_code，则使用默认值
                 tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
-                param['endpoint_name'] = "sanji_kangyang"
 
             param['tags'] = tags
 

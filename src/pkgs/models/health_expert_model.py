@@ -135,10 +135,13 @@ class HealthExpertModel:
 
 
         logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
-
+        his = [{
+            'role': 'system',
+            'content': prompt
+        }]
         content: Union[str, Generator] = await acallLLtrace(
             model=model,
-            query=prompt,
+            history=his,
             extra_params=extra_params,
             **model_args
         )

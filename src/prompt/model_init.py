@@ -396,10 +396,13 @@ async def acallLLtrace(
 
     # 确保 trace 不为 None
     if trace is not None:
-        trace.update(input=query)
+        trace.update(input=query or history)
     else:
         logger.error("Trace object is None, skipping trace update.")
-
+    if generation is not None:
+        generation.update(
+            input=query or history
+        )
     # logger.info(f"Starting model invocation with query: {query}")
 
     if stream and stop:
@@ -511,10 +514,6 @@ async def acallLLtrace(
         generation.end(
             usage=usage_details,
             total_cost=cost_details,
-        )
-
-        generation.update(
-            input={"query": query, "history": history},
         )
 
         # 确保 Flush 成功
