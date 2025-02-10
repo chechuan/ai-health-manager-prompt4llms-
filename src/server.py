@@ -664,10 +664,16 @@ def mount_aigc_functions(app: FastAPI):
             # 获取 intent_code 并根据它获取 tags
             intent_code = param.get("intentCode")
             if intent_code:
-                # 使用 intent_code 获取对应的提示词 tag
-                prompt = gsr.langfuse_client.get_prompt(intent_code)
-                tags = prompt.tags if prompt else []
-                param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
+                try:
+                    # 尝试使用 intent_code 获取对应的提示词 tag
+                    prompt = gsr.langfuse_client.get_prompt(intent_code)
+                    tags = prompt.tags if prompt else []
+                    param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
+                except Exception as e:
+                    # 如果获取失败，记录错误并使用默认的 tags
+                    logger.error(f"Error fetching tags for intent_code {intent_code}: {str(e)}")
+                    tags = ["default_tag"]
+                    param['endpoint_name'] = "sanji_kangyang"
             else:
                 # 如果没有 intent_code，则使用默认值
                 tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
