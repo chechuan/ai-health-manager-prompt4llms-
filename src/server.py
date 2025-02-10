@@ -376,6 +376,21 @@ def mount_rule_endpoints(app: FastAPI):
         finally:
             return ret
         
+    @app.route("/health/blood_pressure_warning", methods=["post"])
+    async def _health_blood_pressure_warning(request: Request):
+        """血糖预警"""
+        try:
+            param = await async_accept_param_purge(
+                request, endpoint="/health/blood_pressure_warning"
+            )
+            ret = await expert_model.health_blood_pressure_warning(param)
+            ret = make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+        
     @app.route("/health/open_extract", methods=["post"])
     async def _health_open_extract(request: Request):
         """页面打开"""
@@ -652,13 +667,15 @@ def mount_aigc_functions(app: FastAPI):
             intent_code = param.get("intentCode")
             if intent_code:
                 try:
-                    # 使用 intent_code 获取对应的提示词 tag
+                    # 尝试使用 intent_code 获取对应的提示词 tag
                     prompt = gsr.langfuse_client.get_prompt(intent_code)
                     tags = prompt.tags if prompt else []
+                    param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
                 except Exception as e:
-                    # 捕获 Langfuse 提示词获取失败的异常，设置为空
-                    logger.error(f"Error while fetching prompt for intent_code {intent_code}: {e}")
-                    tags = []
+                    # 如果获取失败，记录错误并使用默认的 tags
+                    logger.error(f"Error fetching tags for intent_code {intent_code}: {str(e)}")
+                    tags = ["default_tag"]
+                    param['endpoint_name'] = "sanji_kangyang"
             else:
                 # 如果没有 intent_code，则使用默认值
                 tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
