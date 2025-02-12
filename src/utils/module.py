@@ -194,12 +194,12 @@ def intent_init():
     EXPERT_INTENTS = {
         "医师": ("call_doctor", "呼叫医师"),
         "医生": ("call_doctor", "呼叫医师"),
-        "运动师": ("call_sportMaster", "呼叫运动师"),
-        "心理": ("call_psychologist", "呼叫情志师"),
-        "情志": ("call_psychologist", "呼叫情志师"),
-        "营养师": ("call_dietista", "呼叫营养师"),
-        "健管师": ("call_health_manager", "呼叫健管师"),
-        "五师": ("wushi", "呼叫五师"),
+        # "运动师": ("call_sportMaster", "呼叫运动师"),
+        # "心理": ("call_psychologist", "呼叫情志师"),
+        # "情志": ("call_psychologist", "呼叫情志师"),
+        # "营养师": ("call_dietista", "呼叫营养师"),
+        # "健管师": ("call_health_manager", "呼叫健管师"),
+        # "五师": ("wushi", "呼叫五师"),
         "呼叫其他": ("call_other", "呼叫其他"),
     }
 
