@@ -538,7 +538,7 @@ class scheduleManager:
             f"# 任务描述\n"
             f"1. 请你扮演一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间\n"
             f"2. 输出的时间应当是未来的时间，位于当前时间点之后\n"
-            f"3. 只输出最终的时间戳\n"
+            f"3. 只输出最终的时间戳，时间戳必须是标准的日期时间格式，格式为: %Y-%m-%d %H:%M:%S\n"
             f"4. 如果时间描述未指明分钟和秒，默认为0分或者0秒，可以考虑24小时制\n"
             f"# 提供信息\n"
             f"现在的时间是: {current_time}\n"
@@ -558,21 +558,19 @@ class scheduleManager:
             "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
         )
         prompt_str = (
-            "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
-            "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
-            "2. 事件可能是一个或多个, 事件中可能包含地点信息, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
-            "3. 如果一个事件未提供时间, 默认为3分钟后\n"
-            '4. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
-            "# 示例\n"
-            "用户输入: 3分钟后叫我一下,今晚8点提醒我们在家看联欢晚会,半个小时后提醒我喝牛奶\n"
-            "输出: \n"
-            '[["提醒", "3分钟后"],["在家看联欢晚会", "今晚8点"], ["喝牛奶提醒", "半个小时后"]]\n'
-            "用户输入: {query}\n"
-            "输出: \n"
-            "{head_str}"
-        )
+        "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒。以下是任务要求:\n"
+        "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
+        "2. 事件可能是一个或多个，每个事件对应一个时间，事件中可能包含地点信息，务必理解并提取每个事件-时间对。\n"
+        "3. 如果没有明确时间，默认为3分钟后。\n"
+        "4. 输出格式：JSON格式，示例：[ [\"事件1\", \"时间1\"], [\"事件2\", \"时间2\"] ]。\n"
+        "# 示例\n"
+        "用户输入: 3分钟后叫我一下，今晚8点提醒我们在家看联欢晚会，半个小时后提醒我喝牛奶\n"
+        "输出: \n"
+        "[[\"提醒\", \"3分钟后\"], [\"在家看联欢晚会\", \"今晚8点\"], [\"喝牛奶提醒\", \"半个小时后\"]]\n"
+        "用户输入: {query}\n"
+    )
         prompt_template = PromptTemplate.from_template(prompt_str)
-        prompt = prompt_template.format(query=query, head_str=head_str)
+        prompt = prompt_template.format(query=query)
         logger.debug(f"日程创建-提取事件-时间对 LLM Input: \n{prompt}")
         response = callLLM(
             prompt,
@@ -585,7 +583,7 @@ class scheduleManager:
             stop="\n",
             stream=True,
         )
-        event_time_pair = head_str + accept_stream_response(response, verbose=False)
+        event_time_pair = accept_stream_response(response, verbose=False)
         logger.debug(f"日程创建-提取事件-时间对 LLM Output: \n{event_time_pair}")
         event_time_pair = eval(event_time_pair)
         self.__update_mid_vars__(
