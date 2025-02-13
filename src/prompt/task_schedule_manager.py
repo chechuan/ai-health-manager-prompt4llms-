@@ -555,7 +555,7 @@ class scheduleManager:
     def __call_create_extract_event_time_pair__(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get(
-            "call_schedule_create_extract_event_time_pair", "Qwen1.5-14B-Chat"
+            "call_schedule_create_extract_event_time_pair", "Qwen1.5-32B-Chat"
         )
         prompt_str = (
             "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒。以下是任务要求:\n"
