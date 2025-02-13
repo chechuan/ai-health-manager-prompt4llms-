@@ -383,7 +383,7 @@ class Agents:
             str: 答案
         """
         model = self.gsr.model_config.get(
-            "aigc_functions_single_choice", "Qwen-14B-Chat"
+            "aigc_functions_single_choice", "Qwen1.5-14B-Chat"
         )
         prompt_template_str = self.gsr.prompt_meta_data["event"][
             "aigc_functions_single_choice"
@@ -525,7 +525,7 @@ class Agents:
             ]
             content = await acallLLM(
                 history=messages,
-                model="Qwen-14B-Chat",
+                model="Qwen1.5-14B-Chat",
                 temperature=0.7,
                 top_p=0.8,
             )
