@@ -386,7 +386,7 @@ class FuncCall:
             prompt += "\n\n日程提醒:\n"
             return prompt
 
-        model = kwds.get("model", "Qwen-14B-Chat")
+        model = kwds.get("model", "Qwen1.5-14B-Chat")
         schedule = self.funcmap["get_schedule"]["func"](**kwds)
         cur_time, end_time = curr_time(), date_after_days(14)
         prompt = query_schedule_template.replace("{{cur_time}}", cur_time)
@@ -412,7 +412,7 @@ class FuncCall:
 
     def call_search_knowledge_decorate_query(self, query: str) -> str:
         """优化要查询的query"""
-        model = self.model_config.get("decorate_search_prompt", "Qwen-14B-Chat")
+        model = self.model_config.get("decorate_search_prompt", "Qwen1.5-14B-Chat")
         system_prompt = "我的问题是: {query}\n我需要查询关于此问题哪些方面的知识?请以列表的格式给出最多三条问题,并保持静默模式"
         prompt = system_prompt.format(query=query)
         his = [{"role": "user", "content": prompt}]
@@ -432,7 +432,7 @@ class FuncCall:
         top_p=0.8,
         knowledge_base_name="高血压",
         prompt_name="default",
-        model_name="Qwen-14B-Chat",
+        model_name="Qwen1.5-14B-Chat",
         **kwargs,
     ) -> AnyStr:
         """使用默认参数调用知识库"""
@@ -543,7 +543,7 @@ class FuncCall:
         return search_result
 
     def call_llm_with_search_engine(
-        self, *args, model_name="Qwen-14B-Chat", **kwargs
+        self, *args, model_name="Qwen1.5-14B-Chat", **kwargs
     ) -> AnyStr:
         """llm + 搜索引擎
 

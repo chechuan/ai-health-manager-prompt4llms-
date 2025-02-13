@@ -324,7 +324,7 @@ class taskSchedulaManager:
         intentCode = kwds.get("intentCode")
         schedule = self.get_real_time_schedule(**kwds)
         request = ChatCompletionRequest(
-            model="Qwen-14B-Chat",
+            model="Qwen1.5-14B-Chat",
             # functions=task_schedule_parameter_description_for_qwen,
             functions=_tspdfq,
             messages=messages,
@@ -459,7 +459,7 @@ class scheduleManager:
             query=query, current=current, output_format=output_format
         )
 
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         logger.debug(f"日程查询-提取时间范围LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
@@ -482,7 +482,7 @@ class scheduleManager:
             1. 仅查询当日未完成日程
         """
         current = curr_time() + " " + curr_weekday()
-        model = self.model_config.get("call_schedule_query", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedule_query", "Qwen1.5-14B-Chat")
 
         query = kwds["history"][-2]["content"]
         query_schedule_template = self.prompt_meta_data["event"]["schedule_qry_up"][
@@ -532,7 +532,7 @@ class scheduleManager:
         - Return
             target_time [str]: %Y-%m-%d %H:%M:%S格式的时间
         """
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         current_time = curr_time() + " " + curr_weekday()
         prompt = (
             f"# 任务描述\n"
@@ -555,7 +555,7 @@ class scheduleManager:
     def __call_create_extract_event_time_pair__(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get(
-            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+            "call_schedule_create_extract_event_time_pair", "Qwen1.5-14B-Chat"
         )
         prompt_str = (
         "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒。以下是任务要求:\n"
@@ -617,7 +617,7 @@ class scheduleManager:
             },
             key="parse_time_desc",
             model=self.model_config.get(
-                "call_schedular_time_understand", "Qwen-14B-Chat"
+                "call_schedular_time_understand", "Qwen1.5-14B-Chat"
             ),
         )
         return except_result, unexpcept_result
@@ -706,7 +706,7 @@ class scheduleManager:
 
     def __cancel_parse_time_desc__(self, query, **kwds):
         """解析时间点或者范围"""
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         current: str = curr_time() + " " + curr_weekday()
         output_format = (
             '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
@@ -737,7 +737,7 @@ class scheduleManager:
     def __cancel_extract_time_info__(self, query: str, **kwds) -> Dict:
         """取消日程 - 提取时间范围描述 -> 解析为时间戳"""
         model = self.model_config.get(
-            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+            "call_schedule_create_extract_event_time_pair", "Qwen1.5-14B-Chat"
         )
         prompt_str = self.prompt_meta_data["event"]["cancel_extract_time_info"][
             "description"
@@ -825,7 +825,7 @@ class scheduleManager:
             kwds["mid_vars"],
             input_text=messsages,
             output_text=content,
-            model="Qwen-14B-Chat",
+            model="Qwen1.5-14B-Chat",
             key="取消日程-提取目标日程",
         )
         thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(

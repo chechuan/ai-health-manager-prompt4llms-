@@ -445,7 +445,7 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get(
-                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen1.5-14B-Chat"
             ),
             history=messages,
             temperature=0,
@@ -497,7 +497,7 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get(
-                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen1.5-14B-Chat"
             ),
             history=messages,
             temperature=0,

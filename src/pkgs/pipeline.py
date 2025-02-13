@@ -567,7 +567,7 @@ class Chat_v2:
                 "score_threshold": 1,
                 "history": [],
                 "stream": False,
-                "model_name": "Qwen-14B-Chat",
+                "model_name": "Qwen1.5-14B-Chat",
                 "temperature": 0.7,
                 "top_p": 0.8,
                 "max_tokens": 0,
@@ -613,7 +613,7 @@ class Chat_v2:
             key="闲聊-知识库-新奥百科",
             input_text=payload,
             output_text=response,
-            model="知识库-新奥百科知识库-Qwen-14B-Chat",
+            model="知识库-新奥百科知识库-Qwen1.5-14B-Chat",
         )
         if kwargs.get("return_his"):
             messages.append(
@@ -810,7 +810,7 @@ class Chat_v2:
             key="获取用户信息 01",
             input_text=prompt,
             output_text=model_output,
-            model="Qwen-14B-Chat",
+            model="Qwen1.5-14B-Chat",
         )
 
         if (
@@ -1493,7 +1493,7 @@ class Chat_v2:
     def __assert_diet_suggest_in_content__(self, content):
         """判断是否有建议饮食"""
         model = self.gsr.model_config.get(
-            "assert_diet_suggest_in_content", "Qwen-14B-Chat"
+            "assert_diet_suggest_in_content", "Qwen1.5-14B-Chat"
         )
         promt = f"{content}\n请你理解以上文本内容，判断文本是否同时包含诊断结果、食物推荐，如果同时包含，输出“YES”，否则输出“NO”"
         logger.debug(f"判断是否有建议饮食 LLM Input: {promt}")
