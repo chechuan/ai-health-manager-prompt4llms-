@@ -3,11 +3,14 @@ weather_api:
   key: 54b163093ab6414d80e004bf7ba497f6
   weather_base_url: https://api.qweather.com/v7/weather/3d
   geo_base_url: https://geoapi.qweather.com/v2/city/lookup
+  air_quality_now_url: https://api.qweather.com/v7/air/now
 
 #免费
 #weather_api:
 #  key: 5ff965b1661a4c4cba5775be428d2b68
 #  weather_base_url: https://devapi.qweather.com/v7/weather/3
 #  geo_base_url: https://geoapi.qweather.com/v2/city/lookup
+#  air_quality_now_url: https://devapi.qweather.com/v7/air/now
+
 
 

@@ -194,12 +194,12 @@ def intent_init():
     EXPERT_INTENTS = {
         "医师": ("call_doctor", "呼叫医师"),
         "医生": ("call_doctor", "呼叫医师"),
-        "运动师": ("call_sportMaster", "呼叫运动师"),
-        "心理": ("call_psychologist", "呼叫情志师"),
-        "情志": ("call_psychologist", "呼叫情志师"),
-        "营养师": ("call_dietista", "呼叫营养师"),
-        "健管师": ("call_health_manager", "呼叫健管师"),
-        "五师": ("wushi", "呼叫五师"),
+        # "运动师": ("call_sportMaster", "呼叫运动师"),
+        # "心理": ("call_psychologist", "呼叫情志师"),
+        # "情志": ("call_psychologist", "呼叫情志师"),
+        # "营养师": ("call_dietista", "呼叫营养师"),
+        # "健管师": ("call_health_manager", "呼叫健管师"),
+        # "五师": ("wushi", "呼叫五师"),
         "呼叫其他": ("call_other", "呼叫其他"),
     }
 
@@ -962,7 +962,7 @@ class WeatherServiceError(Exception):
 def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
     """获取天气信息，增加错误处理、超时控制和日志"""
     try:
-        required_keys = ['key', 'weather_base_url', 'geo_base_url']
+        required_keys = ['key', 'weather_base_url', 'geo_base_url', 'air_quality_now_url']
         if not all(key in config for key in required_keys):
             logger.error("Missing required configuration keys")
             raise WeatherServiceError("Invalid configuration")
@@ -970,6 +970,7 @@ def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
         api_key = config['key']
         weather_base_url = config['weather_base_url']
         geoapi_url = config['geo_base_url']
+        air_quality_url = config['air_quality_now_url']
 
         logger.info(f"Getting weather info for city: {city}")
         city_id = get_city_id(city, geoapi_url, api_key)
@@ -989,23 +990,43 @@ def get_weather_info(config: Dict[str, str], city: str) -> Optional[str]:
 
         required_weather_fields = [
             'textDay', 'tempMax', 'tempMin', 'windScaleDay',
-            'uvIndex', 'humidity', 'precip', 'pressure', 'vis'
+            'uvIndex'
         ]
 
         if not all(field in today_weather for field in required_weather_fields):
             logger.error("Missing required weather fields in response")
             return None
 
+        def get_uv_level(uvIndex):
+            uvIndex = uvIndex.strip()  # 去除两端的空格或换行符
+            try:
+                uvIndexInt = int(uvIndex)  # 尝试转换为整数
+            except ValueError:  # 如果转换失败，说明uvIndex不是有效的数字
+                return None
+
+            if uvIndexInt in [0, 1, 2]:
+                return '最弱'
+            elif uvIndexInt in [3, 4]:
+                return '较弱'
+            elif uvIndexInt in [5, 6]:
+                return '中等'
+            elif uvIndexInt in [7, 8, 9]:
+                return '较强'
+            elif uvIndexInt >= 10:
+                return '最强'
+            else:
+                return None
+
+        # 获取空气质量信息
+        air_quality_category = get_air_quality_info(air_quality_url, city_id, api_key)
+
         formatted_weather = (
             f"今日{city}天气{today_weather['textDay']}，"
             f"最高温度{today_weather['tempMax']}度，"
-            f"最低温度{today_weather['tempMin']}度，"
+            f"最低{today_weather['tempMin']}度，"
             f"风力{today_weather['windScaleDay']}级，"
-            f"紫外线强度指数{today_weather['uvIndex']}，"
-            f"湿度{today_weather['humidity']}%，"
-            f"降水量{today_weather['precip']}mm，"
-            f"气压{today_weather['pressure']}hPa，"
-            f"能见度{today_weather['vis']}km。"
+            f"紫外线强度{get_uv_level(today_weather['uvIndex'])}，"
+            f"空气质量{air_quality_category}。"
         )
 
         logger.info(f"Successfully got weather info for {city}")
@@ -1040,6 +1061,30 @@ def get_city_id(city: str, geoapi_url: str, api_key: str) -> Optional[str]:
         return None
     except Exception as e:
         logger.error(f"Unexpected error while getting city ID: {str(e)}")
+        return None
+
+
+def get_air_quality_info(air_quality_url: str, city_id: str, api_key: str) -> Optional[str]:
+    """获取空气质量信息，添加错误处理和日志"""
+    try:
+        with timing_logger("get_air_quality_info"):
+            url = f"{air_quality_url}?key={api_key}&location={city_id}"
+            data = make_http_request(url)
+
+            # 检查返回的数据中是否存在 'now' 且包含 'category'
+            if not data.get('now') or 'category' not in data['now']:
+                logger.warning("Air quality data not found or 'category' is missing in response.")
+                return None
+
+            air_quality_category = data['now']['category']
+            logger.info(f"Successfully got air quality category: {air_quality_category}")
+            return air_quality_category
+
+    except WeatherServiceError as e:
+        logger.error(f"Failed to get air quality info: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error while getting air quality info: {str(e)}")
         return None
 
 
@@ -1936,3 +1981,335 @@ def prepare_question_list(data):
     formatted_list += "\n]"
 
     return formatted_list
+
+def glucose_type(time, glucose):
+    # 血糖值分类
+    glucose=float(glucose)
+    if time == "1":
+        t= '空腹血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='你血糖非常低，请立即补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='你血糖较低，请尽快补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
+        elif 3.9 <= glucose <=7:
+            result = "血糖正常"
+            content='血糖正常，请继续保持'
+            agent_content=""
+        elif 7.0 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='今日空腹血糖值偏高，请遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日空腹血糖非常高，请严格遵医嘱！"
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    elif time == "2" and time != "":
+        t= '餐后2小时血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='餐后2小时血糖值非常低，请立即补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='餐后2小时血糖值较低，请尽快补充含糖食物。'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=10:
+            result = "血糖正常"
+            content='血糖正常，请继续保持。'
+            agent_content=""
+        elif 10 < glucose <= 16.7:
+            result = "血糖控制高"
+            content='餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日餐后2小时血糖值非常高，请严格遵医嘱！"
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    else:
+        t= '随机血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='随机血糖值非常低，请立即补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='随机血糖值较低，请尽快补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=7:
+            result = "血糖正常"
+            content='血糖正常，请继续保持。'
+            agent_content=""
+        elif 7 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='今日随机血糖值高，请减少饮食量，增加运动量。'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+        elif 13.9 < glucose < 16.7:
+            result = "血糖控制中危"
+            content='今日随机血糖值非常高，请严格遵医嘱！'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+        else:
+            result = "血糖控制高危"
+            content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+    return result,content,agent_content,t
+
+def extract_glucose(recent_time,glucose_data):
+    # 假设当前时间
+    try:
+        recent_time = datetime.strptime(recent_time, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        recent_time = datetime.now()
+
+    # 将时间字符串转换为datetime对象
+    for entry in glucose_data:
+        entry["exam_time"] = datetime.strptime(entry["exam_time"], "%Y-%m-%d %H:%M:%S")
+
+    # 按时间排序
+    glucose_data.sort(key=lambda x: x["exam_time"])
+
+    # 过滤出在rencent_time前3小时内的数据
+    recent_3h_data = [entry for entry in glucose_data if entry["exam_time"] >= recent_time - timedelta(hours=3) and entry["exam_time"] <= recent_time]
+
+    # 采样逻辑
+    sampled_data = []
+    time_threshold_2h = recent_time.replace(second=0, microsecond=0) - timedelta(hours=2)
+    time_threshold_3h = recent_time.replace(second=0, microsecond=0) - timedelta(hours=3)
+
+    # 近2h内，每5分钟取一个
+    last_2h_samples = []
+    current_time = time_threshold_2h
+    while current_time < time_threshold_2h + timedelta(hours=2):
+        for entry in recent_3h_data:
+            if entry["exam_time"].replace(second=0, microsecond=0) == current_time:
+                last_2h_samples.append(entry)
+                break
+        current_time += timedelta(minutes=5)
+
+    # 近3h-2h内，每10分钟取一个
+    last_3h_2h_samples = []
+    current_time = time_threshold_3h
+    while current_time < time_threshold_2h:
+        for entry in recent_3h_data:
+            if entry["exam_time"].replace(second=0, microsecond=0) == current_time:
+                last_3h_2h_samples.append(entry)
+                break
+        current_time += timedelta(minutes=10)
+
+    # 合并采样数据
+    sampled_data.extend(last_2h_samples)
+    sampled_data.extend(last_3h_2h_samples)
+
+    # 找出波峰波谷
+    def find_peaks_and_valleys(data):
+        peaks = []
+        valleys = []
+        for i in range(1, len(data)-1):
+            if data[i]["item_value"] > data[i-1]["item_value"] and data[i]["item_value"] > data[i+1]["item_value"]:
+                peaks.append(("波峰数据",data[i]["exam_time"], data[i]["item_value"]))
+            if data[i]["item_value"] < data[i-1]["item_value"] and data[i]["item_value"] < data[i+1]["item_value"]:
+                valleys.append(("波谷数据",data[i]["exam_time"], data[i]["item_value"]))
+        return peaks, valleys
+
+    peaks, valleys = find_peaks_and_valleys(recent_3h_data)
+
+    return sampled_data,peaks,valleys
+
+
+def blood_pressure_type(time, glucose):
+    # 血压值分类
+    glucose=float(glucose)
+    if time == "1":
+        t= '空腹血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='你血糖非常低，请立即补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='你血糖较低，请尽快补充含糖食物'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
+        elif 3.9 <= glucose <=7:
+            result = "血糖正常"
+            content='血糖正常，请继续保持'
+            agent_content=""
+        elif 7.0 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='今日空腹血糖值偏高，请遵医嘱，规律生活'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日空腹血糖非常高，请严格遵医嘱！"
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    elif time == "2" and time != "":
+        t= '餐后2小时血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='餐后2小时血糖值非常低，请立即补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='餐后2小时血糖值较低，请尽快补充含糖食物。'
+            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=10:
+            result = "血糖正常"
+            content='血糖正常，请继续保持。'
+            agent_content=""
+        elif 10 < glucose <= 16.7:
+            result = "血糖控制高"
+            content='餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+        else:
+            result = "血糖控制高危"
+            content = "今日餐后2小时血糖值非常高，请严格遵医嘱！"
+            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+    else:
+        t= '随机血糖'
+        if glucose < 3:
+            result = "高危低血糖"
+            content='随机血糖值非常低，请立即补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+        elif 3 <= glucose < 3.9:
+            result = "低血糖"
+            content='随机血糖值较低，请尽快补充含糖食物。'
+            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <=7:
+            result = "血糖正常"
+            content='血糖正常，请继续保持。'
+            agent_content=""
+        elif 7 < glucose <= 13.9:
+            result = "血糖控制高"
+            content='今日随机血糖值高，请减少饮食量，增加运动量。'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+        elif 13.9 < glucose < 16.7:
+            result = "血糖控制中危"
+            content='今日随机血糖值非常高，请严格遵医嘱！'
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+        else:
+            result = "血糖控制高危"
+            content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
+            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+    return result,content,agent_content,t
+
+
+async def monitor_interface(**kwargs):
+    """
+    通用接口监控函数，通过 **kwargs 传递参数。
+
+    Args:
+        **kwargs: 动态参数，包括以下必需字段：
+            - interface_name (str): 接口名称。
+            - user_id (str): 用户 ID。
+            - session_id (str): 会话 ID。
+            - request_input (Any): 请求输入。
+            - response_output (Any): 响应输出。
+
+    Returns:
+        None: 仅用于记录和追踪。
+    """
+    # 校验必需参数
+    required_keys = ["request_input", "response_output"]
+    for key in required_keys:
+        if key not in kwargs:
+            raise ValueError(f"Missing required parameter: {key}")
+
+    logger.debug(kwargs)
+    # 解构参数，使用 .get() 方法
+    interface_name = kwargs.get("interface_name")
+    start_time = kwargs.get("start_time")
+    end_time = kwargs.get("end_time", time.time())
+    tags = kwargs.get("tags")
+    user_id = kwargs.get("user_id") or "default"
+    session_id = kwargs.get("session_id") or "default"
+    request_input = kwargs.get("request_input")
+    response_output = kwargs.get("response_output")
+    langfuse = kwargs.get("langfuse")
+    release = kwargs.get("release", "v1.0.0")  # 可以设置默认值
+    model = kwargs.get("model")  # 默认模型名称
+    metadata = kwargs.get("metadata", {"description": f"Monitoring {interface_name}"})
+
+    # 请求名称
+    request_name = f"post_{interface_name}"
+
+    # 响应名称
+    response_name = f"resp_post_{interface_name}"
+
+    # 初始化 Langfuse Trace
+    if not langfuse:
+        raise ValueError("Missing required parameter: langfuse")
+    trace = langfuse.trace(
+        name=request_name,
+        user_id=user_id,
+        session_id=session_id,
+        release=release,
+        tags=tags,
+        metadata=metadata
+    )
+
+    # 创建追踪 Generation 对象
+    generation = trace.generation(
+        start_time=start_time,
+        name=response_name,
+        model=model
+    )
+
+    t_start = time.time()
+    try:
+        # 更新 trace：记录请求输入
+        trace.update(
+            input=request_input
+        )
+        # logger.info(f"Trace input recorded for {interface_name}: {request_input}")
+
+        # 更新 generation：记录请求输入
+        generation.update(
+            input=request_input
+        )
+        # logger.info(f"Generation input recorded for {interface_name}: {request_input}")
+
+        # 更新 trace：记录响应输出
+        trace.update(
+            output=response_output,
+        )
+        # logger.info(f"Trace output recorded for {interface_name}: {response_output}")
+
+        # 更新 generation：记录响应输出
+        generation.update(
+            output=response_output
+        )
+
+        generation.end(
+            end_time=end_time
+        )
+        # logger.info(f"Generation output recorded for {interface_name}: {response_output}")
+
+    except Exception as e:
+        t_cost = round(time.time() - t_start, 2)
+
+        # 更新 trace：记录失败状态
+        trace.update(
+            name=f"{interface_name} Trace Failure"
+        )
+        logger.error(f"Trace failed for {interface_name} after {t_cost}s with error: {repr(e)}")
+
+        # 更新 generation：记录失败状态
+        generation.update(
+            name=f"{interface_name} Generation Failure"
+        )
+        logger.error(f"Generation failed for {interface_name} after {t_cost}s with error: {repr(e)}")
+        raise e  # 继续抛出异常
+
+    finally:
+        # 提交追踪状态
+        trace.update(
+            state="completed",
+            properties={"final_status": "success" if response_output else "failure"}
+        )
+        generation.update(
+            state="completed",
+            properties={"final_status": "success" if response_output else "failure"}
+        )
+        langfuse.flush()

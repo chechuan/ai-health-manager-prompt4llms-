@@ -324,7 +324,7 @@ class taskSchedulaManager:
         intentCode = kwds.get("intentCode")
         schedule = self.get_real_time_schedule(**kwds)
         request = ChatCompletionRequest(
-            model="Qwen-14B-Chat",
+            model="Qwen1.5-14B-Chat",
             # functions=task_schedule_parameter_description_for_qwen,
             functions=_tspdfq,
             messages=messages,
@@ -459,7 +459,7 @@ class scheduleManager:
             query=query, current=current, output_format=output_format
         )
 
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         logger.debug(f"日程查询-提取时间范围LLM Input: \n{prompt}")
         response = callLLM(prompt, model=model, stop="\n\n", stream=True)
         text = accept_stream_response(response, verbose=False)
@@ -482,7 +482,7 @@ class scheduleManager:
             1. 仅查询当日未完成日程
         """
         current = curr_time() + " " + curr_weekday()
-        model = self.model_config.get("call_schedule_query", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedule_query", "Qwen1.5-14B-Chat")
 
         query = kwds["history"][-2]["content"]
         query_schedule_template = self.prompt_meta_data["event"]["schedule_qry_up"][
@@ -532,13 +532,13 @@ class scheduleManager:
         - Return
             target_time [str]: %Y-%m-%d %H:%M:%S格式的时间
         """
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         current_time = curr_time() + " " + curr_weekday()
         prompt = (
             f"# 任务描述\n"
             f"1. 请你扮演一个功能强大的时间理解及推理工具,可以根据描述和现在的时间推算出正确的时间\n"
             f"2. 输出的时间应当是未来的时间，位于当前时间点之后\n"
-            f"3. 只输出最终的时间戳\n"
+            f"3. 只输出最终的时间戳，时间戳必须是标准的日期时间格式，格式为: %Y-%m-%d %H:%M:%S\n"
             f"4. 如果时间描述未指明分钟和秒，默认为0分或者0秒，可以考虑24小时制\n"
             f"# 提供信息\n"
             f"现在的时间是: {current_time}\n"
@@ -555,24 +555,22 @@ class scheduleManager:
     def __call_create_extract_event_time_pair__(self, query: str, **kwds):
         head_str = '''[["'''
         model = self.model_config.get(
-            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+            "call_schedule_create_extract_event_time_pair", "Qwen1.5-32B-Chat"
         )
         prompt_str = (
-            "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒，下面是一些要求:\n"
+            "请你扮演一个功能强大的日程管理助手，帮用户提取描述中的日程名称和时间，提取的数据将用于为用户创建日程提醒。以下是任务要求:\n"
             "1. 日程名称尽量简洁明了并包含用户所描述的事件和地点信息，如果未明确，则默认为`提醒`\n"
-            "2. 事件可能是一个或多个, 事件中可能包含地点信息, 每个事件对应一个时间, 请你充分理解用户的意图, 提取每个事件-时间\n"
-            "3. 如果一个事件未提供时间, 默认为3分钟后\n"
-            '4. 输出格式: [["事件1", "时间1"], ["事件2", "时间2"]]\n'
+            "2. 事件可能是一个或多个，每个事件对应一个时间，事件中可能包含地点信息，务必理解并提取每个事件-时间对。\n"
+            "3. 如果没有明确时间，默认为3分钟后。\n"
+            "4. 输出格式：JSON格式，示例：[ [\"事件1\", \"时间1\"], [\"事件2\", \"时间2\"] ]。\n"
             "# 示例\n"
-            "用户输入: 3分钟后叫我一下,今晚8点提醒我们在家看联欢晚会,半个小时后提醒我喝牛奶\n"
+            "用户输入: 3分钟后叫我一下，今晚8点提醒我们在家看联欢晚会，半个小时后提醒我喝牛奶\n"
             "输出: \n"
-            '[["提醒", "3分钟后"],["在家看联欢晚会", "今晚8点"], ["喝牛奶提醒", "半个小时后"]]\n'
+            "[[\"提醒\", \"3分钟后\"], [\"在家看联欢晚会\", \"今晚8点\"], [\"喝牛奶提醒\", \"半个小时后\"]]\n"
             "用户输入: {query}\n"
-            "输出: \n"
-            "{head_str}"
         )
         prompt_template = PromptTemplate.from_template(prompt_str)
-        prompt = prompt_template.format(query=query, head_str=head_str)
+        prompt = prompt_template.format(query=query)
         logger.debug(f"日程创建-提取事件-时间对 LLM Input: \n{prompt}")
         response = callLLM(
             prompt,
@@ -585,9 +583,16 @@ class scheduleManager:
             stop="\n",
             stream=True,
         )
-        event_time_pair = head_str + accept_stream_response(response, verbose=False)
+        event_time_pair = accept_stream_response(response, verbose=False)
         logger.debug(f"日程创建-提取事件-时间对 LLM Output: \n{event_time_pair}")
-        event_time_pair = eval(event_time_pair)
+
+        # 使用现有的包解析 JSON 格式
+        try:
+            event_time_pair = json.loads(event_time_pair)  # 假设 parse_json 是你现有包中的方法
+        except Exception as e:
+            logger.error(f"解析事件时间对时出错: {e}")
+            event_time_pair = []
+
         self.__update_mid_vars__(
             kwds["mid_vars"],
             input_text=prompt,
@@ -619,7 +624,7 @@ class scheduleManager:
             },
             key="parse_time_desc",
             model=self.model_config.get(
-                "call_schedular_time_understand", "Qwen-14B-Chat"
+                "call_schedular_time_understand", "Qwen1.5-14B-Chat"
             ),
         )
         return except_result, unexpcept_result
@@ -708,7 +713,7 @@ class scheduleManager:
 
     def __cancel_parse_time_desc__(self, query, **kwds):
         """解析时间点或者范围"""
-        model = self.model_config.get("call_schedular_time_understand", "Qwen-14B-Chat")
+        model = self.model_config.get("call_schedular_time_understand", "Qwen1.5-14B-Chat")
         current: str = curr_time() + " " + curr_weekday()
         output_format = (
             '{"startTime": "%Y-%m-%d %H:%M:%S", "endTime": "%Y-%m-%d %H:%M:%S"}'
@@ -739,7 +744,7 @@ class scheduleManager:
     def __cancel_extract_time_info__(self, query: str, **kwds) -> Dict:
         """取消日程 - 提取时间范围描述 -> 解析为时间戳"""
         model = self.model_config.get(
-            "call_schedule_create_extract_event_time_pair", "Qwen-14B-Chat"
+            "call_schedule_create_extract_event_time_pair", "Qwen1.5-14B-Chat"
         )
         prompt_str = self.prompt_meta_data["event"]["cancel_extract_time_info"][
             "description"
@@ -827,7 +832,7 @@ class scheduleManager:
             kwds["mid_vars"],
             input_text=messsages,
             output_text=content,
-            model="Qwen-14B-Chat",
+            model="Qwen1.5-14B-Chat",
             key="取消日程-提取目标日程",
         )
         thought, schedule_to_cancel = self.__cancel_parse_react_generate_content__(

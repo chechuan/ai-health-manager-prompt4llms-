@@ -273,7 +273,7 @@ def create_chat_completion(request: ChatCompletionRequest, schedule: List[Dict])
     prompt = compose_history(history)
     prompt += "\nThought: "
     logger.debug(f"日程管理ReAct:\n{prompt}")
-    response = callLLM(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen-14B-Chat")
+    response = callLLM(prompt, top_p=0.8, temperature=0.7, max_tokens=200, model="Qwen1.5-14B-Chat")
     logger.debug(f"日程管理Generate:\n{response}")
     mid_vars_item = [{"key":"日程管理", "input_text": prompt, "output_text": response}]
     # print(response)

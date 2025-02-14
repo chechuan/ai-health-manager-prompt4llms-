@@ -445,7 +445,7 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get(
-                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen1.5-14B-Chat"
             ),
             history=messages,
             temperature=0,
@@ -497,7 +497,7 @@ class CustomChatAuxiliary(CustomChatModel):
         messages = [{"role": "user", "content": prompt}]
         chat_response = callLLM(
             model=self.gsr.model_config.get(
-                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen-14B-Chat"
+                "custom_chat_auxiliary_diagnosis_summary_diet_rec", "Qwen1.5-14B-Chat"
             ),
             history=messages,
             temperature=0,
@@ -539,6 +539,8 @@ class CustomChatAuxiliary(CustomChatModel):
 
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
         thought, doctor = self.__parse_response__(content)
+        if doctor.startswith("Doctor: "):
+            doctor = doctor[len("Doctor: "):]
         # is_repeat = self.judge_repeat(history, doctor, model)
         # logger.debug(f"辅助问诊 重复判断 结果: {is_repeat}")
         # if is_repeat:
