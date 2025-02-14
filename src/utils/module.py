@@ -255,7 +255,7 @@ def intent_init():
          ("digital_image_switch", "切换数字人皮肤")),
         (lambda t: "功能页面" in t and "打开" in t,
          ("open_Function", "打开功能页面")),
-        (lambda t: "页面" in t and "打开" in t,
+        (lambda t: "设置页面" in t and "打开" in t,
          ("open_page", "打开页面")),
         (lambda t: "非会议" in t and "日程管理" in t,
          ("other_schedule", "非会议日程管理")),
