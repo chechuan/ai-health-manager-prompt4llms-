@@ -421,22 +421,130 @@ class FuncCall:
         logger.debug(f"装饰知识库查询query LLM Output:\n{content}")
         return content
 
+    # def call_search_knowledge(
+    #     self,
+    #     *args,
+    #     local_doc_url=False,
+    #     stream=False,
+    #     score_threshold=1,
+    #     temperature=0.7,
+    #     top_k=3,
+    #     top_p=0.8,
+    #     knowledge_base_name="高血压",
+    #     prompt_name="default",
+    #     model_name="Qwen1.5-14B-Chat",
+    #     **kwargs,
+    # ) -> AnyStr:
+    #     """使用默认参数调用知识库"""
+    #     called_method = self.funcmap["searchKB"]["method"]
+    #     try:
+    #         params = json.loads(args[0])
+    #         query = params["query"]
+    #         knowledge_base_name = params.get("knowledge_base_name", knowledge_base_name)
+    #     except:
+    #         query = args[0]
+    #
+    #     payload = {}
+    #     # payload['query'] = self.call_search_knowledge_decorate_query(query) + "\n" + query
+    #     payload["query"] = query
+    #     payload["knowledge_base_name"] = knowledge_base_name  # TODO 让模型选择知识库
+    #     payload["local_doc_url"] = local_doc_url
+    #     payload["model_name"] = model_name
+    #     payload["score_threshold"] = score_threshold
+    #     payload["stream"] = stream
+    #     payload["temperature"] = temperature
+    #     payload["top_k"] = top_k
+    #     payload["top_p"] = top_p
+    #     payload["prompt_name"] = prompt_name
+    #
+    #     dataSource = None
+    #     url = self.api_config["langchain"] + called_method
+    #     logger.debug(f"Call 知识库问答 with url\n{url}")
+    #     try:
+    #         logger.debug(f"Call 知识库问答 with payload\n{payload}")
+    #         response = self.session.post(url, json=payload, headers=self.headers)
+    #         logger.debug(url)
+    #
+    #         # 移除前缀 'data: ' 并解析
+    #         response_text = response.text.strip()
+    #         if response_text.startswith("data:"):
+    #             response_text = response_text[5:].strip()  # 移除 'data:'
+    #
+    #         msg = json.loads(response_text)  # 使用 json.loads() 解析 JSON
+    #         logger.debug(f"知识库问答 Response\n{msg}")
+    #     except Exception as e:
+    #         logger.error(e)
+    #         content = "对不起,当前知识服务连接存在一些小问题,请稍后再试"
+    #         ret = {"content": content, "dataSource": dataSource}
+    #         return ret
+    #
+    #     if (
+    #         "未找到相关文档" in msg["answer"]
+    #         or "未找到相关文档" in msg["docs"][0]
+    #         or "无法回答" in msg["answer"]
+    #         or not msg["docs"]
+    #     ):
+    #         content = msg["answer"]
+    #         dataSource = "语言模型"
+    #         self.update_mid_vars(
+    #             kwargs["mid_vars"],
+    #             key=f"查询知识库",
+    #             input_text=query,
+    #             output_text=msg,
+    #             model=model_name,
+    #         )
+    #
+    #         # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
+    #         # try:
+    #         #     content = self.funcmap["searchEngine"]["func"](query, **kwargs).strip()
+    #         #     dataSource = "搜索引擎"
+    #         # except:
+    #         #     content = "对不起,没有检索到相关答案,请稍后再试"
+    #         #     dataSource = "语言模型"
+    #         # self.update_mid_vars(
+    #         #     kwargs["mid_vars"],
+    #         #     key=f"搜索引擎",
+    #         #     input_text=query,
+    #         #     output_text=content,
+    #         #     model="baidu crawler",
+    #         # )
+    #     else:
+    #         doc_name_list = [
+    #             re.findall("\[.*?\]", msg["docs"][1][7:])[0][1:-1] for i in msg["docs"]
+    #         ]
+    #         doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
+    #         dataSource = "、".join(doc_name_list)
+    #         content = msg["answer"].strip()
+    #         try:
+    #             self.update_mid_vars(
+    #                 kwargs["mid_vars"],
+    #                 key=f"知识库问答",
+    #                 input_text=payload,
+    #                 output_text=msg,
+    #                 model="langchain",
+    #             )
+    #         except:
+    #             pass
+    #
+    #     ret = {"content": content, "dataSource": dataSource}
+    #     logger.debug(ret)
+    #     return ret
+
     def call_search_knowledge(
-        self,
-        *args,
-        local_doc_url=False,
-        stream=False,
-        score_threshold=1,
-        temperature=0.7,
-        top_k=3,
-        top_p=0.8,
-        knowledge_base_name="高血压",
-        prompt_name="default",
-        model_name="Qwen1.5-14B-Chat",
-        **kwargs,
+            self,
+            *args,
+            local_doc_url=False,
+            stream=False,
+            score_threshold=1,
+            temperature=0.7,
+            top_k=3,
+            top_p=0.8,
+            knowledge_base_name="高血压",
+            prompt_name="default",
+            model_name="Qwen1.5-14B-Chat",
+            **kwargs,
     ) -> AnyStr:
-        """使用默认参数调用知识库"""
-        called_method = self.funcmap["searchKB"]["method"]
+        """使用默认参数调用知识库，由模型直接输出答案"""
         try:
             params = json.loads(args[0])
             query = params["query"]
@@ -444,88 +552,31 @@ class FuncCall:
         except:
             query = args[0]
 
-        payload = {}
-        # payload['query'] = self.call_search_knowledge_decorate_query(query) + "\n" + query
-        payload["query"] = query
-        payload["knowledge_base_name"] = knowledge_base_name  # TODO 让模型选择知识库
-        payload["local_doc_url"] = local_doc_url
-        payload["model_name"] = model_name
-        payload["score_threshold"] = score_threshold
-        payload["stream"] = stream
-        payload["temperature"] = temperature
-        payload["top_k"] = top_k
-        payload["top_p"] = top_p
-        payload["prompt_name"] = prompt_name
+        # 使用模型直接生成答案
+        prompt = f"请回答关于 '{query}' 的健康相关问题。"
 
-        dataSource = None
-        url = self.api_config["langchain"] + called_method
-        logger.debug(f"Call 知识库问答 with url\n{url}")
-        try:
-            logger.debug(f"Call 知识库问答 with payload\n{payload}")
-            response = self.session.post(url, json=payload, headers=self.headers)
+        # 调用模型进行推理
+        generate_text = callLLM(
+            query=prompt,
+            max_tokens=1024,
+            top_p=top_p,
+            temperature=temperature,
+            do_sample=False,
+            stop=['\nThought'],
+            model=model_name
+        )
+        logger.debug(f"模型输出：{generate_text}")
 
-            # 移除前缀 'data: ' 并解析
-            response_text = response.text.strip()
-            if response_text.startswith("data:"):
-                response_text = response_text[5:].strip()  # 移除 'data:'
-
-            msg = json.loads(response_text)  # 使用 json.loads() 解析 JSON
-            logger.debug(f"知识库问答 Response\n{msg}")
-        except Exception as e:
-            logger.error(e)
-            content = "对不起,当前知识服务连接存在一些小问题,请稍后再试"
-            ret = {"content": content, "dataSource": dataSource}
-            return ret
-
-        if (
-            "未找到相关文档" in msg["answer"]
-            or "未找到相关文档" in msg["docs"][0]
-            or "无法回答" in msg["answer"]
-            or not msg["docs"]
-        ):
-            content = msg["answer"]
+        # 判断是否获取到有效答案
+        if not generate_text or "未找到相关文档" in generate_text or "无法回答" in generate_text:
+            content = "对不起，我无法回答这个问题，请稍后再试。"
             dataSource = "语言模型"
-            self.update_mid_vars(
-                kwargs["mid_vars"],
-                key=f"查询知识库",
-                input_text=query,
-                output_text=msg,
-                model=model_name,
-            )
-
-            # 知识库未查到,可能是阈值过高或者知识不匹配,使用搜索引擎做保底策略
-            # try:
-            #     content = self.funcmap["searchEngine"]["func"](query, **kwargs).strip()
-            #     dataSource = "搜索引擎"
-            # except:
-            #     content = "对不起,没有检索到相关答案,请稍后再试"
-            #     dataSource = "语言模型"
-            # self.update_mid_vars(
-            #     kwargs["mid_vars"],
-            #     key=f"搜索引擎",
-            #     input_text=query,
-            #     output_text=content,
-            #     model="baidu crawler",
-            # )
         else:
-            doc_name_list = [
-                re.findall("\[.*?\]", msg["docs"][1][7:])[0][1:-1] for i in msg["docs"]
-            ]
-            doc_name_list = list(set([i.split(".")[0] for i in doc_name_list]))
-            dataSource = "、".join(doc_name_list)
-            content = msg["answer"].strip()
-            try:
-                self.update_mid_vars(
-                    kwargs["mid_vars"],
-                    key=f"知识库问答",
-                    input_text=payload,
-                    output_text=msg,
-                    model="langchain",
-                )
-            except:
-                pass
+            content = generate_text.strip()
+            dataSource = "模型"
 
         ret = {"content": content, "dataSource": dataSource}
+        logger.debug(f"返回内容：{ret}")
         return ret
 
     def call_search_engine(self, *args, **kwargs) -> AnyStr:
