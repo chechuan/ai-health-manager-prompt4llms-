@@ -179,7 +179,7 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     his = []
     async for item in yield_item:
         his = item
-    his_str = get_history_info(his[-1:])
+    his_str = get_history_info(his[-4:])
     sch_str = get_sch_str(schedule)
     # prompt = get_func_eval_prompt('sport_schedule_recog_prompt')
     prompt = sport_schedule_recog_prompt
