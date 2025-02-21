@@ -27,9 +27,11 @@ from src.prompt.model_init import acallLLM, callLLM
 from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.module import (
-    accept_stream_response, clock, compute_blood_pressure_level, dumpJS, glucose_type, extract_glucose
+    accept_stream_response, clock, compute_blood_pressure_level, dumpJS, glucose_type, extract_glucose,
+    extract_time, generate_pressure_advice
 )
 from src.utils.resources import InitAllResource
+from src.utils.langfuse_prompt_manager import LangfusePromptManager
 
 
 class expertModel:
@@ -43,6 +45,9 @@ class expertModel:
         self.gsr = gsr
         self.gsr.expert_model = self
         self.client = openai.OpenAI()
+        self.langfuse_prompt_manager = LangfusePromptManager(
+            langfuse_client=self.gsr.langfuse_client
+        )
 
     def load_image_config(self):
         self.image_font_path = Path(__file__).parent.parent.parent.parent.joinpath(
@@ -1229,41 +1234,56 @@ class expertModel:
         return dict_
     
     @clock
-    async def health_blood_pressure_warning(self, param: Dict) -> str:
+    async def health_blood_pressure_warning(self, param: Dict) -> Dict[str, str]:
+        """
+        根据传入的血压数据进行预警判断，并生成相应的话术。
+        :param param: 包含血压相关数据的字典
+        :return: 生成的血压预警话术字典
+        需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHEM4N5r3VMwvDqPk?utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dim_card%26utm_source%3Dim&editNotify=true&utm_medium=im_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
+        """
         model = "Qwen1.5-32B-Chat"
-        pro = param
-        user_pro = pro.get("user_profile", {})
-        all_glucose = pro.get("all_glucose", [])
-        recent_time = pro.get("recent_time",'')
-        eg,peaks,valleys=extract_glucose(recent_time,all_glucose)
-        key_glucose =eg+peaks+valleys
-        gl = pro.get("gl", "")
-        gl_code = pro.get("gl_code","")
-        today_sport = pro.get("today_sport", "")
-        today_diet = pro.get("today_diet","")
-        result,content,agent_content,t=glucose_type(gl_code, gl)
-        prompt_template = GLUCOSE_WARNING
-        prompt_vars = {"glucose_data": t+gl+"mmol/L。"+result,  
-                       "user_profile": user_pro,
-                        "today_sport": today_sport,
-                        "today_diet": today_diet,
-                        "key_glucose":key_glucose,
-                        "recent_time":recent_time
-                        }
-        sys_prompt = prompt_template.format(**prompt_vars)
+        # 解析传入的血压数据
+        blood_pressure_data = param.get("blood_pressure_data", {})
+        user_profile = param.get("user_profile", {})
+        event = param.get("intentCode", "")
+        date = blood_pressure_data.get("date", "")
+        sbp = blood_pressure_data.get("sbp", 0)
+        dbp = blood_pressure_data.get("dbp", 0)
+        user_name = user_profile.get("user_name", "")
+
+        # 格式化测量时间（只提取HH:MM）
+        time_measured = extract_time(date)
+
+        # 格式化血压值
+        blood_pressure = f"{sbp}/{dbp}"
+
+        # 构建提示词的变量
+        prompt_vars = {
+            "time_measured": time_measured,
+            "blood_pressure": blood_pressure
+        }
+
+        # 获取提示词
+        default_prompt = PRESSURE_WARNING
+        sys_prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars,
+                                            default_prompt)
 
         history = []
         history.append({"role": "system", "content": sys_prompt})
-        logger.debug(f"血糖预警t: {dumpJS(history)}")
-        response = await acallLLM(
+        logger.debug(f"血压预警t: {dumpJS(history)}")
+        customer_dialogue_suggestion = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
-        dict_={}
-        dict_['front']=content
-        dict_['user_warning']="血糖结果"+str(float(gl))+"mmol/L。"+content
-        dict_['user_content']=response
-        dict_['sug_agent']=agent_content
-        return dict_
+
+        # 根据血压值判断规则生成对应话术
+        home_display_msg, push_alert_msg, expert_warning_msg = generate_pressure_advice(sbp, dbp, user_name)
+
+        return {
+            "home_display_msg": home_display_msg,
+            "push_alert_msg": push_alert_msg,
+            "customer_dialogue_suggestion": customer_dialogue_suggestion,
+            "expert_warning_msg": expert_warning_msg
+        }
 
     @clock
     async def health_open_extract(self, param: Dict) -> str:
