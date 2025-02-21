@@ -2340,43 +2340,43 @@ def generate_pressure_advice(sbp: int, dbp: int, user_name) -> tuple:
     # 规则生成话术（1、2、4）
     if sbp < 90 or dbp < 60:
         front = "当前血压低于正常，请及时就医！"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏低（低血压），{advice_suffix}"
     elif 90 <= sbp <= 119 and 60 <= dbp <= 79:
         front = "当前血压正常，请继续保持，适量运动！"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = "血压过低时，请立刻就医并密切监测血压变化，若情况未改善请联系医生。"
     elif ((120 <= sbp <= 139 and 60 <= dbp <= 89) or
             (90 <= sbp <= 119 and 80 <= dbp <= 89) or
             (120 <= sbp <= 139 and 80 <= dbp <= 89)):
         front = "当前血压处于正常高值，请遵医嘱，规律生活适量运动！"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = "血压正常，继续保持均衡饮食和适量运动，避免过度压力。"
     elif ((140 <= sbp <= 159 and dbp < 90) or
             (sbp < 140 and 90 <= dbp <= 99) or
             (140 <= sbp <= 159 and 90 <= dbp <= 99)):
         front = "您血压值偏高，请遵医嘱，规律生活适量运动。"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（1级高血压），{advice_suffix}"
     elif ((160 <= sbp <= 179 and dbp < 100) or
         (sbp < 160 and 100 <= dbp <= 109) or
         (160 <= sbp <= 179 and 100 <= dbp <= 109)):
         front = "您血压值较高，请遵医嘱并就医。"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（2级高血压），{advice_suffix}"
     elif ((sbp >= 180 and dbp < 110) or
         (sbp < 180 and dbp >= 110) or
         (sbp >= 180 and dbp >= 110)):
         front = "您血压值极高，请遵医嘱并及时就医。"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（3级高血压），{advice_suffix}"
     elif sbp >= 140 and dbp < 90:
         front = "您血压值偏高，请遵医嘱，规律生活适量运动。"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（单纯收缩期高血压），{advice_suffix}"
     elif sbp < 140 and dbp >= 90:
         front = "您血压值偏高，请遵医嘱，规律生活适量运动。"
-        user_waring = f"{blood_pressure}，{front}"
+        user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（单纯舒张期高血压），{advice_suffix}"
 
-    return front, user_waring, sug_agent
+    return front, user_warning, sug_agent
