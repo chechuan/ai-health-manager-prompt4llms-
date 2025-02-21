@@ -133,8 +133,9 @@ def save_jsonlines(data, output_file):
     """
     with open(output_file, 'w', encoding='utf-8') as f:
         for entry in data:
-            json.dump(entry, f, ensure_ascii=False)
-            f.write('\n')
+            if "廊坊天气" in str(entry) and "intent/query" in str(entry):
+                json.dump(entry, f, ensure_ascii=False)
+                f.write('\n')
 
 # 生成统计数据
 def generate_statistics(logs):

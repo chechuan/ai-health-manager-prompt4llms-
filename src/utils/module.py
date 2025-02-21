@@ -2313,3 +2313,70 @@ async def monitor_interface(**kwargs):
             properties={"final_status": "success" if response_output else "failure"}
         )
         langfuse.flush()
+
+
+def extract_time(date: str) -> str:
+    """
+    提取血压测量时间的 HH:MM 部分。
+    :param date: 完整的时间字符串
+    :return: HH:MM 格式的时间
+    """
+    if not date:
+        return ""
+    return date.split(" ")[1][:5]
+
+
+def generate_pressure_advice(sbp: int, dbp: int, user_name) -> tuple:
+    """
+    根据血压值生成不同的规则话术。
+    :param sbp: 收缩压
+    :param dbp: 舒张压
+    :return: 四个话术元组
+    """
+    blood_pressure = f"{sbp}/{dbp}mmHg"
+    greeting = f"您好，客户{user_name}目前血压{blood_pressure}，"
+    advice_suffix = "请及时与客户取得联系，给予处理建议。"
+
+    # 规则生成话术（1、2、4）
+    if sbp < 90 or dbp < 60:
+        home_display_msg = "当前血压低于正常，请及时就医！"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏低（低血压），{advice_suffix}"
+    elif 90 <= sbp <= 119 and 60 <= dbp <= 79:
+        home_display_msg = "当前血压正常，请继续保持，适量运动！"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = "血压过低时，请立刻就医并密切监测血压变化，若情况未改善请联系医生。"
+    elif ((120 <= sbp <= 139 and 60 <= dbp <= 89) or
+            (90 <= sbp <= 119 and 80 <= dbp <= 89) or
+            (120 <= sbp <= 139 and 80 <= dbp <= 89)):
+        home_display_msg = "当前血压处于正常高值，请遵医嘱，规律生活适量运动！"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = "血压正常，继续保持均衡饮食和适量运动，避免过度压力。"
+    elif ((140 <= sbp <= 159 and dbp < 90) or
+            (sbp < 140 and 90 <= dbp <= 99) or
+            (140 <= sbp <= 159 and 90 <= dbp <= 99)):
+        home_display_msg = "您血压值偏高，请遵医嘱，规律生活适量运动。"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏高（1级高血压），{advice_suffix}"
+    elif ((160 <= sbp <= 179 and dbp < 100) or
+        (sbp < 160 and 100 <= dbp <= 109) or
+        (160 <= sbp <= 179 and 100 <= dbp <= 109)):
+        home_display_msg = "您血压值较高，请遵医嘱并就医。"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏高（2级高血压），{advice_suffix}"
+    elif ((sbp >= 180 and dbp < 110) or
+        (sbp < 180 and dbp >= 110) or
+        (sbp >= 180 and dbp >= 110)):
+        home_display_msg = "您血压值极高，请遵医嘱并及时就医。"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏高（3级高血压），{advice_suffix}"
+    elif sbp >= 140 and dbp < 90:
+        home_display_msg = "您血压值偏高，请遵医嘱，规律生活适量运动。"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏高（单纯收缩期高血压），{advice_suffix}"
+    elif sbp < 140 and dbp >= 90:
+        home_display_msg = "您血压值偏高，请遵医嘱，规律生活适量运动。"
+        push_alert_msg = f"{blood_pressure}，{home_display_msg}"
+        expert_warning_msg = f"{greeting}血压偏高（单纯舒张期高血压），{advice_suffix}"
+
+    return home_display_msg, push_alert_msg, expert_warning_msg
