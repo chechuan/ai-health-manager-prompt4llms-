@@ -1276,11 +1276,11 @@ class expertModel:
         )
 
         # 根据血压值判断规则生成对应话术
-        front, user_waring, sug_agent = generate_pressure_advice(sbp, dbp, user_name)
+        front, user_warning, sug_agent = generate_pressure_advice(sbp, dbp, user_name)
 
         return {
             "front": front,
-            "user_waring": user_waring,
+            "user_warning": user_warning,
             "user_content": user_content,
             "sug_agent": sug_agent
         }
