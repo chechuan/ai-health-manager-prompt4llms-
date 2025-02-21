@@ -1271,18 +1271,18 @@ class expertModel:
         history = []
         history.append({"role": "system", "content": sys_prompt})
         logger.debug(f"血压预警t: {dumpJS(history)}")
-        customer_dialogue_suggestion = await acallLLM(
+        user_content = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )
 
         # 根据血压值判断规则生成对应话术
-        home_display_msg, push_alert_msg, expert_warning_msg = generate_pressure_advice(sbp, dbp, user_name)
+        front, user_waring, sug_agent = generate_pressure_advice(sbp, dbp, user_name)
 
         return {
-            "home_display_msg": home_display_msg,
-            "push_alert_msg": push_alert_msg,
-            "customer_dialogue_suggestion": customer_dialogue_suggestion,
-            "expert_warning_msg": expert_warning_msg
+            "front": front,
+            "user_waring": user_waring,
+            "user_content": user_content,
+            "sug_agent": sug_agent
         }
 
     @clock
