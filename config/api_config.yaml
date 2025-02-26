@@ -14,7 +14,6 @@ local:
             - Qwen-14B-Chat
             - Qwen1.5-14B-Chat
             - Qwen1.5-32B-Chat
-            - Qwen1.5-72B-Chat
             - Qwen2-72B-Instruct
             - bce-embedding-base-v1
             - Qwen-VL-base-0.0.1
@@ -34,7 +33,6 @@ dev:
                 - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
                 - Qwen1.5-32B-Chat
-                - Qwen1.5-72B-Chat
                 - Qwen2-72B-Instruct
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
@@ -54,7 +52,6 @@ prod:
                 - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
                 - Qwen1.5-32B-Chat
-                - Qwen1.5-72B-Chat
                 - Qwen2-72B-Instruct
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1

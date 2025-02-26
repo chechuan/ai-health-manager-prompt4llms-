@@ -192,7 +192,7 @@ model_list = [
     "Baichuan2-7B-Chat",
     "Qwen-14B-Chat",
     "Qwen-1_8B-Chat",
-    "Qwen1.5-72B-Chat",
+    "Qwen2-72B-Instruct",
     "Yi-34B-Chat",
 ]
 client = openai.OpenAI()
