@@ -247,7 +247,7 @@ class ParamServer:
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
-            "model_name": "Qwen1.5-72B-Chat",
+            "model_name": "Qwen2-72B-Instruct",
             "query": None,
             "score_threshold": 0.6,
             "stream": False,
@@ -263,14 +263,14 @@ class ParamServer:
             "search_engine_name": "duckduckgo",
             "top_k": 3,
             "stream": False,
-            "model_name": "Qwen1.5-72B-Chat",
+            "model_name": "Qwen2-72B-Instruct",
             "temperature": 0.7,
         }
 
     @property
     def llm_with_graph(cls):
         return {
-            "model": "Qwen1.5-72B-Chat",
+            "model": "Qwen2-72B-Instruct",
             "messages": [{"role": "user", "content": ""}],
         }
 

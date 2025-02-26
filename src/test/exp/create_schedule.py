@@ -56,7 +56,7 @@ def get_currct_time_from_desc(time_desc: str):
     return target_time
 
 start_time = time.time()
-model_list = ['Baichuan2-7B-Chat', 'Qwen-14B-Chat', 'Qwen-1_8B-Chat', 'Qwen1.5-72B-Chat', 'Yi-34B-Chat']
+model_list = ['Baichuan2-7B-Chat', 'Qwen-14B-Chat', 'Qwen-1_8B-Chat', 'Qwen2-72B-Instruct', 'Yi-34B-Chat']
 
 response = callLLM(prompt, model=model_list[1], temperature=0.7, top_p=0.8,stop="\n\n",stream=True)
 text = head_str + accept_stream_response(response, verbose=False)
