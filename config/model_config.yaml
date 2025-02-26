@@ -162,9 +162,9 @@ dev:
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
-        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
         - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
         - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
@@ -248,9 +248,9 @@ prod:
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
+        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
     Qwen2-72B-Instruct:
         - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
-        - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
         - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
         - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
         - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
