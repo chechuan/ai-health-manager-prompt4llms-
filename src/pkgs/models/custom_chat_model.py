@@ -518,7 +518,7 @@ class CustomChatAuxiliary(CustomChatModel):
         """辅助问诊"""
         # 过滤掉辅助诊断之外的历史消息
         # model = self.gsr.model_config["custom_chat_auxiliary_diagnosis"]
-        model = "Qwen2.5-32B-Instruct"
+        model = "Qwen1.5-32B-Chat"
 
         messages = self.__compose_auxiliary_diagnosis_message__(**kwargs)
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
@@ -581,7 +581,7 @@ class CustomChatAuxiliary(CustomChatModel):
     ):
         """通用生成"""
         event = kwargs.get("intentCode")
-        model = "Qwen2.5-32B-Instruct"
+        model = "Qwen1.5-32B-Chat"
         model_args: dict = (
             {
                 "temperature": 0,
@@ -605,7 +605,7 @@ class CustomChatAuxiliary(CustomChatModel):
         return content
 
     async def __chat_start_with_weather__(self, **kwargs) -> ChatMessage:
-        model = 'Qwen2.5-32B-Instruct'
+        model = 'Qwen1.5-32B-Chat'
         pro = kwargs.get("promptParam", {})
         if_entropy = pro.get("withEntropy", '')
         conts = []

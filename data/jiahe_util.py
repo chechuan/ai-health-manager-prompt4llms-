@@ -261,7 +261,7 @@ def get_dish_from_database(dish, userInfo):
         temperature=0.8,
         do_sample=True,
         # stream=True,
-        model="Qwen2.5-32B-Instruct",
+        model="Qwen1.5-32B-Chat",
     )
     logger.debug("儿童菜品llm判断模型输出latancy： " + str(time.time() - start_time))
     logger.debug("儿童菜品llm判断模型输出： " + generate_text)

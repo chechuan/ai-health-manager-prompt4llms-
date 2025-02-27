@@ -449,7 +449,7 @@ class Agents:
             query = f"{docs}\n\n请你判断以上报告属于哪个类型,从给出的选项中选择: {options}, 要求只输出选项答案, 请不要输出其他内容\n\nOutput:"
             messages = [{"role": "user", "content": query}]
             report_type = callLLM(
-                history=messages, model="Qwen2.5-32B-Instruct", temperature=0.7, top_p=0.5
+                history=messages, model="Qwen1.5-32B-Chat", temperature=0.7, top_p=0.5
             )
             logger.debug(f"Report interpretation report type: {report_type}")
             if report_type not in options:
@@ -537,7 +537,7 @@ class Agents:
         ]
         content: str = await acallLLM(
             history=messages,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
             temperature=0.7,
             top_p=0.8,
         )
@@ -949,7 +949,7 @@ class Agents:
         )
 
         content: Union[str, Generator] = await acallLLM(
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
             query=prompt,
             **model_args,
         )
@@ -1008,7 +1008,7 @@ class Agents:
         try:
             # 调用模型
             d_p_pair_str = await acallLLM(
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
                 query=messages,
                 **model_args,
             )
@@ -1096,7 +1096,7 @@ class Agents:
             else model_args
         )
         content = await acallLLM(
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
             query=messages,
             **model_args,
         )
@@ -1595,7 +1595,7 @@ class Agents:
     ) -> Union[str, Generator]:
         """通用生成"""
         event = kwargs.get("intentCode")
-        model = "Qwen2.5-32B-Instruct"
+        model = "Qwen1.5-32B-Chat"
         model_args: dict = (
             {
                 "temperature": 0,

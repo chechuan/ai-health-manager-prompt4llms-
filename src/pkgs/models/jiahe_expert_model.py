@@ -37,7 +37,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("判断是否收集信息模型输出： " + generate_text)
         if "是" in generate_text:
@@ -61,7 +61,7 @@ class JiaheExpertModel:
                     top_p=0.9,
                     temperature=0.8,
                     do_sample=True,
-                    model="Qwen2.5-32B-Instruct",
+                    model="Qwen1.5-32B-Chat",
                 )
                 logger.debug("判断是否在语境中模型输出： " + generate_text)
                 generate_text = (
@@ -89,7 +89,7 @@ class JiaheExpertModel:
                         top_p=0.9,
                         temperature=0.8,
                         do_sample=True,
-                        model="Qwen2.5-32B-Instruct",
+                        model="Qwen1.5-32B-Chat",
                     )
                     logger.debug("判断是否终止模型输出： " + generate_text)
                     if "中止" in generate_text:
@@ -121,7 +121,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -190,7 +190,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("出具饮食调理原则模型输出latancy： " + str(time.time() - start_time))
         logger.debug("出具饮食调理原则模型输出： " + generate_text)
@@ -237,7 +237,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         print(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("出具家庭饮食原则模型输出： " + generate_text)
@@ -293,7 +293,7 @@ class JiaheExpertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
             )
 
             # 打印生成的文本格式
@@ -339,7 +339,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         print(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("出具营养素原则模型输出： " + generate_text)
@@ -368,7 +368,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         print(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("营养素计划模型输出： " + generate_text)
@@ -421,7 +421,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("猜你想问模型意图识别输出： " + generate_text.replace("\n", " "))
         qs = generate_text.split("\n")
@@ -458,7 +458,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         response_time = time.time()
         print(f"latency {response_time - start_time:.2f} s -> response")
@@ -486,7 +486,7 @@ class JiaheExpertModel:
     #         top_p=0.9,
     #         temperature=0.8,
     #         do_sample=True,
-    #         model="Qwen2.5-32B-Instruct",
+    #         model="Qwen1.5-32B-Chat",
     #     )
     #
     #     # 2. 生成食谱的实物功效
@@ -507,7 +507,7 @@ class JiaheExpertModel:
     #         temperature=0.8,
     #         do_sample=True,
     #         stream=True,
-    #         model="Qwen2.5-32B-Instruct",
+    #         model="Qwen1.5-32B-Chat",
     #     )
     #     response_time = time.time()
     #     print(f"latency {response_time - start_time:.2f} s -> response")
@@ -568,7 +568,7 @@ class JiaheExpertModel:
                 max_tokens=1024,
                 top_p=0.9,
                 temperature=0.8,
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
             )
             logger.info(f"第 {i + 1} 天饮食计划生成时间：{time.time() - start_time} 秒")
             diet_cont.append(generate_text)
@@ -604,7 +604,7 @@ class JiaheExpertModel:
             top_p=0.9,
             temperature=0.8,
             do_sample=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("长期营养管理识别模型输出： " + generate_text)
         generate_text = generate_text[generate_text.find('Output')+6:].split('\n')[0].strip()
@@ -624,7 +624,7 @@ class JiaheExpertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("长期营养管理话术模型输出： " + generate_text)
             yield {"message": generate_text, "underlying_intent": True, "end": True}
@@ -669,7 +669,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.info("当餐食谱模型生成时间：" + str(time.time() - start_time))
         logger.debug(
@@ -700,7 +700,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("儿童猜你想问模型输出latancy： " + str(time.time() - start_time))
         logger.debug("儿童猜你想问模型输出： " + generate_text)
@@ -730,7 +730,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("儿童饮食原则模型输出latancy： " + str(time.time() - start_time))
         logger.debug("儿童饮食原则模型输出： " + generate_text)
@@ -759,7 +759,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         print(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("儿童营养素补充剂及功效模型输出： " + generate_text)
@@ -789,7 +789,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             # stream=True,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("儿童菜品功效模型输出latancy： " + str(time.time() - start_time))
         logger.debug("儿童菜品功效模型输出： " + generate_text)
@@ -828,7 +828,7 @@ class JiaheExpertModel:
                 temperature=0.8,
                 do_sample=True,
                 # stream=True,
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("儿童菜品热量模型输出latancy： " + str(time.time() - start_time))
             logger.debug("儿童菜品热量模型输出： " + generate_text)
@@ -1032,7 +1032,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,  # 如果需要流式输出可以启用
-            model="Qwen2.5-32B-Instruct",  # 指定使用的模型
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
         )
 
         # 日志记录模型响应延迟和结果
@@ -1084,7 +1084,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             stream=stream,
-            model="Qwen2.5-32B-Instruct",
+            model="Qwen1.5-32B-Chat",
         )
 
         # 记录模型响应时间
@@ -1115,7 +1115,7 @@ class JiaheExpertModel:
                 temperature=0.8,
                 do_sample=True,
                 stream=stream,
-                model="Qwen2.5-32B-Instruct",
+                model="Qwen1.5-32B-Chat",
             )
 
             logger.info(f"AIGC JIAHE Functions {_event2} LLM Output: {(taboo_details)}")
@@ -1176,7 +1176,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen2.5-32B-Instruct",  # 指定使用的模型
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
         )
 
         # 日志记录模型响应延迟和结果
@@ -1231,7 +1231,7 @@ class JiaheExpertModel:
             temperature=0.8,
             do_sample=True,
             stream=True,
-            model="Qwen2.5-32B-Instruct",  # 指定使用的模型
+            model="Qwen1.5-32B-Chat",  # 指定使用的模型
         )
 
         # 日志记录模型响应延迟和结果

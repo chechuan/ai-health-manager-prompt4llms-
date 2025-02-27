@@ -436,7 +436,7 @@ if __name__ == "__main__":
     # text = asyncio.run(search_engine_chat(query))
     # print(text)
     llm = openai.OpenAI(
-        model_name="Qwen2.5-32B-Instruct",
+        model_name="Qwen1.5-32B-Chat",
         openai_api_base=os.getenv("OPENAI_API_BASE") + "/v1",
         openai_api_key=os.getenv("OPENAI_API_KEY"),
     )

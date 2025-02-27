@@ -6,7 +6,7 @@
 @Contact :   1627635056@qq.com
 """
 
-DEFAULT_MODEL = "Qwen2.5-32B-Instruct"
+DEFAULT_MODEL = "Qwen1.5-32B-Chat"
 CACHE_DIR = ".cache"
 DEFAULT_DATA_SOURCE = "语言模型"
 PLAN_MAP = {
@@ -247,7 +247,7 @@ class ParamServer:
         return {
             "knowledge_base_name": "samples",
             "local_doc_url": False,
-            "model_name": "Qwen2.5-32B-Instruct",
+            "model_name": "Qwen1.5-32B-Chat",
             "query": None,
             "score_threshold": 0.6,
             "stream": False,
@@ -263,14 +263,14 @@ class ParamServer:
             "search_engine_name": "duckduckgo",
             "top_k": 3,
             "stream": False,
-            "model_name": "Qwen2.5-32B-Instruct",
+            "model_name": "Qwen1.5-32B-Chat",
             "temperature": 0.7,
         }
 
     @property
     def llm_with_graph(cls):
         return {
-            "model": "Qwen2.5-32B-Instruct",
+            "model": "Qwen1.5-32B-Chat",
             "messages": [{"role": "user", "content": ""}],
         }
 
