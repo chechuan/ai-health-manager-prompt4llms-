@@ -13,8 +13,8 @@ local:
             - Qwen2-7B-Instruct
             - Qwen-14B-Chat
             - Qwen1.5-14B-Chat
-            - Qwen1.5-32B-Chat
-            - Qwen2-72B-Instruct
+            - Qwen2.5-32B-Instruct
+            - Qwen2.5-32B-Instruct
             - bce-embedding-base-v1
             - Qwen-VL-base-0.0.1
 dev:
@@ -32,8 +32,8 @@ dev:
                 - Qwen2-7B-Instruct
                 - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
-                - Qwen1.5-32B-Chat
-                - Qwen2-72B-Instruct
+                - Qwen2.5-32B-Instruct
+                - Qwen2.5-32B-Instruct
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
 prod:
@@ -51,7 +51,7 @@ prod:
                 - Qwen2-7B-Instruct
                 - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
-                - Qwen1.5-32B-Chat
-                - Qwen2-72B-Instruct
+                - Qwen2.5-32B-Instruct
+                - Qwen2.5-32B-Instruct
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1

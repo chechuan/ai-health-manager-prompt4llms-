@@ -1,4 +1,4 @@
-model=Qwen2-72B-Instruct
+model=Qwen2.5-32B-Instruct
 prompt_type=long
 
 python -m src.test.test_llm_throughput \

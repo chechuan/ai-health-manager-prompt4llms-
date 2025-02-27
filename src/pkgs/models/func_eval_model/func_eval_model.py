@@ -167,7 +167,7 @@ async def schedule_tips_modify(schedule_template, history, cur_time):
         temperature=0.8,
         do_sample=True,
         is_vl=True,
-        model="Qwen1.5-32B-Chat",
+        model="Qwen2.5-32B-Instruct",
     )
     logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     logger.debug("日程tips修改模型输出： " + generate_text)
@@ -208,7 +208,7 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
         temperature=0.8,
         # stream=True,
         is_vl=True,
-        model="Qwen1.5-32B-Chat",
+        model="Qwen2.5-32B-Instruct",
     )
     logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     logger.debug("运动日程修改模型输出： " + generate_text)
@@ -259,7 +259,7 @@ async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, mana
         temperature=0.8,
         # stream=True,
         is_vl=True,
-        model="Qwen1.5-32B-Chat",
+        model="Qwen2.5-32B-Instruct",
     )
     logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     logger.debug("一日饮食等级模型输出： " + generate_text)
@@ -316,7 +316,7 @@ async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, manage
         do_sample=True,
         stream=True,
         is_vl=True,
-        model="Qwen2-72B-Instruct",
+        model="Qwen2.5-32B-Instruct",
     )
     # logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
     # logger.debug("一日饮食评估建议模型输出： " + generate_text)
