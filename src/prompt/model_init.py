@@ -20,7 +20,7 @@ from data.constrant import DEFAULT_MODEL
 import asyncio
 from datetime import datetime
 
-default_model = "Qwen2.5-32B-Instruct"
+default_model = "Qwen1.5-32B-Chat"
 
 retry_times = 3
 
