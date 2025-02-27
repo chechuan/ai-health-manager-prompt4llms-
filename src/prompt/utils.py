@@ -353,7 +353,7 @@ Begin!"""
         # 调用模型
         response = callLLM(
             history=messages,
-            model="Qwen2-72B-Instruct",
+            model="Qwen2.5-32B-Instruct",
             temperature=0.7,
             top_p=0.8,
             n=1,

@@ -111,7 +111,7 @@ class InitAllResource:
         os.environ["OPENAI_API_KEY"] = self.api_config["model_supply"][
             default_supplier
         ]["api_key"]
-        self.default_model = "Qwen1.5-32B-Chat"
+        self.default_model = "Qwen2.5-32B-Instruct"
         logger.info(
             f"Set default supplier [{default_supplier}], default model: {self.default_model}"
         )
