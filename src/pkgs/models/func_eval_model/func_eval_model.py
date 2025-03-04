@@ -216,10 +216,10 @@ async def sport_schedule_tips_modify(schedule, history, cur_time):
     generate_text = generate_text[generate_text.find('{'): generate_text.rfind('}') + 1].replace('\n\\', '').replace('\n', '').replace(' ', '')
     content = json.loads(generate_text.strip())
     if not content.get('is_modify'):
-        return {"is_modify":False, "category": "","modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "end": True}
+        return {"is_modify":False, "category": "","modify_reason": "", "modify_suggestion": "", "head": 200, "err_msg": "", "days":"无", "end": True}
     else:
-        cat_code = sport_category_mapping.get(content.get('category', ''),'HS002')
-        return {"is_modify":True, "category": cat_code,"modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "head": 200, "err_msg": "", "end": True}
+        cat_code = sport_category_mapping.get(content.get('category', ''),'HS004')
+        return {"is_modify":True, "category": cat_code,"modify_reason": content.get('reason', ''), "modify_suggestion": content.get('suggestion', ''), "days":content.get('days', '3'), "head": 200, "err_msg": "", "end": True}
 
 
 async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
