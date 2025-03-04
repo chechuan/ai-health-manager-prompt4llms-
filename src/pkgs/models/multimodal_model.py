@@ -75,7 +75,7 @@ class MultiModalModel:
             "content": f"{self.prompts['图片分类']} {image_caption}",
         }]
         classification_text = await acallLLM(
-            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
+            history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
         )
 
         # 类别定义，大类分四种，子类别index对应types的编号
@@ -133,7 +133,7 @@ class MultiModalModel:
                     "content": f"{self.prompts['运动分类']} {image_caption}",
                 }]
                 sub_type_text = await acallLLM(
-                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
+                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
                 )
 
                 # 判断返回值匹配类别
@@ -150,7 +150,7 @@ class MultiModalModel:
                     "content": f"{self.prompts['报告分类']} {image_caption}",
                 }]
                 sub_type_text = await acallLLM(
-                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
+                    history=messages, max_tokens=64, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
                 )
 
                 # 判断返回值匹配类别
@@ -255,7 +255,7 @@ class MultiModalModel:
             'content': f"{self.prompts['饮食一句话建议'].format(query)}",
         }]
         generate_text = await acallLLM(
-            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-72B-Chat", timeout=45
+            history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
         )
         json_data["content"] = generate_text
 

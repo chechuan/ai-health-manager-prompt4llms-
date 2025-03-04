@@ -18,6 +18,7 @@ from src.utils.module import apply_chat_template, dumpJS
 from src.utils.Logger import logger
 from data.constrant import DEFAULT_MODEL
 import asyncio
+from datetime import datetime
 
 default_model = "Qwen1.5-32B-Chat"
 
@@ -391,7 +392,7 @@ async def acallLLtrace(
                 "top_p": top_p,
                 "max_tokens": max_tokens,
             },
-            metadata={"streaming": stream}
+            metadata={"streaming": stream},
         )
 
     # 确保 trace 不为 None
@@ -431,6 +432,10 @@ async def acallLLtrace(
         while retry <= retry_times:
             try:
                 completion = await aclient.completions.create(**kwds)
+                if completion.choices:
+                    generation.update(
+                        completion_start_time=datetime.now()
+                    )
                 break
             except Exception as e:
                 retry += 1
@@ -439,6 +444,9 @@ async def acallLLtrace(
                 continue
 
         if stream:
+            if completion:
+                # 记录流的开始时间
+                generation.update(completion_start_time=datetime.now())
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
@@ -472,6 +480,10 @@ async def acallLLtrace(
         while retry <= retry_times:
             try:
                 completion = await aclient.chat.completions.create(**kwds)
+                if completion.choices:
+                    generation.update(
+                        completion_start_time=datetime.now()
+                    )
                 break
             except Exception as e:
                 retry += 1
@@ -480,6 +492,9 @@ async def acallLLtrace(
                 continue
         logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
+            if completion:
+                # 记录流的开始时间
+                generation.update(completion_start_time=datetime.now())
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
@@ -510,7 +525,6 @@ async def acallLLtrace(
         }
 
         # logger.info(f"Output value being sent to Langfuse: {ret}")
-
         generation.end(
             usage=usage_details,
             total_cost=cost_details,

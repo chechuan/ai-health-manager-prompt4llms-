@@ -403,7 +403,7 @@ def parse_args():
         help="api key",
     )
     parser.add_argument(
-        "--model", type=str, default="Qwen2-72B-Instruct", help="模型名称"
+        "--model", type=str, default="Qwen1.5-32B-Chat", help="模型名称"
     )
     return parser.parse_args()
 

@@ -187,7 +187,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("压力模型输出:" + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -215,7 +215,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         thoughtIdx = generate_text.find("\nThought") + 9
         thought = generate_text[thoughtIdx:].split("\n")[0].strip()
@@ -283,7 +283,7 @@ class expertModel:
             top_p=0.8,
             temperature=0.0,
             do_sample=False,
-            model="Qwen1.5-72B-Chat",
+            model="Qwen1.5-32B-Chat",
         )
         logger.debug("体重方案/修改模型输出： " + generate_text)
         thoughtIdx = generate_text.find("\nThought") + 9
@@ -417,7 +417,7 @@ class expertModel:
                 top_p=0.9,
                 temperature=0.8,
                 do_sample=True,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("血压问诊模型输出： " + generate_text)
             return generate_text
@@ -697,7 +697,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             )
             logger.debug("血压安抚模型输出： " + generate_text)
             if generate_text.find("\nThought") == -1:
@@ -748,7 +748,7 @@ class expertModel:
                     top_p=0.8,
                     temperature=0.0,
                     do_sample=False,
-                    model="Qwen1.5-72B-Chat",
+                    model="Qwen1.5-32B-Chat",
                 )
                 if "YES" in text:
                     return True
@@ -789,7 +789,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             ).strip()
 
             niti_daughter_role_map = {
@@ -819,7 +819,7 @@ class expertModel:
                 top_p=0.8,
                 temperature=0.0,
                 do_sample=False,
-                model="Qwen1.5-72B-Chat",
+                model="Qwen1.5-32B-Chat",
             ).strip()
 
             return noti_doc_cont, noti_daughter_cont
@@ -1169,7 +1169,7 @@ class expertModel:
     @clock
     async def health_blood_glucose_deal(self, param: Dict) -> str:
 
-        model = "Qwen2-72B-Instruct"
+        model = "Qwen1.5-32B-Chat"
         pro = param
         user_pro = pro.get("user_profile", {})
         gl = pro.get("gl", "")
@@ -1288,7 +1288,7 @@ class expertModel:
     @clock
     async def health_open_extract(self, param: Dict) -> str:
         """打开页面信息抽取"""
-        model = "Qwen2-72B-Instruct"
+        model = "Qwen1.5-32B-Chat"
         pro = param
         data= pro.get("messages", "")
         prompt_template = OPEN_EXTRACT

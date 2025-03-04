@@ -69,6 +69,12 @@ local:
         - aigc_functions_energy_treatment_guideline_generation # 2024年12月6日 三济康养方案-中医调理话术
         - aigc_functions_customer_conversion # 2025年1月6日 客户转化推荐分析
         - aigc_functions_generate_greeting_new # 2025年1月21日 新版开场白
+        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
+        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
+        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
+        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
+        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
+        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
@@ -76,15 +82,7 @@ local:
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
-    Qwen2-72B-Instruct:
-        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
-        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
-        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
-        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
-        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
-    Qwen1.5-72B-Chat:
-        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 
 dev:
     Qwen1.5-32B-Chat:
@@ -156,6 +154,12 @@ dev:
         - aigc_functions_sjkyn_guideline_generation_new # 2024年12月16日 三济康养方案总则新版
         - aigc_functions_energy_treatment_guideline_generation # 2024年12月6日 三济康养方案-中医调理话术
         - aigc_functions_customer_conversion # 2025年1月6日 客户转化推荐分析
+        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
+        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
+        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
+        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
+        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
+        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
@@ -163,15 +167,7 @@ dev:
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
-    Qwen2-72B-Instruct:
-        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
-        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
-        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
-        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
-        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
-    Qwen1.5-72B-Chat:
-        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
 
 prod:
     Qwen1.5-32B-Chat:
@@ -243,6 +239,12 @@ prod:
         - aigc_functions_sjkyn_guideline_generation_new # 2024年12月16日 三济康养方案总则新版
         - aigc_functions_energy_treatment_guideline_generation # 2024年12月6日 三济康养方案-中医调理话术
         - aigc_functions_customer_conversion # 2025年1月6日 客户转化推荐分析
+        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
+        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
+        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
+        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
+        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
+        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
@@ -250,12 +252,4 @@ prod:
         - aigc_functions_itinerary_description # 2024年11月21日 生成活动描述
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
-    Qwen2-72B-Instruct:
-        - aigc_functions_guide_user_back_to_consultation # 2024年7月26日 问诊意图返回引导
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
-        - aigc_functions_likang_introduction # 2024年11月22日 来康郡介绍
-        - aigc_functions_energy_treatment_detailed_generation # 2024年12月6日 三济康养方案-中医调理细则
-        - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
-        - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
-    Qwen1.5-72B-Chat:
-        - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结

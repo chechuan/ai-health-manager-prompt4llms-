@@ -1297,7 +1297,7 @@ class ItineraryModel:
             # 调用大模型直接生成内容
             content = await callLikangLLM(
                 history=messages,
-                model="Qwen2-72B-Instruct",
+                model="Qwen1.5-32B-Chat",
                 temperature=0.7,
                 top_p=0.7,
                 repetition_penalty=1.0,
