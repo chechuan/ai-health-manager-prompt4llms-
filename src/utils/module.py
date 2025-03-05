@@ -2380,3 +2380,55 @@ def generate_pressure_advice(sbp: int, dbp: int, user_name) -> tuple:
         sug_agent = f"{greeting}血压偏高（单纯舒张期高血压），{advice_suffix}"
 
     return front, user_warning, sug_agent
+
+
+def add_ending_punctuation(text: str) -> str:
+    """
+    If the text doesn't end with a punctuation mark (.,!?) add a Chinese period (。) at the end.
+    If it ends with any other punctuation, keep it as it is.
+    """
+    # Check if the last character is a punctuation mark.
+    if not text:
+        return text  # If the text is empty, just return it
+
+    # Define a regex for punctuation characters (.,!?) at the end of the string.
+    if re.match(r'.*[。!！？?.]$', text):
+        return text  # If the text ends with a punctuation mark, return it unchanged.
+
+    # Otherwise, add a Chinese period (。) at the end.
+    return text + "。"
+
+
+def process_text(user_content: str, limit: int = 200) -> str:
+    """
+    从 user_content 中按行提取“完整句子”，
+    在不超过 limit 个字符总长度的情况下依次拼接。
+    拼接时会移除行首的 '- ' 符号，但行尾标点保留。
+    返回拼接后的字符串。
+    """
+    # 1. 按行拆分
+    lines = user_content.split('\n')
+
+    # 2. 去掉空行，并移除每行开头的“- ”
+    cleaned_sentences = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        if line.startswith('- '):
+            line = line[2:].strip()
+        cleaned_sentences.append(line)
+
+    # 3. 在不超过 limit 的前提下，依次拼接完整的行
+    result_sentences = []
+    current_length = 0
+    for sentence in cleaned_sentences:
+        length_if_added = current_length + len(sentence)
+        if length_if_added <= limit:
+            result_sentences.append(sentence)
+            current_length = length_if_added
+        else:
+            break
+
+    # 4. 最终结果：直接拼接，不额外添加空格或换行
+    return ''.join(result_sentences)

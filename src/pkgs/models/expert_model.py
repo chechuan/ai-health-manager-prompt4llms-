@@ -28,7 +28,7 @@ from src.utils.api_protocal import *
 from src.utils.Logger import logger
 from src.utils.module import (
     accept_stream_response, clock, compute_blood_pressure_level, dumpJS, glucose_type, extract_glucose,
-    extract_time, generate_pressure_advice
+    extract_time, generate_pressure_advice, add_ending_punctuation, process_text
 )
 from src.utils.resources import InitAllResource
 from src.utils.langfuse_prompt_manager import LangfusePromptManager
@@ -1229,8 +1229,8 @@ class expertModel:
         dict_={}
         dict_['front']=content
         dict_['user_warning']="血糖结果"+str(float(gl))+"mmol/L。"+content
-        dict_['user_content']=response
-        dict_['sug_agent']=agent_content
+        dict_['user_content']=process_text(response)
+        dict_['sug_agent']=add_ending_punctuation(agent_content)
         return dict_
     
     @clock
