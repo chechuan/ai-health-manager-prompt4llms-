@@ -52,6 +52,13 @@ class InitAllResource:
 
         self.jia_kang_bao_data = self.__load_jia_kang_bao_data__()
         self.jia_kang_bao_data_id_item = {item["id"]: item for item in self.jia_kang_bao_data}
+        self.skip_db = os.getenv("SKIP_DB", "false").lower() == "true"
+
+        if self.skip_db:
+            print("[INFO] ⚠️ 数据库加载被跳过，使用默认数据")
+            self.prompt_meta_data = {}  # 这里可以用一个空字典替代数据库内容
+        else:
+            self.prompt_meta_data = self.req_prompt_data_from_mysql()  # 之前的数据库请求
 
 
     def __parse_args__(

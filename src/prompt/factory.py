@@ -103,7 +103,10 @@ class CustomPromptEngine:
             parser.add_argument('--ip', type=str, default="0.0.0.0", help='ip')
             parser.add_argument('--port', type=int, default=6500, help='port')
             args = parser.parse_args()
-            self.prompt_meta_data = InitAllResource(args).prompt_meta_data
+            try:
+                self.prompt_meta_data = InitAllResource(args).prompt_meta_data
+            except Exception as e:
+                self.prompt_meta_data = {}
     
     def __join_character(self, character: str, **kwds):
         """拼接角色部分的prompt

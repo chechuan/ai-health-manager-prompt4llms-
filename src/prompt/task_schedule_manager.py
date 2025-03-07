@@ -68,6 +68,12 @@ class taskSchedulaManager:
         #     input_variables=["task_schedule_return_demo", "task_schedule_parameter_description", "curr_plan", "tmp_time"],
         #     template=TEMPLATE_TASK_SCHEDULE_MANAGER
         # )
+        try:
+            template = self.prompt_meta_data["tool"]["日程管理"]["description"]
+        except KeyError as e:
+            print(f"⚠️ 跳过 KeyError: {e}")
+            template = "默认的日程管理描述"  # 使用默认的模板内容
+
         prompt = PromptTemplate(
             input_variables=[
                 "task_schedule_return_demo",
@@ -75,14 +81,18 @@ class taskSchedulaManager:
                 "curr_plan",
                 "tmp_time",
             ],
-            template=self.prompt_meta_data["tool"]["日程管理"]["description"],
+            template=template,
         )
-        self.sys_prompt = prompt.format(
-            task_schedule_return_demo=task_schedule_return_demo,
-            task_schedule_parameter_description=task_schedule_parameter_description,
-            curr_plan=[],
-            tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S"),
-        )
+        try:
+            self.sys_prompt = prompt.format(
+                task_schedule_return_demo=task_schedule_return_demo,
+                task_schedule_parameter_description=task_schedule_parameter_description,
+                curr_plan=[],
+                tmp_time=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S"),
+            )
+        except Exception as e:
+            print(f"⚠️ 跳过格式化错误: {e}")
+            self.sys_prompt = prompt.template  # 使用未格式化的模板
         self.conv_prompt = PromptTemplate(
             input_variables=["input"], template="用户输入: {input}\n你的输出(json):"
         )

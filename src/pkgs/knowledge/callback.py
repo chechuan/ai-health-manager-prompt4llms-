@@ -92,9 +92,12 @@ class FuncCall:
 
     def register_for_all(self):
         self.funcmap = {}
-        self.funcname_map = {
-            i["name"]: i["code"] for i in self.prompt_meta_data["tool"].values()
-        }
+        try:
+            self.funcname_map = {
+                i["name"]: i["code"] for i in self.prompt_meta_data["tool"].values()
+            }
+        except KeyError:
+            self.funcname_map = {}
         self.registration_list = []
         self.register_func(
             "searchKB", self.call_search_knowledge, "/chat/knowledge_base_chat"
