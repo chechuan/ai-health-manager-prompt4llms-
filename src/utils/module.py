@@ -2007,7 +2007,7 @@ def glucose_type(time, glucose):
             result = "血糖控制高危"
             content = "今日空腹血糖非常高，请严格遵医嘱！"
             agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
-    elif time == "2" and time != "":
+    elif time == "2":
         t= '餐后2小时血糖'
         if glucose < 3:
             result = "高危低血糖"
@@ -2034,11 +2034,11 @@ def glucose_type(time, glucose):
         if glucose < 3:
             result = "高危低血糖"
             content='随机血糖值非常低，请立即补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
             content='随机血糖值较低，请尽快补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
         elif 3.9 <= glucose <=7:
             result = "血糖正常"
             content='血糖正常，请继续保持。'
@@ -2046,15 +2046,15 @@ def glucose_type(time, glucose):
         elif 7 < glucose <= 13.9:
             result = "血糖控制高"
             content='今日随机血糖值高，请减少饮食量，增加运动量。'
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
         elif 13.9 < glucose < 16.7:
             result = "血糖控制中危"
             content='今日随机血糖值非常高，请严格遵医嘱！'
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
         else:
             result = "血糖控制高危"
             content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
     return result,content,agent_content,t
 
 def extract_glucose(recent_time,glucose_data):

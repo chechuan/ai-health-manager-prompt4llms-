@@ -1207,6 +1207,7 @@ class expertModel:
             key_glucose =eg+peaks+valleys
         gl = pro.get("gl", "")
         gl_code = pro.get("gl_code","")
+
         today_sport = pro.get("today_sport", "")
         today_diet = pro.get("today_diet","")
         result,content,agent_content,t=glucose_type(gl_code, gl)

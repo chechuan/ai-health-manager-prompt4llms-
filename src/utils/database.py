@@ -7,6 +7,7 @@
 
 # 标准库导入
 from urllib import parse
+import os
 
 # 第三方库导入
 import pandas as pd
@@ -35,6 +36,13 @@ class MysqlConnector:
         port: mysql端口
         db_name: 目标库名
         """
+        self.skip_db = os.getenv("SKIP_DB", "false").lower() == "true"
+        if self.skip_db:
+            print("[INFO] ⚠️ 跳过数据库连接，MysqlConnector 初始化为空对象")
+            self.engine = None
+            self.metadata = None
+            self.connect = None
+            return  # 直接返回，不初始化数据库
         passwd = parse.quote_plus(passwd)
         self.url = f"mysql+pymysql://{user}:{passwd}@{ip}:{port}/{db_name}"
         self.engine = create_engine(self.url)
@@ -84,8 +92,9 @@ class MysqlConnector:
             except Exception as error:
                 print(error)
         finally:
-            self.engine.dispose()
-        return res
+            pass
+            # self.engine.dispose()
+        return {}
 
     def execute(self, sql):
         """
