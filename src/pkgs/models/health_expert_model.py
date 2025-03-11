@@ -1964,7 +1964,7 @@ class HealthExpertModel:
 
         # 异步获取当天天气信息
         today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
-        )
+        ) if city else None
 
         # 获取最近节气
         recent_solar_terms = await determine_recent_solar_terms()
