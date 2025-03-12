@@ -264,6 +264,49 @@ class MultiModalModel:
         logger.debug(f"diet_eval success: {result}")
         return result
 
+    async def general_recog(self, **kwargs):
+        """菜品识别，提取菜品名称、数量、单位信息"""
+        image_url = kwargs.get("image_url")
+        prompt = kwargs.get("prompt", "") or "简述图片内容"
+        logger.debug(f"general_recog image_url: {image_url} prompt: {prompt}")
+        if not image_url:
+            return self._get_result(400, {}, "image_url is required and cannot be empty.")
+
+        # 检查图片 URL 是否可访问
+        async with aiohttp.ClientSession() as session:
+            async with session.head(image_url) as response:
+                if not (response.status == 200):
+                    return self._get_result(400, {}, "image_url is not accessible.")
+
+        # 初始化返回内容
+        json_data = {
+            "status": 0,
+            "content": ""
+        }
+
+        # 直接调用多模态大模型识别菜品名称以及数量
+        messages = [{
+            "role": "user",
+            "content":[
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": image_url}}
+            ]
+        }]
+        try:
+            generate_text = await acallLLM(
+                history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+            )
+        except Exception as error:
+            logger.error("general_recog error recog diet image {0}".format(image_url))
+            generate_text = "抱歉，我没能识别出这张图片的内容。请尝试上传一张更清晰的图片，或者提供更多描述信息。" # 报错则返回一句保底内容
+        
+        json_data["content"] = generate_text
+
+        # 处理返回内容
+        result = self._get_result(200, json_data, "")
+        logger.debug(f"general_recog success: {result}")
+        return result
+
     def _init_prompts(self):
         self.prompts = {
             "菜品描述": "请分析图片中所有菜品以及数量",
@@ -442,6 +485,9 @@ if __name__ == '__main__':
         print("#########", result)
         # 饮食一句话点评
         result = loop.run_until_complete(multimodal_model.diet_eval(**input_data))
+        print("#########", result)
+        # 通用识别
+        result = loop.run_until_complete(multimodal_model.general_recog(**image_data[2]))
         print("#########", result)
     except Exception as e:
         print("发生错误：", e)
