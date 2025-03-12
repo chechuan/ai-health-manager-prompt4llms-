@@ -961,6 +961,19 @@ def mount_multimodal_endpoints(app: FastAPI):
         finally:
             return ret
 
+    @app.route("/func_eval/general_recog", methods=["post"])
+    async def _func_eval_general_recog(request: Request):
+        """通用评估，根据图片和提示词（可选）返回结果"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/general_recog")
+            ret = await multimodal_model.general_recog(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
 
 def create_app():
     app: FastAPI = FastAPI(
