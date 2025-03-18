@@ -248,6 +248,7 @@ class MultiModalModel:
         query += f"用户管理标签：{management_tag}\n"
         query += f"用餐时间：{diet_time}\n"
         query += f"饮食信息：{json.dumps(diet_info, ensure_ascii=False)}"
+        logger.debug(f"diet_eval query: {query}")
 
         # 请求LLM
         messages = [{
@@ -262,6 +263,74 @@ class MultiModalModel:
         # 处理返回内容
         result = self._get_result(200, json_data, "")
         logger.debug(f"diet_eval success: {result}")
+        return result
+
+    async def diet_eval_customer(self, **kwargs):
+        """C端饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
+        user_info = kwargs.get("user_info", {}) or {}
+        diet_info = kwargs.get("diet_info", []) or []
+        management_tag = kwargs.get("management_tag", "") or ""
+        diet_period = kwargs.get("diet_period", "") or ""
+        diet_time = kwargs.get("diet_time", time.time())
+        logger.debug(f"diet_eval_customer user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period} diet_time: {diet_time}")
+
+        # 将unix时间转换为日期格式
+        try:
+            diet_time = int(diet_time)
+            logger.debug(f"diet_eval_customer diet_time: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(diet_time))}")
+            diet_time = time.strftime('%H:%M', time.localtime(diet_time))
+        except Exception as _:
+            logger.error("diet_eval_customer error diet_time: {0}".format(diet_time))
+            return self._get_result(400, {}, "diet_time param error.")
+
+        # 初始化返回内容
+        json_data = {
+            "status": 0,
+            "content": "无论您选择何种餐食，都请记得关注食物的多样性和营养均衡，细嚼慢咽享受美味的一餐吧~"
+        }
+
+        # 如果没有饮食信息也就不用出其他内容了
+        if len(diet_info) <= 0:
+            result = self._get_result(200, json_data, "")
+            logger.debug(f"diet_eval_customer success: {result}")
+            return result
+
+        # 拼接用户信息
+        query = ""
+        query += f"饮食信息：{json.dumps(diet_info, ensure_ascii=False)}\n"
+        query += f"用餐时间：{diet_time}\n"
+        for key in [
+            ["age", "年龄"],
+            ["gender", "性别"],
+            ["bmi", "BMI"],
+            ["weight_status", "体重状态"],
+            ["disease", "现患疾病"],
+            ["goal", "管理目标"],
+            ["allergy", "食物过敏"],
+            ["diet_habit", "特殊饮食习惯"],
+            ["taste_preference", "口味偏好"],
+            ["special_period", "是否特殊生理期"],
+            ["tcm_constitution", "中医体质"],
+        ]:
+            if key[0] in user_info and len(f"{user_info.get(key[0], '') or ''}") > 0:
+                query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"
+        if len(management_tag) > 0:
+            query += f"用户管理标签：{management_tag}\n"
+        logger.debug(f"diet_eval_customer query: {query}")
+
+        # 请求LLM
+        messages = [{
+            'role': 'user',
+            'content': f"{self.prompts['C端饮食评价'].format(query)}",
+        }]
+        generate_text = await acallLLM(
+            history=messages, max_tokens=768, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+        )
+        json_data["content"] = generate_text
+
+        # 处理返回内容
+        result = self._get_result(200, json_data, "")
+        logger.debug(f"diet_eval_customer success: {result}")
         return result
 
     async def general_recog(self, **kwargs):
@@ -388,6 +457,16 @@ class MultiModalModel:
 - 你午餐选择的食材都很不错，但是蔬菜的量不足，你可以再增加1个拳头大小的深色绿叶蔬菜，比如凉拌菠菜。另外，可以再适当增加虾2-3只，补充蛋白质。
 
 Begins!""",
+            "C端饮食评价": """# 已知信息
+{0}
+
+# 任务描述
+你扮演一位经验丰富的营养师，请你根据用户上传的饮食图片、用户画像、按照输出要求分析用户的饮食并给出专业评价和建议。
+# 输出要求
+- 你要说明当餐饮食都包含哪些食物、当餐食物的热量信息、结合用户的健康情况给出相关建议。
+- 整体字符不超过200字。
+# 输出示例
+您图片中的美食有三明治、鸡蛋、牛奶。估算您早餐的食物热量大约为300-400kcal。您早餐的营养搭配比较均衡，补充了碳水化合物、优质蛋白质，建议可以再增加些绿叶蔬菜，或者小番茄，来保证膳食纤维、维生素的摄入。""",
             "菜品直接识别": """# 任务描述
 你是一名健康饮食管理助手，你需要识别出图中食物名称、数量、单位。
 
@@ -488,6 +567,9 @@ if __name__ == '__main__':
         print("#########", result)
         # 通用识别
         result = loop.run_until_complete(multimodal_model.general_recog(**image_data[2]))
+        print("#########", result)
+        # C端饮食评价
+        result = loop.run_until_complete(multimodal_model.diet_eval_customer(**input_data))
         print("#########", result)
     except Exception as e:
         print("发生错误：", e)
