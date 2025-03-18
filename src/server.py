@@ -948,6 +948,19 @@ def mount_multimodal_endpoints(app: FastAPI):
         finally:
             return ret
 
+    @app.route("/func_eval/diet_recog_customer", methods=["post"])
+    async def _func_eval_diet_recog_customer(request: Request):
+        """C端菜品识别，提取菜品名称、数量、单位、克重、能量信息"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_recog_customer")
+            ret = await multimodal_model.diet_recog_customer(**param)
+            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+        except Exception as err:
+            logger.exception(err)
+            ret = make_result(head=500, msg=repr(err))
+        finally:
+            return ret
+
     @app.route("/func_eval/diet_eval", methods=["post"])
     async def _func_eval_diet_eval(request: Request):
         """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
