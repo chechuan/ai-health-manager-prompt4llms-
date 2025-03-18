@@ -75,6 +75,7 @@ local:
         - aigc_functions_health_analysis_advice_generation # 2024年12月10日 健康分析与健康建议生成
         - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
+        - aigc_functions_health_user_labels # 2025年03月14日 健康用户标签提取
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则

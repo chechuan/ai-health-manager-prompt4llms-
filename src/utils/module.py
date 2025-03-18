@@ -5,37 +5,41 @@
 @Contact :   1627635056@qq.com
 """
 
-import functools
-import json
 import sys
 import time
+import json
 import re
-from shapely import get_srid
 import yaml
+import asyncio
+import aiohttp
+import requests
+import functools
+import oss2
+import numpy as np
+import pandas as pd
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import (
     Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional
 )
-import oss2
-import numpy as np
-import openai
-import requests
+from contextlib import contextmanager
+
 from lunar_python import Lunar, Solar
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import StreamingResponse
-from contextlib import contextmanager
+
+import openai
+
 from src.utils.api_protocal import AigcFunctionsResponse
 from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice, CompletionStreamResponse
 )
-import asyncio
 
 try:
     from src.utils.Logger import logger
-except Exception as err:
+except ImportError:
     from Logger import logger
-from functools import wraps
 
 
 def clock(func):
@@ -823,110 +827,81 @@ def calculate_standard_body_fat_rate(gender: str) -> str:
 
 async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     """
-    根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果
+    根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果。
 
     参数:
-        diet_plan_standards (dict): 包含饮食方案标准的字典
+        diet_plan_standards (dict): 包含饮食方案标准的字典。
 
     返回:
-        str: 格式化的输出结果
-
-    抛出:
-        DietPlanCalculationError: 如果数据缺失，则抛出异常
+        str: 格式化的输出结果。
     """
-    # 检查推荐每日饮食摄入热量值是否存在且有效
-    if not diet_plan_standards.get("recommended_daily_caloric_intake") or not diet_plan_standards[
-        "recommended_daily_caloric_intake"].get("calories"):
+    # 获取每日推荐摄入热量值
+    calories = diet_plan_standards.get("recommended_daily_caloric_intake", {}).get("calories")
+    if not calories:
         raise ValueError("缺少推荐每日饮食摄入热量值")
 
-    calories = diet_plan_standards["recommended_daily_caloric_intake"]["calories"]
-
-    # 获取推荐的三大产能营养素和推荐餐次及每餐的能量数据
     macronutrients = diet_plan_standards.get("recommended_macronutrient_grams", [])
     meals = diet_plan_standards.get("recommended_meal_energy", [])
-
-    # 如果推荐的三大产能营养素或推荐餐次及每餐能量的数据缺失，抛出异常
     if not macronutrients or not meals:
         raise ValueError("缺少推荐三大产能营养素或推荐餐次及每餐能量的数据")
 
-    def calculate_macronutrient_range(calories, min_ratio, max_ratio, divisor):
-        """
-        根据能量占比计算营养素的质量范围
-
-        参数:
-            calories (float): 推荐每日饮食摄入热量值
-            min_ratio (float): 能量占比的最小值
-            max_ratio (float): 能量占比的最大值
-            divisor (int): 能量转换因子，碳水化合物和蛋白质为4，脂肪为9
-
-        返回:
-            tuple: 最小值和最大值（四舍五入后的整数）
-        """
+    # 计算三大产能营养素的摄入量范围
+    def calculate_macronutrient_range(min_ratio, max_ratio, divisor):
         min_value = (calories * min_ratio) / divisor
         max_value = (calories * max_ratio) / divisor
         return round(min_value), round(max_value)
 
-    def get_macronutrient_range(nutrient):
-        """
-        获取指定营养素的质量范围
+    macronutrient_values = {}
+    for item in macronutrients:
+        nutrient = item["nutrient"]
+        min_ratio = item.get("min_energy_ratio", 0)
+        max_ratio = item.get("max_energy_ratio", 0)
+        divisor = 4 if nutrient != "脂肪" else 9
+        macronutrient_values[nutrient] = calculate_macronutrient_range(min_ratio, max_ratio, divisor)
 
-        参数:
-            nutrient (str): 营养素名称
+    # 计算每餐的能量值
+    meal_energy_values = {}
+    meal_ratios = {}
 
-        返回:
-            tuple: 最小值和最大值（四舍五入后的整数）
-        """
-        for item in macronutrients:
-            if item["nutrient"] == nutrient:
-                return calculate_macronutrient_range(calories, item.get("min_energy_ratio", 0),
-                                                     item.get("max_energy_ratio", 0),
-                                                     4 if nutrient != "脂肪" else 9)
-        return 0, 0
+    breakfast_ratio = next(meal["min_energy_ratio"] for meal in meals if meal["meal_name"] == "早餐")
+    lunch_ratio = next(meal["max_energy_ratio"] for meal in meals if meal["meal_name"] == "午餐")
 
-    # 计算各营养素的质量范围
-    carb_min, carb_max = get_macronutrient_range("碳水化合物")
-    protein_min, protein_max = get_macronutrient_range("蛋白质")
-    fat_min, fat_max = get_macronutrient_range("脂肪")
+    # 计算所有“加餐”相关的餐次比例
+    snack_ratios = [meal["max_energy_ratio"] for meal in meals if "加餐" in meal["meal_name"]]
+    total_snack_ratio = sum(snack_ratios)
 
-    def calculate_meal_energy_range(calories, min_ratio, max_ratio):
-        """
-        根据能量占比计算每餐的能量范围
+    remaining_ratio = 1.0 - (breakfast_ratio + lunch_ratio + total_snack_ratio)
+    dinner_ratio = max(0, remaining_ratio)  # 确保不会为负值
 
-        参数:
-            calories (float): 推荐每日饮食摄入热量值
-            min_ratio (float): 每餐能量占比的最小值
-            max_ratio (float): 每餐能量占比的最大值
+    meal_ratios["早餐"] = breakfast_ratio
+    meal_ratios["午餐"] = lunch_ratio
+    meal_ratios["晚餐"] = dinner_ratio
 
-        返回:
-            tuple: 最小值和最大值（四舍五入后的整数）
-        """
-        min_value = calories * min_ratio
-        max_value = calories * max_ratio
-        return round(min_value), round(max_value)
-
-    # 计算每餐的能量范围，并格式化输出
-    meal_energy_ranges = []
+    # 处理所有“加餐”相关的餐次
     for meal in meals:
-        meal_name = meal["meal_name"]
-        min_energy, max_energy = calculate_meal_energy_range(calories, meal.get("min_energy_ratio", 0),
-                                                             meal.get("max_energy_ratio", 0))
-        meal_energy_ranges.append(f"{meal_name}：{min_energy}kcal-{max_energy}kcal")
+        if "加餐" in meal["meal_name"]:
+            meal_ratios[meal["meal_name"]] = meal["max_energy_ratio"]
 
-    # 格式化输出结果
-    output = f"## 推荐每日饮食摄入热量值\n{calories}kcal\n"
-    output += "## 推荐三大产能营养素推荐克数\n"
-    output += f"碳水化合物：{carb_min}g-{carb_max}g\n"
-    output += f"蛋白质：{protein_min}g-{protein_max}g\n"
-    output += f"脂肪：{fat_min}g-{fat_max}g\n"
-    output += "## 推荐餐次及每餐能量\n"
-    output += "\n".join(meal_energy_ranges)
+    for meal_name, ratio in meal_ratios.items():
+        meal_energy_values[meal_name] = round(calories * ratio)
+
+    # 组装格式化输出
+    output = "# 推荐餐次及热量值\n"
+    for meal_name, kcal in meal_energy_values.items():
+        output += f"{meal_name}：{kcal}kcal\n"
+
+    output += "# 推荐一日总的三大产能营养素摄入量\n"
+    output += f"碳水化合物：{macronutrient_values['碳水化合物'][0]}g-{macronutrient_values['碳水化合物'][1]}g\n"
+    output += f"蛋白质：{macronutrient_values['蛋白质'][0]}g-{macronutrient_values['蛋白质'][1]}g\n"
+    output += f"脂肪：{macronutrient_values['脂肪'][0]}g-{macronutrient_values['脂肪'][1]}g\n"
 
     return output
 
 
 async def format_historical_meal_plans(historical_meal_plans: list) -> str:
     """
-    将历史食谱转换为指定格式的字符串
+    将历史食谱转换为指定格式的字符串，仅保留最近三天的数据。
+    如果数据少于三天，则返回所有可用数据。
 
     参数:
         historical_meal_plans (list): 包含历史食谱的列表
@@ -936,6 +911,10 @@ async def format_historical_meal_plans(historical_meal_plans: list) -> str:
     """
     if not historical_meal_plans:
         return "历史食谱数据为空"
+
+    # 按日期降序排序，最多取最近三天，如果少于三天则全部返回
+    historical_meal_plans = sorted(historical_meal_plans, key=lambda x: x.get("date", ""), reverse=True)[
+                            :min(3, len(historical_meal_plans))]
 
     formatted_output = ""
 
@@ -2432,3 +2411,120 @@ def process_text(user_content: str, limit: int = 200) -> str:
 
     # 4. 最终结果：直接拼接，不额外添加空格或换行
     return ''.join(result_sentences)
+
+
+async def call_mem0_add_memory(mem0_url: str, user_id: str, messages: list):
+    """异步调用 mem0.add_memory 进行会话记录"""
+    try:
+        # 转换 role: "1" → "user", "3" → "assistant"
+        role_mapping = {"1": "user", "3": "assistant"}
+        converted_messages = [
+            {"role": role_mapping.get(msg["role"], "user"), "content": msg["content"]}
+            for msg in messages
+        ]
+
+        mem0_payload = {
+            "user_id": user_id,
+            "messages": converted_messages  # 传递转换后的 messages
+        }
+
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{mem0_url}/add_memory", json=mem0_payload) as response:
+                return await response.json()
+    except Exception as e:
+        logger.exception(f"mem0 调用失败: {e}")
+        return None
+
+
+def match_health_label(health_labels_data: dict, label_name: str, tag_value: str) -> Optional[Dict]:
+    """
+    通过 `gs_resource.health_labels_data` 进行高效查询（O(1) 复杂度）
+
+    参数:
+        gs_resource: `InitAllResource` 实例，已预加载数据
+        label_name (str): 例如 "现患疾病"
+        tag_value (str): 例如 "感冒"
+
+    返回:
+        Dict | None: 匹配成功返回完整信息，否则返回 None。
+    """
+    return health_labels_data.get(label_name, {}).get(tag_value)
+
+
+def jaccard_text_similarity(text1, text2):
+    """ 计算 Jaccard 相似度 """
+    set1, set2 = set(text1), set(text2)
+    intersection = len(set1 & set2)
+    union = len(set1 | set2)
+    return intersection / union if union > 0 else 0
+
+
+def get_best_matching_dish(dish, ds, threshold=0.5):
+    """ 使用 Jaccard 相似度匹配最相似的菜品 """
+    target_dish = None
+
+    for i, x in enumerate(ds):
+        similarity = jaccard_text_similarity(x['name'], dish)
+        if similarity < threshold:
+            continue
+        if not target_dish:
+            target_dish = x
+        elif similarity > jaccard_text_similarity(target_dish['name'], dish):
+            target_dish = x
+
+    if target_dish:
+        logger.debug(f"匹配结果: {json.dumps(target_dish, ensure_ascii=False)}")
+        return target_dish.get("image")
+    else:
+        logger.info(f"未找到匹配项: '{dish}'")
+        return None
+
+
+def enrich_meal_items_with_images(items, dishes_data, threshold=0.5):
+    """
+    处理items，转换结构并添加对应的图片字段。
+    """
+    if not items or not isinstance(items, list):
+        logger.warning("无效输入：items 应为非空列表。")
+        return []
+
+    processed_items = []
+
+    for item in items:
+        try:
+            if not item or "meal" not in item or "foods" not in item:
+                logger.warning(f"跳过无效的餐食项：{item}")
+                continue
+
+            meal_name, meal_calories = item["meal"]
+            processed_meal = {
+                "meal": meal_name,
+                "foods": []
+            }
+
+            for food in item["foods"]:
+                try:
+                    if not food:
+                        logger.warning(f"跳过无效的食物项：{food}")
+                        continue
+
+                    recipe_name, amount, calories = food
+                    image_url = get_best_matching_dish(recipe_name, dishes_data, threshold)
+
+                    processed_meal["foods"].append({
+                        "recipe": recipe_name,
+                        "recommended_amount": amount,
+                        "calories": {
+                            "value": int(calories.replace("kcal", "")),
+                            "unit": "kcal"
+                        },
+                        "image": image_url
+                    })
+                except Exception as e:
+                    logger.error(f"处理食物项 {food} 时出错：{e}")
+
+            processed_items.append(processed_meal)
+        except Exception as e:
+            logger.error(f"处理餐食项 {item} 时出错：{e}")
+
+    return processed_items

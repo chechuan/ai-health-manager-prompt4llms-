@@ -21,7 +21,7 @@ from src.utils.module import (
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
     get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
-    filter_user_profile, replace_you, prepare_question_list
+    filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -29,8 +29,6 @@ from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 from src.utils.langfuse_prompt_manager import LangfusePromptManager
-from langfuse import Langfuse
-import time
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
@@ -134,7 +132,7 @@ class HealthExpertModel:
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
         his = [{
             'role': 'system',
             'content': prompt
@@ -1495,7 +1493,8 @@ class HealthExpertModel:
         medical_records_str = await self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
-        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
+        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""),
+                                                       role_map={"assistant": "assistant", "user": "user"})
 
         # 检查并获取饮食调理原则
         food_principle = kwargs.get("food_principle", "")
@@ -1713,12 +1712,11 @@ class HealthExpertModel:
         # 必填字段和至少需要一项的参数列表
         required_fields = {
             "user_profile": [
-                "weight_status", ("current_diseases", "management_goals")
+                "weight_status", ("current_diseases", "management_goals"), "age", "gender"
             ],
             "diet_plan_standards": {}
         }
 
-        # 检查必填字段
         user_profile = kwargs.get("user_profile", {})
         medical_records = kwargs.get("medical_records", {})
         key_indicators = kwargs.get("key_indicators", {})
@@ -1765,7 +1763,8 @@ class HealthExpertModel:
         diet_plan_standards_str = await calculate_and_format_diet_plan(diet_plan_standards)
 
         # 组合消息字符串
-        messages_str = await self.__compose_user_msg__("messages", messages=messages)
+        messages_str = await self.__compose_user_msg__("messages", messages=messages,
+                                       role_map={"assistant": "assistant", "user": "user"})
 
         # 构建提示变量
         prompt_vars = {
@@ -1782,14 +1781,27 @@ class HealthExpertModel:
         # 更新模型参数
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
-        # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-        )
+        # 初次生成内容
+        while True:
+            content: str = await self.aaigc_functions_general(
+                _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            )
 
-        content = await parse_generic_content(content)
-        content = await run_in_executor(lambda: remove_empty_dicts(content))
-        return content
+            content = await parse_generic_content(content)
+            items = await run_in_executor(lambda: enrich_meal_items_with_images(content, self.gsr.dishes_data))
+
+            # 计算总热量
+            total_calories = sum(
+                sum(food["calories"]["value"] for food in meal["foods"])
+                for meal in items
+            )
+
+            recommended_calories = diet_plan_standards.get("recommended_daily_caloric_intake", {}).get("calories", 0)
+
+            if abs(total_calories - recommended_calories) <= 100:
+                return items  # 若热量符合标准，则返回
+
+            logger.warning(f"总热量 {total_calories} kcal 偏差超过 100 kcal，重新生成...")
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
         """
@@ -2658,6 +2670,55 @@ class HealthExpertModel:
             result["thought"] = thought_match.group(1).strip()
 
         return result
+
+    async def aigc_functions_health_user_labels(self, **kwargs) -> Union[str, List[Dict[str, Union[str, List[str]]]]]:
+        """
+        从用户的对话交互信息中提取健康标签。
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/lyQod3RxJKBeKmlMHjYEkREDVkb4Mw9r?utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dportal_new_tab_open%26utm_source%3Dportal&rnd=0.5560033510751983&doc_type=wiki_doc&cid=2713422242%3A3929938169&sideCollapsed=true&utm_medium=im_single_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
+
+        入参：
+        - messages: List[Dict]，用户历史会话记录。
+
+        出参：
+        - List[Dict[str, Union[str, List[str]]]]，返回匹配到的健康标签，如果没有匹配则返回空列表。
+        - 追加标签编码 & 值域编码
+        """
+
+        _event, kwargs = "健康用户标签提取", deepcopy(kwargs)
+
+        # 参数检查
+        if "messages" not in kwargs or not kwargs["messages"]:
+            return json.dumps([])
+
+        # 统一处理 messages
+        messages = await self.__compose_user_msg__(
+            "messages", messages=kwargs["messages"], role_map={"1": "user", "3": "assistant"}
+        )
+
+        # 生成 prompt 变量
+        prompt_vars = {
+            "messages": messages,
+        }
+
+        # 设定模型参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 发送到 AIGC 处理
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        content = await parse_generic_content(content)
+        # **1. 直接构造列表，提高查询效率**
+        return [
+            matched_data
+            for item in content
+            for tag in item.get("tag_value", [])
+            if (matched_data := match_health_label(self.gsr.health_labels_data, item["label_name"], tag))
+        ]
 
 
 if __name__ == "__main__":
