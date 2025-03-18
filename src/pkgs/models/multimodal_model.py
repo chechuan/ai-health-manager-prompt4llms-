@@ -211,6 +211,51 @@ class MultiModalModel:
         logger.debug(f"diet_recog success: {result}")
         return result
 
+    async def diet_recog_customer(self, **kwargs):
+        """C端菜品识别，提取菜品名称、数量、单位、克重、能量信息"""
+        image_url = kwargs.get("image_url")
+        logger.debug(f"diet_recog_customer image_url: {image_url}")
+        if not image_url:
+            return self._get_result(400, {}, "image_url is required and cannot be empty.")
+
+        # 检查图片 URL 是否可访问
+        async with aiohttp.ClientSession() as session:
+            async with session.head(image_url) as response:
+                if not (response.status == 200):
+                    return self._get_result(400, {}, "image_url is not accessible.")
+
+        # 直接调用多模态大模型识别菜品名称以及数量
+        messages = [{
+            "role": "user",
+            "content":[
+                {"type": "text", "text": self.prompts["C端菜品识别"]},
+                {"type": "image_url", "image_url": {"url": image_url}}
+            ]
+        }]
+        try:
+            generate_text = await acallLLM(
+                history=messages, max_tokens=1024, temperature=0, seed=42, is_vl=True, model="Qwen-VL-base-0.0.1", timeout=45
+            )
+        except Exception as error:
+            logger.error("image_type_recog error recog diet image {0}".format(image_url))
+            generate_text = "" # 报错则返回空，表示未识别，进入后续异常处理
+
+        # 处理结果
+        json_result = None
+        try:  # 去掉json串中多余的内容
+            json_result = self._get_food_energy_info_json(generate_text)
+        except Exception as error:
+            logger.error("diet_recog_customer error check json {0}".format(image_url))
+        if json_result:
+            json_data = {"status": 0, "foods": json_result["foods"]}
+        else:
+            json_data = {"status": -1, "foods": []}
+
+        # 处理返回内容
+        result = self._get_result(200, json_data, "")
+        logger.debug(f"diet_recog_customer success: {result}")
+        return result
+
     async def diet_eval(self, **kwargs):
         """饮食评估，根据用户信息、饮食信息、用户管理标签、餐段信息，生成一句话点评"""
         user_info = kwargs.get("user_info", {}) or {}
@@ -305,12 +350,12 @@ class MultiModalModel:
             ["bmi", "BMI"],
             ["weight_status", "体重状态"],
             ["disease", "现患疾病"],
-            ["goal", "管理目标"],
-            ["allergy", "食物过敏"],
-            ["diet_habit", "特殊饮食习惯"],
+            ["manage_object", "管理目标"],
+            ["allergy_food", "食物过敏"],
+            ["special_diet", "特殊饮食习惯"],
             ["taste_preference", "口味偏好"],
             ["special_period", "是否特殊生理期"],
-            ["tcm_constitution", "中医体质"],
+            ["constitution", "中医体质"],
         ]:
             if key[0] in user_info and len(f"{user_info.get(key[0], '') or ''}") > 0:
                 query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"
@@ -495,6 +540,51 @@ Begins!""",
 ```
 
 Begins!""",
+            "C端菜品识别-长": """# 任务描述
+你是一名健康饮食管理助手，你需要识别出图中菜品名称、数量、单位、克重、能量。
+
+# 输出要求：
+- 仔细分析图片，精确识别出所有可见的菜品，并对每种菜品进行详细的数量统计。
+- 食物名称要尽可能精确到具体菜品（如炒花菜、豆芽炒肉、白米饭、紫米饭等），而非泛泛的类别。
+- 根据菜品的特点，给出准确且恰当的数量描述和单位。例如，使用'个'来表示完整的水果（如'1个（小）苹果'、'2个橘子'），如果是一半根黄瓜则为'0.5根黄瓜'，用'片'来表示切片的食材（如'3片面包'），对于堆积的食物可以使用'堆'、'把'等（如'1堆瓜子'、'1把葡萄'），菜品可以用'克'、'份'等来表示分量。确保所有计数均准确无误，单位使用得当。
+- 克重单位为'克'，能量单位为'千卡'。
+- 输出食物必须来自图片中，禁止自己创造。
+- 以json格式输出，严格按照`输出格式样例`形式。
+
+输出格式样例：
+```json
+[
+    {"foodname": "玉米", "count": "2", "unit": "根", "weight": "180", "energy": "172"},
+    {"foodname": "苹果", "count": "1", "unit": "个（小）", "weight": "100", "energy": "52"},
+    {"foodname": "炒花菜", "count": "1", "unit": "份", "weight": "150", "energy": "75"},
+    {"foodname": "芹菜炒肉", "count": "1", "unit": "份", "weight": "200", "energy": "220"},
+    {"foodname": "米饭", "count": "1", "unit": "碗", "weight": "150", "energy": "200"},
+    {"foodname": "馒头", "count": "0.5", "unit": "块", "weight": "35", "energy": "77"},
+    {"foodname": "西红柿炒鸡蛋", "count": "1", "unit": "份", "weight": "200", "energy": "280"}
+]
+```
+
+Begins!""",
+            "C端菜品识别": """# 任务描述
+你是一名健康饮食管理助手，你需要识别出图中菜品名称、数量、单位、克重、能量。
+
+# 输出要求：
+- 仔细分析图片，精确识别出所有可见的菜品，并对每种菜品进行详细的数量统计。
+- 食物名称要尽可能精确到具体菜品，而非泛泛的类别。
+- 根据菜品的特点，给出准确且恰当的数量描述和单位。例如，使用'个'来表示完整的水果（如'2个橘子'），用'片'来表示切片的食材（如'3片面包'），菜品可以用'克'、'份'等来表示分量。确保所有计数均准确无误，单位使用得当。
+- 克重单位为'克'，能量单位为'千卡'。
+- 输出食物必须来自图片中，禁止自己创造。
+- 以json格式输出，严格按照`输出格式样例`形式。
+
+输出格式样例：
+```json
+[
+    {"foodname": "西红柿炒鸡蛋", "count": "1", "unit": "份", "weight": "200", "energy": "280"},
+    {"foodname": "苹果", "count": "2", "unit": "个", "weight": 150, "energy": 76},
+]
+```
+
+Begins!""",
         }
 
     def _get_food_info_json(self, result):
@@ -523,6 +613,29 @@ Begins!""",
             #         food["count"] = "1"
             # except Exception as _:
             #     food["count"] = "1"
+
+        return info
+
+    def _get_food_energy_info_json(self, result):
+        # 定向纠错，去掉json串前面的分析内容
+        if result[:-3].rfind("```") > 0:
+            result = result[result[:-3].rfind("```"):]
+        if result[:-3].rfind("json") > 0:
+            result = result[result[:-3].rfind("json"):]
+        if result.rfind("返回") > 0:
+            result = result[result.rfind("返回"):]
+        if result.rfind("//") > 0:  # 去掉多余的注释内容
+            result = re.sub(r"//.*?\n", "", result)
+        # 去掉json串中多余的markdown内容
+        info = json.loads(result.replace("```", "").replace("json", "").replace("返回", "").replace("。", ""))
+
+        if isinstance(info, list):
+            info = {"foods": info}
+        if "foods" not in info or not isinstance(info["foods"], list):
+            raise Exception
+        for i, food in enumerate(info["foods"]):
+            if "foodname" not in food or "unit" not in food or "count" not in food or "weight" not in food or "energy" not in food:
+                raise Exception
 
         return info
 
