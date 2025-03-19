@@ -37,7 +37,7 @@ class LangfusePromptManager:
         """
         try:
             # 从 Langfuse 获取 Prompt 对象并进行插值编译
-            prompt_obj = self.langfuse.get_prompt(event_code, version=4)
+            prompt_obj = self.langfuse.get_prompt(event_code)
 
             # 提取 Langfuse 原始提示词内容
             prompt_template = prompt_obj.prompt

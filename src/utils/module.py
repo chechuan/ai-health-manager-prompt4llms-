@@ -825,7 +825,7 @@ def calculate_standard_body_fat_rate(gender: str) -> str:
     return None
 
 
-async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
+async def calculate_and_format_diet_plan_new(diet_plan_standards: dict) -> str:
     """
     根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果。
 
@@ -898,7 +898,7 @@ async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     return output
 
 
-async def format_historical_meal_plans(historical_meal_plans: list) -> str:
+async def format_historical_meal_plans_new(historical_meal_plans: list) -> str:
     """
     将历史食谱转换为指定格式的字符串，仅保留最近三天的数据。
     如果数据少于三天，则返回所有可用数据。
@@ -2480,15 +2480,17 @@ def get_best_matching_dish(dish, ds, threshold=0.5):
         return None
 
 
-def enrich_meal_items_with_images(items, dishes_data, threshold=0.5):
+def enrich_meal_items_with_images(items, dishes_data, threshold, meal_time_mapping):
     """
-    处理items，转换结构并添加对应的图片字段。
+    处理items，转换结构并添加对应的图片字段，同时新增推荐进食时间点（加餐时间点动态匹配）。
     """
+
     if not items or not isinstance(items, list):
         logger.warning("无效输入：items 应为非空列表。")
         return []
 
     processed_items = []
+    previous_meal = None  # 记录上一个正餐
 
     for item in items:
         try:
@@ -2497,8 +2499,25 @@ def enrich_meal_items_with_images(items, dishes_data, threshold=0.5):
                 continue
 
             meal_name, meal_calories = item["meal"]
+
+            # 判断是否是加餐
+            if "加餐" in meal_name:
+                # 如果有上一个正餐，就根据上一个正餐来匹配加餐的时间
+                if previous_meal == "早餐":
+                    meal_time = meal_time_mapping.get("上午加餐", "")
+                elif previous_meal == "午餐":
+                    meal_time = meal_time_mapping.get("下午加餐", "")
+                elif previous_meal == "晚餐":
+                    meal_time = meal_time_mapping.get("晚餐加餐", "")
+                else:
+                    meal_time = ""  # 兜底处理
+            else:
+                meal_time = meal_time_mapping.get(meal_name, "")
+                previous_meal = meal_name  # 记录当前正餐
+
             processed_meal = {
                 "meal": meal_name,
+                "time": meal_time,  # 赋值推荐时间
                 "foods": []
             }
 
@@ -2528,3 +2547,136 @@ def enrich_meal_items_with_images(items, dishes_data, threshold=0.5):
             logger.error(f"处理餐食项 {item} 时出错：{e}")
 
     return processed_items
+
+
+async def format_historical_meal_plans(historical_meal_plans: list) -> str:
+    """
+    将历史食谱转换为指定格式的字符串
+
+    参数:
+        historical_meal_plans (list): 包含历史食谱的列表
+
+    返回:
+        str: 格式化的历史食谱字符串
+    """
+    if not historical_meal_plans:
+        return "历史食谱数据为空"
+
+    formatted_output = ""
+
+    for day in historical_meal_plans:
+        date = day.get("date")
+        if not date:
+            continue
+        formatted_output += f"{date}：\n"
+
+        meals = day.get("meals", {})
+        for meal_time, foods in meals.items():
+            if not foods:
+                continue
+            formatted_output += f"{meal_time}：{'、'.join(foods)}\n"
+
+    return formatted_output.strip()
+
+
+async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
+    """
+    根据饮食方案标准计算推荐的三大产能营养素克数和推荐餐次及每餐的能量，并格式化输出结果
+
+    参数:
+        diet_plan_standards (dict): 包含饮食方案标准的字典
+
+    返回:
+        str: 格式化的输出结果
+
+    抛出:
+        DietPlanCalculationError: 如果数据缺失，则抛出异常
+    """
+    # 检查推荐每日饮食摄入热量值是否存在且有效
+    if not diet_plan_standards.get("recommended_daily_caloric_intake") or not diet_plan_standards[
+        "recommended_daily_caloric_intake"].get("calories"):
+        raise ValueError("缺少推荐每日饮食摄入热量值")
+
+    calories = diet_plan_standards["recommended_daily_caloric_intake"]["calories"]
+
+    # 获取推荐的三大产能营养素和推荐餐次及每餐的能量数据
+    macronutrients = diet_plan_standards.get("recommended_macronutrient_grams", [])
+    meals = diet_plan_standards.get("recommended_meal_energy", [])
+
+    # 如果推荐的三大产能营养素或推荐餐次及每餐能量的数据缺失，抛出异常
+    if not macronutrients or not meals:
+        raise ValueError("缺少推荐三大产能营养素或推荐餐次及每餐能量的数据")
+
+    def calculate_macronutrient_range(calories, min_ratio, max_ratio, divisor):
+        """
+        根据能量占比计算营养素的质量范围
+
+        参数:
+            calories (float): 推荐每日饮食摄入热量值
+            min_ratio (float): 能量占比的最小值
+            max_ratio (float): 能量占比的最大值
+            divisor (int): 能量转换因子，碳水化合物和蛋白质为4，脂肪为9
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        min_value = (calories * min_ratio) / divisor
+        max_value = (calories * max_ratio) / divisor
+        return round(min_value), round(max_value)
+
+    def get_macronutrient_range(nutrient):
+        """
+        获取指定营养素的质量范围
+
+        参数:
+            nutrient (str): 营养素名称
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        for item in macronutrients:
+            if item["nutrient"] == nutrient:
+                return calculate_macronutrient_range(calories, item.get("min_energy_ratio", 0),
+                                                     item.get("max_energy_ratio", 0),
+                                                     4 if nutrient != "脂肪" else 9)
+        return 0, 0
+
+    # 计算各营养素的质量范围
+    carb_min, carb_max = get_macronutrient_range("碳水化合物")
+    protein_min, protein_max = get_macronutrient_range("蛋白质")
+    fat_min, fat_max = get_macronutrient_range("脂肪")
+
+    def calculate_meal_energy_range(calories, min_ratio, max_ratio):
+        """
+        根据能量占比计算每餐的能量范围
+
+        参数:
+            calories (float): 推荐每日饮食摄入热量值
+            min_ratio (float): 每餐能量占比的最小值
+            max_ratio (float): 每餐能量占比的最大值
+
+        返回:
+            tuple: 最小值和最大值（四舍五入后的整数）
+        """
+        min_value = calories * min_ratio
+        max_value = calories * max_ratio
+        return round(min_value), round(max_value)
+
+    # 计算每餐的能量范围，并格式化输出
+    meal_energy_ranges = []
+    for meal in meals:
+        meal_name = meal["meal_name"]
+        min_energy, max_energy = calculate_meal_energy_range(calories, meal.get("min_energy_ratio", 0),
+                                                             meal.get("max_energy_ratio", 0))
+        meal_energy_ranges.append(f"{meal_name}：{min_energy}kcal-{max_energy}kcal")
+
+    # 格式化输出结果
+    output = f"## 推荐每日饮食摄入热量值\n{calories}kcal\n"
+    output += "## 推荐三大产能营养素推荐克数\n"
+    output += f"碳水化合物：{carb_min}g-{carb_max}g\n"
+    output += f"蛋白质：{protein_min}g-{protein_max}g\n"
+    output += f"脂肪：{fat_min}g-{fat_max}g\n"
+    output += "## 推荐餐次及每餐能量\n"
+    output += "\n".join(meal_energy_ranges)
+
+    return output
