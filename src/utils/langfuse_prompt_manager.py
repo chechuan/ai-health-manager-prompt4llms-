@@ -45,7 +45,7 @@ class LangfusePromptManager:
             # 替换动态占位符 {{variable}} 并将 prompt_vars 变量直接插入
             compiled_prompt = prompt_obj.compile(**prompt_vars)
 
-            logger.info(f"[LangfusePromptManager] 提示词成功从 Langfuse 获取，prompt name: {event_code}")
+            logger.info(f"[LangfusePromptManager] 提示词成功从 Langfuse 获取，prompt name: {event_code} prompt version {prompt_obj.version}")
 
             # 还原静态占位符 {{{variable}}} 为 {variable}
             return self._restore_static_placeholders(prompt_template, compiled_prompt)

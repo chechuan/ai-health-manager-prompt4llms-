@@ -17,6 +17,7 @@ from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 import openai
 import requests
 from langfuse import Langfuse
+import pandas as pd
 
 from data.constrant import CACHE_DIR
 from src.utils.module import clock, load_yaml, loadJS, intent_init
@@ -53,9 +54,25 @@ class InitAllResource:
         self.weather_api_config = self.__load_weather_api_config__()
         self.all_intent, self.com_intent = intent_init()
 
+        # **预加载家康宝数据**
         self.jia_kang_bao_data = self.__load_jia_kang_bao_data__()
         self.jia_kang_bao_data_id_item = {item["id"]: item for item in self.jia_kang_bao_data}
-        self.skip_db = os.getenv("SKIP_DB", "false").lower() == "true"
+
+        # **预加载健康标签数据**
+        self.health_labels_data = self.__load_health_labels__()
+
+        # **预加载菜品数据**
+        self.dishes_data = self.__load_dishes__()
+
+    def __load_dishes__(self) -> List[Dict]:
+        """加载菜品数据"""
+        try:
+            dishes_data = loadJS("data/dishes.json")
+            logger.info(f"成功加载 {len(dishes_data)} 道菜品")
+            return dishes_data
+        except Exception as e:
+            logger.error(f"加载菜品数据失败: {e}")
+            return []
 
     def __parse_args__(
         self,
@@ -150,6 +167,7 @@ class InitAllResource:
             for model, event_list in model_config.items()
             for event in event_list
         }
+        self.mem0_url = self.api_config.get("mem0")
         intent_aigcfunc_map = load_yaml(Path("config", "intent_aigcfunc_map.yaml"))
         self.multimodal_config = load_yaml(Path("config", "multimodal_config.yaml"))[self.args.env]
 
@@ -208,6 +226,38 @@ class InitAllResource:
         with jiakangbao_path.open("r", encoding="utf-8") as file:
             data = json.load(file)
         return data
+
+    def __load_health_labels__(self) -> Dict:
+        """
+        预加载健康标签数据，并构建索引，优化查询性能
+
+        返回:
+            Dict: 健康标签索引
+        """
+        """
+            读取 health_labels.csv 并构建索引，提高查询速度
+            """
+        df = pd.read_excel(Path("doc", "客户标签体系", "health_labels.xlsx"), engine="openpyxl")
+
+        indexed_data = {}
+        for _, row in df.iterrows():
+            label_name = row["标签名称"]
+            value_name = row["值域"]
+
+            if label_name not in indexed_data:
+                indexed_data[label_name] = {}
+
+            indexed_data[label_name][value_name] = {
+                "group_code": row["组套代码"],
+                "group_name": row["组套名称"],
+                "nav_code": row["标签导航码"],
+                "label_code": row["标签代码"],
+                "label_name": label_name,
+                "value_code": row["值域编码"],
+                "value_name": value_name
+            }
+
+        return indexed_data
 
     @clock
     def req_prompt_data_from_mysql(self) -> Dict:

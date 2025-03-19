@@ -58,7 +58,8 @@ from src.utils.module import (
     format_sse_chat_complete,
     response_generator,
     replace_you,
-    monitor_interface
+    monitor_interface,
+    call_mem0_add_memory
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
@@ -895,6 +896,78 @@ def mount_aigc_functions(app: FastAPI):
             logger.error(f"Error in _aigc_functions_likang_introduction_v1_1_0: {e}")
             return make_result(head=500, msg="生成Likang介绍失败", items=None)
 
+    @app.route("/health/user_labels", methods=["POST"])
+    async def _async_aigc_functions_health_user_labels(
+            request_model: SanJiKangYangRequest,
+    ) -> Response:
+        """健康用户标签提取接口"""
+        endpoint = "/health/user_labels"
+        endpoint_name = "health_user_labels"
+
+        start_time = time.time()
+        try:
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
+            param["endpoint_name"] = endpoint_name
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            # 记录监控数据
+            intent_code = param.get("intentCode")
+            if intent_code:
+                try:
+                    # 获取 intent_code 对应的提示词 tag
+                    prompt = gsr.langfuse_client.get_prompt(intent_code)
+                    tags = prompt.tags if prompt else []
+                    param['endpoint_name'] = f"health_user_labels_{intent_code}"
+                except Exception as e:
+                    logger.error(f"Error fetching tags for intent_code {intent_code}: {str(e)}")
+                    tags = ["default_tag"]
+                    param['endpoint_name'] = "health_user_labels"
+            else:
+                # 默认 tags
+                tags = ["aigc_health_user_labels", "健康管理", "用户标签", "健康画像"]
+
+            param['tags'] = tags
+
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应
+                generator = response_generator(response)
+
+                end_time = time.time()
+                wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
+                return StreamingResponse(wrapped_generator, media_type="text/event-stream")
+            else:
+                # 处理非流式响应
+                response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+
+                end_time = time.time()
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+
+                await record_monitoring_data([response], param, start_time, end_time)
+
+                return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            # 错误处理
+            msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await
+            logger.error(f"Error in {endpoint}: {msg}")
+
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                generator = response_generator(msg, error=True)
+                return StreamingResponse(generator, media_type="text/event-stream")
+            else:
+                ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+
+                end_time = time.time()
+                await record_monitoring_data([msg], param, start_time, end_time)
+                return build_aigc_functions_response(_return)
+
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
@@ -903,9 +976,9 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/outpatient_support")(_async_aigc_functions_outpatient_support)
 
-    app.post("/aigc/jkbao")(_async_aigc_functions_jia_kang_bao_support)
+    app.post("/aigc/jkbao", description="家康宝")(_async_aigc_functions_jia_kang_bao_support)
 
-    app.post("/aigc/sanji/kangyang", description="家康宝")(_async_aigc_functions_sanji_kangyang)
+    app.post("/aigc/sanji/kangyang")(_async_aigc_functions_sanji_kangyang)
 
     app.post("/aigc/junwang/gongjian")(_async_aigc_functions_junwang_gongjian)
 
@@ -918,6 +991,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/v1_1_0/bath_plan", description="生成泡浴方案（V1.1.0）")(_aigc_functions_generate_bath_plan_v1_1_0)
 
     app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
+
+    app.post("/health/user_labels", description="健康用户标签提取接口")(_async_aigc_functions_health_user_labels)
 
 
 def mount_multimodal_endpoints(app: FastAPI):
@@ -1666,6 +1741,15 @@ def create_app():
             end_time = time.time()
             # 包装生成器，记录数据
             wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
+
+            user_id = param.get("customId", "unknown")
+            messages = param.get("history", [])
+            # **异步调用 mem0 记录对话**
+            if hasattr(gsr, "mem0_url") and gsr.mem0_url:
+                try:
+                    asyncio.create_task(call_mem0_add_memory(gsr.mem0_url, user_id, messages))
+                except Exception as mem0_err:
+                    logger.exception(f"mem0 调用失败: {mem0_err}")
 
             # 原逻辑保持不变
             result = decorate_chat_complete(

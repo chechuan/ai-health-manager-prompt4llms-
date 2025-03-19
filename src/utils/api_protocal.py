@@ -170,6 +170,16 @@ CUSTOMER_TYPE_MAPPING = {
 }
 
 
+MEAL_TIME_MAPPING = {
+        "早餐": "07:00",
+        "上午加餐": "09:00",
+        "午餐": "11:30",
+        "下午加餐": "15:30",
+        "晚餐": "17:30",
+        "晚餐加餐": "20:30"
+    }
+
+
 class DrugPlanItem(BaseModel):
     drug_name: str  # 药品名称
     dosage: str  # 剂量
@@ -1077,6 +1087,11 @@ class SanJiKangYangRequest(BaseModel):
         None,
         description="session ID",
         examples=[]
+    )
+    expert_system: Optional[str] = Field(
+        None,
+        description="专家智能体系类型，例如 'diabetes_expert' 表示糖尿病专家体系",
+        examples=["diabetes_expert", "cardiology_expert"]
     )
     user_profile: Optional[UserProfile] = Field(
         None,
