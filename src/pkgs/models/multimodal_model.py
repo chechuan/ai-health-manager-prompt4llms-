@@ -250,6 +250,29 @@ class MultiModalModel:
             json_data = {"status": 0, "foods": json_result["foods"]}
         else:
             json_data = {"status": -1, "foods": []}
+        
+        # 进一步处理食材内容
+        if json_data["status"] == 0:
+            # 请求LLM
+            query = json.dumps(json_data["foods"], ensure_ascii=False)
+            messages = [{
+                'role': 'user',
+                'content': "# 已知信息\n{0}\n\n{1}".format(query, self.prompts['C端菜品食材拆解'])
+            }]
+            generate_text = await acallLLM(
+                history=messages, max_tokens=1536, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
+            )
+            # 处理返回内容
+            json_result = None
+            try:  # 去掉json串中多余的内容
+                json_result = self._get_food_energy_info_json(generate_text, ingredient_check=True)
+            except Exception as error:
+                logger.error("diet_recog_customer error check ingredients json {0}".format(image_url))
+            if json_result:
+                json_data["foods"] = json_result["foods"]
+            else:
+                for i in range(len(json_data["foods"])):
+                    json_data["foods"][i]["ingredients"] = []
 
         # 处理返回内容
         result = self._get_result(200, json_data, "")
@@ -566,12 +589,11 @@ Begins!""",
 
 Begins!""",
             "C端菜品识别": """# 任务描述
-你是一名健康饮食管理助手，你需要识别出图中菜品名称、数量、单位、克重、能量。
+你是一名健康饮食管理助手，你需要识别出图中菜品名称、克重、能量。
 
 # 输出要求：
-- 仔细分析图片，精确识别出所有可见的菜品，并对每种菜品进行详细的数量统计。
+- 仔细分析图片，精确识别出所有可见的菜品，并对每种菜品进行详细的统计。
 - 食物名称要尽可能精确到具体菜品，而非泛泛的类别。
-- 根据菜品的特点，给出准确且恰当的数量描述和单位。例如，使用'个'来表示完整的水果（如'2个橘子'），用'片'来表示切片的食材（如'3片面包'），菜品可以用'克'、'份'等来表示分量。确保所有计数均准确无误，单位使用得当。
 - 克重单位为'克'，能量单位为'千卡'。
 - 输出食物必须来自图片中，禁止自己创造。
 - 以json格式输出，严格按照`输出格式样例`形式。
@@ -579,8 +601,28 @@ Begins!""",
 输出格式样例：
 ```json
 [
-    {"foodname": "西红柿炒鸡蛋", "count": "1", "unit": "份", "weight": "200", "energy": "280"},
-    {"foodname": "苹果", "count": "2", "unit": "个", "weight": 150, "energy": 76},
+    {"foodname": "西红柿炒鸡蛋", "weight": "200", "energy": "280"},
+    {"foodname": "苹果", "weight": "150", "energy": "76"},
+]
+```
+
+Begins!""",
+            "C端菜品食材拆解": """# 任务描述
+你是一名健康饮食管理助手，你需要识别出已知信息中每道菜的食材名称、克重、能量，并将全部信息进行补充汇总。
+
+# 输出要求：
+- 仔细分析已知信息，对每种菜品进行详细的主材分析。
+- 克重单位为'克'，能量单位为'千卡'。
+- 输出内容必须来自已知信息中，不明确的内容可以进行适当估计，尽量给出对应结果。
+- 以json格式输出，严格按照`输出格式样例`形式。
+
+假设已知信息如下：
+[{"foodname": "西红柿炒鸡蛋", "weight": "200", "energy": "280"}, {"foodname": "苹果", "weight": "150", "energy": "76"}]
+则输出格式样例为：
+```json
+[
+    {"foodname": "西红柿炒鸡蛋", "weight": "200", "energy": "280", "ingredients": [{"name": "西红柿", "weight": "120", "energy": "40"}, {"name": "鸡蛋", "weight": "80", "energy": "240"}]},
+    {"foodname": "苹果", "weight": "150", "energy": "76", "ingredients": [{"name": "苹果", "weight": "150", "energy": "76"}]},
 ]
 ```
 
@@ -616,7 +658,7 @@ Begins!""",
 
         return info
 
-    def _get_food_energy_info_json(self, result):
+    def _get_food_energy_info_json(self, result, ingredient_check=False):
         # 定向纠错，去掉json串前面的分析内容
         if result[:-3].rfind("```") > 0:
             result = result[result[:-3].rfind("```"):]
@@ -634,8 +676,14 @@ Begins!""",
         if "foods" not in info or not isinstance(info["foods"], list):
             raise Exception
         for i, food in enumerate(info["foods"]):
-            if "foodname" not in food or "unit" not in food or "count" not in food or "weight" not in food or "energy" not in food:
+            if "foodname" not in food or "weight" not in food or "energy" not in food:
                 raise Exception
+            if ingredient_check:
+                if "ingredients" not in food or not isinstance(food["ingredients"], list):
+                    raise Exception
+                for j, ingredient in enumerate(food["ingredients"]):
+                    if "name" not in ingredient or "weight" not in ingredient or "energy" not in ingredient:
+                        raise Exception
 
         return info
 
