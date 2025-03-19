@@ -16,13 +16,13 @@ from datetime import datetime
 from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
 from src.utils.module import (
     check_aigc_functions_body_fat_weight_management_consultation, check_and_calculate_bmr,
-    calculate_and_format_diet_plan, calculate_standard_weight, convert_meal_plan_to_text,
-    curr_time, determine_recent_solar_terms, format_historical_meal_plans, format_historical_meal_plans_v2,
+    calculate_standard_weight, convert_meal_plan_to_text,
+    curr_time, determine_recent_solar_terms, format_historical_meal_plans_v2,
     generate_daily_schedule, generate_key_indicators, check_consecutive_days, get_festivals_and_other_festivals,
-    get_weather_info, parse_generic_content, remove_empty_dicts, handle_calories, run_in_executor, log_with_source,
+    get_weather_info, parse_generic_content, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
-    calculate_and_format_diet_plan_new, format_historical_meal_plans_new
+    calculate_and_format_diet_plan, format_historical_meal_plans
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -1463,13 +1463,18 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
         medical_records = kwargs.get("medical_records", {})
         key_indicators = kwargs.get("key_indicators", {})
-        expert_system = kwargs.get("expert_system")
-
-        if expert_system:
-            _event = "推荐每日饮食摄入热量值(专家智能体系)"
-            kwargs["intentCode"] = f"aigc_functions_recommended_daily_calorie_intake_{expert_system}"
-        else:
-            kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
+        # knowledge_system = kwargs.get("knowledge_system", "laikang")
+        #
+        # # 确保只允许特定值，避免传错
+        # allowed_knowledge_systems = {"laikang", "yaoshukun"}  # 未来可扩展
+        # if knowledge_system not in allowed_knowledge_systems:
+        #     raise ValueError(f"Invalid knowledge_system: {knowledge_system}")
+        #
+        # if knowledge_system:
+        #     _event = "推荐每日饮食摄入热量值(知识体系)"
+        #     kwargs["intentCode"] = f"aigc_functions_recommended_daily_calorie_intake_{knowledge_system}"
+        # else:
+        #     kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
 
         missing_fields = []  # 存储缺失的字段
         user_profile_keys = set(user_profile.keys())
@@ -1703,12 +1708,12 @@ class HealthExpertModel:
     async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[
         Dict[str, List[Dict[str, float]]]]:
         """
-        推荐餐次及每餐能量占比和食谱（支持专家智能体系）
+        推荐餐次及每餐能量占比和食谱（支持知识体系）
 
         根据用户健康标签、饮食调理原则，结合当前节气等信息，为用户生成合理的食谱计划，包含餐次、食物名称指导。
 
         参数:
-            kwargs (dict): 包含用户画像和病历信息的参数字典，包括 `expert_system`（可选）
+            kwargs (dict): 包含用户画像和病历信息的参数字典，包括 `knowledge_system`（可选）
 
         返回:
             List[Dict[str, List[Dict[str, float]]]]: 一天的餐次及每餐食谱推荐值
@@ -1716,22 +1721,26 @@ class HealthExpertModel:
 
         _event = "推荐餐次及每餐能量占比和食谱"
 
-        # 解析 `expert_system`
-        expert_system = kwargs.get("expert_system")
+        # 解析 `knowledge_system`，默认为 "laikang"
+        knowledge_system = kwargs.get("knowledge_system", "laikang")
 
-        # 根据 `expert_system` 变更 `intentCode`
-        if expert_system:
-            kwargs["intentCode"] = f"aigc_functions_recommended_meal_plan_with_recipes_{expert_system}"
-        else:
-            kwargs["intentCode"] = "aigc_functions_recommended_meal_plan_with_recipes"
+        # 确保只允许特定值，避免传错
+        allowed_knowledge_systems = {"laikang", "yaoshukun"}  # 未来可扩展
+        if knowledge_system not in allowed_knowledge_systems:
+            raise ValueError(f"Invalid knowledge_system: {knowledge_system}")
+
+        # 根据 `knowledge_system` 变更 `intentCode`
+        kwargs["intentCode"] = f"aigc_functions_recommended_meal_plan_with_recipes_{knowledge_system}"
 
         # 选择执行不同的逻辑
-        if expert_system:
-            return await self._expert_meal_plan_logic(**kwargs)
+        if knowledge_system == "laikang":
+            return await self._laikang_meal_plan_logic(**kwargs)
+        elif knowledge_system == "yaoshukun":
+            return await self._laikang_meal_plan_logic(**kwargs)  # 未来新增
         else:
-            return await self._default_meal_plan_logic(**kwargs)
+            return await self._laikang_meal_plan_logic(**kwargs)  # 兜底
 
-    async def _expert_meal_plan_logic(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
+    async def _laikang_meal_plan_logic(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
         """
         推荐餐次及每餐能量占比和食谱-带量食谱
 
@@ -1746,7 +1755,7 @@ class HealthExpertModel:
             List[Dict[str, List[Dict[str, float]]]]: 一天的餐次及每餐食谱推荐值
         """
 
-        _event = "推荐餐次及每餐能量占比和食谱(专家智能体系)"
+        _event = "推荐餐次及每餐能量占比和食谱(来康知识体系)"
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
@@ -1797,9 +1806,9 @@ class HealthExpertModel:
         ietary_guidelines_str = await self.__compose_user_msg__(
             "ietary_guidelines", ietary_guidelines=ietary_guidelines
         )
-        historical_diets_str = await format_historical_meal_plans_new(historical_diets)
+        historical_diets_str = await format_historical_meal_plans(historical_diets)
 
-        diet_plan_standards_str = await calculate_and_format_diet_plan_new(diet_plan_standards)
+        diet_plan_standards_str = await calculate_and_format_diet_plan(diet_plan_standards)
 
         # 组合消息字符串
         messages_str = await self.__compose_user_msg__("messages", messages=messages,
@@ -1841,105 +1850,6 @@ class HealthExpertModel:
                 return items  # 若热量符合标准，则返回
 
             logger.warning(f"总热量 {total_calories} kcal 偏差超过 100 kcal，重新生成...")
-
-    async def _default_meal_plan_logic(self, **kwargs) -> List[
-        Dict[str, List[Dict[str, float]]]]:
-        """
-        推荐餐次及每餐能量占比和食谱-带量食谱
-
-        需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygts2wqefdpc1f13ob
-
-        根据用户健康标签、饮食调理原则，结合当前节气等信息，为用户生成合理的食谱计划，包含餐次、食物名称指导。
-
-        参数:
-            kwargs (dict): 包含用户画像和病历信息的参数字典
-
-        返回:
-            List[Dict[str, List[Dict[str, float]]]]: 一天的餐次及每餐食谱推荐值
-        """
-
-        _event = "推荐餐次及每餐能量占比和食谱"
-
-        # 必填字段和至少需要一项的参数列表
-        required_fields = {
-            "user_profile": [
-                "weight_status", ("current_diseases", "management_goals")
-            ],
-            "diet_plan_standards": {}
-        }
-
-        # 检查必填字段
-        user_profile = kwargs.get("user_profile", {})
-        medical_records = kwargs.get("medical_records", {})
-        key_indicators = kwargs.get("key_indicators", {})
-
-        missing_fields = []  # 存储缺失的字段
-        user_profile_keys = set(user_profile.keys())
-
-        # 检查 user_profile 字段
-        for field in required_fields["user_profile"]:
-            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
-                if not any(f in user_profile_keys for f in field):
-                    missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
-            elif field not in user_profile_keys:
-                missing_fields.append(f"缺少必填字段: {field}")
-
-        # 检查至少有一个字段
-        if not any([user_profile, medical_records, key_indicators]):
-            missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
-
-        # 如果有缺失字段，抛出错误
-        if missing_fields:
-            raise ValueError(" ".join(missing_fields))
-
-        # 拼接用户画像信息字符串
-        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
-
-        # 获取其他相关信息
-        messages = kwargs.get("messages", "")
-        medical_records = kwargs.get("medical_records", "")
-        food_principle = kwargs.get("food_principle", "")
-        ietary_guidelines = kwargs.get("ietary_guidelines", "")
-        historical_diets = kwargs.get("historical_diets", "")
-        diet_plan_standards = kwargs.get("diet_plan_standards", {})
-
-        # 拼接病历信息字符串
-        medical_records_str = await self.__compose_user_msg__("medical_records", medical_records=medical_records)
-
-        # 拼接其他信息字符串
-        ietary_guidelines_str = await self.__compose_user_msg__(
-            "ietary_guidelines", ietary_guidelines=ietary_guidelines
-        )
-        historical_diets_str = await format_historical_meal_plans(historical_diets)
-
-        diet_plan_standards_str = await calculate_and_format_diet_plan(diet_plan_standards)
-
-        # 组合消息字符串
-        messages_str = await self.__compose_user_msg__("messages", messages=messages)
-
-        # 构建提示变量
-        prompt_vars = {
-            "user_profile": user_profile_str,
-            "messages": messages_str,
-            "datetime": datetime.today().strftime("%Y-%m-%d %H:%M:%S"),
-            "medical_records": medical_records_str,
-            "food_principle": food_principle,
-            "ietary_guidelines": ietary_guidelines_str,
-            "historical_diets": historical_diets_str,
-            "diet_plan_standards": diet_plan_standards_str
-        }
-
-        # 更新模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
-
-        # 调用通用的 AIGC 函数并返回内容
-        content: str = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-        )
-
-        content = await parse_generic_content(content)
-        content = await run_in_executor(lambda: remove_empty_dicts(content))
-        return content
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
         """
