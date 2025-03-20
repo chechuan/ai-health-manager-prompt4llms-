@@ -2425,6 +2425,73 @@ async def call_mem0_add_memory(mem0_url: str, user_id: str, messages: list):
         return None
 
 
+async def call_mem0_search_memory(mem0_url: str, query: str, user_id: str) -> dict:
+    """
+    异步调用 mem0.search_memory 接口，查询用户的记忆数据。
+
+    :param mem0_url: mem0 服务的基础 URL，例如 http://ner0/mull-adapter:5800
+    :param query: 查询内容
+    :param user_id: 用户 ID
+    :return: 若调用成功，返回服务返回的完整 JSON；失败则返回 None。
+    """
+    try:
+        payload = {
+            "query": query,
+            "user_id": user_id
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"{mem0_url}/search_memory", json=payload) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"mem0 search_memory 成功, 返回数据: {data}")
+                    return data
+                else:
+                    logger.error(f"mem0 search_memory 调用失败, HTTP状态码: {response.status}")
+                    return None
+    except Exception as e:
+        logger.exception(f"mem0 search_memory 调用异常: {e}")
+        return None
+
+
+def format_mem0_search_result(search_data: dict) -> str:
+    """
+    将查询到的记忆数据整理成多行字符串。
+    例如:
+        感冒了
+        骨折了
+        123456今天刚学完英语
+        123456开始学德语了
+
+    :param search_data: mem0 返回的 JSON 数据
+    :return: 按行拼接的字符串
+    """
+    if not search_data:
+        logger.warning("search_data 为空或 None，无法格式化记忆。")
+        return ""
+
+    # 取出 search_result -> results
+    search_result = search_data.get("search_result", {})
+    results = search_result.get("results", [])
+
+    if not isinstance(results, list):
+        logger.warning("search_data 中的 results 字段不是列表格式。")
+        return ""
+
+    # 收集所有 memory 字段
+    memory_lines = []
+    for item in results:
+        memory_text = item.get("memory")
+        if memory_text:
+            memory_lines.append(memory_text)
+        else:
+            logger.debug(f"结果中缺少 memory 字段或为空: {item}")
+
+    # 以换行分割
+    formatted = "\n".join(memory_lines)
+    logger.debug(f"格式化后的记忆:\n{formatted}")
+    return formatted
+
+
 def match_health_label(health_labels_data: dict, label_name: str, tag_value: str) -> Optional[Dict]:
     """
     通过 `gs_resource.health_labels_data` 进行高效查询（O(1) 复杂度）
