@@ -1182,7 +1182,7 @@ class HealthExpertModel:
         # 输出格式是```json{}```, 需要正则提取其中的json数据
         content = await parse_generic_content(content)
 
-        content = query_course(self.gsr.exercise_data, "有氧热身")
+        # content = query_course(self.gsr.exercise_data, "有氧热身")
         return content
 
     async def aigc_functions_body_fat_weight_management_consultation(
