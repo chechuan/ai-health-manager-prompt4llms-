@@ -22,7 +22,8 @@ from src.utils.module import (
     get_weather_info, parse_generic_content, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
-    calculate_and_format_diet_plan, format_historical_meal_plans, query_course
+    calculate_and_format_diet_plan, format_historical_meal_plans, query_course, call_mem0_search_memory,
+    format_mem0_search_result
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -1714,6 +1715,8 @@ class HealthExpertModel:
 
         根据用户健康标签、饮食调理原则，结合当前节气等信息，为用户生成合理的食谱计划，包含餐次、食物名称指导。
 
+        需求文档：https://alidocs.dingtalk.com/i/nodes/m9bN7RYPWdYyLgqEcg61MMomVZd1wyK0
+
         参数:
             kwargs (dict): 包含用户画像和病历信息的参数字典，包括 `knowledge_system`（可选）
 
@@ -2723,46 +2726,66 @@ class HealthExpertModel:
 
     async def aigc_functions_health_user_labels(self, **kwargs) -> Union[str, List[Dict[str, Union[str, List[str]]]]]:
         """
-        从用户的对话交互信息中提取健康标签。
+        从用户的对话交互信息中提取健康标签（被动模式），或主动获取健康标签（主动模式）。
 
-        需求文档：https://alidocs.dingtalk.com/i/nodes/lyQod3RxJKBeKmlMHjYEkREDVkb4Mw9r?utm_source=im&utm_scene=team_space&iframeQuery=utm_medium%3Dportal_new_tab_open%26utm_source%3Dportal&rnd=0.5560033510751983&doc_type=wiki_doc&cid=2713422242%3A3929938169&sideCollapsed=true&utm_medium=im_single_card&corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288
+        - 被动模式（默认）：要求传入 messages 参数，从历史会话中提取标签。
+        - 主动模式：只需传入 user_id 参数，同时会调用 call_mem0_search_memory 和 format_mem0_search_result
+          组装记忆数据，由后端根据 user_id 获取长短期记忆信息进行标签提取。
 
         入参：
-        - messages: List[Dict]，用户历史会话记录。
+          - active_mode: bool，默认为 False；若为 True 则表示主动模式。
+          - 若 active_mode=False，则必须传入：
+                messages: List[Dict]，用户历史会话记录
+          - 若 active_mode=True，则只需要传入：
+                user_id: 用户ID
 
         出参：
-        - List[Dict[str, Union[str, List[str]]]]，返回匹配到的健康标签，如果没有匹配则返回空列表。
-        - 追加标签编码 & 值域编码
+          - List[Dict[str, Union[str, List[str]]]]，返回匹配到的健康标签列表（若没有匹配则返回空列表），
+            同时包含标签编码和值域编码。
         """
+        active_mode = kwargs.get("active_mode", False)
+        kwargs = deepcopy(kwargs)
 
-        _event, kwargs = "健康用户标签提取", deepcopy(kwargs)
+        if active_mode:
+            _event = "健康用户主动标签提取"
+            kwargs["intentCode"] = "aigc_functions_health_user_active_label"
+            if "user_id" not in kwargs or not kwargs["user_id"]:
+                logger.warning("主动模式下缺少 user_id 参数。")
+                return json.dumps([])
+            # 使用 self.gsr.mem0_url 作为 mem0_url，并固定 query 为 ""
+            mem0_url = self.gsr.mem0_url
+            query = ""
+            # 调用现成的异步方法获取用户记忆数据
+            search_data = await call_mem0_search_memory(mem0_url, query, kwargs["user_id"])
+            # 格式化记忆数据
+            formatted_memory = format_mem0_search_result(search_data)
+            # 构造 prompt 变量，记忆数据以 "memory" 字段传递
+            prompt_vars = {
+                "memory": formatted_memory,
+            }
+        else:
+            _event = "健康用户标签提取"
+            if "messages" not in kwargs or not kwargs.get("messages"):
+                logger.warning("被动模式下缺少 messages 参数。")
+                return json.dumps([])
+            # 统一处理 messages，将角色标识转换为 "user" 和 "assistant"
+            messages = await self.__compose_user_msg__(
+                "messages", messages=kwargs.get("messages"), role_map={"1": "user", "3": "assistant"}
+            )
+            prompt_vars = {
+                "messages": messages,
+            }
 
-        # 参数检查
-        if "messages" not in kwargs or not kwargs["messages"]:
-            return json.dumps([])
+        # 更新模型参数（温度、top_p、重复惩罚等参数可根据实际需求调整）
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
-        # 统一处理 messages
-        messages = await self.__compose_user_msg__(
-            "messages", messages=kwargs["messages"], role_map={"1": "user", "3": "assistant"}
-        )
-
-        # 生成 prompt 变量
-        prompt_vars = {
-            "messages": messages,
-        }
-
-        # 设定模型参数
-        model_args = await self.__update_model_args__(
-            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
-        )
-
-        # 发送到 AIGC 处理
+        # 调用通用 AIGC 处理接口，传入事件名称、提示变量及模型参数
         content: str = await self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
-
         content = await parse_generic_content(content)
-        # **1. 直接构造列表，提高查询效率**
+
+        # 根据返回结果，匹配健康标签并组装结果列表
         return [
             matched_data
             for item in content
