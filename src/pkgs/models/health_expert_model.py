@@ -22,7 +22,7 @@ from src.utils.module import (
     get_weather_info, parse_generic_content, handle_calories, run_in_executor, log_with_source,
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
-    calculate_and_format_diet_plan, format_historical_meal_plans
+    calculate_and_format_diet_plan, format_historical_meal_plans, query_course
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -1181,6 +1181,8 @@ class HealthExpertModel:
         )
         # 输出格式是```json{}```, 需要正则提取其中的json数据
         content = await parse_generic_content(content)
+
+        content = query_course(self.gsr.exercise_data, "有氧热身")
         return content
 
     async def aigc_functions_body_fat_weight_management_consultation(

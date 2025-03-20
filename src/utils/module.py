@@ -2536,3 +2536,65 @@ def enrich_meal_items_with_images(items, dishes_data, threshold, meal_time_mappi
             logger.error(f"处理餐食项 {item} 时出错：{e}")
 
     return processed_items
+
+
+def query_course(data_dict, course_name):
+    """
+    通过课程名称查询课程详细信息
+
+    :param data_dict: 包含所有课程相关数据的字典
+    :param course_name: 需要查询的课程名称
+    :return: 课程详情，包括动作信息
+    """
+    sports_lessons = data_dict["sports_lessons"]
+    sports_lesson_exercise_course = data_dict["sports_lesson_exercise_course"]
+    exercise_course_action = data_dict["exercise_course_action"]
+    actions = data_dict["actions"]
+
+    # 1️⃣ 查找课程信息
+    course_info = next((lesson for lesson in sports_lessons if lesson.get("NAME") == course_name), None)
+    if not course_info:
+        return {"head": 404, "items": {}, "msg": f"❌ 未找到课程: {course_name}"}
+
+    course_code = course_info.get("Sports_lesson_code", "")
+    course_image = course_info.get("Sports_lesson_picture", "")
+
+    result = {
+        "head": 200,
+        "items": {
+            "course_name": course_name,  # 课程名称
+            "course_image": course_image,  # 课程封面图片
+            "course_code": course_code,  # 课程编码
+            "actions": []  # 课程包含的动作列表
+        },
+        "msg": ""
+    }
+
+    # 2️⃣ 查找课程的运动处方
+    exercise_courses = sports_lesson_exercise_course.get(course_code, {}).get("relationDatas", [])
+    if not exercise_courses:
+        result["msg"] = "⚠️ 该课程未关联任何动作"
+        return result
+
+    # 3️⃣ 查找运动处方对应的所有动作
+    for exercise in exercise_courses:
+        exercise_course_code = exercise.get("exercise_course_code", "")
+        exercise_actions = exercise_course_action.get(exercise_course_code, {}).get("relationDatas", [])
+
+        for action in exercise_actions:
+            action_code = action.get("Action_code", "")
+
+            # 4️⃣ 在 `actions.json` 里查找具体动作信息
+            action_info = next((act for act in actions if act.get("Action_code") == action_code), None)
+
+            if action_info:
+                result["items"]["actions"].append({
+                    "action_name": action_info.get("Action_display_name", "未知动作"),  # 动作名称
+                    "video_duration": action_info.get("Action_video_duration", 0),  # 视频时长
+                    "action_image": action_info.get("Action_picture", ""),  # 动作图片
+                    "video_url": action_info.get("Action_Video", "")  # 视频链接
+                })
+            else:
+                result["items"]["actions"].append({"error": f"⚠️ 动作代码 {action_code} 在 action.json 里找不到！"})
+
+    return result
