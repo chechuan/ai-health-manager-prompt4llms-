@@ -64,6 +64,8 @@ class InitAllResource:
         # **预加载菜品数据**
         self.dishes_data = self.__load_dishes__()
 
+        self.exercise_data = self.__load_exercise_data__()
+
     def __load_dishes__(self) -> List[Dict]:
         """加载菜品数据"""
         try:
@@ -73,6 +75,23 @@ class InitAllResource:
         except Exception as e:
             logger.error(f"加载菜品数据失败: {e}")
             return []
+
+    def __load_exercise_data__(self) -> Dict:
+        """加载所有运动课程相关数据，返回一个大字典"""
+        base_path = "data/exec_data/"
+        try:
+            data = {
+                "sports_lessons": loadJS(base_path + "Sports_lesson.json"),
+                "sports_lesson_exercise_course": loadJS(base_path + "Sports_lesson_exercise_course.json"),
+                "exercise_course_action": loadJS(base_path + "exercise_course_Action.json"),
+                "actions": loadJS(base_path + "action.json"),
+            }
+            logger.info(
+                f"✅ 运动课程数据加载完成: 课程 {len(data['sports_lessons'])} 条, 动作 {len(data['actions'])} 条")
+            return data
+        except Exception as e:
+            logger.error(f"❌ 运动课程数据加载失败: {e}")
+            return {}
 
     def __parse_args__(
         self,
