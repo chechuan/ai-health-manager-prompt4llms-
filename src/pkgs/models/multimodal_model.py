@@ -669,7 +669,7 @@ Begins!""",
         if result.rfind("//") > 0:  # 去掉多余的注释内容
             result = re.sub(r"//.*?\n", "", result)
         # 去掉json串中多余的markdown内容
-        info = json.loads(result.replace("```", "").replace("json", "").replace("返回", "").replace("。", ""))
+        info = json.loads(result.replace("```", "").replace("json", "").replace("返回", "").replace("。", "").replace("\n", "").replace("},]", "}]"))
 
         if isinstance(info, list):
             info = {"foods": info}
