@@ -1223,7 +1223,7 @@ class expertModel:
 
         history = []
         history.append({"role": "system", "content": sys_prompt})
-        logger.debug(f"血糖预警t: {dumpJS(history)}")
+        logger.debug(f"血糖预警t: {(history)}")
         response = await acallLLM(
             history=history, temperature=0.8, top_p=0.5, model=model, stream=False
         )

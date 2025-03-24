@@ -23,7 +23,7 @@ from src.utils.module import (
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
     calculate_and_format_diet_plan, format_historical_meal_plans, query_course, call_mem0_search_memory,
-    format_mem0_search_result
+    format_mem0_search_result, call_mem0_get_all_memories
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -2724,75 +2724,82 @@ class HealthExpertModel:
 
         return result
 
-    async def aigc_functions_health_user_labels(self, **kwargs) -> Union[str, List[Dict[str, Union[str, List[str]]]]]:
+    async def aigc_functions_health_user_active_label(self, **kwargs) -> List[Dict[str, Union[str, int]]]:
         """
-        从用户的对话交互信息中提取健康标签（被动模式），或主动获取健康标签（主动模式）。
+        主动模式下，从所有用户的记忆中提取健康标签（支持并发处理，含耗时日志）。
 
-        - 被动模式（默认）：要求传入 messages 参数，从历史会话中提取标签。
-        - 主动模式：只需传入 user_id 参数，同时会调用 call_mem0_search_memory 和 format_mem0_search_result
-          组装记忆数据，由后端根据 user_id 获取长短期记忆信息进行标签提取。
-
-        入参：
-          - active_mode: bool，默认为 False；若为 True 则表示主动模式。
-          - 若 active_mode=False，则必须传入：
-                messages: List[Dict]，用户历史会话记录
-          - 若 active_mode=True，则只需要传入：
-                user_id: 用户ID
-
-        出参：
-          - List[Dict[str, Union[str, List[str]]]]，返回匹配到的健康标签列表（若没有匹配则返回空列表），
-            同时包含标签编码和值域编码。
+        - 自动调用 mem0 的 get_all_memories 接口。
+        - 每个用户的记忆独立生成标签，并发执行，支持并发上限。
+        - 每条标签结果包含 user_id。
         """
-        active_mode = kwargs.get("active_mode", False)
-        kwargs = deepcopy(kwargs)
+        import time
+        import asyncio
+        from collections import defaultdict
+        from asyncio import Semaphore
 
-        if active_mode:
-            _event = "健康用户主动标签提取"
-            kwargs["intentCode"] = "aigc_functions_health_user_active_label"
-            if "user_id" not in kwargs or not kwargs["user_id"]:
-                logger.warning("主动模式下缺少 user_id 参数。")
-                return json.dumps([])
-            # 使用 self.gsr.mem0_url 作为 mem0_url，并固定 query 为 ""
-            mem0_url = self.gsr.mem0_url
-            query = ""
-            # 调用现成的异步方法获取用户记忆数据
-            search_data = await call_mem0_search_memory(mem0_url, query, kwargs["user_id"])
-            # 格式化记忆数据
-            formatted_memory = format_mem0_search_result(search_data)
-            # 构造 prompt 变量，记忆数据以 "memory" 字段传递
-            prompt_vars = {
-                "memory": formatted_memory,
-            }
-        else:
-            _event = "健康用户标签提取"
-            if "messages" not in kwargs or not kwargs.get("messages"):
-                logger.warning("被动模式下缺少 messages 参数。")
-                return json.dumps([])
-            # 统一处理 messages，将角色标识转换为 "user" 和 "assistant"
-            messages = await self.__compose_user_msg__(
-                "messages", messages=kwargs.get("messages"), role_map={"1": "user", "3": "assistant"}
-            )
-            prompt_vars = {
-                "messages": messages,
-            }
+        _event = "健康用户主动标签提取"
+        mem0_url = self.gsr.mem0_url
+        all_labels = []
 
-        # 更新模型参数（温度、top_p、重复惩罚等参数可根据实际需求调整）
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        start_time = time.time()
+        logger.info("[打点] 接口开始执行")
 
-        # 调用通用 AIGC 处理接口，传入事件名称、提示变量及模型参数
-        content: str = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-        )
-        content = await parse_generic_content(content)
+        # 1. 获取所有用户的记忆数据
+        t1 = time.time()
+        mem0_data = await call_mem0_get_all_memories(mem0_url)
+        logger.info(f"[打点] 获取所有记忆耗时: {time.time() - t1:.2f}s")
 
-        # 根据返回结果，匹配健康标签并组装结果列表
-        return [
-            matched_data
-            for item in content
-            for tag in item.get("tag_value", [])
-            if (matched_data := match_health_label(self.gsr.health_labels_data, item["label_name"], tag))
-        ]
+        if not mem0_data or not mem0_data.get("all_memories"):
+            logger.warning("未获取到任何用户记忆数据。")
+            return []
 
+        # 2. 按 user_id 分组
+        t2 = time.time()
+        user_memories = defaultdict(list)
+        for item in mem0_data["all_memories"]:
+            user_id = item.get("user_id")
+            memory = item.get("memory")
+            if user_id and memory:
+                user_memories[user_id].append(memory)
+        logger.info(f"[打点] 用户记忆分组耗时: {time.time() - t2:.2f}s，共有用户数: {len(user_memories)}")
+
+        # 3. 定义并发处理函数（带并发限制）
+        sem = Semaphore(10)  # 控制最多10个并发
+
+        async def process_user_limited(user_id: str, memory_list: List[str]) -> List[Dict]:
+            async with sem:
+                memory_text = "\n".join(memory_list)
+                prompt_vars = {"memory": memory_text}
+                model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1)  # 注意去掉 repetition_penalty
+                try:
+                    content: str = await self.aaigc_functions_general(
+                        _event=_event, prompt_vars=prompt_vars, model_args=model_args, user_id=user_id, **kwargs
+                    )
+                    parsed = await parse_generic_content(content)
+                    return [
+                        {**matched_data, "user_id": user_id}
+                        for item in parsed
+                        for tag in item.get("tag_value", [])
+                        if (matched_data := match_health_label(self.gsr.health_labels_data, item["label_name"], tag))
+                    ]
+                except Exception as e:
+                    logger.error(f"[主动标签提取] 处理用户 {user_id} 标签失败: {e}")
+                    return []
+
+        # 4. 并发执行
+        t3 = time.time()
+        tasks = [process_user_limited(user_id, memories) for user_id, memories in user_memories.items()]
+        results = await asyncio.gather(*tasks)
+        logger.info(f"[打点] 模型调用并发耗时: {time.time() - t3:.2f}s")
+
+        # 5. 聚合结果
+        t4 = time.time()
+        for label_list in results:
+            all_labels.extend(label_list)
+        logger.info(f"[打点] 标签聚合耗时: {time.time() - t4:.2f}s")
+
+        logger.info(f"[打点] 接口总耗时: {time.time() - start_time:.2f}s，最终标签数: {len(all_labels)}")
+        return all_labels
 
 if __name__ == "__main__":
     gsr = InitAllResource()
