@@ -2453,6 +2453,31 @@ async def call_mem0_search_memory(mem0_url: str, query: str, user_id: str) -> di
         return None
 
 
+async def call_mem0_get_all_memories(mem0_url: str, limit: Optional[int] = 1000) -> Optional[dict]:
+    """
+    异步调用 mem0 的 /get_all_memories 接口，获取所有用户的记忆数据。
+
+    :param mem0_url: mem0 服务的基础 URL，例如 http://mem0-vllm-adapter:5000
+    :param limit: 可选，返回的最大条数，默认 1000
+    :return: 成功返回 dict（包含 all_memories 字段），失败返回 None
+    """
+    try:
+        params = {"limit": limit} if limit is not None else {}
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{mem0_url}/get_all_memories", params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    logger.debug(f"mem0 get_all_memories 成功, 返回数据: {data}")
+                    return data
+                else:
+                    logger.error(f"mem0 get_all_memories 调用失败, HTTP状态码: {response.status}")
+                    return None
+    except Exception as e:
+        logger.exception(f"mem0 get_all_memories 调用异常: {e}")
+        return None
+
+
 def format_mem0_search_result(search_data: dict) -> str:
     """
     将查询到的记忆数据整理成多行字符串。
