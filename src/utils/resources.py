@@ -13,6 +13,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
+from transformers import AutoTokenizer
 
 import openai
 import requests
@@ -65,6 +66,15 @@ class InitAllResource:
         self.dishes_data = self.__load_dishes__()
 
         self.exercise_data = self.__load_exercise_data__()
+
+        self.qwen_tokenizer = self.__init_qwen_tokenizer__()
+
+    def __init_qwen_tokenizer__(self):
+        """加载 Qwen Tokenizer（本地）"""
+        tokenizer_path = Path("qwen_tokenizer").resolve()  # 统一成 Path 风格
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+        logger.info(f"✅ Qwen tokenizer loaded from {tokenizer_path}")
+        return tokenizer
 
     def __load_dishes__(self) -> List[Dict]:
         """加载菜品数据"""
