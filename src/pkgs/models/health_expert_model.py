@@ -1834,27 +1834,14 @@ class HealthExpertModel:
         # 更新模型参数
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
-        # 初次生成内容
-        while True:
-            content: str = await self.aaigc_functions_general(
-                _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
-            )
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
 
-            content = await parse_generic_content(content)
-            items = await run_in_executor(lambda: enrich_meal_items_with_images(content, self.gsr.dishes_data, 0.5, MEAL_TIME_MAPPING))
-
-            # 计算总热量
-            total_calories = sum(
-                sum(food["calories"]["value"] for food in meal["foods"])
-                for meal in items
-            )
-
-            recommended_calories = diet_plan_standards.get("recommended_daily_caloric_intake", {}).get("calories", 0)
-
-            if abs(total_calories - recommended_calories) <= 100:
-                return items  # 若热量符合标准，则返回
-
-            logger.warning(f"总热量 {total_calories} kcal 偏差超过 100 kcal，重新生成...")
+        content = await parse_generic_content(content)
+        items = await run_in_executor(
+            lambda: enrich_meal_items_with_images(content, self.gsr.dishes_data, 0.5, MEAL_TIME_MAPPING))
+        return items
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
         """

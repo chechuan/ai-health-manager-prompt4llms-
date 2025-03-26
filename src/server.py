@@ -152,7 +152,8 @@ async def record_monitoring_data(items, params, start_time=None, end_time=None):
         release="v1.0.0",
         metadata={"team": "AI", "project": "health_service"},
         start_time=start_time,  # 传递 start_time
-        end_time=end_time  # 传递 end_time
+        end_time=end_time,  # 传递 end_time
+        tokenizer=gsr.qwen_tokenizer,
     )
 
 

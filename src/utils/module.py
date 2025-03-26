@@ -2163,6 +2163,10 @@ def blood_pressure_type(time, glucose):
     return result,content,agent_content,t
 
 
+async def count_tokens(text: str, tokenizer=None) -> int:
+    return len(tokenizer.encode(text)) if text else 0
+
+
 async def monitor_interface(**kwargs):
     """
     通用接口监控函数，通过 **kwargs 传递参数。
@@ -2249,9 +2253,29 @@ async def monitor_interface(**kwargs):
             output=response_output
         )
 
+        input_text = json.dumps(request_input, ensure_ascii=False) if request_input else ""
+        output_text = str(response_output) if response_output else ""
+        qwen_tokenizer = kwargs.get("tokenizer")
+        input_tokens = await count_tokens(input_text, qwen_tokenizer)
+        output_tokens = await count_tokens(output_text, qwen_tokenizer)
+
+        usage_details = {
+            "input": input_tokens,
+            "output": output_tokens,
+            "total": input_tokens + output_tokens
+        }
+        cost_details = {
+            "input": input_tokens * 0.00001,
+            "output": output_tokens * 0.00002,
+        }
+        # ================================================
+
         generation.end(
-            end_time=end_time
+            end_time=end_time,
+            usage=usage_details,
+            total_cost=cost_details,
         )
+
         # logger.info(f"Generation output recorded for {interface_name}: {response_output}")
 
     except Exception as e:
@@ -2690,3 +2714,4 @@ def query_course(data_dict, course_name):
                 result["items"]["actions"].append({"error": f"⚠️ 动作代码 {action_code} 在 action.json 里找不到！"})
 
     return result
+
