@@ -2188,7 +2188,7 @@ async def monitor_interface(**kwargs):
         if key not in kwargs:
             raise ValueError(f"Missing required parameter: {key}")
 
-    logger.debug(kwargs)
+    # logger.debug(kwargs)
     # 解构参数，使用 .get() 方法
     interface_name = kwargs.get("interface_name")
     start_time = kwargs.get("start_time")

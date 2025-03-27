@@ -1466,18 +1466,16 @@ class HealthExpertModel:
         user_profile = kwargs.get("user_profile", {})
         medical_records = kwargs.get("medical_records", {})
         key_indicators = kwargs.get("key_indicators", {})
-        # knowledge_system = kwargs.get("knowledge_system", "laikang")
-        #
-        # # 确保只允许特定值，避免传错
-        # allowed_knowledge_systems = {"laikang", "yaoshukun"}  # 未来可扩展
-        # if knowledge_system not in allowed_knowledge_systems:
-        #     raise ValueError(f"Invalid knowledge_system: {knowledge_system}")
-        #
-        # if knowledge_system:
-        #     _event = "推荐每日饮食摄入热量值(知识体系)"
-        #     kwargs["intentCode"] = f"aigc_functions_recommended_daily_calorie_intake_{knowledge_system}"
-        # else:
-        #     kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
+        knowledge_system = kwargs.get("knowledge_system")
+
+        if knowledge_system:
+            if knowledge_system == "yaoshukun":
+                _event = "姚院专项_推荐每日饮食摄入热量值"
+                kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
+            else:
+                return None
+        else:
+            kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
 
         missing_fields = []  # 存储缺失的字段
         user_profile_keys = set(user_profile.keys())
