@@ -76,6 +76,7 @@ local:
         - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
         - aigc_functions_health_user_labels # 2025年03月14日 健康用户标签提取
+        - aigc_functions_recommended_daily_calorie_intake_yaoshukun
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
         - aigc_functions_mental_principle_new # 2024年08月05日 新情志原则
@@ -84,6 +85,8 @@ local:
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+#    DeepSeek-R1-Distill-32B:
+#        - aigc_functions_recommended_daily_calorie_intake_yaoshukun
 
 dev:
     Qwen1.5-32B-Chat:

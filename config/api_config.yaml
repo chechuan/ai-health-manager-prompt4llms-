@@ -17,6 +17,7 @@ local:
             - Qwen1.5-32B-Chat
             - bce-embedding-base-v1
             - Qwen-VL-base-0.0.1
+            - DeepSeek-R1-Distill-32B
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -36,11 +37,12 @@ dev:
                 - Qwen1.5-32B-Chat
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
+                - DeepSeek-R1-Distill-32B
 prod:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate.op.laikang.com/aihealthmanager
     algo_rec: http://aimp-algo-psc-diet-v5.en.laikang.com
-    mem0: http://0.0.0.0:8000
+    mem0: http://mem0-vllm-adapter-pro:6500
     langchain: http://10.228.67.99:26924
     model_supply:
         default: vllm
@@ -55,3 +57,4 @@ prod:
                 - Qwen1.5-32B-Chat
                 - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
+                - DeepSeek-R1-Distill-32B
