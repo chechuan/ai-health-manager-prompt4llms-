@@ -46,6 +46,7 @@ def callLLM(
         stop=[],
         stream=False,
         is_vl=False,
+        extra_params: dict = {},
         **kwargs,
 ):
     """chat with qwen api which is serve at http://10.228.67.99:26921

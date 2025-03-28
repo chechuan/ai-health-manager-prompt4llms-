@@ -158,34 +158,28 @@ async def record_monitoring_data(items, params, start_time=None, end_time=None):
 
 
 # 日志包装和流式输出逻辑
-async def logging_wrapper(gen: AsyncGenerator, param, start_time=None, end_time=None):
+async def logging_wrapper(gen: AsyncGenerator, param, start_time=None):
     """包装生成器，记录输出到 all_items，并保持流式传递"""
     if start_time is None:
         start_time = time.time()
-    if end_time is None:
-        end_time = time.time()
     all_items = []
+
     try:
         async for item in gen:
             # 确保 item 是 JSON 字符串
             if isinstance(item, dict):
                 item_str = json.dumps(item, ensure_ascii=False)
             else:
-                item_str = str(item)  # 转换为字符串
+                item_str = str(item)
 
-            # 打印日志并记录
-            # logger.info(f"[Streaming Output] {item_str}")
             all_items.append(item_str)
-
-            # 将数据流式传递给下游
             yield item
     finally:
-        # 确保即使发生异常也执行监控记录
+        end_time = time.time()  # ⚠️ 在生成器真正结束时记录
         if param.get("endpoint_name") in ["daily_diet_eval"]:
             await record_monitoring_data(all_items[-1:], param, start_time, end_time)
         else:
             await record_monitoring_data(all_items, param, start_time, end_time)
-
 
 
 def mount_rule_endpoints(app: FastAPI):
@@ -519,9 +513,8 @@ def mount_aigc_functions(app: FastAPI):
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
 
-                end_time = time.time()
                 # 包装生成器，记录数据
-                wrapped_generator = logging_wrapper(_return, param, start_time, end_time)
+                wrapped_generator = logging_wrapper(_return, param, start_time)
                 return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:  # 处理str响应 构造json str
                 ret: BaseModel = AigcFunctionsCompletionResponse(
@@ -688,9 +681,8 @@ def mount_aigc_functions(app: FastAPI):
                 # 处理流式响应 构造返回数据的AsyncGenerator
                 generator = response_generator(response)
 
-                end_time = time.time()
                 # 包装生成器，记录数据
-                wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
+                wrapped_generator = logging_wrapper(generator, param, start_time)
                 return StreamingResponse(wrapped_generator, media_type="text/event-stream")
             else:
                 # 处理非流式响应
@@ -1293,9 +1285,8 @@ def create_app():
                 param.get("management_tag", '血糖管理')
             )
 
-            end_time = time.time()
             # 包装生成器，记录数据
-            wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
+            wrapped_generator = logging_wrapper(generator, param, start_time)
 
             result = decorate_general_complete(
                 wrapped_generator
@@ -1736,9 +1727,8 @@ def create_app():
                 **param,
             )
 
-            end_time = time.time()
             # 包装生成器，记录数据
-            wrapped_generator = logging_wrapper(generator, param, start_time, end_time)
+            wrapped_generator = logging_wrapper(generator, param, start_time)
 
             user_id = param.get("customId", "unknown")
             messages = param.get("history", [])

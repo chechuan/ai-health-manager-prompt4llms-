@@ -1,121 +1,174 @@
 # -*- encoding: utf-8 -*-
-'''
+"""
 @Time    :   2023-11-01 11:30:10
 @desc    :   业务处理流程
 @Author  :   宋昊阳
 @Contact :   1627635056@qq.com
-'''
-import json
+"""
 import sys
-from typing import Any, Dict, List, Optional, Tuple, Generator, Iterator
-from functools import lru_cache
+from random import choice
 
-sys.path.append('.')
+from src.pkgs.models.agents import Agents
+from src.utils.api_protocal import AigcFunctionsDoctorRecommendRequest
+
+sys.path.append(".")
+import json
+from typing import Any, AsyncGenerator, Dict, List
 
 from langchain.prompts import PromptTemplate
 from requests import Session
 
-from chat.constant import EXT_USRINFO_TRANSFER_INTENTCODE, default_prompt, intentCode_desc_map
+from chat.constant import (
+    EXT_USRINFO_TRANSFER_INTENTCODE,
+    default_prompt,
+    intentCode_desc_map,
+)
 from chat.util import norm_userInfo_msg
-from config.constrant import DEFAULT_DATA_SOURCE
-from config.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
-from config.constrant import role_map
+from data.constrant import DEFAULT_DATA_SOURCE
+from data.constrant import TOOL_CHOOSE_PROMPT_PIPELINE as TOOL_CHOOSE_PROMPT
+from data.constrant import role_map
 from data.test_param.test import testParam
-from src.pkgs.knowledge.callback import funcCall
-from src.prompt.factory import customPromptEngine
+from src.pkgs.knowledge.callback import FuncCall
+from src.pkgs.models.custom_chat_model import (
+    CustomChatAuxiliary,
+    CustomChatModel,
+    CustomChatReportInterpretationAnswer,
+    CustomChatReportInterpretationAsk,
+)
+from src.prompt.factory import CustomPromptEngine
 from src.prompt.model_init import callLLM
 from src.prompt.react_demo import build_input_text
+from src.prompt.utils import ChatterGailyAssistant
 from src.utils.Logger import logger
-from src.utils.module import (get_doc_role, get_intent, initAllResource, make_meta_ret,
-                              parse_latest_plugin_call)
+from src.utils.resources import InitAllResource
+from src.utils.module import (
+    curr_time,
+    date_after,
+    get_doc_role,
+    get_intent,
+    make_meta_ret,
+    parse_latest_plugin_call,
+)
+from src.pkgs.models.health_expert_model import HealthExpertModel
 
 
 class Chat_v2:
-    """
-    聊天处理系统，实现多种对话模式和意图处理
-    """
-
-    def __init__(self, global_share_resource: initAllResource) -> None:
-        """
-        初始化聊天处理系统
-
-        Args:
-            global_share_resource: 全局共享资源
-        """
+    def __init__(self, global_share_resource: InitAllResource) -> None:
         global_share_resource.chat_v2 = self
         self.gsr = global_share_resource
         self.prompt_meta_data = self.gsr.prompt_meta_data
-        self.promptEngine = customPromptEngine(self.gsr)
-        self.funcall = funcCall(self.gsr)
-        self.sys_template = PromptTemplate(input_variables=['external_information'], template=TOOL_CHOOSE_PROMPT)
-        self.__initialize_intent_map__()
+        self.promptEngine = CustomPromptEngine(self.gsr)
+        self.funcall = FuncCall(self.gsr)
+        self.sys_template = PromptTemplate(
+            input_variables=["external_information"], template=TOOL_CHOOSE_PROMPT
+        )
+        self.custom_chat_auxiliary = CustomChatAuxiliary(self.gsr)
+        self.custom_chat_model = CustomChatModel(self.gsr)
+        self.custom_chat_report_interpretation_ask = CustomChatReportInterpretationAsk(
+            self.gsr
+        )
+        self.custom_chat_report_interpretation_answer = (
+            CustomChatReportInterpretationAnswer(self.gsr)
+        )
+        self.chatter_assistant = ChatterGailyAssistant(global_share_resource)
+        self.__initalize_intent_map__()
         self.session = Session()
 
-    def __initialize_intent_map__(self) -> None:
-        """初始化各类意图映射表
-        """
-        # 将意图列表整合为映射表以便快速查询
+    def __initalize_intent_map__(self):
+        """初始化各类意图map"""
         schedule_manager = ["schedule_qry_up", "schedule_manager"]
         tips_intent_code_list = [
-            'dietary_eva', 'schedule_no', 'measure_bp',
-            'meet_remind', 'medicine_remind', 'dietary_remind', 'sport_remind',
-            'broadcast_bp', 'care_for', 'default_clock',
-            'default_reminder', 'broadcast_bp_up'
+            "dietary_eva",
+            "schedule_no",
+            "measure_bp",
+            "meet_remind",
+            "medicine_remind",
+            "dietary_remind",
+            "sport_remind",
+            "broadcast_bp",
+            "care_for",
+            "default_clock",
+            "default_reminder",
+            "broadcast_bp_up",
         ]
-        userinfo_intent_code_list = [
-            'ask_name', 'ask_age', 'ask_exercise_taboo', 'sk_exercise_habbit', 'ask_food_alergy', 'ask_food_habbit',
-            'ask_taste_prefer',
-            'ask_family_history', 'ask_labor_intensity', 'ask_nation', 'ask_disease', 'ask_weight', 'ask_height',
-            'ask_six', 'ask_mmol_drug', 'ask_exercise_taboo_degree', 'ask_exercise_taboo_xt'
+        useinfo_intent_code_list = [
+            "ask_name",
+            "ask_age",
+            "ask_exercise_taboo",
+            "ask_exercise_habbit",
+            "ask_food_alergy",
+            "ask_food_habbit",
+            "ask_taste_prefer",
+            "ask_family_history",
+            "ask_labor_intensity",
+            "ask_nation",
+            "ask_disease",
+            "ask_weight",
+            "ask_height",
+            "ask_six",
+            "ask_mmol_drug",
+            "ask_exercise_taboo_degree",
+            "ask_exercise_taboo_xt",
+            "ask_goal_manage",
         ]
-        aiui_intent_code_list = ['websearch', 'KLLI3.captialInfo', 'lottery', 'dream', 'AIUI.calc', 'LEIQIAO.cityOfPro',
-                                 'ZUOMX.queryCapital', 'calendar', 'audioProgram', 'translation', 'garbageClassifyPro',
-                                 'AIUI.unitConversion', 'AIUI.forexPro', 'carNumber', 'datetimePro', 'AIUI.ocularGym',
-                                 'weather', 'cookbook', 'story', 'AIUI.Bible', 'drama', 'storyTelling',
-                                 'AIUI.audioBook', 'musicX', 'news', 'joke']
-        callout_intent_code_list = ['call_doctor', 'call_sportMaster', 'call_psychologist', 'call_dietista',
-                                    'call_health_manager']
-
-        # 使用字典推导式简化代码
+        aiui_intent_code_list = [
+            "websearch",
+            "KLLI3.captialInfo",
+            "lottery",
+            "dream",
+            "AIUI.calc",
+            "LEIQIAO.cityOfPro",
+            "ZUOMX.queryCapital",
+            "calendar",
+            "audioProgram",
+            "translation",
+            "garbageClassifyPro",
+            "AIUI.unitConversion",
+            "AIUI.forexPro",
+            "carNumber",
+            "datetimePro",
+            "AIUI.ocularGym",
+            "weather",
+            "cookbook",
+            "story",
+            "AIUI.Bible",
+            "drama",
+            "storyTelling",
+            "AIUI.audioBook",
+            "musicX",
+            "news",
+            "joke",
+        ]
+        callout_intent_code_list = [
+            "call_doctor",
+            "call_sportMaster",
+            "call_psychologist",
+            "call_dietista",
+            "call_health_manager",
+        ]
         self.intent_map = {
-            'schedule': {i: 1 for i in schedule_manager},
-            'tips': {i: 1 for i in tips_intent_code_list},
-            'userinfo': {i: 1 for i in userinfo_intent_code_list},
-            'aiui': {i: 1 for i in aiui_intent_code_list},
-            'callout': {i: 1 for i in callout_intent_code_list}
+            "schedule": {i: 1 for i in schedule_manager},
+            "tips": {i: 1 for i in tips_intent_code_list},
+            "userinfo": {i: 1 for i in useinfo_intent_code_list},
+            "aiui": {i: 1 for i in aiui_intent_code_list},
+            "callout": {i: 1 for i in callout_intent_code_list},
         }
 
-    def __get_default_reply__(self, intentCode: str) -> str:
-        """
-        针对不同的意图提供不同的回复指导话术
+    def __get_default_reply__(self, intentCode):
+        """针对不同的意图提供不同的回复指导话术"""
+        if intentCode == "schedule_manager" or intentCode == "other_schedule":
+            content = "对不起，我没有理解您的需求，如果想进行日程提醒管理，您可以这样说: 查询一下我今天的日程, 提醒我明天下午3点去打羽毛球, 帮我把明天下午3点打羽毛球的日程改到后天下午5点, 取消今天的提醒"
+        elif intentCode == "schedule_qry_up":
+            content = "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程"
+        elif intentCode == "meeting_schedule":
+            content = "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点"
+        elif intentCode == "auxiliary_diagnosis":
+            content = "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
+        else:
+            content = "对不起, 我没有理解您的需求, 请在问题中提供明确的信息并重新尝试."
+        return content
 
-        Args:
-            intentCode: 意图代码
-
-        Returns:
-            str: 默认回复内容
-        """
-        # 使用字典映射替代多个if-elif语句，提高可维护性
-        default_replies = {
-            "schedule_manager": "对不起，我没有理解您的需求，如果想进行日程提醒管理，您可以这样说: 查询一下我今天的日程, 提醒我明天下午3点去打羽毛球, 帮我把明天下午3点打羽毛球的日程改到后天下午5点, 取消今天的提醒",
-            "other_schedule": "对不起，我没有理解您的需求，如果想进行日程提醒管理，您可以这样说: 查询一下我今天的日程, 提醒我明天下午3点去打羽毛球, 帮我把明天下午3点打羽毛球的日程改到后天下午5点, 取消今天的提醒",
-            "schedule_qry_up": "对不起，我没有理解您的需求，如果您想查询今天的待办日程，您可以这样说：查询一下我今天的日程",
-            "meeting_schedule": "对不起，我没有理解您的需求，如果您想管理会议日程，您可以这样说：帮我把明天下午4点的会议改到今天晚上7点",
-            "auxiliary_diagnosis": "对不起，我没有理解您的需求，如果您有健康问题想要咨询，建议您提供更明确的描述"
-        }
-
-        return default_replies.get(intentCode, "对不起, 我没有理解您的需求, 请在问题中提供明确的信息并重新尝试.")
-
-    def __check_query_valid__(self, query: str) -> bool:
-        """
-        检验生成的回复内容是否有效
-
-        Args:
-            query: 需要检验的内容
-
-        Returns:
-            bool: 内容是否有效
-        """
+    def __check_query_valid__(self, query):
         prompt = (
             "你是一个功能强大的内容校验工具请你帮我判断下面输入的句子是否符合要求\n"
             "1. 是一句完整的可以向用户输出的话\n"
@@ -125,1206 +178,1470 @@ class Chat_v2:
             "你的结果(yes or no):\n"
         )
         prompt = prompt.replace("{query}", query)
-
-        try:
-            result = callLLM(query=prompt, temperature=0, top_p=0, max_tokens=3)
-            return "yes" in result.lower()
-        except Exception as e:
-            logger.error(f"内容校验失败: {e}")
+        result = callLLM(query=prompt, temperature=0, top_p=0, max_tokens=3)
+        if "yes" in result.lower():
+            return True
+        else:
             return False
 
-    def __generate_content_verification__(self, out_text: List, list_of_plugin_info: List, **kwargs) -> List:
-        """
-        ReAct生成内容的校验
+    def __generate_content_verification__(
+        self, out_text, list_of_plugin_info, **kwargs
+    ):
+        """ReAct生成内容的校验
 
         1. 校验Tool
         2. 校验Tool Parameter格式
-
-        Args:
-            out_text: 包含思考、工具和参数的列表
-            list_of_plugin_info: 可用工具列表
-
-        Returns:
-            List: 校验后的思考、工具和参数列表
         """
         thought, tool, parameter = out_text
-        possible_tool_map = {i['code']: 1 for i in list_of_plugin_info}
+        possible_tool_map = {i["code"]: 1 for i in list_of_plugin_info}
 
-        # 尝试解析参数为JSON
-        if isinstance(parameter, str):
-            try:
-                parameter = json.loads(parameter)
-            except json.JSONDecodeError:
-                # 保持原始字符串格式，不做处理
-                pass
+        try:
+            parameter = json.loads(parameter)
+        except Exception as err:
+            ...
 
         # 校验Tool
-        if not possible_tool_map.get(tool):
-            # 如果生成的Tool不对, parameter也必然不对
+        if not possible_tool_map.get(tool):  # 如果生成的Tool不对, parameter也必然不对
             tool = "AskHuman"
-            parameter = self.__get_default_reply__(kwargs.get('intentCode', ''))
+            parameter = self.__get_default_reply__(kwargs["intentCode"])
 
-        # 处理AskHuman工具的特殊情况
-        if tool == "AskHuman" and isinstance(parameter, dict):
-            # 尝试提取dict中有效的回复内容
-            valid_content_found = False
-            for _, content in parameter.items():
-                if isinstance(content, str) and self.__check_query_valid__(content):
-                    parameter = content
-                    valid_content_found = True
-                    break
-
-            if not valid_content_found:
-                parameter = self.__get_default_reply__(kwargs.get('intentCode', ''))
-
+        if tool == "AskHuman":
+            # TODO 如果生成的工具是AskHuman但参数是dict, 1. 尝试提取dict中的内容  2. 回复默认提示话术
+            if isinstance(parameter, dict):
+                for gkey, gcontent in parameter.items():
+                    if self.__check_query_valid__(gcontent):
+                        parameter = gcontent
+                        break
+                if isinstance(parameter, dict):
+                    parameter = self.__get_default_reply__(kwargs["intentCode"])
         return [thought, tool, parameter]
 
-    def chat_react(self, *args, **kwargs) -> List[Dict]:
-        """
-        调用模型生成答案,解析ReAct生成的结果
-
-        Args:
-            kwargs: 包含历史记录等参数
-
-        Returns:
-            List[Dict]: 更新后的历史记录
-        """
-        max_tokens = kwargs.get("max_tokens", 200)
-        mid_vars = kwargs.get("mid_vars", [])
-
-        # 1. 构建系统提示词和工具列表
+    def chat_react(self, *args, **kwargs):
+        """调用模型生成答案,解析ReAct生成的结果"""
+        max_tokens = kwargs.get("max_tokens", 500)
         _sys_prompt, list_of_plugin_info = self.compose_input_history(**kwargs)
-
-        # 2. 构建完整的提示词
         prompt = build_input_text(_sys_prompt, list_of_plugin_info, **kwargs)
         prompt += "Thought: "
+        model = self.gsr.get_model("general_react_model")
         logger.debug(f"ReAct Prompt:\n{prompt}")
+        model_output = callLLM(
+            prompt,
+            temperature=0.7,
+            top_p=0.5,
+            max_tokens=max_tokens,
+            model=model,
+            stop=["\nObservation"],
+        )
+        model_output = "\nThought: " + model_output
+        logger.debug(f"ReAct Generate: {model_output}")
+        self.update_mid_vars(
+            kwargs.get("mid_vars"),
+            key="Chat ReAct",
+            input_text=prompt,
+            output_text=model_output,
+            model=model,
+        )
 
-        # 3. 调用模型生成回复
-        try:
-            model_output = callLLM(
-                prompt,
-                temperature=0.7,
-                top_p=0.5,
-                max_tokens=max_tokens,
-                model="Qwen-14B-Chat",
-                stop=["\nObservation"]
-            )
-            model_output = "\nThought: " + model_output
-            logger.debug(f"ReAct Generate: {model_output}")
-        except Exception as e:
-            logger.error(f"模型调用失败: {e}")
-            # 生成一个安全的备用响应
-            model_output = "\nThought: 我无法完成当前请求。\nAction: AskHuman\nAction Input: 抱歉，我现在无法处理您的请求，请稍后再试。"
-
-        # 4. 更新中间变量
-        self.update_mid_vars(mid_vars, key="Chat ReAct", input_text=prompt, output_text=model_output,
-                             model="Qwen-14B-Chat")
-
-        # 5. 解析模型输出
+        # model_output = """Thought: 任务名和时间都没有提供，无法创建日程。\nAction: AskHuman\nAction Input: {"message": "请提供任务名和时间。"}"""
         out_text = parse_latest_plugin_call(model_output)
+        # if not self.prompt_meta_data['prompt_tool_code_map'].get(out_text[1]):
+        #     out_text[1] = "AskHuman"
 
-        # 6. 校验内容
-        out_text = self.__generate_content_verification__(out_text, list_of_plugin_info, **kwargs)
-
-        # 7. 处理工具参数
+        # (optim) 对于react模式, 如果一个事件提供工具列表, 生成的Action不属于工具列表中, 不同的意图返回不同的话术指导和AskHuman工具 2024年1月9日15:50:18
+        out_text = self.__generate_content_verification__(
+            out_text, list_of_plugin_info, **kwargs
+        )
         try:
+            # gen_args = json.loads(out_text[2])
             tool = out_text[1]
-            tool_zh = self.prompt_meta_data['prompt_tool_code_map'].get(tool)
-
-            if tool_zh and tool_zh in self.prompt_meta_data['tool']:
-                tool_param_msg = self.prompt_meta_data['tool'][tool_zh].get("params", [])
-
-                # 对于只有一个参数的工具，尝试提取该参数
-                if tool_param_msg and len(tool_param_msg) == 1:
-                    param_name = tool_param_msg[0].get('name')
-                    param_type = tool_param_msg[0].get('schema', {}).get('type', '')
-
-                    if param_type.startswith("str") and isinstance(out_text[2], dict) and param_name in out_text[2]:
-                        out_text[2] = out_text[2][param_name]
+            tool_zh = self.prompt_meta_data["prompt_tool_code_map"].get(tool)
+            tool_param_msg = self.prompt_meta_data["tool"][tool_zh].get("params")
+            # if self.prompt_meta_data['rollout_tool'].get(tool) and tool_param_msg and len(tool_param_msg) ==1:
+            if tool_param_msg and len(tool_param_msg) == 1:
+                # 对于直接输出的,此处判断改工具设定的参数,通常只有一项 为要输出的话,此时解析对应字段
+                if tool_param_msg[0]["schema"]["type"].startswith("str"):
+                    out_text[2] = out_text[2][tool_param_msg[0]["name"]]
         except Exception as err:
-            logger.debug(f"处理工具参数时出错: {err}")
-            # 继续处理，不中断流程
+            # logger.exception(err)
+            ...
+        kwargs["history"].append(
+            {
+                "intentCode": kwargs["intentCode"],
+                "role": "assistant",
+                "content": out_text[0],
+                "function_call": {"name": out_text[1], "arguments": out_text[2]},
+            }
+        )
+        return kwargs["history"]
 
-        # 8. 更新历史记录
-        kwargs['history'].append({
-            "intentCode": kwargs.get('intentCode', ''),
-            "role": "assistant",
-            "content": out_text[0],
-            "function_call": {"name": out_text[1], "arguments": out_text[2]}
-        })
-
-        return kwargs['history']
-
-    def compose_input_history(self, **kwargs) -> Tuple[str, List]:
-        """
-        拼装系统提示词
-
-        Args:
-            kwargs: 包含提示词等参数
-
-        Returns:
-            Tuple[str, List]: 系统提示词和工具列表
-        """
+    def compose_input_history(self, **kwargs):
+        """拼装sys_prompt里"""
         qprompt = kwargs.get("qprompt")
+
         sys_prompt, functions = self.promptEngine._call(**kwargs)
 
         if not qprompt:
             sys_prompt = self.sys_template.format(external_information=sys_prompt)
         else:
             sys_prompt = sys_prompt + "\n\n" + qprompt
-
         return sys_prompt, functions
 
-    def update_mid_vars(self, mid_vars: List, input_text=Any, output_text=Any, key="节点名", model="调用模型",
-                        **kwargs) -> List:
-        """
-        更新中间变量
-
-        Args:
-            mid_vars: 中间变量列表
-            input_text: 输入文本
-            output_text: 输出文本
-            key: 节点名称
-            model: 模型名称
-
-        Returns:
-            List: 更新后的中间变量列表
-        """
-        if mid_vars is None:
-            mid_vars = []
-
+    def update_mid_vars(
+        self,
+        mid_vars,
+        input_text=Any,
+        output_text=Any,
+        key="节点名",
+        model="调用模型",
+        **kwargs,
+    ):
+        """更新中间变量"""
         lth = len(mid_vars) + 1
-        mid_vars.append({
-            "id": lth,
-            "key": key,
-            "input_text": input_text,
-            "output_text": output_text,
-            "model": model,
-            **kwargs
-        })
+        mid_vars.append(
+            {
+                "id": lth,
+                "key": key,
+                "input_text": input_text,
+                "output_text": output_text,
+                "model": model,
+                **kwargs,
+            }
+        )
         return mid_vars
 
-    def get_parent_intent_name(self, text: str) -> str:
-        """
-        根据文本获取父意图名称
-
-        Args:
-            text: 识别结果文本
-
-        Returns:
-            str: 父意图名称
-        """
-        # 使用包含关系映射，更容易维护
-        intent_keywords = {
-            '五师': '呼叫五师意图',
-            '音频': '音频播放意图',
-            '生活': '生活工具查询意图',
-            '医疗': '医疗健康意图',
-            '饮食': '饮食营养意图',
-            '运动': '运动咨询意图',
-            '日程': '日程管理意图',
-            '食材采购': '食材采购意图'
-        }
-
-        for keyword, intent in intent_keywords.items():
-            if keyword in text:
-                return intent
-
-        return '其它'
-
-    def cls_intent(self, history: List[Dict], mid_vars: List, **kwargs) -> str:
-        """
-        意图识别
-
-        Args:
-            history: 历史记录
-            mid_vars: 中间变量
-
-        Returns:
-            str: 识别的意图
-        """
-        # 快速检测特定功能页面
-        # 可以通过关键词匹配进行快速意图识别
-        feature_keywords = {
-            '血压趋势图': '打开功能页面',
-            '血压录入': '打开功能页面',
-            '血压添加': '打开功能页面',
-            '入录血压': '打开功能页面',
-            '添加血压': '打开功能页面',
-            '历史血压': '打开功能页面',
-            '血压历史': '打开功能页面',
-            '打开聊天': '打开功能页面',
-            '打开交流': '打开功能页面',
-            '信息交互页面': '打开功能页面'
-        }
-
-        # 检查列表组合
-        open_page_combos = [
-            (['打开', '日程'], 2),
-            (['打开', '集市'], 2),
-            (['打开', '家居'], 2)
-        ]
-
-        # 格式化历史记录
-        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
-        latest_msg = history[-1]['content']
-
-        # 检查关键词
-        for keyword in feature_keywords:
-            if keyword in latest_msg:
-                return '打开功能页面'
-
-        # 检查组合关键词
-        for words, threshold in open_page_combos:
-            if sum(word in latest_msg for word in words) >= threshold:
-                return '打开功能页面'
-
-        # 准备模型输入
-        h_p = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history[-3:]])
-
-        if kwargs.get('intentPrompt', ''):
-            prompt = kwargs.get('intentPrompt') + "\n\n" + h_p + "\nThought: "
+    def get_parent_intent_name(self, text):
+        if "五师" in text:
+            return "呼叫五师意图"
+        elif "音频" in text:
+            return "音频播放意图"
+        elif "生活" in text:
+            return "生活工具查询意图"
+        elif "医疗" in text:
+            return "医疗健康意图"
+        elif "饮食" in text:
+            return "饮食营养意图"
+        elif "运动" in text:
+            return "运动咨询意图"
+        elif "日程":
+            return "日程管理意图"
+        elif "食材采购" in text:
+            return "食材采购意图"
         else:
-            prompt = self.prompt_meta_data['tool']['父意图']['description'] + "\n\n" + h_p + "\nThought: "
+            return "其它"
 
-        logger.debug('父意图模型输入：' + prompt)
-
-        try:
-            # 调用模型进行意图识别
-            generate_text = callLLM(
-                query=prompt,
-                max_tokens=200,
-                top_p=0.8,
-                temperature=0,
-                do_sample=False
+    def cls_intent(self, history, mid_vars, **kwargs):
+        """意图识别"""
+        open_sch_list = ["打开", "日程"]
+        market_list = ["打开", "集市"]
+        home_list = ["打开", "家居"]
+        bp_list = [
+            "血压趋势图",
+            "血压录入",
+            "血压添加",
+            "入录血压",
+            "添加血压",
+            "历史血压",
+            "血压历史",
+        ]
+        inter_info_list = ["打开聊天", "打开交流", "信息交互页面"]
+        # st_key, ed_key = "<|im_start|>", "<|im_end|>"
+        history = [
+            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+            for i in history
+        ]
+        # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
+        if sum([1 for i in bp_list if i in history[-1]["content"]]) > 0:
+            return "打开功能页面"
+        if sum([1 for i in inter_info_list if i in history[-1]["content"]]) > 0:
+            return "打开功能页面"
+        if sum([1 for i in open_sch_list if i in history[-1]["content"]]) >= 2:
+            return "打开功能页面"
+        if sum([1 for i in market_list if i in history[-1]["content"]]) >= 2:
+            return "打开功能页面"
+        if sum([1 for i in home_list if i in history[-1]["content"]]) >= 2:
+            return "打开功能页面"
+        h_p = "\n".join(
+            [
+                ("Question" if i["role"] == "user" else "Answer") + f": {i['content']}"
+                for i in history[-3:]
+            ]
+        )
+        # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
+        if kwargs.get("intentPrompt", ""):
+            prompt = kwargs.get("intentPrompt") + "\n\n" + h_p + "\nThought: "
+        else:
+            prompt = (
+                self.prompt_meta_data["tool"]["父意图"]["description"]
+                + "\n\n"
+                + h_p
+                + "\nThought: "
             )
-            logger.debug('意图识别模型输出：' + generate_text)
-
-            # 提取意图
-            intentIdx = generate_text.find("\nIntent: ")
-            if intentIdx >= 0:
-                text = generate_text[intentIdx + 9:].split("\n")[0]
-                parant_intent = self.get_parent_intent_name(text)
-            else:
-                # 如果找不到Intent标记，使用安全的默认值
-                parant_intent = '其它'
-                text = '未能识别意图'
-        except Exception as e:
-            logger.error(f"意图识别失败: {e}")
-            parant_intent = '其它'
-            text = '意图识别错误'
-            generate_text = f"Error: {str(e)}"
-
-        # 处理子意图识别
-        specific_intents = ['呼叫五师意图', '音频播放意图', '生活工具查询意图', '医疗健康意图', '饮食营养意图',
-                            '日程管理意图', '食材采购意图']
-        if parant_intent in specific_intents:
-            try:
-                sub_intent_prompt = self.prompt_meta_data['tool'][parant_intent]['description']
-
-                # 对于呼叫五师，只考虑最后一条消息
-                if parant_intent == '呼叫五师意图':
-                    history = history[-1:]
-                    h_p = "\n".join(
-                        [("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
-
-                if kwargs.get('subIntentPrompt', ''):
-                    prompt = kwargs.get('subIntentPrompt').format(sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
-                else:
-                    prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(
-                        sub_intent_prompt) + "\n\n" + h_p + "\nThought: "
-
-                logger.debug('子意图模型输入：' + prompt)
-
-                # 调用模型识别子意图
-                generate_text = callLLM(
-                    query=prompt,
-                    max_tokens=200,
-                    top_p=0.8,
-                    temperature=0,
-                    do_sample=False
+        logger.debug("父意图模型输入：" + prompt)
+        generate_text = callLLM(
+            query=prompt, max_tokens=200, top_p=0.8, temperature=0, do_sample=False
+        )
+        logger.debug("意图识别模型输出：" + generate_text)
+        intentIdx = generate_text.find("\nIntent: ") + 9
+        text = generate_text[intentIdx:].split("\n")[0]
+        parant_intent = self.get_parent_intent_name(text)
+        if parant_intent in [
+            "呼叫五师意图",
+            "音频播放意图",
+            "生活工具查询意图",
+            "医疗健康意图",
+            "饮食营养意图",
+            "日程管理意图",
+            "食材采购意图",
+        ]:
+            sub_intent_prompt = self.prompt_meta_data["tool"][parant_intent][
+                "description"
+            ]
+            if parant_intent in ["呼叫五师"]:
+                history = history[-1:]
+                h_p = "\n".join(
+                    [
+                        ("Question" if i["role"] == "user" else "Answer")
+                        + f": {i['content']}"
+                        for i in history
+                    ]
                 )
-
-                intentIdx = generate_text.find("\nIntent: ")
-                if intentIdx >= 0:
-                    text = generate_text[intentIdx + 9:].split("\n")[0]
-            except Exception as e:
-                logger.error(f"子意图识别失败: {e}")
-                # 保持原始父意图结果
-
-        # 更新中间变量
-        self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
+            if kwargs.get("subIntentPrompt", ""):
+                prompt = (
+                    kwargs.get("subIntentPrompt").format(sub_intent_prompt)
+                    + "\n\n"
+                    + h_p
+                    + "\nThought: "
+                )
+            else:
+                prompt = (
+                    self.prompt_meta_data["tool"]["子意图模版"]["description"].format(
+                        sub_intent_prompt
+                    )
+                    + "\n\n"
+                    + h_p
+                    + "\nThought: "
+                )
+            logger.debug("子意图模型输入：" + prompt)
+            generate_text = callLLM(
+                query=prompt, max_tokens=200, top_p=0.8, temperature=0, do_sample=False
+            )
+            intentIdx = generate_text.find("\nIntent: ") + 9
+            text = generate_text[intentIdx:].split("\n")[0]
+        self.update_mid_vars(
+            mid_vars,
+            key="意图识别",
+            input_text=prompt,
+            output_text=generate_text,
+            intent=text,
+        )
         return text
 
-    def chatter_gaily(self, mid_vars: List, **kwargs) -> Any:
-        """
-        组装mysql中闲聊对应的prompt
+    def __chatter_gaily_compose_func_reply__(self, messages):
+        """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
+        history = []
+        for i in messages:
+            if not i.get("function_call"):
+                history.append(i)
+            else:
+                func_args = i["function_call"]
+                role = i["role"]
+                content = f"{func_args['arguments']}"
+                history.append({"role": role, "content": content})
+        # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+        history = history[-8:]
+        return history
 
-        Args:
-            mid_vars: 中间变量
+    def chatter_gaily(self, mid_vars, **kwargs):
+        """组装mysql中闲聊对应的prompt"""
+        intentCode = kwargs.get("intentCode", "other")
+        messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        messages = self.__chatter_gaily_compose_func_reply__(messages)
 
-        Returns:
-            str 或 List[Dict]: 输出内容或更新的历史记录
-        """
+        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
+        # process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        process = ""
+        if (
+            desc or process
+        ):  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role": "system", "content": ext_info}] + messages
 
-        def compose_func_reply(messages: List[Dict]) -> List[Dict]:
-            """
-            拼接func中回复的内容到history中
+        logger.debug(f"闲聊 LLM Input:\n{messages}")
+        if not messages:
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": "你好"}
+            ]
+        content = callLLM("", messages, temperature=0.7, top_p=0.45)
+        logger.debug(f"闲聊 LLM Output: {content}")
+        self.update_mid_vars(
+            mid_vars,
+            key="闲聊",
+            input_text=json.dumps(messages, ensure_ascii=False),
+            output_text=content,
+        )
+        if kwargs.get("return_his"):
+            messages.append(
+                {
+                    "intentCode": "other",
+                    "role": "assistant",
+                    "content": "I know the answer.",
+                    "function_call": {"name": "convComplete", "arguments": content},
+                }
+            )
+            return messages
+        else:
+            return content
 
-            最终的history只有role/content字段
+    def chatter_gaily_new(self, mid_vars, **kwargs):
+        """组装mysql中闲聊对应的prompt"""
 
-            Args:
-                messages: 消息列表
-
-            Returns:
-                List[Dict]: 格式化后的历史记录
-            """
+        def __chatter_gaily_compose_func_reply__(messages):
+            """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
             history = []
             for i in messages:
                 if not i.get("function_call"):
                     history.append(i)
                 else:
-                    func_args = i['function_call']
-                    role = i['role']
+                    func_args = i["function_call"]
+                    role = i["role"]
                     content = f"{func_args['arguments']}"
                     history.append({"role": role, "content": content})
+            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+            history = history[-8:]
             return history
 
-        try:
-            # 获取当前意图的消息
-            intentCode = kwargs.get("intentCode", 'other')
-            messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
+        intentCode = kwargs.get("intentCode", "other")
+        messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
+        # messages = __chatter_gaily_compose_func_reply__(messages)
 
-            # 添加系统提示词
-            desc = self.prompt_meta_data['event'][intentCode].get('description', '')
-            process = self.prompt_meta_data['event'][intentCode].get('process', '')
-            if desc or process:
-                ext_info = desc + "\n" + process
-                messages = [{"role": "system", "content": ext_info}] + messages
+        next_step, messages = self.chatter_assistant.get_next_step(messages)
+        self.update_mid_vars(
+            mid_vars,
+            key="日常闲聊-next_step",
+            input_text=messages,
+            output_text=next_step,
+        )
 
-            # 处理函数调用
-            messages = compose_func_reply(messages)
+        if next_step == "searchKB":
+            history, dataSource = self.funcall._call(
+                out_history=messages, intentCode=intentCode, mid_vars=mid_vars
+            )
+            content = history[-1]["content"]
+            messages[-1]["function_call"]["name"] = "AskHuman"
+            messages[-1]["function_call"]["arguments"] = content
+        # elif next_step == "searchEngine":
+        #     history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+        #     content = history[-1]["content"]
+        #     messages[-1]['function_call']['name'] = 'AskHuman'
+        #     messages[-1]['function_call']['arguments'] = content
+        # elif next_step == "AskHuman":
+        else:
+            content, messages = self.chatter_assistant.run(messages)
+            self.update_mid_vars(
+                mid_vars,
+                key="日常闲聊",
+                input_text=json.dumps(messages, ensure_ascii=False),
+                output_text=content,
+            )
+        # else:
+        #     content, messages = self.chatter_assistant.run(messages)
 
-            # 调用模型生成回复
-            content = callLLM("", messages, temperature=0.7, top_p=0.8)
+        if kwargs.get("return_his"):
+            return messages
+        else:
+            return content
 
-            # 更新中间变量
-            self.update_mid_vars(mid_vars, key="闲聊", input_text=json.dumps(messages, ensure_ascii=False),
-                                 output_text=content)
+    def chatter_gaily_knowledge(self, mid_vars, **kwargs):
+        """组装mysql中闲聊对应的prompt"""
 
-            # 返回结果
-            if kwargs.get("return_his"):
-                messages.append({
-                    "role": "assistant",
-                    "content": "I know the answer.",
-                    "function_call": {"name": "convComplete", "arguments": content}
-                })
-                return messages
-            else:
-                return content
-        except Exception as e:
-            logger.error(f"闲聊处理失败: {e}")
-            error_content = "很抱歉，我现在无法回答您的问题，请稍后再试。"
+        def compose_func_reply(messages):
+            """拼接func中回复的内容到history中
 
-            # 更新中间变量
-            self.update_mid_vars(mid_vars, key="闲聊-错误", input_text=str(kwargs.get('history', [])),
-                                 output_text=f"Error: {str(e)}")
-
-            # 返回安全的结果
-            if kwargs.get("return_his"):
-                return [{"role": "assistant", "content": "I know the answer.",
-                         "function_call": {"name": "convComplete", "arguments": error_content}}]
-            else:
-                return error_content
-
-    def chatter_gaily_knowledge(self, mid_vars: List, **kwargs) -> Any:
-        """
-        组装mysql中闲聊对应的prompt，并结合知识库
-
-        Args:
-            mid_vars: 中间变量
-
-        Returns:
-            str 或 List[Dict]: 输出内容或更新的历史记录
-        """
-
-        def compose_func_reply(messages: List[Dict]) -> Dict:
-            """
-            拼接func中回复的内容到history中，并构建知识库查询载荷
-
-            Args:
-                messages: 消息列表
-
-            Returns:
-                Dict: 知识库查询载荷
+            最终的history只有role/content字段
             """
             payload = {
                 "query": "",
-                "knowledge_base_name": "新奥百科知识库",
+                "knowledge_base_name": "",
                 "top_k": 5,
                 "score_threshold": 1,
                 "history": [],
                 "stream": False,
-                "model_name": "Qwen-14B-Chat",
+                "model_name": "Qwen1.5-14B-Chat",
                 "temperature": 0.7,
                 "top_p": 0.8,
                 "max_tokens": 0,
-                "prompt_name": "text"
+                "prompt_name": "text",
             }
-
             history = []
             for i in messages:
                 if not i.get("function_call"):
                     history.append(i)
                 else:
-                    func_args = i['function_call']
-                    role = i['role']
+                    func_args = i["function_call"]
+                    role = i["role"]
                     content = f"{func_args['arguments']}"
                     history.append({"role": role, "content": content})
-
-            # 设置查询参数
-            if history:
-                payload['history'] = history[:-1]
-                payload['query'] = history[-1]['content']
-
+            payload["history"] = history[:-1]
+            payload["query"] = history[-1]["content"]
+            payload["knowledge_base_name"] = "新奥百科知识库"
             return payload
 
-        try:
-            url = self.gsr.api_config['langchain'] + '/chat/knowledge_base_chat'
-            intentCode = kwargs.get("intentCode", 'other')
+        url = self.gsr.api_config["langchain"] + "/chat/knowledge_base_chat"
+        intentCode = kwargs.get("intentCode", "other")
 
-            # 获取当前意图的消息
-            messages = [i for i in kwargs['history'] if i.get("intentCode") == intentCode]
+        messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
 
-            # 添加系统提示词
-            desc = self.prompt_meta_data['event'][intentCode].get('description', '')
-            process = self.prompt_meta_data['event'][intentCode].get('process', '')
-            if desc or process:
-                ext_info = desc + "\n" + process
-                messages = [{"role": "system", "content": ext_info}] + messages
+        desc = self.prompt_meta_data["event"][intentCode].get("description", "")
+        process = self.prompt_meta_data["event"][intentCode].get("process", "")
+        if (
+            desc or process
+        ):  # (optim) 无描述, 不添加system 2024年1月8日14:07:36, 针对需要走纯粹闲聊的问题
+            ext_info = desc + "\n" + process
+            messages = [{"role": "system", "content": ext_info}] + messages
 
-            # 构建知识库查询载荷
-            payload = compose_func_reply(messages)
+        # event_msg = self.prompt_meta_data['event'][intentCode]
+        # system_prompt = event_msg['description'] + "\n" + event_msg['process']
 
-            # 调用知识库API
-            response = self.session.post(url, data=json.dumps(payload))
+        # messages = [{"role":"system", "content": system_prompt}] + messages
+        payload = compose_func_reply(messages)
 
-            # 检查响应状态
-            if response.status_code != 200:
-                logger.error(f"知识库API调用失败: {response.status_code}, {response.text}")
-                raise Exception(f"知识库API调用失败: {response.status_code}")
-
-            # 解析响应
-            response_data = response.json()
-            content = response_data.get('answer', '抱歉，无法获取知识库回答')
-            docs = response_data.get('docs', [])
-
-            # 更新中间变量
-            self.update_mid_vars(
-                mid_vars,
-                key="闲聊-知识库-新奥百科",
-                input_text=payload,
-                output_text=response_data,
-                model="知识库-新奥百科知识库-Qwen-14B-Chat"
-            )
-
-            # 返回结果
-            if kwargs.get("return_his"):
-                messages.append({
+        response = self.session.post(url, data=json.dumps(payload)).json()
+        content, docs = response["answer"], response["docs"]
+        self.update_mid_vars(
+            mid_vars,
+            key="闲聊-知识库-新奥百科",
+            input_text=payload,
+            output_text=response,
+            model="知识库-新奥百科知识库-Qwen1.5-14B-Chat",
+        )
+        if kwargs.get("return_his"):
+            messages.append(
+                {
                     "role": "assistant",
                     "content": "I know the answer.",
-                    "function_call": {"name": "convComplete", "arguments": content}
-                })
-                return messages[1:]  # 跳过system消息
-            else:
-                return content
-        except Exception as e:
-            logger.error(f"知识库查询失败: {e}")
-            error_content = "很抱歉，我现在无法从知识库获取相关信息，请稍后再试。"
-
-            # 更新中间变量
-            self.update_mid_vars(mid_vars, key="闲聊-知识库-错误", input_text=str(kwargs.get('history', [])),
-                                 output_text=f"Error: {str(e)}")
-
-            # 返回安全的结果
-            if kwargs.get("return_his"):
-                return [{"role": "assistant", "content": "I know the answer.",
-                         "function_call": {"name": "convComplete", "arguments": error_content}}]
-            else:
-                return error_content
-
-    def intent_query(self, history: List[Dict], **kwargs) -> Dict:
-        """
-        意图查询处理
-
-        Args:
-            history: 历史记录
-
-        Returns:
-            Dict: 意图查询结果
-        """
-        mid_vars = kwargs.get('mid_vars', [])
-        task = kwargs.get('task', '')
-        input_prompt = kwargs.get('prompt', [])
-
-        try:
-            # 根据任务类型选择意图识别方法
-            if task == 'verify' and input_prompt:
-                # 验证模式下的意图识别
-                intent, desc = get_intent(self.cls_intent_verify(history, mid_vars, input_prompt))
-            else:
-                # 常规意图识别
-                intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs))
-
-            # 根据意图类型处理输出
-            if self.intent_map['callout'].get(intent):
-                out_text = {
-                    'message': get_doc_role(intent),
-                    'intentCode': 'doc_role',
-                    'processCode': 'trans_back',
-                    'intentDesc': desc
+                    "function_call": {"name": "convComplete", "arguments": content},
                 }
-            elif self.intent_map['aiui'].get(intent):
-                out_text = {
-                    'message': '',
-                    'intentCode': intent,
-                    'processCode': 'aiui',
-                    'intentDesc': desc
-                }
-            elif intent in ['food_rec']:
-                if not kwargs.get('userInfo', {}).get('askTastePrefer', ''):
-                    out_text = {
-                        'message': '',
-                        'intentCode': intent,
-                        'processCode': 'trans_back',
-                        'intentDesc': desc
-                    }
-                else:
-                    out_text = {
-                        'message': '',
-                        'intentCode': 'food_rec',
-                        'processCode': 'alg',
-                        'intentDesc': desc
-                    }
-            else:
-                out_text = {
-                    'message': '',
-                    'intentCode': intent,
-                    'processCode': 'alg',
-                    'intentDesc': desc
-                }
+            )
+            return messages[1:]
+        else:
+            return content
 
-            logger.debug('意图识别输出：' + json.dumps(out_text, ensure_ascii=False))
-            return out_text
-        except Exception as e:
-            logger.error(f"意图查询失败: {e}")
-            # 返回安全的默认意图
-            default_intent = {
-                'message': '',
-                'intentCode': 'other',
-                'processCode': 'alg',
-                'intentDesc': '通用对话'
+    def intent_query(self, history, **kwargs):
+        mid_vars = kwargs.get("mid_vars", [])
+        task = kwargs.get("task", "")
+        input_prompt = kwargs.get("prompt", [])
+        if task == "verify" and input_prompt:
+            intent, desc = get_intent(
+                self.cls_intent_verify(history, mid_vars, input_prompt),
+                self.gsr.all_intent,self.gsr.com_intent)
+        else:
+            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs),
+                                      self.gsr.all_intent,self.gsr.com_intent)
+        if self.intent_map["callout"].get(intent):
+            out_text = {
+                "message": get_doc_role(intent),
+                "intentCode": "doc_role",
+                "processCode": "trans_back",
+                "intentDesc": desc,
             }
-            return default_intent
+        elif self.intent_map["aiui"].get(intent):
+            out_text = {
+                "message": "",
+                "intentCode": intent,
+                "processCode": "aiui",
+                "intentDesc": desc,
+            }
+        elif intent in ["food_rec"]:
+            if not kwargs.get("userInfo", {}).get("askTastePrefer", ""):
+                out_text = {
+                    "message": "",
+                    "intentCode": intent,
+                    "processCode": "trans_back",
+                    "intentDesc": desc,
+                }
+            else:
+                out_text = {
+                    "message": "",
+                    "intentCode": "food_rec",
+                    "processCode": "alg",
+                    "intentDesc": desc,
+                }
+        # elif intent in ['sport_rec']:
+        #    if kwargs.get('userInfo', {}).get('askExerciseHabbit', '') and kwargs.get('userInfo',{}).get('askExerciseTabooDegree', '') and kwargs.get('userInfo', {}).get('askExerciseTabooXt', ''):
+        #        out_text = {'message':'',
+        #                'intentCode':intent,'processCode':'alg', 'intentDesc':desc}
+        #    else:
+        #        out_text = {'message':'', 'intentCode':intent,
+        #                'processCode':'trans_back', 'intentDesc':desc}
+        else:
+            out_text = {
+                "message": "",
+                "intentCode": intent,
+                "processCode": "alg",
+                "intentDesc": desc,
+            }
+        logger.debug("意图识别输出：" + json.dumps(out_text, ensure_ascii=False))
+        return out_text
 
-    def fetch_intent_code(self) -> Dict[str, List[str]]:
-        """
-        返回所有的intentCode
-
-        Returns:
-            Dict[str, List[str]]: 意图代码映射
-        """
+    def fetch_intent_code(self):
+        """返回所有的intentCode"""
         intent_code_map = {
-            "get_userInfo_msg": list(self.intent_map['userinfo'].keys()),
-            "get_reminder_tips": list(self.intent_map['tips'].keys()),
-            "other": ['BMI', 'food_rec', 'sport_rec', 'schedule_manager', 'schedule_qry_up', 'auxiliary_diagnosis',
-                      "other"]
+            "get_userInfo_msg": list(self.intent_map["userinfo"].keys()),
+            "get_reminder_tips": list(self.intent_map["tips"].keys()),
+            "other": [
+                "BMI",
+                "food_rec",
+                "sport_rec",
+                "schedule_manager",
+                "schedule_qry_up",
+                "auxiliary_diagnosis",
+                "other",
+            ],
         }
         return intent_code_map
 
-    def pre_fill_param(self, *args, **kwargs) -> Tuple[tuple, dict]:
-        """
-        结合业务逻辑，预构建输入
-
-        Args:
-            args: 位置参数
-            kwargs: 关键字参数
-
-        Returns:
-            Tuple[tuple, dict]: 更新后的参数
-        """
+    def pre_fill_param(self, *args, **kwargs):
+        """结合业务逻辑，预构建输入"""
         intentCode = kwargs.get("intentCode")
-
-        # 检查意图是否存在，不存在则默认为other
-        if not self.prompt_meta_data['event'].get(intentCode):
-            logger.debug(f"不支持当前事件 {intentCode}，将intentCode更改为other。")
-            kwargs['intentCode'] = 'other'
-            intentCode = 'other'
-
-        # 处理特定意图的特殊需求
+        if not self.prompt_meta_data["event"].get(intentCode) and not intentCode in [
+            "weight_meas",
+            "blood_meas",
+            "glucose_diagnosis",
+        ]:
+            logger.debug(
+                f"not support current event {intentCode}, change intentCode to other."
+            )
+            kwargs["intentCode"] = "other"
         if intentCode == "schedule_qry_up" and not kwargs.get("history"):
-            kwargs['history'] = [{"role": 0, "content": "帮我查询今天的日程"}]
-
-        # 日程相关意图需要获取日程信息
+            kwargs["history"] = [{"role": 0, "content": "帮我查询今天的日程"}]
         if "schedule" in intentCode:
-            try:
-                kwargs['schedule'] = self.funcall.call_get_schedule(*args, **kwargs)
-            except Exception as e:
-                logger.error(f"获取日程失败: {e}")
-                kwargs['schedule'] = []  # 使用空列表作为默认值
-
+            kwargs["schedule"] = self.funcall.call_get_schedule(*args, **kwargs)
         return args, kwargs
 
-    def general_yield_result(self, *args, **kwargs) -> Generator[Dict, None, None]:
+    async def general_yield_result(self, *args, **kwargs) -> AsyncGenerator:
+        """预处理,调用pipeline，返回结果
+        1. 通过role_map转换role定义
+        2. history 由backend_history拼接用户输入
         """
-        处理最终的输出
+        args, kwargs = self.pre_fill_param(*args, **kwargs)
+        kwargs["his"] = kwargs.get("history", [])
+        if kwargs.get("history"):
+            if kwargs.get("intentCode") == "auxiliary_diagnosis":
+                history = [
+                    {**i, "role": role_map.get(str(i["role"]), "user")}
+                    for i in kwargs["history"]
+                ]
+                logger.info(f"Process message: {history}")
 
-        Args:
-            args: 位置参数
-            kwargs: 关键字参数
+                kwargs["history"] = kwargs["backend_history"] + history
+                if not kwargs["history"][-1].get("intentCode"):
+                    for i in kwargs["history"]:
+                        i["intentCode"] = kwargs["intentCode"]
+            else:
+                history = [
+                    {**i, "role": role_map.get(str(i["role"]), "user")}
+                    for i in kwargs["history"]
+                ]
+                kwargs["history"] = kwargs["backend_history"] + [history[-1]]
+                if not kwargs["history"][-1].get("intentCode"):
+                    kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
 
-        Yields:
-            Dict: 输出结果
-        """
-        try:
-            # 预处理参数
-            args, kwargs = self.pre_fill_param(*args, **kwargs)
+        if kwargs["intentCode"] == "other":
+            kwargs["prompt"] = None
+            kwargs["sys_prompt"] = None
 
-            # 处理历史记录
-            if kwargs.get("history"):
-                history = [{**i, "role": role_map.get(str(i['role']), "user")} for i in kwargs['history']]
-                kwargs['history'] = kwargs.get('backend_history', []) + [history[-1]]
-                kwargs['history'][-1]['intentCode'] = kwargs['intentCode']
+        logger.info(f"Process message {kwargs.get('history')}")
 
-            # 对于其他意图，清除提示词
-            if kwargs['intentCode'] == 'other':
-                kwargs['prompt'] = None
-                kwargs['sys_prompt'] = None
+        _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
+        # while True:
+        async for yield_item in _iterable:
+            try:
+                # yield_item = next(_iterable)
+                if not yield_item["data"].get("type"):
+                    yield_item["data"]["type"] = "Result"
+                if yield_item["data"]["type"] == "Result" and not yield_item[
+                    "data"
+                ].get("dataSource"):
+                    yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
+                yield yield_item
+            except StopIteration as err:
+                break
 
-            # 执行处理流程
-            _iterable = self.pipeline(*args, **kwargs)
-
-            # 处理每个生成的结果
-            while True:
-                try:
-                    yield_item = next(_iterable)
-
-                    # 确保结果包含类型
-                    if not yield_item['data'].get("type"):
-                        yield_item['data']['type'] = "Result"
-
-                    # 确保结果包含数据源
-                    if yield_item['data']['type'] == "Result" and not yield_item['data'].get("dataSource"):
-                        yield_item['data']['dataSource'] = DEFAULT_DATA_SOURCE
-
-                    yield yield_item
-                except StopIteration:
-                    break
-        except Exception as e:
-            logger.error(f"生成结果处理失败: {e}")
-            # 返回错误信息
-            error_data = {
-                "data": {
-                    "type": "Result",
-                    "dataSource": DEFAULT_DATA_SOURCE,
-                    "message": "抱歉，处理您的请求时出现了问题，请稍后再试。",
-                    "end": True
-                },
-                "mid_vars": kwargs.get('mid_vars', []),
-                "history": kwargs.get('history', [])
-            }
-            yield error_data
-
-    def __log_init(self, **kwargs) -> None:
-        """
-        初始打印日志
-
-        Args:
-            kwargs: 包含意图和历史的参数
-        """
-        intentCode = kwargs.get('intentCode', 'unknown')
-        history = kwargs.get('history', [])
-
-        logger.info(f'intentCode: {intentCode}')
+    def __log_init(self, **kwargs):
+        """初始打印日志"""
+        intentCode = kwargs.get("intentCode")
+        history = kwargs.get("history")
+        logger.info(f"intentCode: {intentCode}")
         if history:
-            logger.info(f"Input: {history[-1].get('content', '')}")
+            logger.info(f"Input: {history[-1]['content']}")
 
-    def parse_last_history(self, history: List[Dict]) -> Tuple[str, Any, str]:
-        """
-        解析历史记录中的最后一条
-
-        Args:
-            history: 历史记录
-
-        Returns:
-            Tuple[str, Any, str]: 工具、内容和思考过程
-        """
-        if not history or len(history) == 0:
-            return "AskHuman", "没有可用的历史记录", "无思考过程"
-
-        last_record = history[-1]
-
-        if not last_record.get('function_call'):
-            return "AskHuman", last_record.get('content', ""), "无思考过程"
-
-        tool = last_record['function_call'].get('name', "AskHuman")
-        content = last_record['function_call'].get('arguments', "")
-        thought = last_record.get('content', "")
-
-        logger.debug(f"Action: {tool}")
-        logger.debug(f"Thought: {thought}")
-        logger.debug(f"Action Input: {content}")
-
+    def parse_last_history(self, history):
+        tool = history[-1]["function_call"]["name"]
+        content = history[-1]["function_call"]["arguments"]
+        thought = history[-1]["content"]
+        # logger.debug(f"Action: {tool}")
+        # logger.debug(f"Thought: {thought}")
+        # logger.debug(f"Action Input: {content}")
         return tool, content, thought
 
-    def get_userInfo_msg(self, prompt: str, history: List[Dict], intentCode: str, mid_vars: List) -> Tuple[str, str]:
-        """
-        获取用户信息
+    def get_userInfo_msg(self, prompt, history, intentCode, mid_vars):
+        """获取用户信息"""
+        logger.debug(f"信息提取prompt:\n{prompt}")
+        model_output = callLLM(
+            prompt,
+            verbose=False,
+            temperature=0,
+            top_p=0.8,
+            max_tokens=200,
+            do_sample=False,
+        )
+        logger.debug("信息提取模型输出：" + model_output)
+        content = model_output.replace("___", "").strip()
+        cnt = []
+        for i in content.split("\n"):
+            if i.startswith("问题") or not i.strip():
+                continue
+            cnt.append(i)
+        content = cnt[0]
+        # model_output = model_output[model_output.find('Output')+7:].split('\n')[0].strip()
+        self.update_mid_vars(
+            mid_vars,
+            key="获取用户信息 01",
+            input_text=prompt,
+            output_text=model_output,
+            model="Qwen1.5-14B-Chat",
+        )
 
-        Args:
-            prompt: 提示词
-            history: 历史记录
-            intentCode: 意图代码
-            mid_vars: 中间变量
-
-        Returns:
-            Tuple[str, str]: 内容和意图代码
-        """
-        logger.debug(f'信息提取prompt:\n{prompt}')
-
-        try:
-            # 调用模型提取信息
-            model_output = callLLM(
-                prompt,
-                verbose=False,
-                temperature=0,
-                top_p=0.8,
-                max_tokens=200,
-                do_sample=False
+        if (
+            sum(
+                [i in content for i in ["询问", "提问", "转移", "结束", "未知", "停止"]]
             )
-            logger.debug('信息提取模型输出：' + model_output)
-            content = model_output
+            != 0
+        ):
+            logger.debug("信息提取流程结束...")
+            content = self.chatter_gaily(mid_vars, history=history)
+            intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
+        else:
+            """
+            content = ''
+            for i in content.strip().split('\n'):
+                if i.startswith('标签值为：'):
+                    content = i
+                    break
+            if not content:
+                content = model_output.strip().split('\n')[0]
+            """
+            logger.debug("标签归一前提取内容：" + content)
+            content = norm_userInfo_msg(intentCode, content)
+            logger.debug("标签归一后提取内容：" + content)
+            content = self.clean_userInfo(content)
 
-            # 更新中间变量
-            self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content,
-                                 model="Qwen-14B-Chat")
+        # content = model_output
+        # content = self.clean_userInfo(content)
 
-            # 处理提取结果
-            exit_keywords = ["询问", "提问", "转移", "结束", "未知", "停止"]
-            if any(keyword in content for keyword in exit_keywords):
-                logger.debug('信息提取流程结束...')
-                content = self.chatter_gaily(mid_vars, history=history)
-                intentCode = EXT_USRINFO_TRANSFER_INTENTCODE
-            elif content:
-                # 只取第一行第一句，并限制长度
-                content = content.split('\n')[0].split('。')[0][:20]
-                logger.debug('标签归一前提取内容：' + content)
-                content = norm_userInfo_msg(intentCode, content)
-                logger.debug('标签归一后提取内容：' + content)
+        content = content if content else "未知"
+        content = "未知" if "Error" in content else content
+        logger.debug(
+            "信息提取返回内容数据：" + content + "     返回意图码：" + intentCode
+        )
 
-            # 处理空内容和错误
-            content = content if content else '未知'
-            content = '未知' if 'Error' in content else content
+        return content, intentCode
 
-            return content, intentCode
-        except Exception as e:
-            logger.error(f"用户信息提取失败: {e}")
-            return '未知', intentCode
+    def clean_userInfo(self, content):
+        content = (
+            content.replace("'", "")
+            .replace("{", "")
+            .replace("}", "")
+            .replace("[", "")
+            .replace("]", "")
+            .replace("。", "")
+        )
+        content = (
+            content.replace("用户昵称：", "")
+            .replace("输出：", "")
+            .replace("标签值为：", "")
+        )
+        return content
 
-    def get_reminder_tips(self, prompt: str, history: List[Dict], intentCode: str, model='Baichuan2-7B-Chat',
-                          mid_vars=None) -> Tuple[str, str]:
-        """
-        获取提醒提示
+    def get_reminder_tips(
+        self, prompt, history, intentCode, model="Qwen2-7B-Instruct", mid_vars=None
+    ):
+        logger.debug("remind prompt: " + prompt)
+        content = callLLM(
+            query=prompt,
+            verbose=False,
+            do_sample=False,
+            temperature=0.1,
+            top_p=0.2,
+            max_tokens=500,
+            model=model,
+        )
+        self.update_mid_vars(
+            mid_vars, key="", input_text=prompt, output_text=content, model=model
+        )
+        logger.debug("remind model output: " + content)
+        if content.startswith("（）"):
+            content = content[2:].strip()
+        return content, intentCode
 
-        Args:
-            prompt: 提示词
-            history: 历史记录
-            intentCode: 意图代码
-            model: 模型名称
-            mid_vars: 中间变量
-
-        Returns:
-            Tuple[str, str]: 内容和意图代码
-        """
-        logger.debug('remind prompt: ' + prompt)
-
-        try:
-            # 调用模型生成提醒内容
-            content = callLLM(
-                query=prompt,
-                verbose=False,
-                do_sample=False,
-                temperature=0.1,
-                top_p=0.2,
-                max_tokens=500,
-                model=model
-            )
-
-            # 更新中间变量
-            if mid_vars is not None:
-                self.update_mid_vars(mid_vars, key="提醒生成", input_text=prompt, output_text=content, model=model)
-
-            logger.debug('remind model output: ' + content)
-
-            # 清理输出中的特殊前缀
-            if content.startswith('（）'):
-                content = content[2:].strip()
-
-            return content, intentCode
-        except Exception as e:
-            logger.error(f"提醒生成失败: {e}")
-            return "抱歉，我现在无法为您提供提醒。", intentCode
-
-    def open_page(self, mid_vars: List, **kwargs) -> str:
-        """
-        组装打开页面对应的prompt
-
-        Args:
-            mid_vars: 中间变量
-
-        Returns:
-            str: 页面名称
-        """
-        # 关键词映射列表
-        keyword_to_page = {
-            "血压趋势": 'pagename:"bloodPressure-trend-chart"',
-            "血压录入": 'pagename:"add-blood-pressure"',
-            "血压添加": 'pagename:"add-blood-pressure"',
-            "录入血压": 'pagename:"add-blood-pressure"',
-            "添加血压": 'pagename:"add-blood-pressure"',
-            "交流": 'pagename:"interactive-information"',
-            "聊天": 'pagename:"interactive-information"',
-            "信息交互": 'pagename:"interactive-information"',
-            "设置": 'pagename:"personal-setting"',
-            "二维码": 'pagename:"qr-code"',
-            "血压历史": 'pagename:"record-list3"',
-            "历史血压": 'pagename:"record-list3"',
-            "打开记录": 'pagename:"add-diet"',
-            "打开录入": 'pagename:"add-diet"',
-            "打开添加": 'pagename:"add-diet"',
-            "饮食记录": 'pagename:"diet-record"',
-            "饮食添加": 'pagename:"diet-record"',
-            "打开推荐": 'pagename:"diet-record"',
-            "饮食评估": 'pagename:"diet-record"',
-            "食谱": 'pagename:"diet-record"',
-            "我的饮食": 'pagename:"diet-record"',
-            "食谱页面": 'pagename:"diet-record"',
-            "餐食记录": 'pagename:"diet-record"',
-            "集市": 'pagename:"my-market"'
-        }
-
-        try:
-            # 格式化历史记录
-            input_history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in
-                             kwargs['history']]
-            input_history = input_history[-3:]  # 只取最近3条记录
-            latest_msg = input_history[-1]['content']
-
-            # 检查特定关键词组合
-            if "打开" in latest_msg and "日程" in latest_msg:
-                return 'pagename:"my-schedule"'
-
-            # 检查其他关键词
-            for keyword, page in keyword_to_page.items():
-                if keyword in latest_msg:
-                    return page
-
-            # 构建更复杂的提示，让模型判断要打开的页面
-            hp = [h['role'] + ' ' + h['content'] for h in input_history]
-            hi = ''
-
-            if len(input_history) > 1:
-                hi = '用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是很久以前的记录：' + '\n' + '\n'.join(
-                    [h["role"] + h["content"] for h in input_history[-3:-1]]) + '\n' + '当前用户输入：\n'
-
-            hi += f'Question:{input_history[-1]["content"]}\nThought:'
-            ext_info = self.prompt_meta_data['event']['open_Function']['description'] + "\n" + \
-                       self.prompt_meta_data['event']['open_Function']['process'] + '\n' + hi + '\nThought:'
-
-            input_history = [{"role": "system", "content": ext_info}]
-            logger.debug('打开页面模型输入：' + json.dumps(input_history, ensure_ascii=False))
-
-            # 调用模型获取页面
-            content = callLLM("", input_history, temperature=0, top_p=0.8, do_sample=False)
-
-            # 解析模型输出
-            if 'Answer' in content:
-                content = content[content.find('Answer') + 7:].split('\n')[0].strip()
-            elif 'Output' in content:
-                content = content[content.find('Response') + 6:].split('\n')[0].strip()
-            elif 'Response' in content:
-                content = content[content.find('') + 9:].split('\n')[0].strip()
-
-            # 更新中间变量
-            self.update_mid_vars(mid_vars, key="打开功能画面", input_text=json.dumps(input_history, ensure_ascii=False),
-                                 output_text=content)
-
-            return content
-        except Exception as e:
-            logger.error(f"打开页面处理失败: {e}")
-            return "pagename:\"unknown\""
-
-    def get_pageName_code(self, text: str) -> str:
-        """
-        从文本中提取页面名称代码
-
-        Args:
-            text: 包含页面信息的文本
-
-        Returns:
-            str: 页面代码
-        """
-        logger.debug('页面生成内容：' + text)
-
-        # 页面名称映射
-        page_mappings = [
-            ('bloodPressure-trend-chart', 'bloodPressure-trend-chart'),
-            ('add-blood-pressure', 'add-blood-pressure'),
-            ('record-list3', 'record-list3'),
-            ('my-schedule', 'my-schedule'),
-            ('add-diet', 'add-diet'),
-            ('diet-record', 'diet-record'),
-            ('my-market', 'my-market'),
-            ('personal-setting', 'personal-setting'),
-            ('qr-code', 'qr-code'),
-            ('smart-home', 'smart-home'),
-            ('interactive-information', 'interactive-information')
+    def open_page(self, mid_vars, **kwargs):
+        """组装mysql中打开页面对应的prompt"""
+        add_bp_list = ["血压录入", "血压添加", "录入血压", "添加血压"]
+        add_diet_list = ["打开记录", "打开录入", "打开添加"]
+        diet_record_list = [
+            "饮食记录",
+            "饮食添加",
+            "打开推荐",
+            "饮食评估",
+            "食谱",
+            "我的饮食",
+            "食谱页面",
+            "餐食记录",
         ]
+        market_list = ["集市"]
+        personal_list = ["我的设置"]
+        qr_code_list = ["二维码"]
+        inter_info_list = ["交流", "聊天", "信息交互"]
+        input_history = [
+            {"role": role_map.get(str(i["role"]), "user"), "content": i["content"]}
+            for i in kwargs["history"]
+        ]
+        input_history = input_history[-3:]
+        if "血压趋势" in input_history[-1]["content"]:
+            return 'pagename:"bloodPressure-trend-chart"'
+        elif sum([1 for i in add_bp_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"add-blood-pressure"'
+        elif sum([1 for i in inter_info_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"interactive-information"'
+        elif sum([1 for i in personal_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"personal-setting"'
+        elif sum([1 for i in qr_code_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"qr-code"'
+        elif (
+            "血压历史" in input_history[-1]["content"]
+            or "历史血压" in input_history[-1]["content"]
+        ):
+            return 'pagename:"record-list3"'
+        elif sum([1 for i in add_diet_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"add-diet"'
+        elif (
+            sum([1 for i in diet_record_list if i in input_history[-1]["content"]]) > 0
+        ):
+            return 'pagename:"diet-record"'
+        elif sum([1 for i in market_list if i in input_history[-1]["content"]]) > 0:
+            return 'pagename:"my-market"'
+        elif (
+            "打开" in input_history[-1]["content"]
+            and "日程" in input_history[-1]["content"]
+        ):
+            return 'pagename:"my-schedule"'
 
-        # 检查文本中是否包含页面名称
-        for page_id, page_code in page_mappings:
-            if page_id in text and 'pagename' in text:
-                return page_code
+        hp = [h["role"] + " " + h["content"] for h in input_history]
+        hi = ""
+        if len(input_history) > 1:
+            hi = (
+                "用户历史会话如下，可以作为意图识别的参考，但不要过于依赖历史记录，因为它可能是狠久以前的记录："
+                + "\n"
+                + "\n".join([h["role"] + h["content"] for h in input_history[-3:-1]])
+                + "\n"
+                + "当前用户输入：\n"
+            )
+        hi += f'Question:{input_history[-1]["content"]}\nThought:'
+        ext_info = (
+            self.prompt_meta_data["event"]["open_Function"]["description"]
+            + "\n"
+            + self.prompt_meta_data["event"]["open_Function"]["process"]
+            + "\n"
+            + hi
+            + "\nThought:"
+        )
+        input_history = [{"role": "system", "content": ext_info}]
+        logger.debug(
+            "打开页面模型输入：" + json.dumps(input_history, ensure_ascii=False)
+        )
+        content = callLLM("", input_history, temperature=0, top_p=0.8, do_sample=False)
+        if content.find("Answer") != -1:
+            content = content[content.find("Answer") + 7 :].split("\n")[0].strip()
+        if content.find("Output") != -1:
+            content = content[content.find("Response") + 6 :].split("\n")[0].strip()
+        if content.find("Response") != -1:
+            content = content[content.find("") + 9 :].split("\n")[0].strip()
 
-        return 'other'
+        self.update_mid_vars(
+            mid_vars,
+            key="打开功能画面",
+            input_text=json.dumps(input_history, ensure_ascii=False),
+            output_text=content,
+        )
+        return content
 
-    def complete(self, mid_vars: List[object], **kwargs) -> Tuple[List[Dict], str]:
-        """
-        only prompt模式的生成及相关逻辑
+    def get_pageName_code(self, text):
+        logger.debug("页面生成内容：" + text)
+        if "bloodPressure-trend-chart" in text and "pagename" in text:
+            return "bloodPressure-trend-chart"
+        elif "add-blood-pressure" in text and "pagename" in text:
+            return "add-blood-pressure"
+        elif "record-list3" in text and "pagename" in text:
+            return "record-list3"
+        elif "my-schedule" in text and "pagename" in text:
+            return "my-schedule"
+        elif "add-diet" in text and "pagename" in text:
+            return "add-diet"
+        elif "diet-record" in text and "pagename" in text:
+            return "diet-record"
+        elif "my-market" in text and "pagename" in text:
+            return "my-market"
+        elif "personal-setting" in text and "pagename" in text:
+            return "personal-setting"
+        elif "qr-code" in text and "pagename" in text:
+            return "qr-code"
+        elif "smart-home" in text and "pagename" in text:
+            return "smart-home"
+        elif "interactive-information" in text and "pagename" in text:
+            return "interactive-information"
+        else:
+            return "other"
 
-        Args:
-            mid_vars: 中间变量
+    def __raw_event_process_for_doctor_recommend_at_end__(
+        self, intentCode, appendData, chat_history, ret_result
+    ):
+        """附加医生推荐 原流程追加信息"""
+        if intentCode.startswith("auxiliary_diagnosis"):
+            if self.__assert_diet_suggest_in_content__(chat_history[-1]["content"]):
+                # 2024年4月24日11:06:51 增加新事件
+                # 判断auxiliary_diagnosis_with_doctor_recommend结束
+                append_content = "请问是否需要我帮您找一位医生？"
+                appendData["contents"] = [append_content]
+                # appendData["scheme_gen"] = 1
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
+                )
+        elif intentCode.startswith("report_interpretation_chat"):
+            _content = (
+                chat_history[-1]["function_call"]["arguments"]
+                if chat_history[-1].get("function_call")
+                else None
+            )
+            if (
+                _content
+                and "?" not in _content
+                and "？" not in _content
+                and not appendData.get("doctor_rec")
+            ):
+                _append_content = "请问是否需要我帮您找一位医生？"
+                # appendData["scheme_gen"] =
+                appendData["contents"].append(_append_content)
+                chat_history.append(
+                    {
+                        "role": "assistant",
+                        "content": _append_content,
+                        "intentCode": "aigc_functions_doctor_recommend",
+                    }
+                )
+        # elif intentCode.startswith("blood_meas"):
+        #     _content = (
+        #         chat_history[-1]["function_call"]["arguments"]
+        #         if chat_history[-1].get("function_call")
+        #         else None
+        #     )
+        #     if ret_result.get("init_intent"):
+        #         _append_content = "请问是否需要我帮您找一位医生？"
+        #         appendData["contents"].append(_append_content)
+        #         chat_history.append(
+        #             {
+        #                 "role": "assistant",
+        #                 "content": _append_content,
+        #                 "intentCode": "aigc_functions_doctor_recommend",
+        #             }
+        #         )
 
-        Returns:
-            Tuple[List[Dict], str]: 更新的历史记录和意图代码
-        """
-        # 验证必要参数
-        if not kwargs.get("prompt"):
-            raise ValueError("当前处理类型为only_prompt，但未提供prompt参数。")
+    async def complete(
+        self, mid_vars: List[object], tool: str = "convComplete", **kwargs
+    ):
+        """only prompt模式的生成及相关逻辑"""
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        _appendData = {"doctor_rec": []}
+        weight_res, blood_res, conts, notify_blood_pressure_contnets = {}, {}, [], []
+        content, level, modi_scheme, thought, contact_doctor, visit_verbal_idx = "", "", "", "我知道如何回答", -1, -1
+        prompt = kwargs.get("prompt")
+        chat_history = kwargs["history"]
+        intentCode = kwargs["intentCode"]
+        sch = blood_trend_gen = call_120 = is_visit = exercise_video = (
+            notifi_daughter_doctor
+        ) = weight_trend_gen = False
+        if self.intent_map["userinfo"].get(intentCode):
+            content, intentCode = self.get_userInfo_msg(
+                prompt, chat_history, intentCode, mid_vars
+            )
+        elif self.intent_map["tips"].get(intentCode):
+            content, intentCode = self.get_reminder_tips(
+                prompt, chat_history, intentCode, mid_vars=mid_vars
+            )
+        elif intentCode == "open_Function":
+            output_text = self.open_page(mid_vars, **kwargs)
+            content = (
+                "稍等片刻，页面即将打开"
+                if self.get_pageName_code(output_text) != "other"
+                else output_text
+            )
+            intentCode = self.get_pageName_code(output_text)
+            logger.debug("页面Code: " + intentCode)
+        elif intentCode in [
+            "auxiliary_diagnosis",
+            "auxiliary_diagnosis_with_doctor_recommend",
+        ]:
+            doctor_rec_code = "aigc_functions_doctor_recommend"
+            # 调用医生推荐
+            if (
+                len(chat_history) >= 2
+                and chat_history[-2]["intentCode"] == doctor_rec_code
+            ):
+                # chat_history[-1] 为用户对医生的需求
+                # chat_history[-2] 为询问是否需要推荐医生
+                # chat_history[-3] 为当前事件的总结
+                param = AigcFunctionsDoctorRecommendRequest(
+                    intentCode=doctor_rec_code,
+                    prompt=chat_history[-3]["content"],
+                    messages=[
+                        {"role": "assistant", "content": chat_history[-2]["content"]},
+                        {"role": "user", "content": chat_history[-1]["content"]},
+                    ],
+                ).model_dump()
+                doctor_rec = await self.gsr.agents.call_function(**param)
+                _appendData["doctor_rec"] = doctor_rec
+                thought = "判断是否需要医生推荐"
+                if doctor_rec:
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
+                else:
+                    content = (
+                        "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
+                    )
+                tool = "convComplete"
 
-        prompt = kwargs['prompt']
-        chat_history = kwargs['history']
-        intentCode = kwargs['intentCode']
-
-        try:
-            # 根据意图类型选择处理方法
-            if self.intent_map['userinfo'].get(intentCode):
-                # 用户信息提取
-                content, intentCode = self.get_userInfo_msg(prompt, chat_history, intentCode, mid_vars)
-            elif self.intent_map['tips'].get(intentCode):
-                # 提醒生成
-                content, intentCode = self.get_reminder_tips(prompt, chat_history, intentCode, mid_vars=mid_vars)
-            elif intentCode == "open_Function":
-                # 打开功能页面
-                output_text = self.open_page(mid_vars, **kwargs)
-                page_code = self.get_pageName_code(output_text)
-                content = '稍等片刻，页面即将打开' if page_code != 'other' else output_text
-                intentCode = page_code
-                logger.debug('页面Code: ' + intentCode)
             else:
-                # 默认闲聊
-                content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
+                mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+                tool = "askHuman"
+            if conts and len(conts)>0:
+                intentCode = "assert_whether_contact_family_doctor"
+                tool = "convComplete"
+                # content = content+conts[0]
+        elif intentCode == "pressure_meas":
+            pressure_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = pressure_res["content"]
+            # sch = pressure_res['scheme_gen']
+            thought = pressure_res["thought"]
+            sch = pressure_res["scheme_gen"]
+            tool = (
+                "askHuman" if pressure_res["scene_ending"] == False else "convComplete"
+            )
+        elif intentCode == "weight_meas":
+            weight_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            if weight_res["contents"]:
+                content = weight_res["contents"][0]
+                conts = weight_res["contents"][1:]
+            sch = weight_res["scheme_gen"]
+            thought = weight_res["thought"]
+            weight_trend_gen = weight_res["weight_trend_gen"]
+            modi_scheme = weight_res.get("modi_scheme", "scheme_no_change")
 
-            # 验证返回类型
-            if not isinstance(content, str):
-                logger.warning(f"only_prompt模式下，返回值必须为str类型，但获得了{type(content)}")
-                content = str(content)
+            level = ""
+            tool = "askHuman" if weight_res["scene_ending"] == False else "convComplete"
+        elif intentCode  =="blood_meas":
+            blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+            content = blood_res["contents"][0]
+            conts = blood_res["contents"][1:]
+            sch = blood_res["scheme_gen"]
+            thought = blood_res["thought"]
+            level = blood_res["level"]
+            blood_trend_gen = blood_res["blood_trend_gen"]
+            notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
+            call_120 = blood_res["call_120"]
+            is_visit = blood_res["is_visit"]
+            contact_doctor = blood_res['contact_doctor']
+            visit_verbal_idx = blood_res["visit_verbal_idx"]
+            # idx = blood_res.get('idx', 0)
+            tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+            if blood_res["scene_ending"] and (level == 0 or level == 1):
+                conts.append(
+                    "基于您的生命熵变化，我给您匹配一个降压小妙招，您可以试一下。然后建议联系家庭医生对您进行后续健康服务，我现在帮您邀请在线家庭医生吧。"
+                )
+                intentCode = "assert_whether_contact_family_doctor"
+            notify_blood_pressure_contnets = blood_res.get("events", [])
+            exercise_video = blood_res.get("exercise_video", False)
+        # todo
+        elif intentCode == "blood_interact":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
+        elif intentCode == "glucose_consultation":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
+            else:
+                conts=[]
+        elif intentCode == "sanji_glucose_diagnosis":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
+        elif intentCode =="chat_start_with_weather":
+            mid_vars, conts, (thought, content) = (
+                    await self.custom_chat_auxiliary.chat(mid_vars=mid_vars, **kwargs)
+                )
+            if len(conts)==0:
+                tool = "askHuman"
+        # elif intentCode == "blood_meas_with_doctor_recommend":
+        #     blood_res = self.custom_chat_model.chat(mid_vars=mid_vars, **kwargs)
+        #     content = blood_res["contents"][0]
+        #     conts = blood_res["contents"][1:]
+        #     sch = blood_res["scheme_gen"]
+        #     thought = blood_res["thought"]
+        #     level = blood_res["level"]
+        #     blood_trend_gen = blood_res["blood_trend_gen"]
+        #     notifi_daughter_doctor = blood_res["notifi_daughter_doctor"]
+        #     call_120 = blood_res["call_120"]
+        #     is_visit = blood_res["is_visit"]
+        #     # idx = blood_res.get('idx', 0)
+        #     tool = "askHuman" if blood_res["scene_ending"] == False else "convComplete"
+        #     if blood_res["scene_ending"]:
+        #         conts.append(
+        #             "我建议您联系家庭医生对你进行后续健康服务，我现在帮您邀请家庭医生吧？"
+        #         )
+        #         intentCode = "assert_whether_contact_family_doctor"
+        #     notify_blood_pressure_contnets = blood_res.get("events", [])
+        #     exercise_video = blood_res.get("exercise_video", False)
+        elif intentCode in [
+            "report_interpretation_chat",
+            "report_interpretation_chat_with_doctor_recommend",
+        ]:
+            doctor_rec_code = "aigc_functions_doctor_recommend"
+            # 调用医生推荐
+            if (
+                len(chat_history) >= 2
+                and chat_history[-2]["intentCode"] == doctor_rec_code
+            ):
+                param = AigcFunctionsDoctorRecommendRequest(
+                    intentCode=doctor_rec_code,
+                    prompt=chat_history[-3]["content"],
+                    messages=[
+                        {"role": "assistant", "content": chat_history[-2]["content"]},
+                        {"role": "user", "content": chat_history[-1]["content"]},
+                    ],
+                ).model_dump()
+                doctor_rec = await self.gsr.agents.call_function(**param)
+                _appendData["doctor_rec"] = doctor_rec
+                thought = "判断是否需要医生推荐"
+                if doctor_rec:
+                    content = "根据您的问诊结果，我已为您匹配离您最近、最适于您的医师。"
+                else:
+                    content = (
+                        "好的, 我还可以为您提供其他健康咨询服务, 请问您有什么问题吗?"
+                    )
+                tool = "convComplete"
+            else:
+                kwargs["history"] = [
+                    i
+                    for i in kwargs["history"]
+                    if i.get("intentCode").startswith("report_interpretation_chat")
+                ]
+                mid_vars, chat_history, conts, sch, (thought, content, tool) = (
+                    self.custom_chat_report_interpretation_ask.chat(
+                        mid_vars=mid_vars, **kwargs
+                    )
+                )
+        elif intentCode == "report_interpretation_answer":
+            kwargs["history"] = [
+                i
+                for i in kwargs["history"]
+                if i.get("intentCode") == "report_interpretation_answer"
+            ]
+            mid_vars, chat_history, conts, sch, (thought, content, tool) = (
+                self.custom_chat_report_interpretation_answer.chat(
+                    mid_vars=mid_vars, **kwargs
+                )
+            )
+        elif intentCode == "assert_whether_contact_family_doctor":
+            # 判断是否需要联系家庭医生
+            user_input = chat_history[-1]["content"]
+            # prompt_template = self.gsr.get_event_item(
+            #     "assert_whether_contact_family_doctor"
+            # )["description"]
+            prompt_template = (
+                "请你帮我做判断, 输出选项中给定的内容\n"
+                "问: 请问是否需要帮您联系家庭医生\n"
+                "用户: {user_input}"
+            )
+            prompt = prompt_template.format(user_input=user_input)
+            contactFamilyDoctor = self.gsr.agents.aigc_functions_single_choice(
+                prompt=prompt,
+                options=["YES", "NO"],
+            )
+            if contactFamilyDoctor == "YES":
+                contactFamilyDoctor = 1
+                content = "好的，正为您联系你的家庭医生"
+            else:
+                contactFamilyDoctor = 0
+                content = "好的，我还能为您提供什么帮助？"
+            intentCode = ""
+            _appendData["contactFamilyDoctor"] = contactFamilyDoctor
+        else:
+            content = self.chatter_gaily(mid_vars, return_his=False, **kwargs)
 
-            # 更新历史记录
-            chat_history.append({
+        assert type(content) == str, "only_prompt模式下，返回值必须为str类型"
+
+        appendData = {
+            "contents": conts,
+            "scheme_gen": sch,
+            "level": level,
+            "blood_trend_gen": blood_trend_gen,
+            "notifi_daughter_doctor": notifi_daughter_doctor,
+            "call_120": call_120,
+            "is_visit": is_visit,
+            "modi_scheme": modi_scheme,
+            "weight_trend_gen": weight_trend_gen,
+            "events": notify_blood_pressure_contnets,
+            "exercise_video": exercise_video,
+            "contact_doctor":contact_doctor,
+            "visit_verbal_idx": visit_verbal_idx,
+            **_appendData,
+        }
+        chat_history.append(
+            {
+                "role": "assistant",
+                "content": thought,
+                "function_call": {"name": tool, "arguments": content},
+                "intentCode": intentCode,
+            }
+        )
+        return appendData, chat_history, intentCode
+
+    def complete_temporary(self, mid_vars: List[object], **kwargs):
+        # XXX 演示临时增加逻辑 2024年01月31日12:39:28
+        # XXX 推出这句话同时调用创建日程（2个：体温监测、挂号）
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        # prompt = kwargs.get("prompt")
+        history = kwargs["history"]
+        intentCode = kwargs["intentCode"]
+        content = (
+            "请您时刻关注自己的病情变化，如果出现新症状（胸痛、呼吸困难、疲劳等）或者原有症状加重（如咳嗽频率增加、持续发热、症状持续时间超过3天），建议您线下就医。"
+            + "依据病情若有需要推荐您在廊坊市人民医院呼吸内科就诊。廊坊市人民医院的公众号挂号渠道0点开始放号。我帮您设置一个23:55的挂号日程，您看可以吗？"
+        )
+
+        url = self.gsr.api_config["ai_backend"] + "/alg-api/schedule/manage"
+        for task, cronData in [
+            ["体温测量", "一个小时后"],
+            ["挂号提醒", "今晚23点55分"],
+        ]:
+            if cronData == "一个小时后":
+                cronData = date_after(hours=1)
+            elif cronData == "今晚23点55分":
+                cronData = curr_time()[:10] + " 23:55:00"
+            payload = {
+                "customId": kwargs.get("customId"),
+                "orgCode": kwargs.get("orgCode"),
+                "taskName": task,
+                "cronDate": cronData,
+                "taskType": "reminder",
+                "intentCode": "CREATE",
+            }
+            resp_js = self.session.post(url, json=payload).json()
+            if resp_js["code"] == 200 and resp_js["data"] is True:
+                ...
+            else:
+                logger.error(f"Error to create schedule {task}")
+        # reply = self.funcall.scheduleManager.create(
+        #     history=_history,
+        #     intentCode="schedule_manager",
+        #     orgCode=kwargs.get("orgCode"),
+        #     customId=kwargs.get("customId"),
+        #     mid_vars=kwargs.get("mid_vars", []),
+        # )
+        history.append(
+            {
                 "role": "assistant",
                 "content": "I know the answer.",
-                "function_call": {"name": "convComplete", "arguments": content}
-            })
+                "function_call": {"name": "convComplete", "arguments": content},
+                "intentCode": intentCode,
+            }
+        )
+        return history
 
-            return chat_history, intentCode
-        except Exception as e:
-            logger.error(f"完成处理失败: {e}")
-            # 生成安全的响应
-            error_content = "抱歉，我暂时无法处理您的请求，请稍后再试。"
-            chat_history.append({
+    def complete_temporary_v1(self, mid_vars: List[object], **kwargs):
+        # XXX 演示临时增加逻辑 2024年01月31日12:39:28
+        # XXX 推出这句话同时调用创建日程（2个：体温监测、挂号）
+        # assert kwargs.get("prompt"), "Current process type is only_prompt, but not prompt passd."
+        # prompt = kwargs.get("prompt")
+        history = kwargs["history"]
+        intentCode = kwargs["intentCode"]
+        content = "我1小时后会提醒您测量体温。"
+
+        history.append(
+            {
                 "role": "assistant",
                 "content": "I know the answer.",
-                "function_call": {"name": "convComplete", "arguments": error_content}
-            })
-            return chat_history, intentCode
+                "function_call": {"name": "convComplete", "arguments": content},
+                "intentCode": intentCode,
+            }
+        )
+        return history
 
-    def interact_first(self, mid_vars: List, **kwargs) -> Tuple[List[Dict], str]:
-        """
-        首次交互处理
-
-        Args:
-            mid_vars: 中间变量
-
-        Returns:
-            Tuple[List[Dict], str]: 历史记录和意图代码
-        """
-        intentCode = kwargs.get('intentCode', '')
+    async def interact_first(self, mid_vars, **kwargs):
+        """首次交互"""
+        intentCode = kwargs.get("intentCode")
         out_history = None
+        appendData = {}
+        if self.prompt_meta_data["event"].get(intentCode):
+            # XXX 演示临时增加逻辑 2024年01月31日11:28:00
+            # XXX 判断kwargs历史中最后一条的content字段和"我需要去医院吗？"是否一致，如果一致，则进入临时逻辑，否则进入正常流程
+            if (
+                kwargs["history"]
+                and "我需要去医院吗" in kwargs["history"][-1]["content"]
+            ):
+                out_history = self.complete_temporary(mid_vars=mid_vars, **kwargs)
+            elif (
+                kwargs["history"]
+                and len(kwargs["history"]) >= 2
+                and kwargs["history"][-2].get("function_call")
+                and isinstance(kwargs["history"][-2].get("function_call", ""), str)
+                and kwargs["history"][-2]["function_call"]["arguments"].startswith(
+                    "请您时刻关注自己的病情变化，"
+                )
+                and [
+                    i
+                    for i in ["好的", "行", "可以", "ok", "OK"]
+                    if i in kwargs["history"][-1]["content"]
+                ]
+                # and set(kwargs["history"][-1]["content"]).intersection(set("好行可以"))
+            ):
+                out_history = self.complete_temporary_v1(mid_vars=mid_vars, **kwargs)
+            elif intentCode == "other":
+                # 2023年12月26日10:07:03 闲聊接入知识库 https://devops.aliyun.com/projex/task/VOSE-3715# 《模型中调用新奥百科的知识内容》
+                # out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
+                out_history = self.chatter_gaily_new(
+                    mid_vars, **kwargs, return_his=True
+                )
+            elif intentCode == "enn_wiki":
+                out_history = self.chatter_gaily_knowledge(
+                    mid_vars, **kwargs, return_his=True
+                )
+            elif self.prompt_meta_data["event"][intentCode].get("process_type") in [
+                "only_prompt",
+                "custom_chat",
+            ]:
+                appendData, out_history, intentCode = await self.complete(
+                    mid_vars=mid_vars, **kwargs
+                )
+                kwargs["intentCode"] = intentCode
+            elif (
+                self.prompt_meta_data["event"][intentCode].get("process_type")
+                == "react"
+            ):
+                out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+            elif intentCode == "jia_kang_bao":
+                kwargs["user_question"] = kwargs.get("history", [{}])[-1].get("content", "")
+                kwargs["messages"] = kwargs.get("history", [])
 
-        try:
-            # 检查事件是否存在于prompt_meta_data中
-            if self.prompt_meta_data['event'].get(intentCode):
-                if intentCode == "other":
-                    # 闲聊
-                    out_history = self.chatter_gaily(mid_vars, **kwargs, return_his=True)
-                elif intentCode == "enn_wiki":
-                    # 知识库查询
-                    out_history = self.chatter_gaily_knowledge(mid_vars, **kwargs, return_his=True)
-                elif self.prompt_meta_data['event'][intentCode].get("process_type") == "only_prompt":
-                    # 仅提示模式
-                    out_history, intentCode = self.complete(mid_vars=mid_vars, **kwargs)
-                    kwargs['intentCode'] = intentCode
-                elif self.prompt_meta_data['event'][intentCode].get("process_type") == "react":
-                    # ReAct模式
-                    out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
+                health_expert = HealthExpertModel(self.gsr)
+                response = await health_expert.aigc_functions_jia_kang_bao_support(**kwargs)
+                if response is None or not response.get("answer"):
+                    # 修改所有相关 intentCode 为 "other"
+                    intentCode = "other"
+                    kwargs["intentCode"] = "other"
+                    for msg in kwargs.get("messages", []):
+                        msg["intentCode"] = "other"
+                    for history_item in kwargs.get("history", []):
+                        history_item["intentCode"] = "other"
 
-            # 如果没有处理结果，使用chat_react作为备选方案
-            if not out_history:
-                out_history = self.chat_react(mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs)
+                    # 切换到闲聊逻辑
+                    out_history = self.chatter_gaily_new(
+                        mid_vars, **kwargs, return_his=True
+                    )
+                else:
+                    response_content = response.get("answer")
+                    out_history = kwargs["messages"] + [{
+                        "role": "assistant",
+                        "content": response.get("thought", "基于知识库检索"),
+                        "function_call": {
+                            "name": "convComplete",
+                            "arguments": response_content
+                        },
+                        "intentCode": intentCode
+                    }]
+                    appendData = {"guessQuestions": response["guess_you_want"]} if response.get("guess_you_want") else {}
+        if not out_history:
+            out_history = self.chat_react(
+                mid_vars=mid_vars, return_his=True, max_tokens=100, **kwargs
+            )
+        return appendData, out_history, intentCode
 
-            return out_history, intentCode
-        except Exception as e:
-            logger.error(f"首次交互失败: {e}")
-            # 生成安全的响应
-            error_message = "抱歉，处理您的请求时出现了问题，请稍后再试。"
-            safe_history = [{"role": "assistant", "content": "Error occurred.",
-                             "function_call": {"name": "convComplete", "arguments": error_message}}]
-            return safe_history, intentCode
+    def if_init(self, tool):
+        # XXX 不是所有的流程都会调用工具，比如未定义意图的闲聊
+        return self.prompt_meta_data["init_intent"].get(tool, False)
 
-    def if_init(self, tool: str) -> bool:
+    def __assert_diet_suggest_in_content__(self, content):
+        """判断是否有建议饮食"""
+        model = self.gsr.model_config.get(
+            "assert_diet_suggest_in_content", "Qwen1.5-14B-Chat"
+        )
+        promt = f"{content}\n请你理解以上文本内容，判断文本是否同时包含诊断结果、食物推荐，如果同时包含，输出“YES”，否则输出“NO”"
+        logger.debug(f"判断是否有建议饮食 LLM Input: {promt}")
+        messages = [{"role": "user", "content": promt}]
+        flag = callLLM(
+            model=model, history=messages, temperature=0, top_p=0.8, do_sample=False
+        )
+        logger.debug(f"判断是否有建议饮食 LLM Output: {flag}")
+
+        if "yes" in flag.lower():
+            return True
+        else:
+            return False
+
+    async def pipeline(self, mid_vars=[], **kwargs) -> AsyncGenerator:
         """
-        检查工具是否为初始化意图
-
-        Args:
-            tool: 工具名称
-
-        Returns:
-            bool: 是否为初始化意图
-        """
-        return self.prompt_meta_data['init_intent'].get(tool, False)
-
-    def pipeline(self, mid_vars: List = [], **kwargs) -> Iterator[Dict]:
-        """
-        多轮交互流程
-
+        ## 多轮交互流程
         1. 定义先验信息变量,拼装对应prompt
         2. 准备模型输入messages
         3. 模型生成结果
 
-        Args:
-            mid_vars: 中间变量列表
-            kwargs: 包含历史记录和意图代码等参数
+        - Args
 
-        Yields:
-            Dict: 输出结果
+            history (List[Dict[str, str]]) required
+                对话历史信息
+            mid_vars (List[Dict])
+                中间变量
+            intentCode (str)
+                意图编码,直接根据传入的intentCode进入对应的处理子流程
+
+        - Return
+            out_text (Dict[str, str])
+                返回的输出结果
         """
-        # 初始化日志
         self.__log_init(**kwargs)
-
-        # 获取意图代码和中间变量
-        intentCode = kwargs.get('intentCode', '')
-        mid_vars = kwargs.get('mid_vars', [])
+        intentCode = kwargs.get("intentCode")
+        mid_vars = kwargs.get("mid_vars", [])
         dataSource = DEFAULT_DATA_SOURCE
+        appendData, out_history, intentCode = await self.interact_first(
+            mid_vars=mid_vars, **kwargs
+        )
+        while True:
+            tool, content, thought = self.parse_last_history(out_history)
 
-        try:
-            # 首次交互
-            out_history, intentCode = self.interact_first(mid_vars=mid_vars, **kwargs)
+            if (
+                self.prompt_meta_data["event"].get(intentCode)
+                and self.prompt_meta_data["event"][intentCode]["process_type"]
+                != "only_prompt"
+            ):  # 2023年12月13日15:35:50 only_prompt对应的事件不输出思考
+                ret_tool = make_meta_ret(
+                    msg=tool, type="Tool", code=intentCode, gsr=self.gsr
+                )
+                ret_thought = make_meta_ret(
+                    msg=thought, type="Thought", code=intentCode, gsr=self.gsr
+                )
+                yield {
+                    "data": ret_tool,
+                    "mid_vars": mid_vars,
+                    "history": out_history,
+                    "appendData": appendData,
+                }
+                yield {
+                    "data": ret_thought,
+                    "mid_vars": mid_vars,
+                    "history": out_history,
+                    "appendData": appendData,
+                }
 
-            # 循环处理工具调用
-            while True:
-                # 解析历史记录中的最后一条
-                tool, content, thought = self.parse_last_history(out_history)
+            if self.prompt_meta_data["rollout_tool"].get(
+                tool
+            ) or not self.funcall.funcmap.get(tool):
+                # 2023年12月17日17:19:06 增加判断是否支持对应函数 未定义支持的 即使未写rollout_tool也直接返回,不走函数调用
+                break
+            try:
+                kwargs["history"], dataSource = self.funcall._call(
+                    out_history=out_history, mid_vars=mid_vars, **kwargs
+                )
+            except AssertionError as err:
+                logger.error(err)
+                kwargs["history"], dataSource = self.funcall._call(
+                    out_history=out_history, mid_vars=mid_vars, **kwargs
+                )
 
-                # 输出思考过程和工具选择
-                if self.prompt_meta_data['event'].get(intentCode) and self.prompt_meta_data['event'][intentCode].get(
-                        'process_type') != "only_prompt":
-                    ret_tool = make_meta_ret(msg=tool, type="Tool", code=intentCode, gsr=self.gsr)
-                    ret_thought = make_meta_ret(msg=thought, type="Thought", code=intentCode, gsr=self.gsr)
-                    yield {"data": ret_tool, "mid_vars": mid_vars, "history": out_history}
-                    yield {"data": ret_thought, "mid_vars": mid_vars, "history": out_history}
+            if self.prompt_meta_data["rollout_tool_after_complete"].get(tool):
+                # 工具执行完成后输出
+                content = kwargs["history"][-1]["content"]
+                break
+            else:
+                # function_call的结果, self_rag
+                content = kwargs["history"][-1]["content"]
+                ret_function_call = make_meta_ret(
+                    msg=content, type="Observation", code=intentCode, gsr=self.gsr
+                )
+                yield {
+                    "data": ret_function_call,
+                    "mid_vars": mid_vars,
+                    "history": out_history,
+                    "appendData": appendData,
+                }
+                out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
 
-                # 检查是否需要执行工具函数
-                if self.prompt_meta_data['rollout_tool'].get(tool) or not self.funcall.funcmap.get(tool):
-                    # 不需要执行工具或工具不存在，直接退出循环
-                    break
-
-                # 执行工具函数
-                try:
-                    kwargs['history'], dataSource = self.funcall._call(out_history=out_history, mid_vars=mid_vars,
-                                                                       **kwargs)
-                except AssertionError as err:
-                    logger.error(f"工具函数执行失败: {err}")
-                    # 重试工具函数
-                    kwargs['history'], dataSource = self.funcall._call(out_history=out_history, mid_vars=mid_vars,
-                                                                       **kwargs)
-                except Exception as e:
-                    logger.error(f"工具函数执行出现未预期的错误: {e}")
-                    # 中断处理并返回错误信息
-                    dataSource = DEFAULT_DATA_SOURCE
-                    content = "抱歉，处理您的请求时出现了问题，请稍后再试。"
-                    break
-
-                # 检查是否在工具完成后直接输出
-                if self.prompt_meta_data['rollout_tool_after_complete'].get(tool):
-                    # 工具执行完成后输出
-                    content = kwargs['history'][-1]['content']
-                    break
-                else:
-                    # 输出函数调用结果，继续ReAct流程
-                    content = kwargs['history'][-1]['content']
-                    ret_function_call = make_meta_ret(msg=content, type="Observation", code=intentCode, gsr=self.gsr)
-                    yield {"data": ret_function_call, "mid_vars": mid_vars, "history": out_history}
-                    out_history = self.chat_react(mid_vars=mid_vars, **kwargs)
-
-            # 生成最终结果
-            ret_result = make_meta_ret(
-                end=True,
-                msg=content,
-                code=intentCode,
-                gsr=self.gsr,
-                init_intent=self.if_init(tool),
-                dataSource=dataSource
+        ret_result = make_meta_ret(
+            end=True,
+            msg=content,
+            code=intentCode,
+            gsr=self.gsr,
+            init_intent=self.if_init(tool),
+            dataSource=dataSource,
+        )
+        if intentCode.endswith("_with_doctor_recommend"):
+            self.__raw_event_process_for_doctor_recommend_at_end__(
+                intentCode, appendData, out_history, ret_result
             )
-            yield {"data": ret_result, "mid_vars": mid_vars, "history": out_history}
 
-        except Exception as e:
-            logger.error(f"Pipeline处理失败: {e}")
-            # 生成错误结果
-            error_result = make_meta_ret(
-                end=True,
-                msg="抱歉，处理您的请求时遇到了问题，请稍后再试。",
-                code=intentCode,
-                gsr=self.gsr,
-                init_intent=False,
-                dataSource=DEFAULT_DATA_SOURCE
-            )
-            yield {"data": error_result, "mid_vars": mid_vars,
-                   "history": out_history if 'out_history' in locals() else []}
+        """
+        # 演示临时增加逻辑 2024年01月31日11:28:00
+        # 2024年4月23日18:37:06 注释掉食材采购清单的逻辑
+        if (
+            intentCode.endswith("_with_doctor_recommend")
+            and not ret_result["init_intent"]
+        ):
+            # if len([i for i in ["根据", "描述", "水果", "建议", "注意休息", "可以吃"] if i in content]) >= 3:
+            if self.__assert_diet_suggest_in_content__(content):
+                purchasing_list = (
+                    self.gsr.expert_model.food_purchasing_list_generate_by_content(
+                        content
+                    )
+                )
+                ret_result["intentCode"] = "create_food_purchasing_list"
+                ret_result["appendData"] = purchasing_list
+                ret_result["message"] += "\n为您生成了一份采购清单，请确认"
+        """
+
+        yield {
+            "data": ret_result,
+            "mid_vars": mid_vars,
+            "history": out_history,
+            "appendData": appendData,
+        }
 
 
-if __name__ == '__main__':
-    # 初始化聊天实例并测试
-    chat = Chat_v2(initAllResource())
-    ori_input_param = testParam.param_feat_schedular_not_today
-    prompt = ori_input_param['prompt']
-    history = ori_input_param['history']
-    intentCode = ori_input_param['intentCode']
-    customId = ori_input_param['customId']
-    orgCode = ori_input_param['orgCode']
-
-    # 测试生成结果
-    for result in chat.general_yield_result(**ori_input_param):
-        # 在这里处理生成的结果
-        pass
+if __name__ == "__main__":
+    chat = Chat_v2(InitAllResource())
+    ori_input_param = testParam.param_dev_report_interpretation_chat
+    prompt = ori_input_param["prompt"]
+    history = ori_input_param["history"]
+    intentCode = ori_input_param["intentCode"]
+    customId = ori_input_param["customId"]
+    orgCode = ori_input_param["orgCode"]
+    while True:
+        out_text, mid_vars = next(chat.general_yield_result(**ori_input_param))
