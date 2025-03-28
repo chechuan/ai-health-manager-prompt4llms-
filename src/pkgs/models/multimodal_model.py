@@ -660,10 +660,12 @@ Begins!""",
 
     def _get_food_energy_info_json(self, result, ingredient_check=False):
         # 定向纠错，去掉json串前面的分析内容
-        if result[:-3].rfind("```") > 0:
-            result = result[result[:-3].rfind("```"):]
-        if result[:-3].rfind("json") > 0:
-            result = result[result[:-3].rfind("json"):]
+        if result.rfind("```") >= 0:
+            result = result[:result.rfind("```")]
+        if result.find("```") >= 0:
+            result = result[result.find("```"):]
+        if result.rfind("json") >= 0:
+            result = result[result.rfind("json"):]
         if result.rfind("返回") > 0:
             result = result[result.rfind("返回"):]
         if result.rfind("//") > 0:  # 去掉多余的注释内容
