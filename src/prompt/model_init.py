@@ -334,7 +334,7 @@ async def acallLLtrace(
         history: List[Dict] = [],
         temperature=0.5,
         top_p=0.5,
-        max_tokens=1024,
+        max_tokens=2048,
         model: str = DEFAULT_MODEL,
         stop=[],
         stream=False,
@@ -470,7 +470,7 @@ async def acallLLtrace(
             msg = ""
             for i, n in enumerate(list(reversed(history))):
                 msg += n["content"]
-                if len(msg) > 1800:
+                if len(msg) > 10000:
                     h = history[-i:]
                     break
                 else:

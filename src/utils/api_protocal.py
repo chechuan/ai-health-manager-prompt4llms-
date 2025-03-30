@@ -118,9 +118,12 @@ USER_PROFILE_KEY_MAP = {
     "weight_status": "体重状态",
     "preferred_name": "用户期望称呼",
     "city": "所在城市",
-    "last_night_sleep_time":"昨晚睡眠时间",
-    "today_blood_sugar":"今日血糖",
-    "today_life_entropy":"今日生命熵"
+    "last_night_sleep_time": "昨晚睡眠时间",
+    "today_blood_sugar": "今日血糖",
+    "today_life_entropy": "今日生命熵",
+    "sleep_quality": "睡眠质量",
+    "emotion_state": "情绪状态",
+    "lifestyle_habits": "生活习惯"
 }
 
 
@@ -282,6 +285,9 @@ class UserProfile(BaseModel):
     chinese_medicine_symptom: Optional[str] = Field(None, description="证候", examples=["头痛"])
     severity: Optional[str] = Field(None, description="疾病严重程度", examples=["中等"])
     constitution_symptom: Optional[str] = Field(None, description="体质相关症状表现", examples=["口干"])
+    sleep_quality: Optional[str] = Field(None, description="睡眠质量", examples=["良好", "一般", "差"])
+    emotion_state: Optional[str] = Field(None, description="情绪状态", examples=["平稳", "焦虑", "抑郁", "易怒"])
+    lifestyle_habits: Optional[str] = Field(None, description="生活习惯（包括吸烟、饮酒、作息等）", examples=["不吸烟不饮酒，作息规律", "偶尔抽烟，常喝啤酒", "经常熬夜，爱喝奶茶", "已戒烟，生活较健康"])
 
 
 class AigcFunctionsRequest(BaseModel):
@@ -1384,6 +1390,16 @@ class SanJiKangYangRequest(BaseModel):
             'monitor',
             'user'
         ],
+    )
+    glucose_data: Optional[List[Dict]] = Field(
+        None,
+        description="血糖信息",
+        examples=[[{"timestamp": "2025-03-25 08:00", "value": 5.6}]]
+    )
+    questionnaire: Optional[Dict] = Field(
+        None,
+        description="入组问卷",
+        examples=[{"question_1": "每天锻炼"}]
     )
 
 

@@ -2715,3 +2715,155 @@ def query_course(data_dict, course_name):
 
     return result
 
+
+async def convert_dict_to_key_value_section(
+    data: Dict,
+    image: str = "",
+    section_key: str = "title",
+    list_key: str = "data",
+    key_field: str = "name",
+    value_field: str = "value",
+    image_field: str = "image"
+) -> Dict[str, Union[str, List[Dict]]]:
+    """
+    将 { 一级标题: {子项key: 子项value} } 的嵌套结构转换为标准结构，带图片字段：
+    {
+        "section": 一级标题,
+        "image": 图片地址,
+        "data": [{key: ..., value: ...}]
+    }
+
+    参数:
+        data (dict): 原始嵌套结构
+        image (str): 可选的图片地址
+        section_key (str): 一级标题字段名（默认 "section"）
+        list_key (str): 子项列表字段名（默认 "data"）
+        key_field (str): 子项标题字段名（默认 "key"）
+        value_field (str): 子项内容字段名（默认 "value"）
+        image_field (str): 图片字段名（默认 "image"）
+
+    返回:
+        dict: 标准结构
+    """
+    if not isinstance(data, dict) or len(data) == 0:
+        return {section_key: "", image_field: image, list_key: []}
+
+    first_key = next(iter(data))
+    raw = data.get(first_key, {})
+
+    if not isinstance(raw, dict):
+        return {section_key: first_key, image_field: image, list_key: []}
+
+    items = [{key_field: k, value_field: v} for k, v in raw.items()]
+
+    return {
+        section_key: first_key,
+        image_field: image,
+        list_key: items
+    }
+
+
+async def strip_think_block(text: str) -> str:
+    """
+    去除模型输出中的 <think>...</think> 思考标签段落（DeepSeek 等模型专用）
+
+    参数:
+        text (str): 模型原始输出
+
+    返回:
+        str: 去除 <think> 块后的纯净内容
+    """
+    if not isinstance(text, str):
+        return text
+
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+
+async def convert_structured_kv_to_prompt_dict(section: dict) -> dict:
+    """
+    将结构化的 title + data 转换为 prompt 需要的 dict 格式
+    """
+    if not section or not isinstance(section, dict):
+        return {}
+
+    title = section.get("title")
+    data = section.get("data", [])
+    if not title or not isinstance(data, list):
+        return {}
+
+    mapped = {item["name"]: item["value"] for item in data if "name" in item and "value" in item}
+    res = json.dumps({title: mapped}, ensure_ascii=False, indent=2)
+    return res
+
+
+async def convert_schedule_fields_to_english(schedule: dict) -> dict:
+    """
+    将日程中的中文字段转换为英文字段
+    """
+    mapping = {
+        "日程名称": "schedule_name",
+        "日程时间": "schedule_time",
+        "推送话术": "push_text"
+    }
+    return {mapping.get(k, k): v for k, v in schedule.items()}
+
+
+async def enrich_schedule_with_extras(item: dict) -> dict:
+    """
+    为每个日程打卡追加视频/图片/cate_code 字段，统一结构
+    """
+    name = item.get("schedule_name", "")
+    item.setdefault("videos", None)
+    item.setdefault("image", [])
+
+    # 分类编码
+    if "餐" in name:
+        item["cate_code"] = "diet_schedule"
+    elif "运动" in name:
+        item["cate_code"] = "exercise_schedule"
+    else:
+        item["cate_code"] = "unknown_schedule"
+
+    # 视频和图片处理
+    if "运动" in name and "14" in item.get("schedule_time", ""):
+        item["videos"] = [
+            {"name": "摸膝卷腹", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心-力量/摸膝卷腹.mp4"},
+            {"name": "垫上仰卧踢腿", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心结合心肺训练/垫上仰卧踢腿.mp4"},
+            {"name": "垫上对侧抬手抬脚", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/力量-背/垫上对侧抬手抬脚.mp4"},
+        ]
+    elif "运动" in name and "19" in item.get("schedule_time", ""):
+        item["image"] = [
+            {"name": "散步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/散步.png"},
+            {"name": "游泳", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/游泳.png"},
+            {"name": "跑步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/跑步.png"},
+        ]
+    elif "早餐" in name:
+        item["image"] = [
+            {"name": "早餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/早餐.png"}
+        ]
+    elif "午餐" in name:
+        item["image"] = [
+            {"name": "午餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/午餐.png"}
+        ]
+    elif "晚餐" in name:
+        item["image"] = [
+            {"name": "晚餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/晚餐.png"}
+        ]
+
+    return item
+
+
+async def extract_daily_schedule(parsed) -> List[Dict]:
+    """
+    通用提取模型返回的日程结构，兼容字典/列表/字段名变动等
+    """
+    if isinstance(parsed, list):
+        return parsed
+
+    if isinstance(parsed, dict):
+        for key in parsed:
+            if "日程" in key or "打卡" in key or "推送" in key:
+                value = parsed[key]
+                if isinstance(value, list):
+                    return value
+    return []
