@@ -23,7 +23,8 @@ from src.utils.module import (
     determine_weight_status, determine_body_fat_status, truncate_to_limit, get_highest_data_per_day,
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
     calculate_and_format_diet_plan, format_historical_meal_plans, query_course, call_mem0_search_memory,
-    format_mem0_search_result, call_mem0_get_all_memories
+    format_mem0_search_result, call_mem0_get_all_memories, convert_dict_to_key_value_section, strip_think_block,
+    convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras, extract_daily_schedule
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -35,6 +36,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
 from Levenshtein import ratio
+from data.expert_knowledge_prompt import *
 
 
 class HealthExpertModel:
@@ -146,7 +148,7 @@ class HealthExpertModel:
             **model_args
         )
 
-        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
 
         return content
 
@@ -2785,6 +2787,233 @@ class HealthExpertModel:
 
         logger.info(f"[打点] 接口总耗时: {time.time() - start_time:.2f}s，最终标签数: {len(all_labels)}")
         return all_labels
+
+    async def aigc_functions_clear_inflammatory_diet(self, **kwargs) -> Union[str, List[Dict]]:
+        """
+        清除致炎饮食建议生成
+        """
+        _event = "清除致炎饮食建议生成"
+
+        if kwargs.get("knowledge_system") != "yaoshukun":
+            return None
+
+        user_profile = kwargs.get("user_profile", {})
+        if not user_profile:
+            raise ValueError("user_profile 是必填字段")
+
+        prompt_vars = {
+            "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
+            "group": kwargs.get("group", ""),
+            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages", [])),
+            "glucose_data": kwargs.get("glucose_data", None),
+            "questionnaire": kwargs.get("questionnaire"),
+            "current_date": datetime.today().strftime("%Y-%m-%d"),
+        }
+
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        content = await self.aaigc_functions_general(
+            _event=_event,
+            prompt_vars=prompt_vars,
+            prompt_template=clear_inflammatory_diet,
+            model_args=model_args,
+            **kwargs
+        )
+
+        content = await parse_generic_content(content)
+
+        image_url = IMAGE_MAP.get("清除致炎饮食", {}).get("url", "")
+
+        content = await convert_dict_to_key_value_section(content, image=image_url)
+
+        return content
+
+    async def aigc_functions_emotion_mind_adjustment(self, **kwargs) -> Union[str, Dict]:
+        """
+        情志调理心态建议生成
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/93NwLYZXWyqxvl7zuj4yGpabWkyEqBQm?corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288&doc_type=wiki_doc&utm_medium=search_main&utm_source=search
+
+        根据姚树坤院长理念，为慢病用户生成情志调理建议，符合中老年表达习惯。
+
+        参数:
+            kwargs (dict): 包含用户画像、管理群组、历史信息等
+
+        返回:
+            dict: 情志调理建议（英文字段）
+        """
+        _event = "情志调理心态建议生成"
+
+        if kwargs.get("knowledge_system") != "yaoshukun":
+            return None
+
+        user_profile = kwargs.get("user_profile", {})
+        if not user_profile:
+            raise ValueError("user_profile 是必填字段")
+
+        prompt_vars = {
+            "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
+            "group": kwargs.get("group", ""),
+            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages", [])),
+            "questionnaire": kwargs.get("questionnaire", None),
+            "current_date": datetime.today().strftime("%Y-%m-%d"),
+        }
+
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        content = await self.aaigc_functions_general(
+            _event=_event,
+            prompt_vars=prompt_vars,
+            prompt_template=emotion_mind_adjustment,
+            model_args=model_args,
+            **kwargs
+        )
+
+        content = await strip_think_block(content)
+
+        content = await parse_generic_content(content)
+
+        image_url = IMAGE_MAP.get("情志调理心态", {}).get("url", "")
+
+        content = await convert_dict_to_key_value_section(content,image=image_url)
+
+        return content
+
+    async def aigc_functions_smoking_alcohol_control(self, **kwargs) -> Dict:
+        """
+        戒烟限酒建议生成
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/93NwLYZXWyqxvl7zuj4yGpabWkyEqBQm?corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288&doc_type=wiki_doc&utm_medium=search_main&utm_source=search
+
+        根据固定规则，结合性别和疾病情况，输出戒烟限酒建议（统一结构）。
+
+        参数:
+            kwargs (dict): 包含 user_profile 和 group 字段
+
+        返回:
+            dict: 标准结构 {
+                "title": "戒烟限酒",
+                "image": "...",
+                "data": [
+                    {"name": ..., "value": ...}
+                ]
+            }
+        """
+        _event = "戒烟限酒"
+
+        if kwargs.get("knowledge_system") != "yaoshukun":
+            return None
+
+        user_profile = kwargs.get("user_profile", {})
+        group = kwargs.get("group", "")
+
+        if not user_profile or not user_profile.get("gender"):
+            raise ValueError("user_profile 和 gender 是必填字段")
+
+        gender = user_profile.get("gender")
+        diseases = user_profile.get("current_diseases", []) or []
+
+        has_high_risk_disease = (
+                any(d in ["糖尿病", "脂肪肝", "肝功能异常"] for d in diseases)
+                or any(risk in group for risk in ["糖尿病", "脂肪肝", "肝功能异常"])
+        )
+
+        if has_high_risk_disease:
+            raw = {
+                "戒烟限酒": {
+                    "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                    "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                    "严格戒酒": "任何形式的酒精对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                }
+            }
+        else:
+            if gender == "男":
+                raw = {
+                    "戒烟限酒": {
+                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                        "限酒": "男性每天不超过50g酒精，2两酒=80g酒精。3钱的酒杯，建议每次男性不超3杯（1两）。每周不超2次。",
+                        "注意": "糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                    }
+                }
+            else:
+                raw = {
+                    "戒烟限酒": {
+                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                        "限酒": "女性每天不超过30g酒精，2两酒=80g酒精。3钱的酒杯，建议每次女性不超2杯，每周不超2次。",
+                        "注意": "糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                    }
+                }
+
+        image_url = IMAGE_MAP.get("戒烟限酒", {}).get("url", "")
+
+        content = await convert_dict_to_key_value_section(raw, image=image_url)
+
+        return content
+
+    async def aigc_functions_daily_schedule_push(self, **kwargs) -> Union[str, Dict]:
+        """
+        日程打卡推送内容生成
+
+        需求文档：https://your-doc-link-placeholder.com
+
+        根据姚树坤理论及用户画像，生成早餐、午餐、晚餐、14点/19点运动打卡文案。
+
+        参数:
+            kwargs (dict): 包含用户画像、管理群组、健康管理参数
+
+        返回:
+            dict: 包含日程推送列表结构（含视频/图片等）
+        """
+        _event = "日程推送"
+
+        if kwargs.get("knowledge_system") != "yaoshukun":
+            return {}
+
+        user_profile = kwargs.get("user_profile", {})
+        if not user_profile:
+            raise ValueError("user_profile 是必填字段")
+
+        # 从结构化字段中提取各干预内容到提示词
+        prompt_vars = {
+            "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
+            "group": kwargs.get("group"),
+            "current_date": datetime.today().strftime("%Y-%m-%d"),
+            "diet_weight_control": await convert_structured_kv_to_prompt_dict(kwargs.get("diet_weight_control")),
+            "clear_inflammatory_diet": await convert_structured_kv_to_prompt_dict(kwargs.get("clear_inflammatory_diet")),
+            "salt_intake_control": await convert_structured_kv_to_prompt_dict(kwargs.get("salt_intake_control")),
+            "moderate_exercise": await convert_structured_kv_to_prompt_dict(kwargs.get("moderate_exercise")),
+        }
+
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        content = await self.aaigc_functions_general(
+            _event=_event,
+            prompt_vars=prompt_vars,
+            prompt_template=daily_schedule_push,
+            model_args=model_args,
+            **kwargs
+        )
+
+        content = await strip_think_block(content)
+
+        parsed = await parse_generic_content(content)
+
+        daily_list = await extract_daily_schedule(parsed)
+
+        daily_schedule_list = []
+        for raw_item in daily_list:
+            item = await convert_schedule_fields_to_english(raw_item)
+            item = await enrich_schedule_with_extras(item)
+            daily_schedule_list.append(item)
+
+        return daily_schedule_list
+
 
 if __name__ == "__main__":
     gsr = InitAllResource()

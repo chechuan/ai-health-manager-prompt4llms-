@@ -958,6 +958,65 @@ def mount_aigc_functions(app: FastAPI):
 
             return build_aigc_functions_response(_return)
 
+    @app.route("/aigc/intervene", methods=["POST"])
+    async def _aigc_functions_intervention_entry(
+            request_model: Optional[SanJiKangYangRequest] = None,
+    ) -> Response:
+        """327干预计划统一入口"""
+        endpoint = "/aigc/intervene"
+        endpoint_name = "aigc_intervene"
+        param = {}
+
+        start_time = time.time()
+        try:
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
+            # 如果没有提供 intent_code，会报错
+            intent_code = param.get("intentCode")
+            if not intent_code:
+                raise ValueError("缺少必填字段：intentCode")
+
+            # 设置默认 endpoint_name（用于langfuse trace）
+            param.setdefault("endpoint_name", f"{endpoint_name}_{intent_code}")
+
+            # 执行干预能力调用（支持四个）
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            # 设置 tags（尝试从 langfuse 获取）
+            try:
+                prompt = gsr.langfuse_client.get_prompt(intent_code)
+                tags = prompt.tags if prompt else []
+            except Exception as e:
+                logger.warning(f"[{endpoint}] Failed to fetch tags for {intent_code}: {str(e)}")
+                tags = ["aigc_intervention", "327干预计划", "姚树坤"]
+
+            param["tags"] = tags
+
+            # 处理返回值
+            response = replace_you(response) if callable(replace_you) and hasattr(replace_you, "__await__") else replace_you(
+                response)
+            ret = AigcFunctionsCompletionResponse(head=200, items=response)
+            _return = ret.model_dump_json(exclude_unset=False)
+
+            logger.info(f"[{endpoint}] Final response: {_return}")
+            end_time = time.time()
+            await record_monitoring_data([response], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            msg = replace_you(repr(err)) if callable(replace_you) and hasattr(replace_you, "__await__") else repr(
+                err)
+            logger.error(f"[{endpoint}] Error: {msg}")
+
+            ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+            _return = ret.model_dump_json(exclude_unset=True)
+
+            end_time = time.time()
+            await record_monitoring_data([msg], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+    # 挂载 POST 路由
     app.post("/aigc/functions", description="AIGC函数")(_async_aigc_functions)
 
     app.post("/aigc/functions/doctor_recommend")(_async_aigc_functions_doctor_recommend)
@@ -983,6 +1042,8 @@ def mount_aigc_functions(app: FastAPI):
     app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
 
     app.post("/health/user_labels", description="健康用户标签提取接口")(_aigc_functions_health_user_active_label)
+
+    app.post("/aigc/intervene", description="327干预计划统一入口")(_aigc_functions_intervention_entry)
 
 
 def mount_multimodal_endpoints(app: FastAPI):
