@@ -724,49 +724,53 @@ class Chat_v2:
         1. 通过role_map转换role定义
         2. history 由backend_history拼接用户输入
         """
-        args, kwargs = self.pre_fill_param(*args, **kwargs)
-        kwargs["his"] = kwargs.get("history", [])
-        if kwargs.get("history"):
-            if kwargs.get("intentCode") == "auxiliary_diagnosis":
-                history = [
-                    {**i, "role": role_map.get(str(i["role"]), "user")}
-                    for i in kwargs["history"]
-                ]
-                logger.info(f"Process message: {history}")
+        try:
+            args, kwargs = self.pre_fill_param(*args, **kwargs)
+            kwargs["his"] = kwargs.get("history", [])
+            if kwargs.get("history"):
+                if kwargs.get("intentCode") == "auxiliary_diagnosis":
+                    history = [
+                        {**i, "role": role_map.get(str(i["role"]), "user")}
+                        for i in kwargs["history"]
+                    ]
+                    logger.info(f"Process message: {history}")
 
-                kwargs["history"] = kwargs["backend_history"] + history
-                if not kwargs["history"][-1].get("intentCode"):
-                    for i in kwargs["history"]:
-                        i["intentCode"] = kwargs["intentCode"]
-            else:
-                history = [
-                    {**i, "role": role_map.get(str(i["role"]), "user")}
-                    for i in kwargs["history"]
-                ]
-                kwargs["history"] = kwargs["backend_history"] + [history[-1]]
-                if not kwargs["history"][-1].get("intentCode"):
-                    kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
+                    kwargs["history"] = kwargs["backend_history"] + history
+                    if not kwargs["history"][-1].get("intentCode"):
+                        for i in kwargs["history"]:
+                            i["intentCode"] = kwargs["intentCode"]
+                else:
+                    history = [
+                        {**i, "role": role_map.get(str(i["role"]), "user")}
+                        for i in kwargs["history"]
+                    ]
+                    kwargs["history"] = kwargs["backend_history"] + [history[-1]]
+                    if not kwargs["history"][-1].get("intentCode"):
+                        kwargs["history"][-1]["intentCode"] = kwargs["intentCode"]
 
-        if kwargs["intentCode"] == "other":
-            kwargs["prompt"] = None
-            kwargs["sys_prompt"] = None
+            if kwargs["intentCode"] == "other":
+                kwargs["prompt"] = None
+                kwargs["sys_prompt"] = None
 
-        logger.info(f"Process message {kwargs.get('history')}")
+            logger.info(f"Process message {kwargs.get('history')}")
 
-        _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
-        # while True:
-        async for yield_item in _iterable:
-            try:
-                # yield_item = next(_iterable)
-                if not yield_item["data"].get("type"):
-                    yield_item["data"]["type"] = "Result"
-                if yield_item["data"]["type"] == "Result" and not yield_item[
-                    "data"
-                ].get("dataSource"):
-                    yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
-                yield yield_item
-            except StopIteration as err:
-                break
+            _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
+            # while True:
+            async for yield_item in _iterable:
+                try:
+                    # yield_item = next(_iterable)
+                    if not yield_item["data"].get("type"):
+                        yield_item["data"]["type"] = "Result"
+                    if yield_item["data"]["type"] == "Result" and not yield_item[
+                        "data"
+                    ].get("dataSource"):
+                        yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
+                    yield yield_item
+                except StopIteration as err:
+                    break
+
+        except Exception as e:
+            logger.error(f"生成结果处理失败: {e}")
 
     def __log_init(self, **kwargs):
         """初始打印日志"""

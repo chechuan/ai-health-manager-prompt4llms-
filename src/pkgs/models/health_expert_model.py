@@ -107,7 +107,8 @@ class HealthExpertModel:
                 "version": kwargs.get("version", "v1.0.0"),
                 "description": f"Processing event {_event}"
             },
-            "langfuse": self.gsr.langfuse_client
+            "langfuse": self.gsr.langfuse_client,
+            "tokenizer": self.gsr.qwen_tokenizer
         }
         # 获取模型及配置
         event = kwargs.get("intentCode")

@@ -15,7 +15,8 @@ import openai
 from src.utils.resources import InitAllResource
 from src.utils.module import (
     accept_stream_response,
-    parse_latest_plugin_call
+    parse_latest_plugin_call,
+    get_intent_name_and_tags
 )
 
 sys.path.append(".")
@@ -265,6 +266,7 @@ Begin!"""
         logger.debug(
             f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
         )
+
         model = self.gsr.get_model("custom_chat_gaily_assistant")
         response = callLLM(
             history=messages,
@@ -275,8 +277,9 @@ Begin!"""
             frequency_penalty=0.5,
             presence_penalty=0,
             stop=["\nObservation:"],
-            stream=True,
+            stream=True
         )
+
         content = accept_stream_response(response, verbose=False)
         logger.debug(f"闲聊识别Action LLM Output: \n{content}")
         # content = "Thought: 提供的工具帮助较小，我将直接回答。\nAnswer: 你是你的主人。"
@@ -350,6 +353,9 @@ Begin!"""
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
 
+        # ================== 提取意图 & 获取 Langfuse 配置 ====================
+        intent_code = "other"
+        endpoint_name, tags = get_intent_name_and_tags(intent_code)
         # 调用模型
         response = callLLM(
             history=messages,
@@ -360,6 +366,17 @@ Begin!"""
             frequency_penalty=0.5,
             presence_penalty=0,
             stream=True,
+            extra_params={
+                "langfuse": self.gsr.langfuse_client,
+                "user_id": "chechuan",
+                "session_id": "chechuan",
+                "tokenizer": self.gsr.qwen_tokenizer,
+                "intent_code": intent_code,
+                "name": endpoint_name,
+                "tags": tags,
+                "release": "v1.0.0",
+                "metadata": {"source": "react"},
+            }
         )
 
         # 处理模型响应
