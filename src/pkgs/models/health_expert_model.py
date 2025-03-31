@@ -2815,7 +2815,6 @@ class HealthExpertModel:
         content = await self.aaigc_functions_general(
             _event=_event,
             prompt_vars=prompt_vars,
-            prompt_template=clear_inflammatory_diet,
             model_args=model_args,
             **kwargs
         )
@@ -2866,7 +2865,6 @@ class HealthExpertModel:
         content = await self.aaigc_functions_general(
             _event=_event,
             prompt_vars=prompt_vars,
-            prompt_template=emotion_mind_adjustment,
             model_args=model_args,
             **kwargs
         )
@@ -2995,7 +2993,6 @@ class HealthExpertModel:
         content = await self.aaigc_functions_general(
             _event=_event,
             prompt_vars=prompt_vars,
-            prompt_template=daily_schedule_push,
             model_args=model_args,
             **kwargs
         )
