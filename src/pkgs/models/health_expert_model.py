@@ -1477,6 +1477,9 @@ class HealthExpertModel:
 
         # ✅ 分支 1：knowledge_system = "yaoshukun"
         if knowledge_system == "yaoshukun":
+            group = kwargs.get("group", "")
+            if not group:
+                raise ValueError("group是必填字段")
             _event = "姚院专项_推荐每日饮食摄入热量值"
             kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
 
@@ -1487,7 +1490,7 @@ class HealthExpertModel:
                     messages=kwargs.get("messages", ""),
                     role_map={"assistant": "assistant", "user": "user"}
                 ),
-                "group": kwargs.get("group", ""),
+                "group": group,
                 "glucose_data": kwargs.get("glucose_data", ""),
                 "current_date": kwargs.get("current_date", "")
             }
