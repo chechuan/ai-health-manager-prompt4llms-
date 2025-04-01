@@ -7,13 +7,17 @@
 """
 from ast import dump
 import time
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union, AsyncGenerator
 
 import openai
 from pydantic import BaseModel, Field
 
 from src.utils.Logger import logger
-from src.utils.module import apply_chat_template, dumpJS
+from src.utils.module import (
+    apply_chat_template, dumpJS, count_tokens, flatten_input_text, init_langfuse_trace_with_input,
+    get_intent_name_and_tags, wrap_stream_with_langfuse, track_completion_with_langfuse,
+    async_init_langfuse_trace_with_input, async_wrap_stream_with_langfuse, async_track_completion_with_langfuse
+)
 
 from src.utils.Logger import logger
 from data.constrant import DEFAULT_MODEL
@@ -73,6 +77,18 @@ def callLLM(
     """
     kwargs = pre_process_model_args(**kwargs)
     client = openai.OpenAI()
+
+    # 初始化 Langfuse 跟踪
+    trace, generation, langfuse, tokenizer, input_data = init_langfuse_trace_with_input(
+        extra_params=extra_params,
+        model=model,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        stream=stream,
+        query=query,
+        history=history,
+    )
     # logger.info(f"base_url: {client.base_url}, api_key: {client.api_key}")
     # if model != default_model:
     #     logger.warning(
@@ -109,6 +125,8 @@ def callLLM(
         while retry <= retry_times:
             try:
                 completion = client.completions.create(**kwds)
+                if completion.choices:
+                    generation.update(completion_start_time=datetime.now())
                 break
             except Exception as e:
                 retry += 1
@@ -116,6 +134,16 @@ def callLLM(
                 continue
 
         if stream:
+            if completion and generation:
+                generation.update(completion_start_time=datetime.now())
+                return wrap_stream_with_langfuse(
+                    stream=completion,
+                    generation=generation,
+                    trace=trace,
+                    langfuse=langfuse,
+                    tokenizer=tokenizer,
+                    input_data=input_data,
+                )
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
@@ -157,6 +185,8 @@ def callLLM(
         while retry <= retry_times:
             try:
                 completion = client.chat.completions.create(**kwds)
+                if completion.choices:
+                    generation.update(completion_start_time=datetime.now())
                 break
             except Exception as e:
                 retry += 1
@@ -164,6 +194,16 @@ def callLLM(
                 logger.info(f"request llm model error, retry to request")
                 continue
         if stream:
+            if completion and generation:
+                generation.update(completion_start_time=datetime.now())
+                return wrap_stream_with_langfuse(
+                    stream=completion,
+                    generation=generation,
+                    trace=trace,
+                    langfuse=langfuse,
+                    tokenizer=tokenizer,
+                    input_data=input_data,
+                )
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
@@ -185,6 +225,17 @@ def callLLM(
         + f"total_tokens:{completion.usage.total_tokens}, "
           f"cost: {time_cost}s"
     )
+
+    # 非流式监控记录
+    track_completion_with_langfuse(
+        trace=trace,
+        generation=generation,
+        langfuse=langfuse,
+        input_data=input_data,
+        output_data=ret,
+        tokenizer=tokenizer,
+    )
+
     return ret
 
 
@@ -329,7 +380,6 @@ async def acallLLM(
     )
     return ret
 
-
 async def acallLLtrace(
         query: str = "",
         history: List[Dict] = [],
@@ -367,44 +417,18 @@ async def acallLLtrace(
     """
     kwargs = pre_process_model_args(**kwargs)
     aclient = openai.AsyncOpenAI()
-    # 从 extra_params 提取追踪相关信息
-    langfuse = extra_params.get("langfuse")
-    user_id = extra_params.get("user_id")
-    session_id = extra_params.get("session_id")
-    # 如果存在 user_id 和 session_id，创建 trace
-    trace = None
-    generation = None
-    if user_id and session_id:
-        trace = langfuse.trace(
-            name=extra_params.get("name"),
-            user_id=user_id,
-            session_id=session_id,
-            release=extra_params.get("release"),
-            tags=extra_params.get("tags"),
-            metadata=extra_params.get("metadata")
-        )
 
-        # 创建 Generation
-        generation = trace.generation(
-            name="llm-generation",
-            model=model,
-            model_parameters={
-                "temperature": temperature,
-                "top_p": top_p,
-                "max_tokens": max_tokens,
-            },
-            metadata={"streaming": stream},
-        )
-
-    # 确保 trace 不为 None
-    if trace is not None:
-        trace.update(input=query or history)
-    else:
-        logger.error("Trace object is None, skipping trace update.")
-    if generation is not None:
-        generation.update(
-            input=query or history
-        )
+    # 初始化 Langfuse 跟踪信息
+    trace, generation, langfuse, tokenizer, input_data = await async_init_langfuse_trace_with_input(
+        extra_params=extra_params,
+        model=model,
+        temperature=temperature,
+        top_p=top_p,
+        max_tokens=max_tokens,
+        stream=stream,
+        query=query,
+        history=history,
+    )
     # logger.info(f"Starting model invocation with query: {query}")
 
     if stream and stop:
@@ -425,6 +449,8 @@ async def acallLLtrace(
     }
     logger.trace(f"callLLM with {dumpJS(kwds)}")
 
+
+    # ========== Prompt 模式 ==========
     if not history:
         if "qwen" in model.lower():
             query = apply_chat_template(query)
@@ -446,9 +472,17 @@ async def acallLLtrace(
 
         if stream:
             if completion:
-                # 记录流的开始时间
                 generation.update(completion_start_time=datetime.now())
+                return async_wrap_stream_with_langfuse(
+                    completion,
+                    generation=generation,
+                    trace=trace,
+                    langfuse=langfuse,
+                    tokenizer=extra_params.get("tokenizer"),
+                    input_data=input_data
+                )
             return completion
+
         retry = 0
         while not completion.choices and retry <= retry_times:
             try:
@@ -488,14 +522,21 @@ async def acallLLtrace(
                 break
             except Exception as e:
                 retry += 1
-                logger.info(f"call llm error:{repr(e)}")
-                logger.info(f"request llm model error, retry to request")
+                # logger.info(f"call llm error:{repr(e)}")
+                # logger.info(f"request llm model error, retry to request")
                 continue
         logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
             if completion:
-                # 记录流的开始时间
                 generation.update(completion_start_time=datetime.now())
+                return async_wrap_stream_with_langfuse(
+                    completion,
+                    generation=generation,
+                    trace=trace,
+                    langfuse=langfuse,
+                    tokenizer=extra_params.get("tokenizer"),
+                    input_data=input_data
+                )
             return completion
         retry = 0
         while not completion.choices and retry <= retry_times:
@@ -510,43 +551,23 @@ async def acallLLtrace(
             logger.info(f"Model generate completion:{repr(completion)}")
 
         ret = completion.choices[0].message.content.strip()
+
     time_cost = round(time.time() - t_st, 1)
-
-    # 如果存在 trace 和 generation，则记录追踪信息
-    if trace and generation:
-        # 提取模型使用情况
-        usage_details = {
-            "input": completion.usage.prompt_tokens,
-            "output": completion.usage.completion_tokens,
-            "total": completion.usage.total_tokens
-        }
-        cost_details = {
-            "input": usage_details["input"] * 0.00001,
-            "output": usage_details["output"] * 0.00002,
-        }
-
-        # logger.info(f"Output value being sent to Langfuse: {ret}")
-        generation.end(
-            usage=usage_details,
-            total_cost=cost_details,
-        )
-
-        # 确保 Flush 成功
-        try:
-            langfuse.flush()
-            logger.info("Langfuse flush executed successfully.")
-        except Exception as e:
-            logger.error(f"Langfuse flush failed: {e}")
-
-    if trace is not None:
-        trace.update(output=ret)
-
     logger.info(
         f"Model {model} generate costs summary: "
         + f"prompt_tokens:{completion.usage.prompt_tokens}, "
         + f"completion_tokens:{completion.usage.completion_tokens}, "
         + f"total_tokens:{completion.usage.total_tokens}, "
           f"cost: {time_cost}s"
+    )
+    # 非流式输出监控
+    await async_track_completion_with_langfuse(
+        trace=trace,
+        generation=generation,
+        langfuse=langfuse,
+        input_data=input_data,
+        output_data=ret,
+        tokenizer=tokenizer,
     )
 
     return ret

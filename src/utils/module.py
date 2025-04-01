@@ -2162,9 +2162,21 @@ def blood_pressure_type(time, glucose):
             agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
     return result,content,agent_content,t
 
-
-async def count_tokens(text: str, tokenizer=None) -> int:
+def count_tokens(text: str, tokenizer=None) -> int:
     return len(tokenizer.encode(text)) if text else 0
+
+async def async_count_tokens(text: str, tokenizer=None) -> int:
+    return len(tokenizer.encode(text)) if text else 0
+
+
+# 把 list[dict] 格式的 message history 转成纯文本
+def flatten_input_text(data):
+    if isinstance(data, str):
+        return data
+    elif isinstance(data, list):
+        return "\n".join([f"{m.get('role', '')}: {m.get('content', '')}" for m in data])
+    else:
+        return str(data)
 
 
 async def monitor_interface(**kwargs):
@@ -2256,8 +2268,8 @@ async def monitor_interface(**kwargs):
         input_text = json.dumps(request_input, ensure_ascii=False) if request_input else ""
         output_text = str(response_output) if response_output else ""
         qwen_tokenizer = kwargs.get("tokenizer")
-        input_tokens = await count_tokens(input_text, qwen_tokenizer)
-        output_tokens = await count_tokens(output_text, qwen_tokenizer)
+        input_tokens = await async_count_tokens(input_text, qwen_tokenizer)
+        output_tokens = await async_count_tokens(output_text, qwen_tokenizer)
 
         usage_details = {
             "input": input_tokens,
@@ -2867,3 +2879,270 @@ async def extract_daily_schedule(parsed) -> List[Dict]:
                 if isinstance(value, list):
                     return value
     return []
+
+
+def init_langfuse_trace_with_input(
+    *,
+    extra_params: dict,
+    model: str,
+    temperature: float,
+    top_p: float,
+    max_tokens: int,
+    stream: bool,
+    query: str = "",
+    history: List[Dict] = [],
+):
+    """初始化 Langfuse trace 和 generation，并记录输入 input"""
+    langfuse = extra_params.get("langfuse")
+    user_id = extra_params.get("user_id")
+    session_id = extra_params.get("session_id")
+
+    if not (langfuse and user_id and session_id):
+        return None, None, None, None, query or history
+
+    trace = langfuse.trace(
+        name=extra_params.get("name"),
+        user_id=user_id,
+        session_id=session_id,
+        release=extra_params.get("release"),
+        tags=extra_params.get("tags"),
+        metadata=extra_params.get("metadata"),
+    )
+
+    generation = trace.generation(
+        name="llm-generation",
+        model=model,
+        model_parameters={
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+        },
+        metadata={"streaming": stream},
+    )
+
+    input_data = query or history
+    generation.update(input=input_data)
+    trace.update(input=input_data)
+
+    tokenizer = extra_params.get("tokenizer")
+
+    return trace, generation, langfuse, tokenizer, input_data
+
+async def async_init_langfuse_trace_with_input(
+    *,
+    extra_params: dict,
+    model: str,
+    temperature: float,
+    top_p: float,
+    max_tokens: int,
+    stream: bool,
+    query: str = "",
+    history: List[Dict] = [],
+):
+    """初始化 Langfuse trace 和 generation，并记录输入 input"""
+    langfuse = extra_params.get("langfuse")
+    user_id = extra_params.get("user_id")
+    session_id = extra_params.get("session_id")
+
+    if not (langfuse and user_id and session_id):
+        return None, None, None, None, query or history
+
+    trace = langfuse.trace(
+        name=extra_params.get("name"),
+        user_id=user_id,
+        session_id=session_id,
+        release=extra_params.get("release"),
+        tags=extra_params.get("tags"),
+        metadata=extra_params.get("metadata"),
+    )
+
+    generation = trace.generation(
+        name="llm-generation",
+        model=model,
+        model_parameters={
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+        },
+        metadata={"streaming": stream},
+    )
+
+    input_data = query or history
+    generation.update(input=input_data)
+    trace.update(input=input_data)
+
+    tokenizer = extra_params.get("tokenizer")
+
+    return trace, generation, langfuse, tokenizer, input_data
+
+
+ALL_INTENTS, _ = intent_init()
+
+# 构建 intent_code -> intent_name 的映射
+INTENT_NAME_MAP = {v[0]: (v[0], v[1]) for v in ALL_INTENTS.values()}
+INTENT_NAME_MAP["other"] = ("other", "闲聊/其他")
+
+def get_intent_name_and_tags(intent_code: str) -> Tuple[str, List[str]]:
+    """
+    根据 intent_code 映射 endpoint_name 与 tags
+    """
+    name, tag = INTENT_NAME_MAP.get(intent_code, ("other", "闲聊"))
+    return f"{tag}", ["chat_gen", tag, intent_code]
+
+def track_completion_with_langfuse(
+    *,
+    trace,
+    generation,
+    langfuse=None,
+    input_data="",
+    output_data="",
+    tokenizer=None,
+):
+    """非流式调用的 Langfuse 监控记录"""
+    try:
+        input_text = flatten_input_text(input_data)
+        input_tokens = count_tokens(input_text, tokenizer) if tokenizer else 0
+        output_tokens = count_tokens(output_data, tokenizer) if tokenizer else 0
+
+        usage = {
+            "input": input_tokens,
+            "output": output_tokens,
+            "total": input_tokens + output_tokens,
+        }
+        cost = {
+            "input": input_tokens * 0.00001,
+            "output": output_tokens * 0.00002,
+        }
+
+        generation.end(usage=usage, total_cost=cost)
+        generation.update(output=output_data)
+        trace.update(output=output_data)
+        if langfuse:
+            langfuse.flush()
+
+        logger.info(f"[Langfuse] 非流式追踪完成 ✅ tokens: in={input_tokens}, out={output_tokens}")
+    except Exception as e:
+        logger.warning(f"[Langfuse] 非流式追踪失败 ❌: {repr(e)}")
+
+
+async def async_track_completion_with_langfuse(
+    *,
+    trace,
+    generation,
+    langfuse=None,
+    input_data="",
+    output_data="",
+    tokenizer=None,
+):
+    """非流式调用的 Langfuse 监控记录"""
+    try:
+        input_text = flatten_input_text(input_data)
+        input_tokens = await async_count_tokens(input_text, tokenizer) if tokenizer else 0
+        output_tokens = await async_count_tokens(output_data, tokenizer) if tokenizer else 0
+
+        usage = {
+            "input": input_tokens,
+            "output": output_tokens,
+            "total": input_tokens + output_tokens,
+        }
+        cost = {
+            "input": input_tokens * 0.00001,
+            "output": output_tokens * 0.00002,
+        }
+
+        generation.end(usage=usage, total_cost=cost)
+        generation.update(output=output_data)
+        trace.update(output=output_data)
+        if langfuse:
+            langfuse.flush()
+
+        logger.info(f"[Langfuse] 非流式追踪完成 ✅ tokens: in={input_tokens}, out={output_tokens}")
+    except Exception as e:
+        logger.warning(f"[Langfuse] 非流式追踪失败 ❌: {repr(e)}")
+
+
+def wrap_stream_with_langfuse(
+    stream,
+    generation,
+    trace,
+    langfuse=None,
+    tokenizer=None,
+    input_data=""
+):
+    """包装流式生成器，在结束后补充 Langfuse 追踪信息"""
+
+    all_chunks = []
+    try:
+        for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            all_chunks.append(delta)
+            yield chunk
+    finally:
+        full_output = "".join(all_chunks)
+        input_text = flatten_input_text(input_data)
+
+        if generation:
+            try:
+                input_tokens = count_tokens(input_text, tokenizer) if tokenizer else 0
+                output_tokens = count_tokens(full_output, tokenizer) if tokenizer else 0
+
+                usage = {
+                    "input": input_tokens,
+                    "output": output_tokens,
+                    "total": input_tokens + output_tokens,
+                }
+                cost = {
+                    "input": input_tokens * 0.00001,
+                    "output": output_tokens * 0.00002,
+                }
+                logger.debug("full_output", full_output)
+                generation.end(usage=usage, total_cost=cost)
+                generation.update(output=full_output)
+                trace.update(output=full_output)
+                langfuse.flush()
+                logger.info(f"[Langfuse] 流式追踪完成 ✅ tokens: in={input_tokens}, out={output_tokens}")
+            except Exception as e:
+                logger.warning(f"[Langfuse] 流式追踪失败 ❌: {repr(e)}")
+
+
+async def async_wrap_stream_with_langfuse(
+    stream,
+    generation,
+    trace,
+    langfuse=None,
+    tokenizer=None,
+    input_data=""
+):
+    """包装流式生成器，在结束后补充 Langfuse 追踪信息"""
+
+    all_chunks = []
+    try:
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content or ""
+            all_chunks.append(delta)
+            yield chunk
+    finally:
+        full_output = "".join(all_chunks)
+        input_text = flatten_input_text(input_data)
+
+        if generation:
+            try:
+                input_tokens = await async_count_tokens(input_text, tokenizer) if tokenizer else 0
+                output_tokens = await async_count_tokens(full_output, tokenizer) if tokenizer else 0
+
+                usage = {
+                    "input": input_tokens,
+                    "output": output_tokens,
+                    "total": input_tokens + output_tokens,
+                }
+                cost = {
+                    "input": input_tokens * 0.00001,
+                    "output": output_tokens * 0.00002,
+                }
+                generation.end(usage=usage, total_cost=cost)
+                generation.update(output=full_output)
+                trace.update(output=full_output)
+                langfuse.flush()
+                logger.info(f"[Langfuse] 流式追踪完成 ✅ tokens: in={input_tokens}, out={output_tokens}")
+            except Exception as e:
+                logger.warning(f"[Langfuse] 流式追踪失败 ❌: {repr(e)}")

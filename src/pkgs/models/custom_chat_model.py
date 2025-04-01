@@ -28,7 +28,8 @@ from src.utils.module import (
     dumpJS,
     update_mid_vars,
     get_weather_info,
-    determine_recent_solar_terms
+    determine_recent_solar_terms,
+    get_intent_name_and_tags,
 )
 
 
@@ -524,6 +525,9 @@ class CustomChatAuxiliary(CustomChatModel):
         logger.info(f"Custom Chat 辅助诊断 LLM Input: {dumpJS(messages)}")
         valid = True
         # for _ in range(2):
+
+        intent_code = "auxiliary_diagnosis"
+        endpoint_name, tags = get_intent_name_and_tags(intent_code)
         content = callLLM(
             model=model,
             history=messages,
@@ -535,6 +539,17 @@ class CustomChatAuxiliary(CustomChatModel):
             frequency_penalty=0,
             # stop=["\nObservation:", "问诊Finished!\n\n", "问诊Finished!\n"],
             stream=False,
+            extra_params={
+                "langfuse": self.gsr.langfuse_client,
+                "user_id": "chechuan",
+                "session_id": "chechuan",
+                "tokenizer": self.gsr.qwen_tokenizer,
+                "intent_code": intent_code,
+                "name": endpoint_name,
+                "tags": tags,
+                "release": "v1.0.0",
+                "metadata": {"source": "react"},
+            }
         )
 
         logger.info(f"Custom Chat 辅助诊断 LLM Output: \n{content}")
