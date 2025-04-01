@@ -136,7 +136,7 @@ class HealthExpertModel:
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
         his = [{
             'role': 'system',
             'content': prompt
@@ -148,7 +148,7 @@ class HealthExpertModel:
             **model_args
         )
 
-        logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
 
         return content
 
@@ -1441,22 +1441,17 @@ class HealthExpertModel:
     async def aigc_functions_recommended_daily_calorie_intake(self, **kwargs) -> str:
         """
         推荐每日饮食摄入热量值（B端）
-
-        需求文档：https://alidocs.dingtalk.com/i/nodes/Gl6Pm2Db8D1M7mlatXQ9O6B2WxLq0Ee4?utm_scene=team_space&iframeQuery=anchorId%3Duu_lygopp0xcx3sb0lz5si
-
-        根据用户画像如健康状态、管理目标等信息，推荐用户每日饮食应该摄入的热量值，
-        供B端营养师参考和调整，方便营养师指导用户的饮食方案。
-
-        参数:
-            kwargs (dict): 包含用户画像和病历信息的参数字典
-
-        返回:
-            str: 生成的每日饮食推荐摄入热量值（单位：kcal）
         """
 
-        _event = "推荐每日饮食摄入热量值"
+        user_profile = kwargs.get("user_profile", {})
+        medical_records = kwargs.get("medical_records", {})
+        key_indicators = kwargs.get("key_indicators", {})
+        knowledge_system = kwargs.get("knowledge_system")
 
-        # 必填字段和至少需要一项的参数列表
+        _event = "推荐每日饮食摄入热量值"
+        kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
+
+        # 字段校验
         required_fields = {
             "user_profile": [
                 "age", "gender", "height", "weight", "bmi", "daily_physical_labor_intensity",
@@ -1464,74 +1459,79 @@ class HealthExpertModel:
             ]
         }
 
-        # 检查必填字段
-        user_profile = kwargs.get("user_profile", {})
-        medical_records = kwargs.get("medical_records", {})
-        key_indicators = kwargs.get("key_indicators", {})
-        knowledge_system = kwargs.get("knowledge_system")
-
-        if knowledge_system:
-            if knowledge_system == "yaoshukun":
-                _event = "姚院专项_推荐每日饮食摄入热量值"
-                kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
-            else:
-                return None
-        else:
-            kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake"
-
-        missing_fields = []  # 存储缺失的字段
+        missing_fields = []
         user_profile_keys = set(user_profile.keys())
 
-        # 检查 user_profile 字段
         for field in required_fields["user_profile"]:
-            if isinstance(field, tuple):  # 如果是元组，表示其中至少需要一个字段
+            if isinstance(field, tuple):
                 if not any(f in user_profile_keys for f in field):
                     missing_fields.append(f"必须提供 {field[0]} 或 {field[1]} 中的至少一个字段")
             elif field not in user_profile_keys:
                 missing_fields.append(f"缺少必填字段: {field}")
 
-        # 检查至少有一个字段
         if not any([user_profile, medical_records, key_indicators]):
             missing_fields.append("至少提供 user_profile、medical_records 或 key_indicators 中的一个")
 
-        # 如果有缺失字段，抛出错误
         if missing_fields:
             raise ValueError(" ".join(missing_fields))
 
-        # 使用工具类方法检查并计算基础代谢率（BMR）
+        # ✅ 分支 1：knowledge_system = "yaoshukun"
+        if knowledge_system == "yaoshukun":
+            _event = "姚院专项_推荐每日饮食摄入热量值"
+            kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
+
+            prompt_vars = {
+                "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
+                "messages": await self.__compose_user_msg__(
+                    "messages",
+                    messages=kwargs.get("messages", ""),
+                    role_map={"assistant": "assistant", "user": "user"}
+                ),
+                "group": kwargs.get("group", ""),
+                "glucose_data": kwargs.get("glucose_data", ""),
+                "current_date": kwargs.get("current_date", "")
+            }
+
+            model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+            content: str = await self.aaigc_functions_general(
+                _event=_event,
+                prompt_vars=prompt_vars,
+                model_args=model_args,
+                **kwargs
+            )
+
+            # 处理 deepseek 输出
+            content = await strip_think_block(content)
+            return await parse_generic_content(content)
+
+        # ❌ 分支 2：knowledge_system = "laikang"（直接跳过）
+        elif knowledge_system == "laikang":
+            return None
+
+        # ✅ 分支 3：默认逻辑（knowledge_system 未传或为其他）
         bmr = await check_and_calculate_bmr(user_profile)
         user_profile["bmr"] = f"{bmr}kcal"
 
-        # 组合用户画像信息字符串
-        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
-
-        # 组合病历信息字符串
-        medical_records_str = await self.__compose_user_msg__("medical_records", medical_records=kwargs.get("medical_records", ""))
-
-        # 组合消息字符串
-        messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""),
-                                                       role_map={"assistant": "assistant", "user": "user"})
-
-        # 检查并获取饮食调理原则
-        food_principle = kwargs.get("food_principle", "")
-
-        # 构建提示变量
         prompt_vars = {
-            "user_profile": user_profile_str,
-            "messages": messages_str,
-            "medical_records": medical_records_str,
-            "food_principle": food_principle
+            "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
+            "medical_records": await self.__compose_user_msg__("medical_records", medical_records=medical_records),
+            "messages": await self.__compose_user_msg__(
+                "messages",
+                messages=kwargs.get("messages", ""),
+                role_map={"assistant": "assistant", "user": "user"}
+            ),
+            "food_principle": kwargs.get("food_principle", "")
         }
 
-        # 更新模型参数
         model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
-
-        # 调用通用的 AIGC 函数并返回内容
         content: str = await self.aaigc_functions_general(
-            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+            _event=_event,
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
         )
-        content = await parse_generic_content(content)
-        return content
+        return await parse_generic_content(content)
 
     async def aigc_functions_recommended_macro_nutrient_ratios(self, **kwargs) -> Dict[str, List[Dict[str, float]]]:
         """
@@ -2920,31 +2920,31 @@ class HealthExpertModel:
 
         if has_high_risk_disease:
             raw = {
-                "戒烟限酒": {
-                    "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                    "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                    "严格戒酒": "任何形式的酒精对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                    "戒烟限酒": {
+                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                        "严格戒酒": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                    }
                 }
-            }
         else:
             if gender == "男":
                 raw = {
-                    "戒烟限酒": {
-                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                        "限酒": "男性每天不超过50g酒精，2两酒=80g酒精。3钱的酒杯，建议每次男性不超3杯（1两）。每周不超2次。",
-                        "注意": "糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                        "戒烟限酒": {
+                            "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                            "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                            "限酒": "男性每次不超过50g酒精，2两酒=80g酒精。3钱的酒杯，建议每次男性不超3杯（1两）。每周不超2次。",
+                            "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                        }
                     }
-                }
             else:
                 raw = {
-                    "戒烟限酒": {
-                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                        "限酒": "女性每天不超过30g酒精，2两酒=80g酒精。3钱的酒杯，建议每次女性不超2杯，每周不超2次。",
-                        "注意": "糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                        "戒烟限酒": {
+                            "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                            "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                            "限酒": "女性每次不超过30g酒精，2两酒=80g酒精。3钱的酒杯，建议每次女性不超2杯，每周不超2次。",
+                            "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
+                        }
                     }
-                }
 
         image_url = IMAGE_MAP.get("戒烟限酒", {}).get("url", "")
 
