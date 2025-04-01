@@ -2798,8 +2798,9 @@ class HealthExpertModel:
             return None
 
         user_profile = kwargs.get("user_profile", {})
-        if not user_profile:
-            raise ValueError("user_profile 是必填字段")
+        group = kwargs.get("group", "")
+        if not group:
+            raise ValueError("group是必填字段")
 
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
@@ -2847,9 +2848,9 @@ class HealthExpertModel:
             return None
 
         user_profile = kwargs.get("user_profile", {})
-        if not user_profile:
-            raise ValueError("user_profile 是必填字段")
-
+        group = kwargs.get("group", "")
+        if not group:
+            raise ValueError("group是必填字段")
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group", ""),
@@ -2906,9 +2907,8 @@ class HealthExpertModel:
 
         user_profile = kwargs.get("user_profile", {})
         group = kwargs.get("group", "")
-
-        if not user_profile or not user_profile.get("gender"):
-            raise ValueError("user_profile 和 gender 是必填字段")
+        if not group:
+            raise ValueError("group是必填字段")
 
         gender = user_profile.get("gender")
         diseases = user_profile.get("current_diseases", []) or []
@@ -2972,8 +2972,10 @@ class HealthExpertModel:
             return {}
 
         user_profile = kwargs.get("user_profile", {})
-        if not user_profile:
-            raise ValueError("user_profile 是必填字段")
+
+        group = kwargs.get("group", "")
+        if not group:
+            raise ValueError("group是必填字段")
 
         # 从结构化字段中提取各干预内容到提示词
         prompt_vars = {
