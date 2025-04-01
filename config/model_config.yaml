@@ -76,7 +76,6 @@ local:
         - jia_kang_bao # 2024年1月3日 家康宝问题检索支持
         - aigc_functions_diet_recommendation_summary # 2024年10月30日 饮食建议总结
         - aigc_functions_health_user_labels # 2025年03月14日 健康用户标签提取
-        - aigc_functions_recommended_daily_calorie_intake_yaoshukun
         - aigc_functions_clear_inflammatory_diet # 2025年03月30日 清除致炎饮食建议生成
     Qwen2-7B-Instruct:
         - blood_glucose_trend_analysis # 血糖趋势分析
@@ -87,6 +86,7 @@ local:
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
     DeepSeek-R1-Distill-32B:
+        - aigc_functions_recommended_daily_calorie_intake_yaoshukun # 2025年03月30日 姚院专项_推荐每日饮食摄入热量值
         - aigc_functions_emotion_mind_adjustment # 2025年03月30日 情志调整心态
         - aigc_functions_daily_schedule_push # 2025年03月30日 日程打卡推送内容生成
 
@@ -178,6 +178,7 @@ dev:
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
     DeepSeek-R1-Distill-32B:
+        - aigc_functions_recommended_daily_calorie_intake_yaoshukun # 2025年03月30日 姚院专项_推荐每日饮食摄入热量值
         - aigc_functions_emotion_mind_adjustment # 2025年03月30日 情志调整心态
         - aigc_functions_daily_schedule_push # 2025年03月30日 日程打卡推送内容生成
 
