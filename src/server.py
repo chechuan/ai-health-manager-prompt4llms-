@@ -59,7 +59,8 @@ from src.utils.module import (
     response_generator,
     replace_you,
     monitor_interface,
-    call_mem0_add_memory
+    call_mem0_add_memory,
+    call_mem0_get_all_memories
 )
 
 from src.pkgs.models.func_eval_model.func_eval_model import (
@@ -948,6 +949,62 @@ def mount_aigc_functions(app: FastAPI):
         except Exception as err:
             msg = replace_you(repr(err)) if callable(replace_you) and hasattr(replace_you, "__await__") else repr(
                 err)
+            logger.error(f"Error in {endpoint}: {msg}")
+
+            ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+            _return = ret.model_dump_json(exclude_unset=True)
+
+            end_time = time.time()
+            await record_monitoring_data([msg], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+    @app.post("/health/get_all_memories", description="获取所有用户记忆数据接口")
+    async def get_all_memories(request_model: Optional[SanJiKangYangRequest] = None) -> Response:
+        """获取所有记忆数据接口"""
+        endpoint = "/health/get_all_memories"
+        endpoint_name = "get_all_memories"
+        param = {}  # 可选参数
+
+        start_time = time.time()
+
+        try:
+            # 解析请求参数
+            if request_model is None:
+                param = {}
+            else:
+                param = await async_accept_param_purge(request_model, endpoint=endpoint)
+
+            # 设置默认 intentCode 和 endpoint_name
+            param.setdefault("intentCode", "aigc_functions_get_all_memories")
+            param.setdefault("endpoint_name", endpoint_name)
+
+            # 获取mem0_url，假设 gsr 存在并且包含了 mem0_url
+            if hasattr(gsr, "mem0_url") and gsr.mem0_url:
+                mem0_url = gsr.mem0_url
+            else:
+                raise ValueError("Mem0 URL is missing in the gsr context!")
+
+            # 调用获取所有记忆的异步函数
+            memories = await call_mem0_get_all_memories(mem0_url=mem0_url)
+
+            if memories is not None:
+                # 成功返回记忆数据
+                ret = AigcFunctionsCompletionResponse(head=200, items=memories)
+                _return = ret.model_dump_json(exclude_unset=False)
+            else:
+                # 如果获取失败，返回错误
+                ret = AigcFunctionsCompletionResponse(head=500, msg="Failed to retrieve memories.", items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+
+            end_time = time.time()
+            logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+            await record_monitoring_data([memories], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            msg = replace_you(repr(err)) if callable(replace_you) and hasattr(replace_you, "__await__") else repr(err)
             logger.error(f"Error in {endpoint}: {msg}")
 
             ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
