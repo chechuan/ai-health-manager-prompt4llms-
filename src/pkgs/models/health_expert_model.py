@@ -2809,7 +2809,7 @@ class HealthExpertModel:
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group", ""),
-            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages", [])),
+            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages") or []),
             "glucose_data": kwargs.get("glucose_data", None),
             "questionnaire": kwargs.get("questionnaire"),
             "current_date": datetime.today().strftime("%Y-%m-%d"),
@@ -2858,7 +2858,7 @@ class HealthExpertModel:
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group", ""),
-            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages", [])),
+            "messages": await self.__compose_user_msg__("messages", messages=kwargs.get("messages") or []),
             "questionnaire": kwargs.get("questionnaire", None),
             "current_date": datetime.today().strftime("%Y-%m-%d"),
         }
@@ -2915,7 +2915,7 @@ class HealthExpertModel:
             raise ValueError("group是必填字段")
 
         gender = user_profile.get("gender")
-        diseases = user_profile.get("current_diseases", []) or []
+        diseases = user_profile.get("current_diseases") or []
 
         has_high_risk_disease = (
                 any(d in ["糖尿病", "脂肪肝", "肝功能异常"] for d in diseases)
