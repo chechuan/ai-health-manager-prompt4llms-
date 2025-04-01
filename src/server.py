@@ -136,25 +136,52 @@ def yield_result(head=200, msg=None, items=None, cls=False, **kwargs):
 
 # 统一的监控记录函数
 async def record_monitoring_data(items, params, start_time=None, end_time=None):
-    """统一的异步记录监控数据"""
+    """统一的异步记录监控数据，确保失败不影响接口返回"""
     if end_time is None:
         end_time = time.time()
     if start_time is None:
         start_time = time.time()
-    await monitor_interface(
-        tags=params.get("tags"),
-        interface_name=params.get('endpoint_name'),  # 接口名称
-        user_id=params.get("user_id"),
-        session_id=params.get("session_id"),
-        request_input=params,
-        response_output=json.dumps(items, ensure_ascii=False),  # 记录所有生成器内容
-        langfuse=gsr.langfuse_client,
-        release="v1.0.0",
-        metadata={"team": "AI", "project": "health_service"},
-        start_time=start_time,  # 传递 start_time
-        end_time=end_time,  # 传递 end_time
-        tokenizer=gsr.qwen_tokenizer,
-    )
+
+    # 检查 items 中的每个元素是否为 Response 对象，若是则提取其内容
+    items_to_log = []
+    for item in items:
+        if isinstance(item, Response):
+            # 如果是 Response 对象，检查其是否是 JSONResponse
+            try:
+                if isinstance(item, JSONResponse):
+                    # 如果是 JSONResponse 类型，直接调用 .json() 提取内容
+                    item_content = await item.json()
+                else:
+                    # 如果不是 JSONResponse 类型，直接获取内容（如字节流等）
+                    item_content = str(item)  # 或者根据需要将其转换为字符串
+                items_to_log.append(item_content)
+            except Exception as e:
+                # 捕获并记录错误，继续执行
+                logger.error(f"Error extracting content from Response: {e}")
+                items_to_log.append("Error extracting content")  # 记录错误信息
+        else:
+            items_to_log.append(item)
+
+    # 使用 try-except 捕获监控记录中的所有错误，避免影响接口的正常返回
+    try:
+        response_output = json.dumps(items_to_log, ensure_ascii=False)  # 确保所有内容都是可序列化的
+        await monitor_interface(
+            tags=params.get("tags"),
+            interface_name=params.get('endpoint_name'),  # 接口名称
+            user_id=params.get("user_id"),
+            session_id=params.get("session_id"),
+            request_input=params,
+            response_output=response_output,  # 记录所有生成器内容
+            langfuse=gsr.langfuse_client,
+            release="v1.0.0",
+            metadata={"team": "AI", "project": "health_service"},
+            start_time=start_time,  # 传递 start_time
+            end_time=end_time,  # 传递 end_time
+            tokenizer=gsr.qwen_tokenizer,
+        )
+    except Exception as e:
+        # 捕获监控记录过程中的异常，避免影响接口的返回
+        logger.error(f"Error recording monitoring data: {e}")
 
 
 # 日志包装和流式输出逻辑
@@ -663,22 +690,7 @@ def mount_aigc_functions(app: FastAPI):
             param["endpoint_name"] = endpoint_name
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
             # 记录监控数据
-            # 获取 intent_code 并根据它获取 tags
-            intent_code = param.get("intentCode")
-            if intent_code:
-                try:
-                    # 尝试使用 intent_code 获取对应的提示词 tag
-                    prompt = gsr.langfuse_client.get_prompt(intent_code)
-                    tags = prompt.tags if prompt else []
-                    param['endpoint_name'] = f"sanji_kangyang_{intent_code}"
-                except Exception as e:
-                    # 如果获取失败，记录错误并使用默认的 tags
-                    logger.error(f"Error fetching tags for intent_code {intent_code}: {str(e)}")
-                    tags = ["default_tag"]
-                    param['endpoint_name'] = "sanji_kangyang"
-            else:
-                # 如果没有 intent_code，则使用默认值
-                tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
+            tags = ["aigc_sanji_kangyang", "健康方案", "个性化营养", "三济康养"]
 
             param['tags'] = tags
 
@@ -1738,11 +1750,12 @@ def create_app():
             user_id = param.get("customId", "unknown")
             messages = param.get("history", [])
             # **异步调用 mem0 记录对话**
-            # if hasattr(gsr, "mem0_url") and gsr.mem0_url:
-            #     try:
-            #         asyncio.create_task(call_mem0_add_memory(gsr.mem0_url, user_id, messages))
-            #     except Exception as mem0_err:
-            #         logger.exception(f"mem0 调用失败: {mem0_err}")
+            if hasattr(gsr, "mem0_url") and gsr.mem0_url:
+                try:
+                    asyncio.create_task(call_mem0_add_memory(gsr.mem0_url, user_id, messages))
+                except Exception as mem0_err:
+                    pass
+                    # logger.exception(f"mem0 调用失败: {mem0_err}")
 
             # 原逻辑保持不变
             result = decorate_chat_complete(
@@ -1810,8 +1823,14 @@ def create_app():
     @app.route("/intent/query", methods=["post"])
     async def intent_query(request: Request):
         global chat
+        endpoint = "/intent/query"
+
+        start_time = time.time()
         try:
-            param = await accept_param(request, endpoint="/intent/query")
+            # 获取请求参数
+            param = await accept_param(request, endpoint=endpoint)
+
+            # 执行 intent_query 方法
             item = chat.intent_query(
                 param.get("history", []),
                 task=param.get("task", ""),
@@ -1821,15 +1840,35 @@ def create_app():
                 subIntentPrompt=param.get("subIntentPrmopt", ""),
                 scene_code=param.get("scene_code", "default"),
             )
+
+            # 记录监控数据
+            tags = ["intent_query", "意图查询", "智能问答", "对话系统"]
+            param['tags'] = tags
+            param["endpoint_name"] = endpoint
+            logger.info(f"Intent query result: {repr(item)}")
+
+            # 构造返回的结果
             result = make_result(items=item)
+
+            end_time = time.time()
+            logger.info(f"Endpoint: {endpoint}, Final response: {repr(result)}")
+
+            # 记录监控数据
+            await record_monitoring_data([item], param, start_time, end_time)
+
         except AssertionError as err:
             logger.exception(err)
             result = make_result(head=601, msg=repr(err), items=param)
+
         except Exception as err:
             logger.exception(err)
             logger.error(traceback.format_exc())
             result = make_result(msg=repr(err), items=param)
+
         finally:
+            # 在finally块中确保记录监控数据
+            end_time = time.time()
+            await record_monitoring_data([result], param, start_time, end_time)
             return result
 
     @app.route("/reload_prompt", methods=["get"])

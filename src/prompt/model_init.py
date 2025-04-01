@@ -522,8 +522,8 @@ async def acallLLtrace(
                 break
             except Exception as e:
                 retry += 1
-                logger.info(f"call llm error:{repr(e)}")
-                logger.info(f"request llm model error, retry to request")
+                # logger.info(f"call llm error:{repr(e)}")
+                # logger.info(f"request llm model error, retry to request")
                 continue
         logger.info(f"Model generate completion:{repr(completion)}")
         if stream:
@@ -551,6 +551,15 @@ async def acallLLtrace(
             logger.info(f"Model generate completion:{repr(completion)}")
 
         ret = completion.choices[0].message.content.strip()
+
+    time_cost = round(time.time() - t_st, 1)
+    logger.info(
+        f"Model {model} generate costs summary: "
+        + f"prompt_tokens:{completion.usage.prompt_tokens}, "
+        + f"completion_tokens:{completion.usage.completion_tokens}, "
+        + f"total_tokens:{completion.usage.total_tokens}, "
+          f"cost: {time_cost}s"
+    )
     # 非流式输出监控
     await async_track_completion_with_langfuse(
         trace=trace,

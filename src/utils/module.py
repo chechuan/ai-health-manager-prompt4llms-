@@ -2986,7 +2986,6 @@ async def async_wrap_stream_with_langfuse(
                     "input": input_tokens * 0.00001,
                     "output": output_tokens * 0.00002,
                 }
-                logger.debug("full_output", full_output)
                 generation.end(usage=usage, total_cost=cost)
                 generation.update(output=full_output)
                 trace.update(output=full_output)
