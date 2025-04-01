@@ -1980,8 +1980,6 @@ def create_app():
 
         finally:
             # 在finally块中确保记录监控数据
-            end_time = time.time()
-            await record_monitoring_data([result], param, start_time, end_time)
             return result
 
     @app.route("/reload_prompt", methods=["get"])
