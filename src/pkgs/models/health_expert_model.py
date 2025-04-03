@@ -2979,7 +2979,8 @@ class HealthExpertModel:
             item = await convert_schedule_fields_to_english(raw_item)
             item = await enrich_schedule_with_extras(item)
             daily_schedule_list.append(item)
-
+        if not daily_schedule_list:
+            daily_schedule_list = DAILV_SCHEDULE_PUSH
         return daily_schedule_list
 
 

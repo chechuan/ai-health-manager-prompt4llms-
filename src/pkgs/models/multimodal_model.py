@@ -286,6 +286,7 @@ class MultiModalModel:
         management_tag = kwargs.get("management_tag", "") or ""
         diet_period = kwargs.get("diet_period", "") or ""
         diet_time = kwargs.get("diet_time", time.time())
+        knowledge_system = kwargs.get("knowledge_system")
         logger.debug(f"diet_eval user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period} diet_time: {diet_time}")
 
         # 将unix时间转换为日期格式
@@ -311,17 +312,44 @@ class MultiModalModel:
 
         # 拼接用户信息
         query = ""
-        for key in [["age", "年龄"], ["gender", "性别"], ["height", "身高"], ["weight", "体重"], ["disease", "现患疾病"], ["allergy", "过敏史"]]:
+        for key in [
+            ["age", "年龄"],
+            ["gender", "性别"],
+            ["height", "身高"],
+            ["weight", "体重"],
+            ["disease", "现患疾病"],
+            ["allergy", "过敏史"],
+            ["past_illness_history", "既往疾病史"],  # Adding new fields here
+            ["diabetes_type", "糖尿病类型"],
+            ["diabetes_complications", "糖尿病并发症"],
+            ["hypertension_type", "高血压类型"],
+            ["family_history", "家族史"],
+            ["discomfort_symptoms", "不适症状"],
+            ["diabetes_medication", "糖尿病用药情况"],
+            ["hypertension_medication", "高血压用药情况"],
+            ["other_health_issues", "其他健康问题"]
+        ]:
             query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"
         query += f"用户管理标签：{management_tag}\n"
         query += f"用餐时间：{diet_time}\n"
         query += f"饮食信息：{json.dumps(diet_info, ensure_ascii=False)}"
         logger.debug(f"diet_eval query: {query}")
 
+        if knowledge_system:
+            if knowledge_system == "yaoshukun":
+                prompt_template = self.prompts.get("专家知识体系饮食点评")
+            else:
+                return self._get_result(200, {
+                    "status": 0,
+                    "content": None
+                }, "")
+        else:
+            prompt_template = self.prompts.get("饮食一句话建议")
+
         # 请求LLM
         messages = [{
             'role': 'user',
-            'content': f"{self.prompts['饮食一句话建议'].format(query)}",
+            'content': f"{prompt_template.format(query)}",
         }]
         generate_text = await acallLLM(
             history=messages, max_tokens=512, temperature=0, seed=42, model="Qwen1.5-32B-Chat", timeout=45
@@ -340,7 +368,6 @@ class MultiModalModel:
         management_tag = kwargs.get("management_tag", "") or ""
         diet_period = kwargs.get("diet_period", "") or ""
         diet_time = kwargs.get("diet_time", time.time())
-        knowledge_system = kwargs.get("knowledge_system")
         logger.debug(f"diet_eval_customer user_info: {user_info} diet_info: {diet_info} management_tag: {management_tag} diet_period: {diet_period} diet_time: {diet_time}")
 
         # 将unix时间转换为日期格式
@@ -379,16 +406,7 @@ class MultiModalModel:
             ["special_diet", "特殊饮食习惯"],
             ["taste_preference", "口味偏好"],
             ["special_period", "是否特殊生理期"],
-            ["constitution", "中医体质"],
-            ["past_illness_history", "既往疾病史"],  # Adding new fields here
-            ["diabetes_type", "糖尿病类型"],
-            ["diabetes_complications", "糖尿病并发症"],
-            ["hypertension_type", "高血压类型"],
-            ["family_history", "家族史"],
-            ["discomfort_symptoms", "不适症状"],
-            ["diabetes_medication", "糖尿病用药情况"],
-            ["hypertension_medication", "高血压用药情况"],
-            ["other_health_issues", "其他健康问题"]
+            ["constitution", "中医体质"]
         ]:
             if key[0] in user_info and len(f"{user_info.get(key[0], '') or ''}") > 0:
                 query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"
@@ -396,16 +414,7 @@ class MultiModalModel:
             query += f"用户管理标签：{management_tag}\n"
         logger.debug(f"diet_eval_customer query: {query}")
 
-        if knowledge_system:
-            if knowledge_system == "yaoshukun":
-                prompt_template = self.prompts.get("专家知识体系饮食点评")
-            else:
-                return self._get_result(200, {
-                    "status": 0,
-                    "content": None
-                }, "")
-        else:
-            prompt_template = self.prompts.get("C端饮食评价")
+        prompt_template = self.prompts.get("C端饮食评价")
 
         # 请求LLM
         messages = [{
