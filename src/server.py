@@ -1050,13 +1050,7 @@ def mount_aigc_functions(app: FastAPI):
             # 执行干预能力调用（支持四个）
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
-            # 设置 tags（尝试从 langfuse 获取）
-            try:
-                prompt = gsr.langfuse_client.get_prompt(intent_code)
-                tags = prompt.tags if prompt else []
-            except Exception as e:
-                logger.warning(f"[{endpoint}] Failed to fetch tags for {intent_code}: {str(e)}")
-                tags = ["aigc_intervention", "327干预计划", "姚树坤"]
+            tags = ["aigc_intervention", "327干预计划", "姚树坤"]
 
             param["tags"] = tags
 
