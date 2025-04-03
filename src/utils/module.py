@@ -159,6 +159,18 @@ class NpEncoder(json.JSONEncoder):
 
 
 def intent_init():
+    # ==================== 糖尿病专病父+子意图 ====================
+    DM_EXPERT_INTENTS = {
+        "健康咨询": ("dm_health", "健康咨询"),
+        "健康处方": ("dm_diet", "健康处方"),
+        "健康管理总原则咨询": ("dm_principle", "健康管理总原则咨询"),
+        "饮食原则咨询": ("dm_diet_rule", "饮食原则咨询"),
+        "饮食知识咨询": ("dm_diet_knowledge", "饮食知识咨询"),
+        "饮食适宜、禁忌咨询": ("dm_diet_suit", "饮食适宜、禁忌咨询"),
+        "食物营养成分查询": ("dm_food_nutrition", "食物营养成分查询"),
+        "生成食谱": ("dm_diet_rec", "生成食谱"),
+    }
+
     # ==================== 固安来康郡相关 ====================
     LAKANG_INTENTS = {
         "温泉推荐": ("spa_rec", "温泉推荐"),
@@ -278,6 +290,7 @@ def intent_init():
     # 合并所有简单意图
     ALL_INTENTS = {}
     for intent_dict in [
+        DM_EXPERT_INTENTS,
         LAKANG_INTENTS,
         MEDICAL_INTENTS,
         FOOD_INTENTS,
@@ -3095,7 +3108,6 @@ def wrap_stream_with_langfuse(
                     "input": input_tokens * 0.00001,
                     "output": output_tokens * 0.00002,
                 }
-                logger.debug("full_output", full_output)
                 generation.end(usage=usage, total_cost=cost)
                 generation.update(output=full_output)
                 trace.update(output=full_output)

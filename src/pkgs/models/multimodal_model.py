@@ -380,6 +380,15 @@ class MultiModalModel:
             ["taste_preference", "口味偏好"],
             ["special_period", "是否特殊生理期"],
             ["constitution", "中医体质"],
+            ["past_illness_history", "既往疾病史"],  # Adding new fields here
+            ["diabetes_type", "糖尿病类型"],
+            ["diabetes_complications", "糖尿病并发症"],
+            ["hypertension_type", "高血压类型"],
+            ["family_history", "家族史"],
+            ["discomfort_symptoms", "不适症状"],
+            ["diabetes_medication", "糖尿病用药情况"],
+            ["hypertension_medication", "高血压用药情况"],
+            ["other_health_issues", "其他健康问题"]
         ]:
             if key[0] in user_info and len(f"{user_info.get(key[0], '') or ''}") > 0:
                 query += f"{key[1]}：{user_info.get(key[0], '') or ''}\n"

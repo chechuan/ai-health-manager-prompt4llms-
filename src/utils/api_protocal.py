@@ -123,7 +123,16 @@ USER_PROFILE_KEY_MAP = {
     "today_life_entropy": "今日生命熵",
     "sleep_quality": "睡眠质量",
     "emotion_state": "情绪状态",
-    "lifestyle_habits": "生活习惯"
+    "lifestyle_habits": "生活习惯",
+    "past_illness_history": "既往疾病史",
+    "diabetes_type": "糖尿病类型",
+    "diabetes_complications": "糖尿病并发症",
+    "hypertension_type": "高血压类型",
+    "family_history": "家族史",
+    "discomfort_symptoms": "不适症状",
+    "diabetes_medication": "糖尿病用药情况",
+    "hypertension_medication": "高血压用药情况",
+    "other_health_issues": "其他健康问题"
 }
 
 
@@ -261,26 +270,24 @@ class UserProfile(BaseModel):
     exercise_intensity: Optional[str] = Field(
         None, description="运动强度", examples=["正常强度"]
     )
-    current_diseases: Optional[str] = Field(None, description="现患疾病", example=["高血压, 糖尿病"])
-    management_goals: Optional[str] = Field(None, description="管理目标", example=["减重, 降血压"])
-    food_allergies: Optional[str] = Field(None, description="食物过敏", example=["花生"])
-    special_diet: Optional[str] = Field(None, description="特殊饮食习惯", example=["素食"])
-    taste_preferences: Optional[str] = Field(None, description="口味偏好", example=["清淡"])
-    special_physiological_period: Optional[str] = Field(None,
-                                                        description="是否特殊生理期，如备孕期、孕早期、孕中期、孕晚期等",
-                                                        example=["备孕期"])
-    region: Optional[str] = Field(None, description="所处地域", example=["北京"])
-    exercise_habits: Optional[str] = Field(None, description="运动习惯", example=["每天锻炼"])
-    exercise_level: Optional[str] = Field(None, description="运动水平", example=["中等"])
-    exercise_risk: Optional[str] = Field(None, description="运动风险", example=["低"])
-    emotional_issues: Optional[str] = Field(None, description="情志问题", example=["焦虑"])
-    weight_status: Optional[str] = Field(None, description="体重状态", example=["偏低", "正常", "超重", "肥胖"])
-    recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", example=["1717.5kcal"])
-    preferred_name: Optional[str] = Field(None, description="用户期望称呼", example=["张叔叔"])
-    city: Optional[str] = Field(None, description="所在城市", example=["张叔叔"])
-    last_night_sleep_time: Optional[str] = Field(None, description="昨晚睡眠时间", example=["120"])
-    today_blood_sugar: Optional[str] = Field(None, description="今日血糖", example=["5"])
-    today_life_entropy: Optional[str] = Field(None, description="今日生命熵", example=["53.45"])
+    current_diseases: Optional[str] = Field(None, description="现患疾病", examples=["高血压, 糖尿病"])
+    management_goals: Optional[str] = Field(None, description="管理目标", examples=["减重, 降血压"])
+    food_allergies: Optional[str] = Field(None, description="食物过敏", examples=["花生"])
+    special_diet: Optional[str] = Field(None, description="特殊饮食习惯", examples=["素食"])
+    taste_preferences: Optional[str] = Field(None, description="口味偏好", examples=["清淡"])
+    special_physiological_period: Optional[str] = Field(None, description="是否特殊生理期，如备孕期、孕早期、孕中期、孕晚期等", examples=["备孕期"])
+    region: Optional[str] = Field(None, description="所处地域", examples=["北京"])
+    exercise_habits: Optional[str] = Field(None, description="运动习惯", examples=["每天锻炼"])
+    exercise_level: Optional[str] = Field(None, description="运动水平", examples=["中等"])
+    exercise_risk: Optional[str] = Field(None, description="运动风险", examples=["低"])
+    emotional_issues: Optional[str] = Field(None, description="情志问题", examples=["焦虑"])
+    weight_status: Optional[str] = Field(None, description="体重状态", examples=["偏低", "正常", "超重", "肥胖"])
+    recommended_caloric_intake: Optional[str] = Field(None, description="标准饮食摄入热量", examples=["1717.5kcal"])
+    preferred_name: Optional[str] = Field(None, description="用户期望称呼", examples=["张叔叔"])
+    city: Optional[str] = Field(None, description="所在城市", examples=["张叔叔"])
+    last_night_sleep_time: Optional[str] = Field(None, description="昨晚睡眠时间", examples=["120"])
+    today_blood_sugar: Optional[str] = Field(None, description="今日血糖", examples=["5"])
+    today_life_entropy: Optional[str] = Field(None, description="今日生命熵", examples=["53.45"])
     chinese_medicine_disease: Optional[str] = Field(None, description="中医疾病", examples=["肝郁气滞"])
     chinese_medicine_symptom: Optional[str] = Field(None, description="证候", examples=["头痛"])
     severity: Optional[str] = Field(None, description="疾病严重程度", examples=["中等"])
@@ -288,7 +295,15 @@ class UserProfile(BaseModel):
     sleep_quality: Optional[str] = Field(None, description="睡眠质量", examples=["良好", "一般", "差"])
     emotion_state: Optional[str] = Field(None, description="情绪状态", examples=["平稳", "焦虑", "抑郁", "易怒"])
     lifestyle_habits: Optional[str] = Field(None, description="生活习惯（包括吸烟、饮酒、作息等）", examples=["不吸烟不饮酒，作息规律", "偶尔抽烟，常喝啤酒", "经常熬夜，爱喝奶茶", "已戒烟，生活较健康"])
-
+    past_illness_history: Optional[str] = Field(None, description="既往疾病史", examples=["无重大疾病"])
+    diabetes_type: Optional[str] = Field(None, description="糖尿病类型", examples=["1型糖尿病"])
+    diabetes_complications: Optional[str] = Field(None, description="糖尿病并发症", examples=["糖尿病视网膜病变"])
+    hypertension_type: Optional[str] = Field(None, description="高血压类型", examples=["原发性高血压"])
+    family_history: Optional[str] = Field(None, description="家族史", examples=["父亲有高血压，母亲有糖尿病"])
+    discomfort_symptoms: Optional[str] = Field(None, description="不适症状", examples=["偶尔头晕"])
+    diabetes_medication: Optional[str] = Field(None, description="糖尿病用药情况", examples=["每日口服二甲双胍"])
+    hypertension_medication: Optional[str] = Field(None, description="高血压用药情况", examples=["每天服用降压药"])
+    other_health_issues: Optional[str] = Field(None, description="其他健康问题", examples=["胃病"])
 
 class AigcFunctionsRequest(BaseModel):
     intentCode: Literal[

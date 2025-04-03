@@ -315,7 +315,7 @@ Begin!"""
         history = history[-8:]
         return history
 
-    def run(self, history: Dict):
+    def run(self, history: Dict, kwargs: Dict):
         from datetime import datetime
 
         # 获取当前日期
@@ -355,6 +355,7 @@ Begin!"""
 
         # ================== 提取意图 & 获取 Langfuse 配置 ====================
         intent_code = "other"
+        user_id = kwargs.get("customId", "anonymous")
         endpoint_name, tags = get_intent_name_and_tags(intent_code)
         # 调用模型
         response = callLLM(
@@ -368,8 +369,8 @@ Begin!"""
             stream=True,
             extra_params={
                 "langfuse": self.gsr.langfuse_client,
-                "user_id": "chechuan",
-                "session_id": "chechuan",
+                "user_id": user_id,
+                "session_id": "anonymous",
                 "tokenizer": self.gsr.qwen_tokenizer,
                 "intent_code": intent_code,
                 "name": endpoint_name,

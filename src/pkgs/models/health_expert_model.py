@@ -1712,44 +1712,7 @@ class HealthExpertModel:
 
         return content
 
-    async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[
-        Dict[str, List[Dict[str, float]]]]:
-        """
-        推荐餐次及每餐能量占比和食谱（支持知识体系）
-
-        根据用户健康标签、饮食调理原则，结合当前节气等信息，为用户生成合理的食谱计划，包含餐次、食物名称指导。
-
-        需求文档：https://alidocs.dingtalk.com/i/nodes/m9bN7RYPWdYyLgqEcg61MMomVZd1wyK0
-
-        参数:
-            kwargs (dict): 包含用户画像和病历信息的参数字典，包括 `knowledge_system`（可选）
-
-        返回:
-            List[Dict[str, List[Dict[str, float]]]]: 一天的餐次及每餐食谱推荐值
-        """
-
-        _event = "推荐餐次及每餐能量占比和食谱"
-
-        # 解析 `knowledge_system`，默认为 "laikang"
-        knowledge_system = kwargs.get("knowledge_system", "laikang")
-
-        # 确保只允许特定值，避免传错
-        allowed_knowledge_systems = {"laikang", "yaoshukun"}  # 未来可扩展
-        if knowledge_system not in allowed_knowledge_systems:
-            raise ValueError(f"Invalid knowledge_system: {knowledge_system}")
-
-        # 根据 `knowledge_system` 变更 `intentCode`
-        kwargs["intentCode"] = f"aigc_functions_recommended_meal_plan_with_recipes_{knowledge_system}"
-
-        # 选择执行不同的逻辑
-        if knowledge_system == "laikang":
-            return await self._laikang_meal_plan_logic(**kwargs)
-        elif knowledge_system == "yaoshukun":
-            return await self._laikang_meal_plan_logic(**kwargs)  # 未来新增
-        else:
-            return await self._laikang_meal_plan_logic(**kwargs)  # 兜底
-
-    async def _laikang_meal_plan_logic(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
+    async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
         """
         推荐餐次及每餐能量占比和食谱-带量食谱
 
@@ -1764,7 +1727,7 @@ class HealthExpertModel:
             List[Dict[str, List[Dict[str, float]]]]: 一天的餐次及每餐食谱推荐值
         """
 
-        _event = "推荐餐次及每餐能量占比和食谱(来康知识体系)"
+        _event = "推荐餐次及每餐能量占比和食谱"
 
         # 必填字段和至少需要一项的参数列表
         required_fields = {
@@ -1845,6 +1808,8 @@ class HealthExpertModel:
         content = await parse_generic_content(content)
         items = await run_in_executor(
             lambda: enrich_meal_items_with_images(content, self.gsr.dishes_data, 0.5, MEAL_TIME_MAPPING))
+        if not items:
+            items = DEFAULT_MEAL_PLAN
         return items
 
     async def aigc_functions_generate_related_questions(self, **kwargs) -> List[str]:
@@ -2960,7 +2925,7 @@ class HealthExpertModel:
         """
         日程打卡推送内容生成
 
-        需求文档：https://your-doc-link-placeholder.com
+        需求文档：https://alidocs.dingtalk.com/i/nodes/93NwLYZXWyqxvl7zuj4yGpabWkyEqBQm?corpId=ding5aaad5806ea95bd7ee0f45d8e4f7c288&doc_type=wiki_doc&utm_medium=search_main&utm_source=search
 
         根据姚树坤理论及用户画像，生成早餐、午餐、晚餐、14点/19点运动打卡文案。
 
@@ -2985,7 +2950,7 @@ class HealthExpertModel:
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group"),
-            "current_date": datetime.today().strftime("%Y-%m-%d"),
+            "current_date": kwargs.get("current_date"),
             "diet_weight_control": await convert_structured_kv_to_prompt_dict(kwargs.get("diet_weight_control")),
             "clear_inflammatory_diet": await convert_structured_kv_to_prompt_dict(kwargs.get("clear_inflammatory_diet")),
             "salt_intake_control": await convert_structured_kv_to_prompt_dict(kwargs.get("salt_intake_control")),

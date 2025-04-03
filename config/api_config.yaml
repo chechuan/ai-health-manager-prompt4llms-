@@ -10,14 +10,11 @@ local:
             api_base: http://10.39.91.251:40024
             api_key: sk-QZqVzsbLfql5texCBb27C4958e2b412798F2Ba0e34D958C5
             support_models:
-            - Baichuan2-7B-Chat
-            - Qwen2-7B-Instruct
-            - Qwen-14B-Chat
-            - Qwen1.5-14B-Chat
-            - Qwen1.5-32B-Chat
-            - bce-embedding-base-v1
-            - Qwen-VL-base-0.0.1
-            - DeepSeek-R1-Distill-32B
+                - Qwen2-7B-Instruct
+                - Qwen1.5-14B-Chat
+                - Qwen1.5-32B-Chat
+                - Qwen-VL-base-0.0.1
+                - DeepSeek-R1-Distill-32B
 dev:
     graph: http://10.4.164.240:26925
     ai_backend: https://gate-dev.op.laikang.com/aihealthmanager-dev
@@ -30,12 +27,9 @@ dev:
             api_base: http://172.27.9.34:26928
             api_key: sk-QZqVzsbLfql5texCBb27C4958e2b412798F2Ba0e34D958C5
             support_models:
-                - Baichuan2-7B-Chat
                 - Qwen2-7B-Instruct
-                - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
                 - Qwen1.5-32B-Chat
-                - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
                 - DeepSeek-R1-Distill-32B
 prod:
@@ -50,11 +44,8 @@ prod:
             api_base: http://172.27.18.60:26928
             api_key: sk-Wy62RaRYU0JXptKG79DaD45aB3C845F3A0959bBd92AeB907
             support_models:
-                - Baichuan2-7B-Chat
                 - Qwen2-7B-Instruct
-                - Qwen-14B-Chat
                 - Qwen1.5-14B-Chat
                 - Qwen1.5-32B-Chat
-                - bce-embedding-base-v1
                 - Qwen-VL-base-0.0.1
                 - DeepSeek-R1-Distill-32B

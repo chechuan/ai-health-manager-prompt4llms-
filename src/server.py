@@ -1937,6 +1937,7 @@ def create_app():
     async def intent_query(request: Request):
         global chat
         endpoint = "/intent/query"
+        endpoint_name = "intent_query"
 
         start_time = time.time()
         try:
@@ -1957,7 +1958,7 @@ def create_app():
             # 记录监控数据
             tags = ["intent_query", "意图查询", "智能问答", "对话系统"]
             param['tags'] = tags
-            param["endpoint_name"] = endpoint
+            param["endpoint_name"] = endpoint_name
             logger.info(f"Intent query result: {repr(item)}")
 
             # 构造返回的结果

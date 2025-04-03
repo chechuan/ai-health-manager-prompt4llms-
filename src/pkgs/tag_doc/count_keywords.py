@@ -110,7 +110,7 @@ open("result.txt", "w").write(text)
 
 # url = "http://10.228.67.99:26921/v1/chat/completions"
 # payload = {
-#     # "model": "Qwen-14B-Chat",
+#     # "model": "Qwen1.5-14B-Chat",
 #     "model": "Baichuan2-13B-Chat",
 #     "messages": [
 #         {

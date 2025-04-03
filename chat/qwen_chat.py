@@ -104,7 +104,7 @@ class Chat:
                              key="辅助诊断",
                              input_text=prompt,
                              output_text=model_output,
-                             model="Qwen-14B-Chat")
+                             model="Qwen1.5-14B-Chat")
         logger.debug(f"辅助诊断 Gen Output:\n{model_output}")
 
         out_text = _parse_latest_plugin_call(model_output)
@@ -123,7 +123,7 @@ class Chat:
                                  key="辅助诊断 改写修正",
                                  input_text=prompt,
                                  output_text=model_output,
-                                 model="Qwen-14B-Chat")
+                                 model="Qwen1.5-14B-Chat")
 
             model_output = model_output.replace("\n", "").strip().split("：")[-1]
             out_text = "I know the final answer.", "直接回复用户问题", model_output
@@ -174,6 +174,10 @@ class Chat:
             return '运动咨询'
         elif '日程' in text:
             return '日程管理'
+        elif '健康咨询' in text:
+            return '健康咨询'
+        elif '健康处方' in text:
+            return '健康处方'
         else:
             return '其它'
 
@@ -221,7 +225,7 @@ class Chat:
             #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
         generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-                temperature=0, do_sample=False, stop=['\nThought'], model='Qwen-14B-Chat')
+                temperature=0, do_sample=False, stop=['\nThought'], model='Qwen1.5-14B-Chat')
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = 0
         if 'Intent:' in  generate_text:
@@ -246,7 +250,7 @@ class Chat:
                 # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
             generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-                    temperature=0, do_sample=False, stop=['\nThought'], model='Qwen-14B-Chat')
+                    temperature=0, do_sample=False, stop=['\nThought'], model='Qwen1.5-14B-Chat')
             logger.debug('子意图模型输出：' + generate_text)
             intentIdx = 0
             if 'Intent:' in  generate_text:
@@ -263,6 +267,9 @@ class Chat:
         """意图识别
         """
         kwargs = deepcopy(kwargs)
+        logger.debug(kwargs)
+        user_id = kwargs.get("user_id", "anonymous")
+        session_id = kwargs.get("session_id", "anonymous")
         if kwargs.get('scene_code', 'default') != 'doctor':
             open_sch_list = ['打开','日程']
             market_list = ['打开','集市']
@@ -313,8 +320,27 @@ class Chat:
             # else:
             #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
         logger.debug('父意图模型输入：' + prompt)
-        generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-        temperature=0, do_sample=False, stop=['\nThought'], model='Qwen1.5-32B-Chat')
+        # 调用模型（Langfuse 追踪：父意图）
+        generate_text = callLLM(
+            query=prompt,
+            max_tokens=200,
+            top_p=0.8,
+            temperature=0,
+            do_sample=False,
+            stop=['\nThought'],
+            model='Qwen1.5-32B-Chat',
+            extra_params={
+                "langfuse": self.global_share_resource.langfuse_client,
+                "user_id": user_id,
+                "session_id": session_id,
+                "tokenizer": self.global_share_resource.qwen_tokenizer,
+                "intent_code": "intent_classification",
+                "name": "parent_intent",
+                "tags": [],
+                "release": "v1.0.0",
+                "metadata": {"source": "intent"},
+            }
+        )
         logger.debug('父意图识别模型输出：' + generate_text)
         intentIdx = 0
         if 'Intent:' in generate_text:
@@ -325,7 +351,7 @@ class Chat:
             intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
+        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询', '健康咨询', '健康处方'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
             # sub_intent_prompt = self.prompt_meta_data['intent'][parant_intent]['description']
             if parant_intent in ['呼叫五师意图']:
                 history = history[-1:]
@@ -338,8 +364,27 @@ class Chat:
                 prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
                 # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
             logger.debug('子意图模型输入：' + prompt)
-            generate_text = callLLM(query=prompt, max_tokens=200, top_p=0.8,
-                    temperature=0, do_sample=False, stop=['\nThought'], model='Qwen1.5-32B-Chat')
+            # 调用模型（Langfuse 追踪：子意图）
+            generate_text = callLLM(
+                query=prompt,
+                max_tokens=200,
+                top_p=0.8,
+                temperature=0,
+                do_sample=False,
+                stop=['\nThought'],
+                model='Qwen1.5-32B-Chat',
+                extra_params={
+                    "langfuse": self.global_share_resource.langfuse_client,
+                    "user_id": user_id,
+                    "session_id": session_id,
+                    "tokenizer": self.global_share_resource.qwen_tokenizer,
+                    "intent_code": "intent_classification",
+                    "name": "sub_intent",
+                    "tags": [parant_intent],
+                    "release": "v1.0.0",
+                    "metadata": {"source": "intent"},
+                }
+            )
             logger.debug('子意图模型输出：' + generate_text)
             intentIdx = 0
             if 'Intent:' in  generate_text:
@@ -425,7 +470,7 @@ class Chat:
                                  do_sample=False)
         logger.debug('信息提取模型输出：' + model_output)
         content = model_output
-        self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen-14B-Chat")
+        self.update_mid_vars(mid_vars, key="获取用户信息 01", input_text=prompt, output_text=content, model="Qwen1.5-14B-Chat")
         if sum([i in content for i in ["询问","提问","转移","未知","结束", "停止"]]) != 0:
             logger.debug('信息提取流程结束...')
             content = self.chatter_gaily(history, mid_vars)

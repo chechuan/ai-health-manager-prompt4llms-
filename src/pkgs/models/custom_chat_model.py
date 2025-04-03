@@ -527,6 +527,7 @@ class CustomChatAuxiliary(CustomChatModel):
         # for _ in range(2):
 
         intent_code = "auxiliary_diagnosis"
+        user_id = kwargs.get("customId", "anonymous")
         endpoint_name, tags = get_intent_name_and_tags(intent_code)
         content = callLLM(
             model=model,
@@ -541,8 +542,8 @@ class CustomChatAuxiliary(CustomChatModel):
             stream=False,
             extra_params={
                 "langfuse": self.gsr.langfuse_client,
-                "user_id": "chechuan",
-                "session_id": "chechuan",
+                "user_id": user_id,
+                "session_id": "anonymous",
                 "tokenizer": self.gsr.qwen_tokenizer,
                 "intent_code": intent_code,
                 "name": endpoint_name,

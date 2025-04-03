@@ -190,7 +190,7 @@ messages = [
 start_time = time.time()
 model_list = [
     "Baichuan2-7B-Chat",
-    "Qwen-14B-Chat",
+    "Qwen1.5-14B-Chat",
     "Qwen-1_8B-Chat",
     "Qwen1.5-32B-Chat",
     "Yi-34B-Chat",

@@ -486,7 +486,7 @@ class Agents:
         # prompt_template_str = "You are a helpful assistant.\n" "# 任务描述\n" "请你为我解读报告中的异常信息"
         # messages = [{"role": "system", "content": prompt_template_str}, {"role": "user", "content": docs}]
         # logger.debug(f"Report interpretation LLM Input: {dumpJS(messages)}")
-        # response = callLLM(history=messages, model="Qwen-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
+        # response = callLLM(history=messages, model="Qwen1.5-14B-Chat", temperature=0.7, top_p=0.5, stream=True)
         # content = accept_stream_response(response, verbose=False)
         # logger.debug(f"Report interpretation LLM Output: {content}")
 

@@ -216,3 +216,215 @@ IMAGE_MAP = {
         "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/干预计划图片/6情志调理心态.png"
     }
 }
+
+# 三济康养方案带量食谱兜底方案
+DEFAULT_MEAL_PLAN = [
+        {
+            "meal": "早餐",
+            "time": "07:00",
+            "foods": [
+                {
+                    "recipe": "燕麦粥",
+                    "recommended_amount": "100g",
+                    "calories": {
+                        "value": 100,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/64d00ff0-ec91-4c16-8e0d-53ba6974bf19.jpg?e=16733833883&token=2:OHIOHGNAJA8OGVVC0RI1:11104aee424d6df0d048af4a07685a5ad4c4af32228fe0f794e08344794d9163"
+                },
+                {
+                    "recipe": "水煮蛋",
+                    "recommended_amount": "1个",
+                    "calories": {
+                        "value": 70,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/d0055a2c-8c66-475d-ad69-269039051511.jpg?e=16732942614&token=2:OHIOHGNAJA8OGVVC0RI1:d7b4f149b7adf9a39c72d3aec5fd7aeaf6b5f55a4e51b569a8308102cf7f8720"
+                },
+                {
+                    "recipe": "凉拌黄瓜",
+                    "recommended_amount": "100g",
+                    "calories": {
+                        "value": 30,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/adcd39fb-5773-41dc-bc20-0348fe441634.jpg?e=16736418109&token=2:OHIOHGNAJA8OGVVC0RI1:4dc8653d65f67d9b207c3c322cd99955c6e4d0985a8fec3419bff4c1a5b488b3"
+                }
+            ]
+        },
+        {
+            "meal": "午餐",
+            "time": "11:30",
+            "foods": [
+                {
+                    "recipe": "红烧豆腐",
+                    "recommended_amount": "150g",
+                    "calories": {
+                        "value": 120,
+                        "unit": "kcal"
+                    },
+                    "image": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/2022-10-13/buffet/红烧豆腐.png"
+                },
+                {
+                    "recipe": "清蒸鲈鱼",
+                    "recommended_amount": "100g",
+                    "calories": {
+                        "value": 150,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/be771c18-0801-4a33-91f4-2ec9dbf642e4.jpg?e=16733738619&token=2:OHIOHGNAJA8OGVVC0RI1:9cd18dcd1d45a3a11908b42575165a6eb4dd9aeabd8e7b83278bed4be2bce67d"
+                },
+                {
+                    "recipe": "炒菠菜",
+                    "recommended_amount": "100g",
+                    "calories": {
+                        "value": 80,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/505b36ef-1b3e-4a63-81e4-0079860ab548.jpg?e=16733736109&token=2:OHIOHGNAJA8OGVVC0RI1:5abc778840868626ddb8c3ba9f92142c79f5f9109babc41a1d37e2e89782ebbe"
+                }
+            ]
+        },
+        {
+            "meal": "晚餐",
+            "time": "17:30",
+            "foods": [
+                {
+                    "recipe": "瘦猪肉炒青椒",
+                    "recommended_amount": "150g",
+                    "calories": {
+                        "value": 200,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/06f573ec-3e61-4890-90e8-3ad8fa5ce24b.jpg?e=16733735460&token=2:OHIOHGNAJA8OGVVC0RI1:ec6f652bd3a9811fd7b1cf1bb52257f448b8d7d63b9300fcf261bc8950cd20d5"
+                },
+                {
+                    "recipe": "糙米饭",
+                    "recommended_amount": "80g",
+                    "calories": {
+                        "value": 120,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/1dfea7ff-f459-46e8-8e9f-1ecd16ddfc49.png?e=17011979369&token=2:OHIOHGNAJA8OGVVC0RI1:822b07abe1f1aadf4b872e7497559b0d58d2d515888b31644bcc20ba1815c1df"
+                },
+                {
+                    "recipe": "凉拌木耳",
+                    "recommended_amount": "50g",
+                    "calories": {
+                        "value": 30,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/1dfea7ff-f459-46e8-8e9f-1ecd16ddfc49.png?e=17011979369&token=2:OHIOHGNAJA8OGVVC0RI1:822b07abe1f1aadf4b872e7497559b0d58d2d515888b31644bcc20ba1815c1df"
+                }
+            ]
+        },
+        {
+            "meal": "加餐",
+            "time": "20:30",
+            "foods": [
+                {
+                    "recipe": "苹果",
+                    "recommended_amount": "1个",
+                    "calories": {
+                        "value": 60,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/38c111b0-942d-45de-93f4-a4b73f254739.jpg?e=16733649655&token=2:OHIOHGNAJA8OGVVC0RI1:4e1e38c9c32358209ab0a01d972b1613f69d1078b22ebe38d50d5b3c2c5e2364"
+                },
+                {
+                    "recipe": "低脂牛奶",
+                    "recommended_amount": "200ml",
+                    "calories": {
+                        "value": 40,
+                        "unit": "kcal"
+                    },
+                    "image": "https://enn-fs-gov.op.laikang.com/knowledge-qa/b34f9eaf-f864-4368-b2cd-2759b6b6aaaa.jpg?e=16732963283&token=2:OHIOHGNAJA8OGVVC0RI1:a4c0c5cddd461b9e194eb401fa2475694e324d967e0e72d5d9a966cdf4d1eb48"
+                }
+            ]
+        }
+    ]
+
+# 智能日程兜底方案
+DAILV_SCHEDULE_PUSH = [
+        {
+            "schedule_name": "早餐打卡",
+            "schedule_time": "07:00",
+            "push_text": "早晨好！今天是控糖减重的关键一天。早餐建议选择全麦面包2片、麦片粥或全麦馒头1两，搭配黄瓜、西红柿、生菜凉拌，加少许醋、盐和香油。避免使用葱、姜、蒜等刺激性蔬菜。记得适量进食，保持健康饮食习惯。加油！",
+            "videos": None,
+            "image": [
+                {
+                    "name": "早餐",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/早餐.png"
+                }
+            ],
+            "cate_code": "diet_schedule"
+        },
+        {
+            "schedule_name": "午餐打卡",
+            "schedule_time": "11:30",
+            "push_text": "中午好！午餐建议选择米粉、面条、馒头等主食（干重1两），搭配白菜、萝卜、菠菜等蔬菜。可以选择生吃或水煮后加醋、盐和香油。避免使用葱、姜、蒜等刺激性蔬菜。保持健康饮食，控制热量摄入。加油！",
+            "videos": None,
+            "image": [
+                {
+                    "name": "午餐",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/午餐.png"
+                }
+            ],
+            "cate_code": "diet_schedule"
+        },
+        {
+            "schedule_name": "晚餐打卡",
+            "schedule_time": "17:30",
+            "push_text": "傍晚好！晚餐以蔬菜和低热量水果为主，避免主食。可以选择黄瓜、西红柿生吃，或水煮叶菜加少许醋、盐和香油。水果推荐柚子、橙子、苹果等，避免榴莲、荔枝等过甜水果。保持健康饮食，控制血糖。加油！",
+            "videos": None,
+            "image": [
+                {
+                    "name": "晚餐",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/晚餐.png"
+                }
+            ],
+            "cate_code": "diet_schedule"
+        },
+        {
+            "schedule_name": "运动打卡",
+            "schedule_time": "14:00",
+            "push_text": "下午好！今天的力量训练时间到了。可以选择仰卧起坐、深蹲等动作，根据自身情况调整强度，循序渐进。每周进行2 - 3次力量训练，帮助增强肌肉，促进新陈代谢。注意运动前后监测血糖，保持水分补充。加油！",
+            "videos": [
+                {
+                    "name": "摸膝卷腹",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心-力量/摸膝卷腹.mp4"
+                },
+                {
+                    "name": "垫上仰卧踢腿",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心结合心肺训练/垫上仰卧踢腿.mp4"
+                },
+                {
+                    "name": "垫上对侧抬手抬脚",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/力量-背/垫上对侧抬手抬脚.mp4"
+                }
+            ],
+            "image": [],
+            "cate_code": "exercise_schedule"
+        },
+        {
+            "schedule_name": "运动打卡",
+            "schedule_time": "19:30",
+            "push_text": "晚上好！今天的有氧运动时间到了。可以选择快走、游泳、骑车等运动，每次30 - 60分钟。有氧运动有助于燃烧脂肪，控制体重。注意运动前后监测血糖，避免低血糖，及时补充水分。加油！",
+            "videos": None,
+            "image": [
+                {
+                    "name": "散步",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/散步.png"
+                },
+                {
+                    "name": "游泳",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/游泳.png"
+                },
+                {
+                    "name": "跑步",
+                    "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/跑步.png"
+                }
+            ],
+            "cate_code": "exercise_schedule"
+        }
+    ]
