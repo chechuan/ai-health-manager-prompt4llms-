@@ -2858,9 +2858,9 @@ async def enrich_schedule_with_extras(item: dict) -> dict:
         ]
     elif "运动" in name and "19" in item.get("schedule_time", ""):
         item["image"] = [
-            {"name": "散步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/散步.png"},
-            {"name": "游泳", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/游泳.png"},
-            {"name": "跑步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/干预计划图片/跑步.png"},
+            {"name": "散步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/散步.png"},
+            {"name": "游泳", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/游泳.png"},
+            {"name": "跑步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/跑步.png"},
         ]
     elif "早餐" in name:
         item["image"] = [
