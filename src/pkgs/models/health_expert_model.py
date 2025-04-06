@@ -2845,7 +2845,7 @@ class HealthExpertModel:
 
         image_url = IMAGE_MAP.get("情志调理心态", {}).get("url", "")
 
-        content = await convert_dict_to_key_value_section(content,image=image_url)
+        content = await convert_dict_to_key_value_section(content, image=image_url)
 
         return content
 
