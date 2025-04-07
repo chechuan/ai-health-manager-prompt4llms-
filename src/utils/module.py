@@ -2742,16 +2742,20 @@ def query_course(data_dict, course_name):
 
 
 async def convert_dict_to_key_value_section(
-    data: Dict,
-    image: str = "",
-    section_key: str = "title",
-    list_key: str = "data",
-    key_field: str = "name",
-    value_field: str = "value",
-    image_field: str = "image"
+        data: Dict,
+        image: str = "",
+        section_key: str = "title",
+        list_key: str = "data",
+        key_field: str = "name",
+        value_field: str = "value",
+        image_field: str = "image"
 ) -> Dict[str, Union[str, List[Dict]]]:
     """
-    将 { 一级标题: {子项key: 子项value} } 的嵌套结构转换为标准结构，带图片字段：
+    兼容两种数据形式：
+    1. 一级标题 -> {key: value} 的字典
+    2. 一级标题 -> [{'key': ..., 'value': ...}] 的字典列表
+
+    返回标准结构：
     {
         "section": 一级标题,
         "image": 图片地址,
@@ -2774,12 +2778,20 @@ async def convert_dict_to_key_value_section(
         return {section_key: "", image_field: image, list_key: []}
 
     first_key = next(iter(data))
-    raw = data.get(first_key, {})
+    raw = data.get(first_key, [])
 
-    if not isinstance(raw, dict):
+    if isinstance(raw, dict):
+        # 第一种格式：字典 {key: value}
+        items = [{key_field: k, value_field: v} for k, v in raw.items()]
+    elif isinstance(raw, list):
+        # 第二种格式：列表，列表元素是字典 {key: value}
+        items = [
+            {key_field: list(item.keys())[0], value_field: list(item.values())[0]}
+            for item in raw
+        ]
+    else:
+        # 如果格式不对，则返回空数据
         return {section_key: first_key, image_field: image, list_key: []}
-
-    items = [{key_field: k, value_field: v} for k, v in raw.items()]
 
     return {
         section_key: first_key,
