@@ -1478,9 +1478,6 @@ class HealthExpertModel:
 
         # ✅ 分支 1：knowledge_system = "yaoshukun"
         if knowledge_system == "yaoshukun":
-            group = kwargs.get("group", "")
-            if not group:
-                raise ValueError("group是必填字段")
             _event = "姚院专项_推荐每日饮食摄入热量值"
             kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
 
@@ -1491,7 +1488,7 @@ class HealthExpertModel:
                     messages=kwargs.get("messages", ""),
                     role_map={"assistant": "assistant", "user": "user"}
                 ),
-                "group": group,
+                "group": kwargs.get("group", ""),
                 "glucose_data": kwargs.get("glucose_data", ""),
                 "current_date": kwargs.get("current_date", "")
             }
@@ -2767,9 +2764,6 @@ class HealthExpertModel:
             return None
 
         user_profile = kwargs.get("user_profile", {})
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
@@ -2817,9 +2811,7 @@ class HealthExpertModel:
             return None
 
         user_profile = kwargs.get("user_profile", {})
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
+
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group", ""),
@@ -2876,8 +2868,6 @@ class HealthExpertModel:
 
         user_profile = kwargs.get("user_profile", {})
         group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         gender = user_profile.get("gender")
         diseases = user_profile.get("current_diseases") or []
@@ -2941,10 +2931,6 @@ class HealthExpertModel:
             return {}
 
         user_profile = kwargs.get("user_profile", {})
-
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         # 从结构化字段中提取各干预内容到提示词
         prompt_vars = {
