@@ -1963,82 +1963,84 @@ def prepare_question_list(data):
 
     return formatted_list
 
+
 def glucose_type(time, glucose):
     # 血糖值分类
-    glucose=float(glucose)
+    glucose = float(glucose)
     if time == "1":
-        t= '空腹血糖'
+        t = '空腹血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='你血糖非常低，请立即补充含糖食物'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '你血糖非常低，请立即补充含糖食物'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='你血糖较低，请尽快补充含糖食物'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
-        elif 3.9 <= glucose <=7:
+            content = '你血糖较低，请尽快补充含糖食物'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
+        elif 3.9 <= glucose <= 7:
             result = "血糖正常"
-            content='血糖正常，请继续保持'
-            agent_content=""
+            content = '血糖正常，请继续保持'
+            agent_content = ""
         elif 7.0 < glucose <= 13.9:
             result = "血糖控制高"
-            content='今日空腹血糖值偏高，请遵医嘱，规律生活'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+            content = '今日空腹血糖值偏高，请遵医嘱，规律生活'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
         else:
             result = "血糖控制高危"
             content = "今日空腹血糖非常高，请严格遵医嘱！"
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
     elif time == "2":
-        t= '餐后2小时血糖'
+        t = '餐后2小时血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='餐后2小时血糖值非常低，请立即补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '餐后2小时血糖值非常低，请立即补充含糖食物。'
+            agent_content = f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='餐后2小时血糖值较低，请尽快补充含糖食物。'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
-        elif 3.9 <= glucose <=10:
+            content = '餐后2小时血糖值较低，请尽快补充含糖食物。'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <= 10:
             result = "血糖正常"
-            content='血糖正常，请继续保持。'
-            agent_content=""
+            content = '血糖正常，请继续保持。'
+            agent_content = ""
         elif 10 < glucose <= 16.7:
             result = "血糖控制高"
-            content='餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
-            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+            content = '餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
+            agent_content = f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
         else:
             result = "血糖控制高危"
             content = "今日餐后2小时血糖值非常高，请严格遵医嘱！"
-            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+            agent_content = f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
     else:
-        t= '随机血糖'
+        t = '随机血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='随机血糖值非常低，请立即补充含糖食物。'
-            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '随机血糖值非常低，请立即补充含糖食物。'
+            agent_content = f"""你好，客户目前{t}为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='随机血糖值较低，请尽快补充含糖食物。'
-            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
-        elif 3.9 <= glucose <=7:
+            content = '随机血糖值较低，请尽快补充含糖食物。'
+            agent_content = f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <= 7:
             result = "血糖正常"
-            content='血糖正常，请继续保持。'
-            agent_content=""
+            content = '血糖正常，请继续保持。'
+            agent_content = ""
         elif 7 < glucose <= 13.9:
             result = "血糖控制高"
-            content='今日随机血糖值高，请减少饮食量，增加运动量。'
-            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+            content = '今日随机血糖值高，请减少饮食量，增加运动量。'
+            agent_content = f"""你好，客户目前{t}为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
         elif 13.9 < glucose < 16.7:
             result = "血糖控制中危"
-            content='今日随机血糖值非常高，请严格遵医嘱！'
-            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+            content = '今日随机血糖值非常高，请严格遵医嘱！'
+            agent_content = f"""你好，客户目前{t}为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
         else:
             result = "血糖控制高危"
             content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
-            agent_content=f"""你好，客户目前{t}为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
-    return result,content,agent_content,t
+            agent_content = f"""你好，客户目前{t}为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+    return result, content, agent_content, t
 
-def extract_glucose(recent_time,glucose_data):
+
+def extract_glucose(recent_time, glucose_data):
     # 假设当前时间
     try:
         recent_time = datetime.strptime(recent_time, "%Y-%m-%d %H:%M:%S")
@@ -2053,7 +2055,8 @@ def extract_glucose(recent_time,glucose_data):
     glucose_data.sort(key=lambda x: x["exam_time"])
 
     # 过滤出在rencent_time前3小时内的数据
-    recent_3h_data = [entry for entry in glucose_data if entry["exam_time"] >= recent_time - timedelta(hours=3) and entry["exam_time"] <= recent_time]
+    recent_3h_data = [entry for entry in glucose_data if
+                      entry["exam_time"] >= recent_time - timedelta(hours=3) and entry["exam_time"] <= recent_time]
 
     # 采样逻辑
     sampled_data = []
@@ -2088,95 +2091,97 @@ def extract_glucose(recent_time,glucose_data):
     def find_peaks_and_valleys(data):
         peaks = []
         valleys = []
-        for i in range(1, len(data)-1):
-            if data[i]["item_value"] > data[i-1]["item_value"] and data[i]["item_value"] > data[i+1]["item_value"]:
-                peaks.append(("波峰数据",data[i]["exam_time"], data[i]["item_value"]))
-            if data[i]["item_value"] < data[i-1]["item_value"] and data[i]["item_value"] < data[i+1]["item_value"]:
-                valleys.append(("波谷数据",data[i]["exam_time"], data[i]["item_value"]))
+        for i in range(1, len(data) - 1):
+            if data[i]["item_value"] > data[i - 1]["item_value"] and data[i]["item_value"] > data[i + 1]["item_value"]:
+                peaks.append(("波峰数据", data[i]["exam_time"], data[i]["item_value"]))
+            if data[i]["item_value"] < data[i - 1]["item_value"] and data[i]["item_value"] < data[i + 1]["item_value"]:
+                valleys.append(("波谷数据", data[i]["exam_time"], data[i]["item_value"]))
         return peaks, valleys
 
     peaks, valleys = find_peaks_and_valleys(recent_3h_data)
 
-    return sampled_data,peaks,valleys
+    return sampled_data, peaks, valleys
 
 
 def blood_pressure_type(time, glucose):
     # 血压值分类
-    glucose=float(glucose)
+    glucose = float(glucose)
     if time == "1":
-        t= '空腹血糖'
+        t = '空腹血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='你血糖非常低，请立即补充含糖食物'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '你血糖非常低，请立即补充含糖食物'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='你血糖较低，请尽快补充含糖食物'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
-        elif 3.9 <= glucose <=7:
+            content = '你血糖较低，请尽快补充含糖食物'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时给予处理建议。如果本周发生1-2次低血糖，就属于频繁低血糖，必要时与客户取得联系邀请复诊"""
+        elif 3.9 <= glucose <= 7:
             result = "血糖正常"
-            content='血糖正常，请继续保持'
-            agent_content=""
+            content = '血糖正常，请继续保持'
+            agent_content = ""
         elif 7.0 < glucose <= 13.9:
             result = "血糖控制高"
-            content='今日空腹血糖值偏高，请遵医嘱，规律生活'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+            content = '今日空腹血糖值偏高，请遵医嘱，规律生活'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
         else:
             result = "血糖控制高危"
             content = "今日空腹血糖非常高，请严格遵医嘱！"
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
     elif time == "2" and time != "":
-        t= '餐后2小时血糖'
+        t = '餐后2小时血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='餐后2小时血糖值非常低，请立即补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '餐后2小时血糖值非常低，请立即补充含糖食物。'
+            agent_content = f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='餐后2小时血糖值较低，请尽快补充含糖食物。'
-            agent_content=f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
-        elif 3.9 <= glucose <=10:
+            content = '餐后2小时血糖值较低，请尽快补充含糖食物。'
+            agent_content = f"""你好，客户目前空腹血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <= 10:
             result = "血糖正常"
-            content='血糖正常，请继续保持。'
-            agent_content=""
+            content = '血糖正常，请继续保持。'
+            agent_content = ""
         elif 10 < glucose <= 16.7:
             result = "血糖控制高"
-            content='餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
-            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
+            content = '餐后2小时血糖值过高，请遵医嘱调整饮食与运动等生活方式。'
+            agent_content = f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值偏高，请给予关注。"""
         else:
             result = "血糖控制高危"
             content = "今日餐后2小时血糖值非常高，请严格遵医嘱！"
-            agent_content=f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
+            agent_content = f"""你好，客户目前餐后2小时血糖为{glucose}mmol/L,血糖值非常高，请及时关注用户运动量、用药量、饮食量等变化，并进一步与患者沟通，给予改善建议。"""
     else:
-        t= '随机血糖'
+        t = '随机血糖'
         if glucose < 3:
             result = "高危低血糖"
-            content='随机血糖值非常低，请立即补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
+            content = '随机血糖值非常低，请立即补充含糖食物。'
+            agent_content = f"""你好，客户目前血糖为{glucose}mmol/L,血糖值非常低，请及时与客户取得联系，给予处理建议。"""
         elif 3 <= glucose < 3.9:
             result = "低血糖"
-            content='随机血糖值较低，请尽快补充含糖食物。'
-            agent_content=f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
-        elif 3.9 <= glucose <=7:
+            content = '随机血糖值较低，请尽快补充含糖食物。'
+            agent_content = f"""你好，客户目前血糖为{glucose}mmol/L,血糖值偏低，请及时与客户取得联系，给予处理建议。"""
+        elif 3.9 <= glucose <= 7:
             result = "血糖正常"
-            content='血糖正常，请继续保持。'
-            agent_content=""
+            content = '血糖正常，请继续保持。'
+            agent_content = ""
         elif 7 < glucose <= 13.9:
             result = "血糖控制高"
-            content='今日随机血糖值高，请减少饮食量，增加运动量。'
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
+            content = '今日随机血糖值高，请减少饮食量，增加运动量。'
+            agent_content = f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值偏高，请关注该用户近2日动态血糖变化。"""
         elif 13.9 < glucose < 16.7:
             result = "血糖控制中危"
-            content='今日随机血糖值非常高，请严格遵医嘱！'
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+            content = '今日随机血糖值非常高，请严格遵医嘱！'
+            agent_content = f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值较高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
         else:
             result = "血糖控制高危"
             content = "随机血糖值极高，请严格遵医嘱，积极控制血糖！"
-            agent_content=f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
-    return result,content,agent_content,t
+            agent_content = f"""你好，客户目前随机血糖为{glucose}mmol/L,血糖值极高，请关注该用户近2日动态血糖变化，必要时进一步与患者沟通，给予改善建议"""
+    return result, content, agent_content, t
+
 
 def count_tokens(text: str, tokenizer=None) -> int:
     return len(tokenizer.encode(text)) if text else 0
+
 
 async def async_count_tokens(text: str, tokenizer=None) -> int:
     return len(tokenizer.encode(text)) if text else 0
@@ -2364,26 +2369,26 @@ def generate_pressure_advice(sbp: int, dbp: int, user_name) -> tuple:
         user_warning = f"{blood_pressure}，{front}"
         sug_agent = "血压过低时，请立刻就医并密切监测血压变化，若情况未改善请联系医生。"
     elif ((120 <= sbp <= 139 and 60 <= dbp <= 89) or
-            (90 <= sbp <= 119 and 80 <= dbp <= 89) or
-            (120 <= sbp <= 139 and 80 <= dbp <= 89)):
+          (90 <= sbp <= 119 and 80 <= dbp <= 89) or
+          (120 <= sbp <= 139 and 80 <= dbp <= 89)):
         front = "当前血压处于正常高值，请遵医嘱，规律生活适量运动！"
         user_warning = f"{blood_pressure}，{front}"
         sug_agent = "血压正常，继续保持均衡饮食和适量运动，避免过度压力。"
     elif ((140 <= sbp <= 159 and dbp < 90) or
-            (sbp < 140 and 90 <= dbp <= 99) or
-            (140 <= sbp <= 159 and 90 <= dbp <= 99)):
+          (sbp < 140 and 90 <= dbp <= 99) or
+          (140 <= sbp <= 159 and 90 <= dbp <= 99)):
         front = "您血压值偏高，请遵医嘱，规律生活适量运动。"
         user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（1级高血压），{advice_suffix}"
     elif ((160 <= sbp <= 179 and dbp < 100) or
-        (sbp < 160 and 100 <= dbp <= 109) or
-        (160 <= sbp <= 179 and 100 <= dbp <= 109)):
+          (sbp < 160 and 100 <= dbp <= 109) or
+          (160 <= sbp <= 179 and 100 <= dbp <= 109)):
         front = "您血压值较高，请遵医嘱并就医。"
         user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（2级高血压），{advice_suffix}"
     elif ((sbp >= 180 and dbp < 110) or
-        (sbp < 180 and dbp >= 110) or
-        (sbp >= 180 and dbp >= 110)):
+          (sbp < 180 and dbp >= 110) or
+          (sbp >= 180 and dbp >= 110)):
         front = "您血压值极高，请遵医嘱并及时就医。"
         user_warning = f"{blood_pressure}，{front}"
         sug_agent = f"{greeting}血压偏高（3级高血压），{advice_suffix}"
@@ -2864,27 +2869,36 @@ async def enrich_schedule_with_extras(item: dict) -> dict:
     # 视频和图片处理
     if "运动" in name and "14" in item.get("schedule_time", ""):
         item["videos"] = [
-            {"name": "摸膝卷腹", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心-力量/摸膝卷腹.mp4"},
-            {"name": "垫上仰卧踢腿", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心结合心肺训练/垫上仰卧踢腿.mp4"},
-            {"name": "垫上对侧抬手抬脚", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/力量-背/垫上对侧抬手抬脚.mp4"},
+            {"name": "摸膝卷腹",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心-力量/摸膝卷腹.mp4"},
+            {"name": "垫上仰卧踢腿",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心结合心肺训练/垫上仰卧踢腿.mp4"},
+            {"name": "垫上对侧抬手抬脚",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/力量-背/垫上对侧抬手抬脚.mp4"},
         ]
     elif "运动" in name and "19" in item.get("schedule_time", ""):
         item["image"] = [
-            {"name": "散步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/散步.png"},
-            {"name": "游泳", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/游泳.png"},
-            {"name": "跑步", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/跑步.png"},
+            {"name": "散步",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/散步.png"},
+            {"name": "游泳",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/游泳.png"},
+            {"name": "跑步",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/跑步.png"},
         ]
     elif "早餐" in name:
         item["image"] = [
-            {"name": "早餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/早餐.png"}
+            {"name": "早餐",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/早餐.png"}
         ]
     elif "午餐" in name:
         item["image"] = [
-            {"name": "午餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/午餐.png"}
+            {"name": "午餐",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/午餐.png"}
         ]
     elif "晚餐" in name:
         item["image"] = [
-            {"name": "晚餐", "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/晚餐.png"}
+            {"name": "晚餐",
+             "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/一日3餐/晚餐.png"}
         ]
 
     return item
@@ -2907,15 +2921,15 @@ async def extract_daily_schedule(parsed) -> List[Dict]:
 
 
 def init_langfuse_trace_with_input(
-    *,
-    extra_params: dict,
-    model: str,
-    temperature: float,
-    top_p: float,
-    max_tokens: int,
-    stream: bool,
-    query: str = "",
-    history: List[Dict] = [],
+        *,
+        extra_params: dict,
+        model: str,
+        temperature: float,
+        top_p: float,
+        max_tokens: int,
+        stream: bool,
+        query: str = "",
+        history: List[Dict] = [],
 ):
     """初始化 Langfuse trace 和 generation，并记录输入 input"""
     langfuse = extra_params.get("langfuse")
@@ -2953,16 +2967,17 @@ def init_langfuse_trace_with_input(
 
     return trace, generation, langfuse, tokenizer, input_data
 
+
 async def async_init_langfuse_trace_with_input(
-    *,
-    extra_params: dict,
-    model: str,
-    temperature: float,
-    top_p: float,
-    max_tokens: int,
-    stream: bool,
-    query: str = "",
-    history: List[Dict] = [],
+        *,
+        extra_params: dict,
+        model: str,
+        temperature: float,
+        top_p: float,
+        max_tokens: int,
+        stream: bool,
+        query: str = "",
+        history: List[Dict] = [],
 ):
     """初始化 Langfuse trace 和 generation，并记录输入 input"""
     langfuse = extra_params.get("langfuse")
@@ -3007,6 +3022,7 @@ ALL_INTENTS, _ = intent_init()
 INTENT_NAME_MAP = {v[0]: (v[0], v[1]) for v in ALL_INTENTS.values()}
 INTENT_NAME_MAP["other"] = ("other", "闲聊/其他")
 
+
 def get_intent_name_and_tags(intent_code: str) -> Tuple[str, List[str]]:
     """
     根据 intent_code 映射 endpoint_name 与 tags
@@ -3014,14 +3030,15 @@ def get_intent_name_and_tags(intent_code: str) -> Tuple[str, List[str]]:
     name, tag = INTENT_NAME_MAP.get(intent_code, ("other", "闲聊"))
     return f"{tag}", ["chat_gen", tag, intent_code]
 
+
 def track_completion_with_langfuse(
-    *,
-    trace,
-    generation,
-    langfuse=None,
-    input_data="",
-    output_data="",
-    tokenizer=None,
+        *,
+        trace,
+        generation,
+        langfuse=None,
+        input_data="",
+        output_data="",
+        tokenizer=None,
 ):
     """非流式调用的 Langfuse 监控记录"""
     try:
@@ -3051,13 +3068,13 @@ def track_completion_with_langfuse(
 
 
 async def async_track_completion_with_langfuse(
-    *,
-    trace,
-    generation,
-    langfuse=None,
-    input_data="",
-    output_data="",
-    tokenizer=None,
+        *,
+        trace,
+        generation,
+        langfuse=None,
+        input_data="",
+        output_data="",
+        tokenizer=None,
 ):
     """非流式调用的 Langfuse 监控记录"""
     try:
@@ -3087,12 +3104,12 @@ async def async_track_completion_with_langfuse(
 
 
 def wrap_stream_with_langfuse(
-    stream,
-    generation,
-    trace,
-    langfuse=None,
-    tokenizer=None,
-    input_data=""
+        stream,
+        generation,
+        trace,
+        langfuse=None,
+        tokenizer=None,
+        input_data=""
 ):
     """包装流式生成器，在结束后补充 Langfuse 追踪信息"""
 
@@ -3130,12 +3147,12 @@ def wrap_stream_with_langfuse(
 
 
 async def async_wrap_stream_with_langfuse(
-    stream,
-    generation,
-    trace,
-    langfuse=None,
-    tokenizer=None,
-    input_data=""
+        stream,
+        generation,
+        trace,
+        langfuse=None,
+        tokenizer=None,
+        input_data=""
 ):
     """包装流式生成器，在结束后补充 Langfuse 追踪信息"""
 
