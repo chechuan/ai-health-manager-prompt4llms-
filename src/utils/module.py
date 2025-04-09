@@ -898,12 +898,36 @@ async def calculate_and_format_diet_plan(diet_plan_standards: dict) -> str:
     for meal_name, ratio in meal_ratios.items():
         meal_energy_values[meal_name] = round(calories * ratio)
 
+    # 处理加餐部分的生成：根据热量分配生成上午、下午、晚上加餐
+    total_snack_calories = round(calories * total_snack_ratio) if total_snack_ratio > 0 else 0
+
+    if total_snack_calories > 0:
+        # 分配加餐热量到不同的加餐时段
+        snack_meals = ["上午加餐", "下午加餐", "晚上加餐"]
+        snack_calories_per_meal = total_snack_calories // len(snack_meals)
+
+        for i, snack_meal in enumerate(snack_meals):
+            meal_energy_values[snack_meal] = snack_calories_per_meal
+            if i == len(snack_meals) - 1:  # 将剩余的热量分配给最后一个加餐
+                meal_energy_values[snack_meal] += total_snack_calories % len(snack_meals)
+
     # 组装格式化输出
     output = "# 推荐餐次及热量值\n"
     for meal_name, kcal in meal_energy_values.items():
-        output += f"{meal_name}：{kcal}kcal\n"
+        # 检查是否是加餐，并在加餐时添加时段说明
+        if "加餐" in meal_name:
+            # 对加餐的时段进行判断并输出相应信息
+            if "上午" in meal_name:
+                output += f"{meal_name}：{kcal}kcal（根据需要生成上午加餐）\n"
+            elif "下午" in meal_name:
+                output += f"{meal_name}：{kcal}kcal（根据需要生成下午加餐）\n"
+            elif "晚上" in meal_name:
+                output += f"{meal_name}：{kcal}kcal（根据需要生成晚上加餐）\n"
+        else:
+            # 非加餐部分直接输出
+            output += f"{meal_name}：{kcal}kcal\n"
 
-    output += "# 推荐一日总的三大产能营养素摄入量\n"
+    output += "\n# 推荐一日总的三大产能营养素摄入量\n"
     output += f"碳水化合物：{macronutrient_values['碳水化合物'][0]}g-{macronutrient_values['碳水化合物'][1]}g\n"
     output += f"蛋白质：{macronutrient_values['蛋白质'][0]}g-{macronutrient_values['蛋白质'][1]}g\n"
     output += f"脂肪：{macronutrient_values['脂肪'][0]}g-{macronutrient_values['脂肪'][1]}g\n"
