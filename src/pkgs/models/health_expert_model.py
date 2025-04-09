@@ -137,7 +137,7 @@ class HealthExpertModel:
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
         his = [{
             'role': 'system',
             'content': prompt
@@ -149,7 +149,7 @@ class HealthExpertModel:
             **model_args
         )
 
-        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
 
         return content
 
