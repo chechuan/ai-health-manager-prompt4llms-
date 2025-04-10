@@ -301,8 +301,46 @@ class UserProfile(BaseModel):
     hypertension_type: Optional[str] = Field(None, description="高血压类型", examples=["原发性高血压"])
     family_history: Optional[str] = Field(None, description="家族史", examples=["父亲有高血压，母亲有糖尿病"])
     discomfort_symptoms: Optional[str] = Field(None, description="不适症状", examples=["偶尔头晕"])
-    diabetes_medication: Optional[str] = Field(None, description="糖尿病用药情况", examples=["每日口服二甲双胍"])
-    hypertension_medication: Optional[str] = Field(None, description="高血压用药情况", examples=["每天服用降压药"])
+    diabetes_medication: Optional[List[Dict[str, str]]] = Field(
+        None, description="糖尿病用药情况", examples=[
+            [
+                {
+                    "name": "二甲双胍（格华止）",
+                    "spec": "0.25g",
+                    "dose": "半片",
+                    "frequency": "1次/日",
+                    "time": "空腹"
+                },
+                {
+                    "name": "门冬胰岛素（诺和锐）",
+                    "spec": "1U",
+                    "dose": "6U",
+                    "frequency": "1次/日",
+                    "time": "睡前"
+                }
+            ]
+        ]
+    )
+    hypertension_medication: Optional[List[Dict[str, str]]] = Field(
+        None, description="高血压用药情况", examples=[
+            [
+                {
+                    "name": "二甲双胍（格华止）",
+                    "spec": "0.25g",
+                    "dose": "半片",
+                    "frequency": "1次/日",
+                    "time": "空腹"
+                },
+                {
+                    "name": "门冬胰岛素（诺和锐）",
+                    "spec": "1U",
+                    "dose": "6U",
+                    "frequency": "1次/日",
+                    "time": "睡前"
+                }
+            ]
+        ]
+    )
     other_health_issues: Optional[str] = Field(None, description="其他健康问题", examples=["胃病"])
 
 class AigcFunctionsRequest(BaseModel):
