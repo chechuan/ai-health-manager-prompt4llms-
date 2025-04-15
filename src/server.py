@@ -1046,6 +1046,21 @@ def mount_aigc_functions(app: FastAPI):
 
             # 设置默认 endpoint_name（用于langfuse trace）
             param.setdefault("endpoint_name", f"{endpoint_name}_{intent_code}")
+            knowledge_system = param.get("knowledge_system", "")
+
+            if knowledge_system != "yaoshukun":
+                ret = AigcFunctionsCompletionResponse(
+                    head=200,
+                    items=None,
+                    msg="当前知识体系暂未开放该干预能力"
+                )
+                _return = ret.model_dump_json(exclude_unset=False)
+
+                # 记录该请求的监控数据
+                end_time = time.time()
+                await record_monitoring_data([None], param, start_time, end_time)
+
+                return build_aigc_functions_response(_return)
 
             # 执行干预能力调用（支持四个）
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
@@ -1057,7 +1072,9 @@ def mount_aigc_functions(app: FastAPI):
             # 处理返回值
             response = replace_you(response) if callable(replace_you) and hasattr(replace_you, "__await__") else replace_you(
                 response)
+
             ret = AigcFunctionsCompletionResponse(head=200, items=response)
+
             _return = ret.model_dump_json(exclude_unset=False)
 
             logger.info(f"[{endpoint}] Final response: {_return}")
