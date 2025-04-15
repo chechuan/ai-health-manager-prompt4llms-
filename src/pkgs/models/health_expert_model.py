@@ -2760,9 +2760,6 @@ class HealthExpertModel:
         """
         _event = "清除致炎饮食建议生成"
 
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
-
         user_profile = kwargs.get("user_profile", {})
 
         prompt_vars = {
@@ -2806,9 +2803,6 @@ class HealthExpertModel:
             dict: 情志调理建议（英文字段）
         """
         _event = "情志调理心态建议生成"
-
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
 
         user_profile = kwargs.get("user_profile", {})
 
@@ -2862,9 +2856,6 @@ class HealthExpertModel:
             }
         """
         _event = "戒烟限酒"
-
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
 
         user_profile = kwargs.get("user_profile", {})
         group = kwargs.get("group", "")
@@ -2926,9 +2917,6 @@ class HealthExpertModel:
             dict: 包含日程推送列表结构（含视频/图片等）
         """
         _event = "日程推送"
-
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return {}
 
         user_profile = kwargs.get("user_profile", {})
 
