@@ -91,21 +91,11 @@ async def diet_image_recog(img):
 
 async def extract_imgInfo(history, daily_diet_info):
     """
-    # 修改说明：
-    # 修改时间：2025年4月17日
-    #
-    # 1. 将 `img_info` 从一个简单的列表改为存储字典，字典中存储每张图片的 URL 和其对应的索引。
-    #    这能确保每张图片能与正确的 `daily_diet_info` 或 `history` 项一一对应。
-    #    例如：img_info.append({'url': 图片URL, 'index': 对应的索引})
-    #
-    # 2. 更新时，直接使用字典中的索引 (`index`) 来更新 `history` 或 `daily_diet_info` 中的对应项，
-    #    这样可以避免因 `history` 和 `daily_diet_info` 顺序不同而导致的错误匹配。
-    #
-    # 3. 修改 `history` 中的更新逻辑，确保使用 `img_info` 中的索引来更新对应的项。
-    #
-    # 4. 在更新 `daily_diet_info` 时，确保通过 `index` 来直接更新正确的项。
-    #
-    # 5. 添加了 JSON 解码异常捕获，确保模型返回的文本能够正确解析为 JSON，防止格式错误导致的程序崩溃。
+    修改时间：2025年4月17日
+    1. 将 `img_info` 改为字典形式，存储图片 URL 和对应索引，确保正确匹配 `daily_diet_info` 或 `history`。
+    2. 更新时通过字典中的索引来准确更新对应项，避免索引错位。
+    3. 添加 JSON 解析异常捕获，确保文本格式正确。
+    4. 修改饮食识别提示词，增加“无法识别食材时不输出任何信息”的要求。
     """
     img_info = []
 
