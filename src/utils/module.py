@@ -2707,6 +2707,62 @@ def enrich_meal_items_with_images(items, dishes_data, threshold, meal_time_mappi
 
     return processed_items
 
+def export_all_lessons_with_actions(data_dict, filename):
+    """
+    导出所有课程及其包含的所有动作信息，并直接保存为 JSON 文件。
+
+    参数:
+        data_dict (dict): 包含所有课程和动作数据的字典。
+        filename (str): 输出的 JSON 文件名。
+    """
+    # 获取所有数据
+    sports_lessons = data_dict["sports_lessons"]
+    sports_lesson_exercise_course = data_dict["sports_lesson_exercise_course"]
+    exercise_course_action = data_dict["exercise_course_action"]
+    actions = data_dict["actions"]
+
+    result = []
+
+    # 遍历所有课程
+    for lesson in sports_lessons:
+        course_name = lesson.get("NAME")
+        course_code = lesson.get("Sports_lesson_code")
+        course_image = lesson.get("Sports_lesson_picture")
+
+        # 初始化课程信息，包含课程对象的所有字段
+        lesson_info = {key: value for key, value in lesson.items()}  # 获取所有课程字段
+
+        lesson_info["actions"] = []  # 动作列表
+
+        # 查找课程相关的运动处方
+        exercise_courses = sports_lesson_exercise_course.get(course_code, {}).get("relationDatas", [])
+        if not exercise_courses:
+            lesson_info["actions"].append({"error": "⚠️ 该课程未关联任何动作"})
+        else:
+            # 遍历课程相关的动作
+            for exercise in exercise_courses:
+                exercise_course_code = exercise.get("exercise_course_code")
+                exercise_actions = exercise_course_action.get(exercise_course_code, {}).get("relationDatas", [])
+
+                for action in exercise_actions:
+                    action_code = action.get("Action_code")
+                    # 查找具体的动作信息
+                    action_info = next((act for act in actions if act.get("Action_code") == action_code), None)
+
+                    if action_info:
+                        # 获取所有动作字段
+                        action_details = {key: value for key, value in action_info.items()}
+                        lesson_info["actions"].append(action_details)
+                    else:
+                        lesson_info["actions"].append({"error": f"⚠️ 动作代码 {action_code} 在 action.json 里找不到！"})
+
+        # 将课程信息添加到结果列表
+        result.append(lesson_info)
+
+    # print(len(result))  # 输出结果的数量，便于调试
+    # 保存结果到 JSON 文件
+    with open(filename, 'w', encoding='utf-8') as f:
+        json.dump(result, f, ensure_ascii=False, indent=4)
 
 def query_course(data_dict, course_name):
     """
