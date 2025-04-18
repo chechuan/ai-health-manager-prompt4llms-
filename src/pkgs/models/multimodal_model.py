@@ -339,10 +339,7 @@ class MultiModalModel:
             if knowledge_system == "yaoshukun":
                 prompt_template = self.prompts.get("专家知识体系饮食点评")
             else:
-                return self._get_result(200, {
-                    "status": 0,
-                    "content": None
-                }, "")
+                prompt_template = self.prompts.get("饮食一句话建议")
         else:
             prompt_template = self.prompts.get("饮食一句话建议")
 
