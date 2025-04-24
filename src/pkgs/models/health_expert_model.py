@@ -24,7 +24,8 @@ from src.utils.module import (
     filter_user_profile, prepare_question_list, match_health_label, enrich_meal_items_with_images,
     calculate_and_format_diet_plan, format_historical_meal_plans, query_course, call_mem0_search_memory,
     format_mem0_search_result, call_mem0_get_all_memories, convert_dict_to_key_value_section, strip_think_block,
-    convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras, extract_daily_schedule
+    convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
+    extract_daily_schedule, export_all_lessons_with_actions
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -137,7 +138,7 @@ class HealthExpertModel:
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
 
-        logger.debug(f"AIGC Functions {_event} LLM Input: {repr(prompt)}")
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
         his = [{
             'role': 'system',
             'content': prompt
@@ -149,7 +150,7 @@ class HealthExpertModel:
             **model_args
         )
 
-        logger.info(f"AIGC Functions {_event} LLM Output: {repr(content)}")
+        logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
 
         return content
 
@@ -1187,6 +1188,7 @@ class HealthExpertModel:
         content = await parse_generic_content(content)
 
         # content = query_course(self.gsr.exercise_data, "有氧热身")
+        # export_all_lessons_with_actions(self.gsr.exercise_data, "exported_lessons_with_all_actions", "output.xlsx")
         return content
 
     async def aigc_functions_body_fat_weight_management_consultation(
@@ -1478,9 +1480,6 @@ class HealthExpertModel:
 
         # ✅ 分支 1：knowledge_system = "yaoshukun"
         if knowledge_system == "yaoshukun":
-            group = kwargs.get("group", "")
-            if not group:
-                raise ValueError("group是必填字段")
             _event = "姚院专项_推荐每日饮食摄入热量值"
             kwargs["intentCode"] = "aigc_functions_recommended_daily_calorie_intake_yaoshukun"
 
@@ -1491,7 +1490,7 @@ class HealthExpertModel:
                     messages=kwargs.get("messages", ""),
                     role_map={"assistant": "assistant", "user": "user"}
                 ),
-                "group": group,
+                "group": kwargs.get("group", ""),
                 "glucose_data": kwargs.get("glucose_data", ""),
                 "current_date": kwargs.get("current_date", "")
             }
@@ -2763,13 +2762,7 @@ class HealthExpertModel:
         """
         _event = "清除致炎饮食建议生成"
 
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
-
         user_profile = kwargs.get("user_profile", {})
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
@@ -2813,13 +2806,8 @@ class HealthExpertModel:
         """
         _event = "情志调理心态建议生成"
 
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
-
         user_profile = kwargs.get("user_profile", {})
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
+
         prompt_vars = {
             "user_profile": await self.__compose_user_msg__("user_profile", user_profile=user_profile),
             "group": kwargs.get("group", ""),
@@ -2871,13 +2859,8 @@ class HealthExpertModel:
         """
         _event = "戒烟限酒"
 
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return None
-
         user_profile = kwargs.get("user_profile", {})
         group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         gender = user_profile.get("gender")
         diseases = user_profile.get("current_diseases") or []
@@ -2937,14 +2920,7 @@ class HealthExpertModel:
         """
         _event = "日程推送"
 
-        if kwargs.get("knowledge_system") != "yaoshukun":
-            return {}
-
         user_profile = kwargs.get("user_profile", {})
-
-        group = kwargs.get("group", "")
-        if not group:
-            raise ValueError("group是必填字段")
 
         # 从结构化字段中提取各干预内容到提示词
         prompt_vars = {

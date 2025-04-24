@@ -339,10 +339,7 @@ class MultiModalModel:
             if knowledge_system == "yaoshukun":
                 prompt_template = self.prompts.get("专家知识体系饮食点评")
             else:
-                return self._get_result(200, {
-                    "status": 0,
-                    "content": None
-                }, "")
+                prompt_template = self.prompts.get("饮食一句话建议")
         else:
             prompt_template = self.prompts.get("饮食一句话建议")
 
@@ -507,7 +504,8 @@ class MultiModalModel:
 注意如果是饮食评估报告，则返回"报告"。
 如果图片中是运动器材、体能、健身的内容，则返回"运动"。
 如果图片中是包含体重、体脂的截图内容，则返回"报告"。
-如果图片中是药物、血压计血糖仪等医疗器械，或食物的成分分析，或其他内容，则返回"其他"。
+如果图片中是食品相关的表格，涵盖名称、适应人群和定价，则返回"其他"。
+如果图片中是药物、血压计血糖仪等医疗器械，或食物的成分分析，或其他内容，则均返回"其他"。
 不要返回其他内容，仅返回类别名称。
 以下是图片描述：
 """,

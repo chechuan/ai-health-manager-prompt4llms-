@@ -88,17 +88,32 @@ async def diet_image_recog(img):
 
         yield {"content": content, "head": 200, "err_msg":"", "end":True}
 
+
 async def extract_imgInfo(history, daily_diet_info):
+    """
+    修改时间：2025年4月17日
+    1. 将 `img_info` 改为字典形式，存储图片 URL 和对应索引，确保正确匹配 `daily_diet_info` 或 `history`。
+    2. 更新时通过字典中的索引来准确更新对应项，避免索引错位。
+    3. 添加 JSON 解析异常捕获，确保文本格式正确。
+    4. 修改饮食识别提示词，增加“无法识别食材时不输出任何信息”的要求。
+    """
     img_info = []
+
+    # 如果有 history，提取图片链接和索引
     if history:
-        for h in history:
+        for idx, h in enumerate(history):
             if h['content'].startswith('http'):
-                img_info.append(h['content'])
+                img_info.append({'url': h['content'], 'index': idx})  # 用字典存储 URL 和索引
     elif daily_diet_info:
         for i, info in enumerate(daily_diet_info):
             if info.get('diet_image', '') and not info.get('diet_info', ''):
-                img_info.append(info['diet_image'])
-    for i, img_url in enumerate(img_info):
+                img_info.append({'url': info['diet_image'], 'index': i})  # 用字典存储 URL 和索引
+
+    # 遍历 img_info，根据字典中的索引来更新 daily_diet_info
+    for img_entry in img_info:
+        img_url = img_entry['url']
+        index = img_entry['index']
+
         prompt = get_func_eval_prompt('img_sumUp_prompt') if history else diet_image_recog_prompt
         messages = [
             {
@@ -128,15 +143,30 @@ async def extract_imgInfo(history, daily_diet_info):
         )
         logger.debug(f"latency {time.time() - start_time:.2f} s -> response")
         logger.debug("图片信息总结/识别模型输出： " + generate_text)
+
+        # 检查生成的文本是否为空或无效
+        if not generate_text.strip():
+            logger.error("图片信息识别模型返回为空或无效内容.")
+            continue
+
+        # 清理和截取有效的 JSON 部分
         if history:
-            history[i]['content'] = "上传了一张图片，图片信息为：" + generate_text
+            history[img_entry['index']]['content'] = "上传了一张图片，图片信息为：" + generate_text
         else:
             generate_text = generate_text.replace("`", '').replace("json", '').strip()
             generate_text = generate_text[generate_text.find('['): generate_text.rfind(']') + 1]
-            content = json.loads(generate_text.strip())
-            daily_diet_info[i]['diet_info'] = content
-    yield history if history else daily_diet_info
+            try:
+                content = json.loads(generate_text.strip())
+                # 使用字典中的索引直接更新 daily_diet_info
+                if not daily_diet_info[index].get('diet_info', []):
+                    daily_diet_info[index]['diet_info'] = content
+                else:
+                    logger.debug(f"Skipping modification for {index}, diet_info already exists.")
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON 解码错误： {e}")
+                continue
 
+    yield history if history else daily_diet_info
 
 async def schedule_tips_modify(schedule_template, history, cur_time):
     """日程tips修改"""
@@ -273,9 +303,6 @@ async def daily_diet_degree(userInfo, daily_diet_info, daily_blood_glucose, mana
     else:
         res = '尚可'
     return {"dietStatus": res}
-
-
-
 
 async def daily_diet_eval(userInfo, daily_diet_info, daily_blood_glucose, management_tag='血糖管理'):
     """一日饮食评估建议"""
