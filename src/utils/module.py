@@ -3273,6 +3273,8 @@ async def async_wrap_stream_with_langfuse(
 
 
 async def format_key_indicators(key_indicators):
+    if not key_indicators:
+        return ""
     result_lines = []
     indicator_type = key_indicators.get("type")
     data_list = key_indicators.get("data")
@@ -3310,6 +3312,8 @@ async def format_meals_info(meals_info: List[dict]) -> str:
 
 
 async def format_intervention_plan(intervention_plan):
+    if not intervention_plan:
+        return ""
     formatted_plan = []
 
     # 推荐饮食摄入热量值
@@ -3515,3 +3519,5 @@ def map_diet_analysis(diet_data: dict) -> dict:
         "evaluation_and_advice": f"【血糖趋势分析】\n{trend}\n\n【营养优化建议】\n{advice}",
         "diet_status": status
     }
+
+

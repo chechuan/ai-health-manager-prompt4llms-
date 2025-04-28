@@ -1089,6 +1089,44 @@ def mount_aigc_functions(app: FastAPI):
 
             return build_aigc_functions_response(_return)
 
+    @app.post("/aigc/cognitive_improvement")
+    async def cognitive_improvement(request: Request):
+        """老年认知改善接口"""
+        endpoint = "/aigc/cognitive_improvement"
+        param = {}  # 初始化参数
+
+        start_time = time.time()
+        try:
+            param = await async_accept_param_purge(request, endpoint=endpoint)
+
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            # 获取 tags
+            tags = ["cognitive_improvement", "老年认知", "饮食", "菜谱"]  # 默认 tags，可以根据需求调整
+            param['tags'] = tags
+
+            # 返回响应
+            ret = AigcFunctionsCompletionResponse(head=200, items=response)
+            _return = ret.model_dump_json(exclude_unset=False)
+
+            end_time = time.time()
+            logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+            await record_monitoring_data([response], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            msg = str(err)
+            logger.error(f"Error in {endpoint}: {msg}")
+
+            ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+            _return = ret.model_dump_json(exclude_unset=True)
+
+            end_time = time.time()
+            await record_monitoring_data([msg], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
     @app.route("/aigc/intervene", methods=["POST"])
     async def _aigc_functions_intervention_entry(
             request_model: Optional[SanJiKangYangRequest] = None,
