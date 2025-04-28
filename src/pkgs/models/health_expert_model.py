@@ -2964,7 +2964,7 @@ class HealthExpertModel:
         """
         饮食评估功能
 
-        需求文档：<请补充文档链接>
+        需求文档：https://alidocs.dingtalk.com/i/nodes/YQBnd5ExVEBjOmlqHMNqNnYZJyeZqMmz
 
         根据专家体系（laikang/yaoshukun）、管理群组和指标类型，分发到对应的饮食评估场景函数，统一处理饮食分析与饮食状态建议。
 
@@ -2979,20 +2979,20 @@ class HealthExpertModel:
         indicator_type = kwargs.get("key_indicators", {}).get("type")
 
         if expert_system == "laikang":
-            if manage_group == "血糖管理" and indicator_type == "blood_sugar":
+            if manage_group == "血糖管理":
                 return await self._diet_eval_blood_sugar_laikang(**kwargs)
-            elif manage_group == "血压管理" and indicator_type == "blood_pressure":
+            elif manage_group == "血压管理":
                 return await self._diet_eval_blood_pressure_laikang(**kwargs)
-            elif manage_group == "减脂减重管理" and indicator_type == "weight":
+            elif manage_group == "减脂减重管理":
                 return await self._diet_eval_weight_management_laikang(**kwargs)
         elif expert_system == "yaoshukun":
             if manage_group == "血糖管理" and indicator_type == "blood_sugar":
                 return await self._diet_eval_blood_sugar_yaoshukun(**kwargs)
             elif manage_group == "血糖管理" and indicator_type == "dynamic_blood_sugar":
                 return await self._diet_eval_dynamic_blood_sugar_yaoshukun(**kwargs)
-            elif manage_group == "血压管理" and indicator_type == "blood_pressure":
+            elif manage_group == "血压管理":
                 return await self._diet_eval_blood_pressure_yaoshukun(**kwargs)
-            elif manage_group == "减脂减重管理" and indicator_type == "weight":
+            elif manage_group == "减脂减重管理":
                 return await self._diet_eval_weight_management_yaoshukun(**kwargs)
 
         raise ValueError("不支持的专家体系或管理群组/指标类型组合")
@@ -3292,6 +3292,86 @@ class HealthExpertModel:
         content = await parse_generic_content(content)
         content = map_diet_analysis(content)
         return content
+
+    async def aigc_functions_diet_recommendation(self, **kwargs):
+        user_profile = kwargs.get("user_profile")
+        height = user_profile.get("height")
+        weight = user_profile.get("weight")
+        disease = user_profile.get("disease")
+        exercise_intensity = user_profile.get("intensity")  # 这里传数字了，比如1，2，3，4，5
+
+        # 运动强度映射（如果后面需要用的话）
+        intensity_mapping = {
+            "1": "极低活动水平（久坐、很少运动）",
+            "2": "轻度活动水平（周1~3次低强度运动，如散步）",
+            "3": "中度活动水平（周3~5次中强度运动，如慢跑）",
+            "4": "高度活动水平（周3~5次高强度运动，如健身）",
+            "5": "极高活动水平（高强度体力劳动、运动员）"
+        }
+
+        # 计算 BMI
+        bmi = float(weight) / (float(height) / 100) ** 2
+
+        # 生成一句BMI描述
+        if bmi < 18.5:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI低于正常区间，属于过轻范围。"
+        elif 18.5 <= bmi < 24.9:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI在正常区间，属于健康范围。"
+        else:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI高于正常区间，属于过重范围。"
+
+        # 固定分类
+        cate_list = [
+            {"name": "大豆类", "code": "001"},
+            {"name": "动物性食物", "code": "002"},
+            {"name": "豆菜类", "code": "003"},
+            {"name": "根菜类", "code": "004"},
+            {"name": "菇类", "code": "005"},
+            {"name": "谷物", "code": "006"},
+            {"name": "果菜瓜菜类", "code": "007"},
+            {"name": "果脯类", "code": "008"},
+            {"name": "花菜类", "code": "009"},
+            {"name": "坚果类", "code": "010"},
+            {"name": "茎菜类", "code": "011"},
+            {"name": "薯类", "code": "012"},
+            {"name": "水果类", "code": "013"},
+            {"name": "叶菜类", "code": "014"}
+        ]
+
+        # 给每个分类加推荐克数
+        for item in cate_list:
+            item["weight"] = 100 + int(item["code"]) * 10  # 假数据，可以后面自己调整
+
+        return {
+            "bmi_desc": bmi_desc,
+            "cate_list": cate_list
+        }
+
+    async def aigc_functions_generate_meal_plan(self, **kwargs):
+        ingredients = kwargs.get("ingredients", [])
+
+        # 参数检查
+        if not ingredients:
+            return {"message": "食材列表不能为空"}
+
+        meal_plans = []
+
+        for item in ingredients:
+            name = item.get("name")
+            num = item.get("num")
+
+            if not name or num is None:
+                continue  # 如果name或者num缺失，跳过
+
+            meal_plans.append({
+                "recipe_name": f"{name}料理",
+                "method": f"准备{num}份{name}，清洗、切块，快速翻炒至熟，加调味料即可食用。",
+                "image": ""  # 图片字段空着
+            })
+
+        return {
+            "meal_plans": meal_plans
+        }
 
 
 if __name__ == "__main__":
