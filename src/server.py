@@ -140,6 +140,17 @@ class RabbitMQConsumer:
         self.queue_name = queue_name
         self.should_stop = threading.Event()
 
+    def get_virtual_host(self):
+        env = os.getenv('ZB_ENV', '')
+        if env == 'prod':
+            return '/lk-n-prod'
+        elif env == 'dev':
+            return '/lk-n-qa'
+        elif env == 'local':
+            return '/lk-n-dev'
+        else:
+            return '/lk-n-dev'
+
     def consume(self):
         """RabbitMQ 消费者线程函数"""
         while not self.should_stop.is_set():
@@ -148,7 +159,7 @@ class RabbitMQConsumer:
                                                   'RTI5MzlFQ0FFQzM5Q0I3MkM0MUEzNDc1M0ZFMzU0MkIwNjRFQzg4MToxNjc1MzE4OTMwMTMx')
                 connection = pika.BlockingConnection(
                     pika.ConnectionParameters('amqp-cn-9lb31jq7o019.cn-beijing.amqp-14.vpc.mq.amqp.aliyuncs.com',
-                                              5672, '/lk-n-qa', user_info))
+                                              5672, self.get_virtual_host(), user_info))
                 channel = connection.channel()
                 channel.queue_declare(queue=self.queue_name, durable=True)
 
