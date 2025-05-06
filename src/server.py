@@ -158,23 +158,28 @@ class RabbitMQConsumer:
                     data = json.loads(json.loads(body.decode('utf-8')))
                     envelope = data['envelope']
                     payload = data['payload']
+                    contextData = {}
+                    contextData['context'] = data['payload'].get('transmitContent',{}).get('context',{})
                     scene_type = payload['scenarioType']
                     if scene_type == 'BLOOD_SUGAR_ALERT':
                         gap_content = generate_glucose_alert_plan()
-                        param = TaskParams(taskType='glucoseWarning', contextData=envelope, callBackData=gap_content)
+                        param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
+                        param = param.model_dump_json().encode(encoding='utf-8')
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
                         sch_content = modify_schedule()
                         if not sch_content:
                             sch_content = {}
-                        param = TaskParams(taskType='modifySchedule', contextData=envelope, callBackData=sch_content)
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param.model_dump_json(),
+                        param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
+                        param = param.model_dump_json().encode(encoding='utf-8')
+                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                         sch_content = modify_health_promotion_plan()
-                        param = TaskParams(taskType='modifyHealthPromote', contextData=envelope,
+                        param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
                                            callBackData=sch_content)
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param.model_dump_json(),
+                        param = param.model_dump_json().encode(encoding='utf-8')
+                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
 
                 channel.basic_qos(prefetch_count=1)
