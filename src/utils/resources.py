@@ -127,6 +127,7 @@ class InitAllResource:
             help="是否使用指定的prompt版本, Default为False,都使用lastest",
         )
         self.args = parser.parse_args()
+        os.environ["ZB_ENV"] = self.args.env
         # os.environ["env"] = self.args.env
         logger.info(f"Initialize args: {self.args}")
 
@@ -359,6 +360,7 @@ class InitAllResource:
             prompt_character = mysql_conn.query("select * from ai_prompt_character")
             prompt_event = mysql_conn.query("select * from ai_prompt_event")
             prompt_tool = mysql_conn.query("select * from ai_prompt_tool")
+            prompt_intent_detect = mysql_conn.query("select * from ai_intent_detect")
             prompt_intent = mysql_conn.query("select * from ai_prompt_intent")
 
             # 格式化查询结果
@@ -366,6 +368,7 @@ class InitAllResource:
             prompt_event = filter_format(prompt_event)
             prompt_tool = filter_format(prompt_tool)
             prompt_intent = filter_format(prompt_intent)
+            prompt_intent_detect = filter_format(prompt_intent_detect)
 
             # 根据指定的版本构建prompt meta data
             if self.args.special_prompt_version:
@@ -386,6 +389,9 @@ class InitAllResource:
                         elif key == "intent":
                             prompt_meta_data["intent"] = {
                                 i["name"]: i for i in prompt_intent
+                            }
+                            prompt_meta_data["intent_detect"] = {
+                                i["name"]: i for i in prompt_intent_detect
                             }
                     else:
                         if key == "character":
@@ -429,6 +435,7 @@ class InitAllResource:
                     i["name"]: i for i in prompt_tool if i["in_used"] == 1
                 }
                 prompt_meta_data["intent"] = {i["name"]: i for i in prompt_intent}
+                prompt_meta_data["intent_detect"] = {i["name"]: i for i in prompt_intent_detect}
 
             # 初始化intent和tool的映射关系
             prompt_meta_data["init_intent"] = {
