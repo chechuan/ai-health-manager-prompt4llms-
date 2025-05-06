@@ -1129,7 +1129,9 @@ class SanJiKangYangRequest(BaseModel):
         "aigc_functions_energy_treatment_guideline_generation",
         "aigc_functions_energy_treatment_detailed_generation",
         "aigc_functions_health_analysis_advice_generation",
-        "aigc_functions_test1230"
+        "aigc_functions_diet_recommendation",
+        "aigc_functions_generate_meal_plan",
+        "aigc_functions_test1230",
     ] = Field(
         description="意图编码/事件编码",
         examples=[
@@ -1376,13 +1378,14 @@ class SanJiKangYangRequest(BaseModel):
             {'time': '16:00', 'event': '复诊'}
         ]
     )
-    key_indicators: Union[None, List[dict]] = Field(
-        None,
-        description="关键指标",
+    key_indicators: Optional[Any] = Field(
+        default=None,
+        description="关键指标，不限制结构，支持任意格式（dict、list、str等均可）",
         examples=[
-                    {'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82, 'unit': 'mmHg'},
-                    {'datetime': '2024-07-20 20:34:35', 'sbp': 118, 'dbp': 86, 'unit': 'mmHg'}
-            ],
+            {'type': 'blood_pressure', 'data': [{'datetime': '2024-07-20 09:08:25', 'value': 120}]},
+            [{'datetime': '2024-07-20 09:08:25', 'sbp': 116, 'dbp': 82}],
+            "随便什么字符串也可以"
+        ]
     )
     food_name: Union[str, None] = Field(
         None,
@@ -1453,6 +1456,61 @@ class SanJiKangYangRequest(BaseModel):
         None,
         description="入组问卷",
         examples=[{"question_1": "每天锻炼"}]
+    )
+    # current_date: Optional[str] = Field(
+    #     default=None,
+    #     description="当前日期，格式不限（推荐：YYYY-MM-DD）",
+    #     examples=[
+    #         "2024-12-03",
+    #         "12/03/2024",
+    #         "2024年12月3日"
+    #     ]
+    # )
+    meals_info: Optional[Any] = Field(
+        default=None,
+        description="饮食记录，不限制结构，推荐为每餐记录组成的列表",
+        examples=[
+            [
+                {
+                    "meal_time": "2024-12-03 08:04:42",
+                    "food_items": [
+                        {"food_name": "煎饼", "quantity": 1, "calories": 120},
+                        {"food_name": "豆腐", "quantity": 1, "calories": 150}
+                    ],
+                    "meal_evaluation": "无"
+                },
+                {
+                    "meal_time": "2024-12-03 12:50:00",
+                    "food_items": [
+                        {"food_name": "米饭", "quantity": 1, "calories": 200},
+                        {"food_name": "青菜", "quantity": 1, "calories": 50}
+                    ]
+                }
+            ],
+            "随便传一个字符串测试结构也可以"
+        ]
+    )
+    intervention_plan: Union[Dict, None] = Field(
+        default=None,
+        description="干预计划，不限制结构，推荐为多模块结构体，包含热量、限盐、节食建议等",
+        examples=[
+            {
+                "recommended_calories_intake": {"calories": 1200, "unit": "kcal"},
+                "health_management_principles": {
+                    "data": [{"name": "", "value": "控制热量摄入，戒烟限酒，规律作息"}],
+                    "image": "https://xxx.com/1.png",
+                    "title": "健康管理总原则"
+                },
+                "salt_restriction": {
+                    "data": [
+                        {"name": "限盐建议", "value": "每日不超过5g"},
+                        {"name": "注意隐形盐", "value": "减少加工食品摄入"}
+                    ],
+                    "image": "https://xxx.com/2.png",
+                    "title": "限盐"
+                }
+            }
+        ]
     )
 
 

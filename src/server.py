@@ -733,6 +733,68 @@ def mount_aigc_functions(app: FastAPI):
                 await record_monitoring_data([msg], param, start_time, end_time)
                 return build_aigc_functions_response(_return)
 
+    @app.route("/aigc/diet_eval", methods=["POST"])
+    async def _async_aigc_functions_diet_eval(
+            request_model: SanJiKangYangRequest,  # 你可能需要根据请求的参数模型调整这里的类名
+    ) -> Response:
+        """饮食评估AIGC函数"""
+        endpoint = "/aigc/diet_eval"
+        endpoint_name = "diet_eval"
+
+        start_time = time.time()
+        try:
+            param = await async_accept_param_purge(request_model, endpoint=endpoint)
+            param["endpoint_name"] = endpoint_name
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            # 记录监控数据
+            tags = ["aigc_diet_eval", "健康方案", "个性化营养", "饮食评估"]
+
+            param['tags'] = tags
+
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 处理流式响应 构造返回数据的AsyncGenerator
+                generator = response_generator(response)
+
+                # 包装生成器，记录数据
+                wrapped_generator = logging_wrapper(generator, param, start_time)
+                return StreamingResponse(wrapped_generator, media_type="text/event-stream")
+            else:
+                # 处理非流式响应
+                response = replace_you(response)  # 如果 replace_you 是异步函数，请使用 await
+                if isinstance(response, str):
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+                else:
+                    ret = AigcFunctionsCompletionResponse(head=200, items=response)
+                    _return = ret.model_dump_json(exclude_unset=False)
+
+                end_time = time.time()
+                logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+
+                await record_monitoring_data([response], param, start_time, end_time)
+
+                return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            # 错误处理
+            msg = replace_you(repr(err))  # 如果 replace_you 是异步函数，请使用 await
+            logger.error(f"Error in {endpoint}: {msg}")
+
+            if param.get("model_args") and param["model_args"].get("stream") is True:
+                # 流式错误响应
+                generator = response_generator(msg, error=True)
+                return StreamingResponse(generator, media_type="text/event-stream")
+            else:
+                # 非流式错误响应
+                ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+                _return = ret.model_dump_json(exclude_unset=True)
+
+                end_time = time.time()
+                # 记录错误监控数据
+                await record_monitoring_data([msg], param, start_time, end_time)
+                return build_aigc_functions_response(_return)
+
     async def _async_aigc_functions_jia_kang_bao_support(
             request_model: OutpatientSupportRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
@@ -1017,6 +1079,44 @@ def mount_aigc_functions(app: FastAPI):
 
         except Exception as err:
             msg = replace_you(repr(err)) if callable(replace_you) and hasattr(replace_you, "__await__") else repr(err)
+            logger.error(f"Error in {endpoint}: {msg}")
+
+            ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)
+            _return = ret.model_dump_json(exclude_unset=True)
+
+            end_time = time.time()
+            await record_monitoring_data([msg], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+    @app.post("/aigc/cognitive_improvement")
+    async def cognitive_improvement(request: Request):
+        """老年认知改善接口"""
+        endpoint = "/aigc/cognitive_improvement"
+        param = {}  # 初始化参数
+
+        start_time = time.time()
+        try:
+            param = await async_accept_param_purge(request, endpoint=endpoint)
+
+            response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
+
+            # 获取 tags
+            tags = ["cognitive_improvement", "老年认知", "饮食", "菜谱"]  # 默认 tags，可以根据需求调整
+            param['tags'] = tags
+
+            # 返回响应
+            ret = AigcFunctionsCompletionResponse(head=200, items=response)
+            _return = ret.model_dump_json(exclude_unset=False)
+
+            end_time = time.time()
+            logger.info(f"Endpoint: {endpoint}, Final response: {_return}")
+            await record_monitoring_data([response], param, start_time, end_time)
+
+            return build_aigc_functions_response(_return)
+
+        except Exception as err:
+            msg = str(err)
             logger.error(f"Error in {endpoint}: {msg}")
 
             ret = AigcFunctionsCompletionResponse(head=601, msg=msg, items=None)

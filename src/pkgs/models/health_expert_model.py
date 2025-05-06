@@ -25,7 +25,8 @@ from src.utils.module import (
     calculate_and_format_diet_plan, format_historical_meal_plans, query_course, call_mem0_search_memory,
     format_mem0_search_result, call_mem0_get_all_memories, convert_dict_to_key_value_section, strip_think_block,
     convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
-    extract_daily_schedule, export_all_lessons_with_actions
+    extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
+    format_intervention_plan, get_daily_key_bg, map_diet_analysis
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -2958,6 +2959,419 @@ class HealthExpertModel:
         if not daily_schedule_list:
             daily_schedule_list = DAILV_SCHEDULE_PUSH
         return daily_schedule_list
+
+    async def aigc_functions_diet_eval(self, **kwargs):
+        """
+        饮食评估功能
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/YQBnd5ExVEBjOmlqHMNqNnYZJyeZqMmz
+
+        根据专家体系（laikang/yaoshukun）、管理群组和指标类型，分发到对应的饮食评估场景函数，统一处理饮食分析与饮食状态建议。
+
+        参数:
+            kwargs (dict): 请求参数，包含用户画像、饮食记录、指标数据等
+
+        返回:
+            dict: 返回包含饮食分析和饮食状态的结构
+        """
+        expert_system = kwargs.get("expert_system")
+        manage_group = kwargs.get("manage_group")
+        indicator_type = kwargs.get("key_indicators", {}).get("type")
+
+        if expert_system == "laikang":
+            if manage_group == "血糖管理":
+                return await self._diet_eval_blood_sugar_laikang(**kwargs)
+            elif manage_group == "血压管理":
+                return await self._diet_eval_blood_pressure_laikang(**kwargs)
+            elif manage_group == "减脂减重管理":
+                return await self._diet_eval_weight_management_laikang(**kwargs)
+        elif expert_system == "yaoshukun":
+            if manage_group == "血糖管理" and indicator_type == "blood_sugar":
+                return await self._diet_eval_blood_sugar_yaoshukun(**kwargs)
+            elif manage_group == "血糖管理" and indicator_type == "dynamic_blood_sugar":
+                return await self._diet_eval_dynamic_blood_sugar_yaoshukun(**kwargs)
+            elif manage_group == "血压管理":
+                return await self._diet_eval_blood_pressure_yaoshukun(**kwargs)
+            elif manage_group == "减脂减重管理":
+                return await self._diet_eval_weight_management_yaoshukun(**kwargs)
+
+        raise ValueError("不支持的专家体系或管理群组/指标类型组合")
+
+    async def _diet_eval_blood_sugar_laikang(self, **kwargs):
+        """
+        处理三疗体系下的血糖管理（指尖血）饮食评估。
+
+        根据传入的用户画像、饮食记录、血糖数据等，评估当前饮食对血糖控制的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、血糖数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_blood_sugar_laikang"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_blood_pressure_laikang(self, **kwargs):
+        """
+        处理三疗体系下的血压管理饮食评估。
+
+        根据传入的用户画像、饮食记录、血压数据等，评估当前饮食对血压控制的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、血压数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_blood_pressure_laikang"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_weight_management_laikang(self, **kwargs):
+        """
+        处理三疗体系下的减脂减重饮食评估。
+
+        根据传入的用户画像、饮食记录、体重数据等，评估当前饮食对体重管理的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、体重数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_weight_management_laikang"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_blood_sugar_yaoshukun(self, **kwargs):
+        """
+        处理姚树坤体系下的血糖管理（指尖血）饮食评估。
+
+        根据传入的用户画像、饮食记录、血糖数据等，评估当前饮食对血糖控制的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、血糖数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_blood_sugar_yaoshukun"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_dynamic_blood_sugar_yaoshukun(self, **kwargs):
+        """
+        处理姚树坤体系下的血糖管理（动态血糖）饮食评估。
+
+        根据传入的用户画像、饮食记录、动态血糖数据等，评估当前饮食对动态血糖的控制影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、动态血糖数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_dynamic_blood_sugar_yaoshukun"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+        intervention_plan = await format_intervention_plan(kwargs.get("intervention_plan"))
+
+        glucose_analyses = await get_daily_key_bg(kwargs.get("key_indicators"), kwargs.get("meals_info"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators,
+            "glucose_analyses_summary": glucose_analyses.rstrip("\n").rstrip(),
+            "intervention_plan": intervention_plan
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_blood_pressure_yaoshukun(self, **kwargs):
+        """
+        处理姚树坤体系下的血压管理饮食评估。
+
+        根据传入的用户画像、饮食记录、血压数据等，评估当前饮食对血压控制的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、血压数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_blood_pressure_yaoshukun"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+        intervention_plan = await format_intervention_plan(kwargs.get("intervention_plan"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators,
+            "glucose_analyses_summary": kwargs.get("glucose_analyses_summary"),
+            "intervention_plan": intervention_plan
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def _diet_eval_weight_management_yaoshukun(self, **kwargs):
+        """
+        处理姚树坤体系下的减脂减重饮食评估。
+
+        根据传入的用户画像、饮食记录、体重数据等，评估当前饮食对体重管理的影响，并提供相应的建议。
+
+        参数:
+            kwargs (dict): 包含用户画像、饮食记录、体重数据等信息。
+
+        返回:
+            dict: 返回饮食分析和饮食状态的建议。
+        """
+        kwargs["intentCode"] = "aigc_functions_diet_eval_weight_management_yaoshukun"
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        meeals_info = await format_meals_info(kwargs.get("meals_info"))
+        key_indicators = await format_key_indicators(kwargs.get("key_indicators"))
+        intervention_plan = await format_intervention_plan(kwargs.get("intervention_plan"))
+
+        # 准备提示词变量
+        prompt_vars = {
+            "manage_group": kwargs.get("manage_group"),
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "current_date": f"## 当前日期：{kwargs.get('current_date')}",
+            "meals_info": meeals_info,
+            "key_indicators": key_indicators,
+            "glucose_analyses_summary": kwargs.get("glucose_analyses_summary"),
+            "intervention_plan": intervention_plan
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 获取饮食评估内容
+        content = await self.aaigc_functions_general(
+            _event="饮食评估",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+        content = await parse_generic_content(content)
+        content = map_diet_analysis(content)
+        return content
+
+    async def aigc_functions_diet_recommendation(self, **kwargs):
+        user_profile = kwargs.get("user_profile")
+        height = user_profile.get("height")
+        weight = user_profile.get("weight")
+        disease = user_profile.get("disease")
+        exercise_intensity = user_profile.get("intensity")  # 这里传数字了，比如1，2，3，4，5
+
+        # 运动强度映射（如果后面需要用的话）
+        intensity_mapping = {
+            "1": "极低活动水平（久坐、很少运动）",
+            "2": "轻度活动水平（周1~3次低强度运动，如散步）",
+            "3": "中度活动水平（周3~5次中强度运动，如慢跑）",
+            "4": "高度活动水平（周3~5次高强度运动，如健身）",
+            "5": "极高活动水平（高强度体力劳动、运动员）"
+        }
+
+        # 计算 BMI
+        bmi = float(weight) / (float(height) / 100) ** 2
+
+        # 生成一句BMI描述
+        if bmi < 18.5:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI低于正常区间，属于过轻范围。"
+        elif 18.5 <= bmi < 24.9:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI在正常区间，属于健康范围。"
+        else:
+            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI高于正常区间，属于过重范围。"
+
+        # 固定分类
+        cate_list = [
+            {"name": "大豆类", "code": "001"},
+            {"name": "动物性食物", "code": "002"},
+            {"name": "豆菜类", "code": "003"},
+            {"name": "根菜类", "code": "004"},
+            {"name": "菇类", "code": "005"},
+            {"name": "谷物", "code": "006"},
+            {"name": "果菜瓜菜类", "code": "007"},
+            {"name": "果脯类", "code": "008"},
+            {"name": "花菜类", "code": "009"},
+            {"name": "坚果类", "code": "010"},
+            {"name": "茎菜类", "code": "011"},
+            {"name": "薯类", "code": "012"},
+            {"name": "水果类", "code": "013"},
+            {"name": "叶菜类", "code": "014"}
+        ]
+
+        # 给每个分类加推荐克数
+        for item in cate_list:
+            item["weight"] = 100 + int(item["code"]) * 10  # 假数据，可以后面自己调整
+
+        return {
+            "bmi_desc": bmi_desc,
+            "cate_list": cate_list
+        }
+
+    async def aigc_functions_generate_meal_plan(self, **kwargs):
+        ingredients = kwargs.get("ingredients", [])
+
+        # 参数检查
+        if not ingredients:
+            return {"message": "食材列表不能为空"}
+
+        meal_plans = []
+
+        for item in ingredients:
+            name = item.get("name")
+            num = item.get("num")
+
+            if not name or num is None:
+                continue  # 如果name或者num缺失，跳过
+
+            meal_plans.append({
+                "recipe_name": f"{name}料理",
+                "method": f"准备{num}份{name}，清洗、切块，快速翻炒至熟，加调味料即可食用。",
+                "image": ""  # 图片字段空着
+            })
+
+        return {
+            "meal_plans": meal_plans
+        }
 
 
 if __name__ == "__main__":

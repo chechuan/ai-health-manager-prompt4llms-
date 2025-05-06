@@ -23,6 +23,8 @@ from typing import (
     Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional
 )
 from contextlib import contextmanager
+from collections import OrderedDict
+from scipy.signal import find_peaks
 
 from lunar_python import Lunar, Solar
 
@@ -35,6 +37,7 @@ from src.utils.api_protocal import AigcFunctionsResponse
 from src.utils.openai_api_protocal import (
     CompletionResponseStreamChoice, CompletionStreamResponse
 )
+from src.pkgs.models.func_eval_model.glucose_analysis import GlucoseAnalyzer
 
 try:
     from src.utils.Logger import logger
@@ -3267,3 +3270,254 @@ async def async_wrap_stream_with_langfuse(
                 logger.info(f"[Langfuse] 流式追踪完成 ✅ tokens: in={input_tokens}, out={output_tokens}")
             except Exception as e:
                 logger.warning(f"[Langfuse] 流式追踪失败 ❌: {repr(e)}")
+
+
+async def format_key_indicators(key_indicators):
+    if not key_indicators:
+        return ""
+    result_lines = []
+    indicator_type = key_indicators.get("type")
+    data_list = key_indicators.get("data")
+    if indicator_type == "blood_sugar":
+        result_lines.append("## 血糖数据：")
+        for item in data_list:
+            result_lines.append(
+                f"测量时间：{item.get('datetime')}  {item.get('name', '')} 测量值：{item.get('value')}")
+    elif indicator_type == "dynamic_blood_sugar":
+        result_lines.append("## 当天1日关键血糖值：")
+        for item in data_list:
+            result_lines.append(f"测量时间：{item.get('datetime')}  测量值：{item.get('value')}")
+    elif indicator_type == "blood_pressure":
+        result_lines.append("## 血压数据：")
+        for item in data_list:
+            result_lines.append(
+                f"测量时间：{item.get('datetime')}  {item.get('name', '收缩压/舒张压')} 测量值：{item.get('value')}")
+    elif indicator_type == "weight":
+        result_lines.append("## 关键指标：")
+        for item in data_list:
+            result_lines.append(
+                f"测量时间：{item.get('datetime')}  {item.get('name', '体重')} 测量值：{item.get('value')}")
+    return "\n".join(result_lines)
+
+
+async def format_meals_info(meals_info: List[dict]) -> str:
+    result = []
+    for meal in meals_info:
+        meal_time = meal.get("meal_time", "")
+        foods = meal.get("food_items", [])
+        evaluation = meal.get("meal_evaluation", "无")
+        food_str = "，".join([f'{item.get("quantity", 1)}个{item.get("food_name")}' if item.get("quantity") == 1 else f'{item.get("quantity")}份{item.get("food_name")}' for item in foods])
+        result.append(f"就餐时间：{meal_time} 就餐食物：{food_str}。医生当餐评价：{evaluation}")
+    return "\n".join(result)
+
+
+async def format_intervention_plan(intervention_plan):
+    if not intervention_plan:
+        return ""
+    formatted_plan = []
+
+    # 推荐饮食摄入热量值
+    if intervention_plan.get("recommended_calories_intake"):
+        formatted_plan.append(f"推荐饮食摄入热量值：{intervention_plan['recommended_calories_intake'].get('calories')}kcal")
+
+    # 健康管理总原则
+    if intervention_plan.get("health_management_principles"):
+        health_principle = intervention_plan["health_management_principles"]
+        formatted_plan.append(f"健康管理总原则：{health_principle['data'][0].get('value')}")
+
+    # 节食减重
+    if intervention_plan.get("diet_reduction"):
+        diet_reduction = intervention_plan["diet_reduction"]
+        formatted_plan.append("节食减重：{")
+        for idx, item in enumerate(diet_reduction.get("data", [])):
+            formatted_plan.append(f"  \"{item['name']}\": \"{item['value']}\"{',' if idx < len(diet_reduction.get('data', [])) - 1 else ''}")
+        formatted_plan.append("}")
+
+    # 清除致炎饮食
+    if intervention_plan.get("inflammation_control_diet"):
+        inflammation_diet = intervention_plan["inflammation_control_diet"]
+        formatted_plan.append("清除致炎饮食：{")
+        for idx, item in enumerate(inflammation_diet.get("data", [])):
+            formatted_plan.append(f"  \"{item['name']}\": \"{item['value']}\"{',' if idx < len(inflammation_diet.get('data', [])) - 1 else ''}")
+        formatted_plan.append("}")
+
+    # 限盐
+    if intervention_plan.get("salt_restriction"):
+        salt_restriction = intervention_plan["salt_restriction"]
+        formatted_plan.append("限盐：{")
+        for idx, item in enumerate(salt_restriction.get("data", [])):
+            formatted_plan.append(f"  \"{item['name']}\": \"{item['value']}\"{',' if idx < len(salt_restriction.get('data', [])) - 1 else ''}")
+        formatted_plan.append("}")
+
+    # 饮食打卡推送内容
+    if intervention_plan.get("diet_check_in_content"):
+        formatted_plan.append("饮食建议[")
+        for idx, content in enumerate(intervention_plan.get("diet_check_in_content", [])):
+            formatted_plan.append(f"  {{\n    \"日程名称\": \"{content['schedule_name']}\",")
+            formatted_plan.append(f"    \"日程时间\": \"{content['schedule_time']}\",")
+            formatted_plan.append(f"    \"推送话术\": \"{content['push_text']}\"")
+            formatted_plan.append(f"  }}{',' if idx < len(intervention_plan.get('diet_check_in_content', [])) - 1 else ''}")
+        formatted_plan.append("]")
+
+    return "\n".join(formatted_plan)
+
+
+def get_meals_bg_str(bg):
+    res = '\n3. 餐后2小时内血糖极值变化：\n'
+    for key in bg.keys():
+        res += f'   - {key}后2小时内: 血糖最小值：{bg[key][0]}   血糖最大值：{bg[key][1]}\n'
+    return res
+
+
+def get_meal_name(time_str):
+    if ' ' in time_str:
+        time_str = time_str.split(' ')[-1]  # 提取 HH:MM:SS
+    try:
+        meal_time = datetime.strptime(time_str, '%H:%M:%S')
+    except Exception:
+        return '未知'
+
+    if meal_time <= datetime.strptime('10:30:00', '%H:%M:%S'):
+        return '早餐'
+    elif datetime.strptime('10:30:00', '%H:%M:%S') < meal_time <= datetime.strptime('14:30:00', '%H:%M:%S'):
+        return '午餐'
+    elif datetime.strptime('17:30:00', '%H:%M:%S') < meal_time < datetime.strptime('22:00:00', '%H:%M:%S'):
+        return '晚餐'
+    else:
+        return '加餐'
+
+
+async def get_daily_key_bg(bg_info, diet_info):
+    res = []
+    buckets = OrderedDict()
+    processed_blood_glucose_data = [
+        {**entry, 'time': entry['datetime'], 'value': float(entry['value'])}
+        for entry in bg_info.get("data")
+    ]
+
+    bg_info = bg_info.get("data", []) if bg_info else []
+    for info in bg_info:
+        time = info.get('datetime', '').split(' ')[-1]
+        hour_key = time.split(':')[0]
+        info['time'] = info['datetime']  # 兼容旧代码中使用'time'字段的地方
+        info['value'] = float(info['value'])  # 确保是float
+        if hour_key not in buckets:
+            buckets[hour_key] = [info]
+        else:
+            buckets[hour_key].append(info)
+
+    img_time = []
+    for info in diet_info:
+        time_key = info.get('meal_time', '').split(' ')[-1].split(':')[0]
+        if time_key:
+            img_time.append(info.get('meal_time', '').split(' ')[-1])
+    night_low = {}
+    day_high = {}
+    peaks = []
+    troughs = []
+    meals_minmax_bg = {}
+    for i in img_time:
+        after_meal_data = []
+        for key in buckets.keys():
+            if int(key) == (int(i.split(':')[0]) - 1):
+                meal_trough_idxs, _ = find_peaks([-float(i['value']) for i in buckets[key]], height=-100)
+                meal_troughs = [x for i, x in enumerate(buckets[key]) if i in meal_trough_idxs]
+                res.extend(sorted(meal_troughs, key=lambda i: float(i['value']))[:3])
+            target_time = datetime.strptime(i, '%H:%M:%S')
+            if int(key) == int(i.split(':')[0]):
+                target_time = datetime.strptime(i, '%H:%M:%S')
+                after_meal_data.extend([entry for entry in buckets[key] if datetime.strptime(entry['time'].split(' ')[1].strip(), '%H:%M:%S') >= target_time])
+            if int(key) == int(i.split(':')[0]) + 2:
+                target_time = datetime.strptime(i[3:].strip(), '%M:%S')
+                after_meal_data.extend([entry for entry in buckets[key] if datetime.strptime(entry['time'].split(' ')[1][3:].strip(), '%M:%S') <= target_time])
+            if int(key) == int(i.split(':')[0]) + 1:
+                after_meal_data.extend(buckets[key])
+                # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
+        meal_peak_idxs, _ = find_peaks([i['value'] for i in after_meal_data], height=0)
+        meal_peaks = [x for i, x in enumerate(after_meal_data) if i in meal_peak_idxs]
+        meal_peaks = sorted(meal_peaks, key=lambda i: float(i['value']), reverse=True)
+
+        min_bg = ''
+        max_bg = ''
+        for d in after_meal_data:
+            if not min_bg:
+                min_bg = d['value']
+            if float(d['value']) < float(min_bg):
+                min_bg = d['value']
+            if not max_bg:
+                max_bg = d['value']
+            if float(d['value']) > float(max_bg):
+                max_bg = d['value']
+        meals_minmax_bg[get_meal_name(i)] = [min_bg, max_bg]
+
+        if meal_peaks and float(meal_peaks[0]['value']) > 10.0:
+            res.extend(meal_peaks[:5])
+        else:
+            res.extend(meal_peaks[:3])
+
+    for key in buckets.keys():
+        for i in img_time:
+            if (int(key) == int(i.split(':')[0]) + 1) or (int(key) == int(i.split(':')[0]) + 2):
+                # if (int(key) in [int(i.split(':')[0]) + 1 for i in img_time]) or (int(key) in [int(i.split(':')[0]) + 2 for i in img_time]):
+                for j in buckets[key]:
+                    if i.split(':')[1] == j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
+                    elif i.split(':')[1] < j['time'].split(' ')[-1].split(':')[1]:
+                        res.append(j)
+                        break
+        if int(key) < 6 or int(key) > 21:  # 夜间时段
+            trough_idxes, _ = find_peaks([-float(i['value']) for i in buckets[key]], height=-100)
+            troughs.extend([x for i, x in enumerate(buckets[key]) if i in trough_idxes])
+            for i in buckets[key]:
+                if not night_low:
+                    night_low = i
+                elif night_low['value'] > i['value']:
+                    night_low = i
+            if int(key) % 2 == 0:
+                res.append(buckets[key][0])
+        elif 5 < int(key) < 22:      # 白天时段
+            peak_idxes, _ = find_peaks([i['value'] for i in buckets[key]], height=0)
+            peaks.extend([x for i, x in enumerate(buckets[key]) if i in peak_idxes])
+            res.append(buckets[key][0])
+            # for i,x in enumerate(buckets[key]):
+            #     if not day_high:
+            #         day_high = x
+            #     elif day_high['value'] < x['value']:
+            #         day_high = x
+    res.extend(sorted(peaks, key=lambda i: float(i['value']), reverse=True)[:3])
+    if len(troughs) > 0:
+        if float(troughs[0]['value']) < 3.9:
+            res.extend(troughs[:3])
+        else:
+            res.append(troughs[0])
+    res.append(night_low)
+    # res.append(day_high)
+    unique_tuples = set(tuple(sorted(d.items())) for d in res)
+    res = [dict(t) for t in unique_tuples]
+    res = sorted(res, key=lambda item: item.get('time', ''))
+    glucose_analyses = GlucoseAnalyzer().analyze_glucose_data(processed_blood_glucose_data)
+    result = glucose_analyses.get('summary', '') + "\n" + get_meals_bg_str(meals_minmax_bg)
+    return result
+
+
+def map_diet_analysis(diet_data: dict) -> dict:
+    """
+    将 diet_data 中的中文字段合并成 evaluation_and_advice 字段，并保留饮食状态为 diet_status。
+    格式如下：
+    {
+        "evaluation_and_advice": "【血糖趋势分析】\nxxx\n\n【营养优化建议】\nxxx",
+        "diet_status": "欠佳"
+    }
+    """
+    evaluation = diet_data.get("指标评价及营养建议", {})
+    trend = evaluation.get("指标趋势分析", "")
+    advice = evaluation.get("营养优化建议", "")
+    status = diet_data.get("饮食状态", "")
+
+    return {
+        "evaluation_and_advice": f"【血糖趋势分析】\n{trend}\n\n【营养优化建议】\n{advice}",
+        "diet_status": status
+    }
+
+
