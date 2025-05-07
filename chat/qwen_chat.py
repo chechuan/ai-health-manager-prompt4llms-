@@ -320,7 +320,7 @@ class Chat:
                 scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent_detect'],
                                                        kwargs.get('scene_code') or 'default')
                 prompt = self.prompt_meta_data['intent_detect']['意图模版']['description'].format(scene_prompt, h_p)
-                model = 'Intent-Detect-Instruct'
+                model = 'Intent-Detect-0.5B'
 
             # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
             #     scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
