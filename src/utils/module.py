@@ -3521,3 +3521,33 @@ def map_diet_analysis(diet_data: dict) -> dict:
     }
 
 
+async def format_warning_indicators(warning_indicators):
+    formatted = []
+    for warning in warning_indicators:
+        dt = warning.get("time", "")[:16]  # "2025-04-28 17:00"
+        date_part = dt[:10].replace("-", "年", 1).replace("-", "月", 1) + "日"
+        time_part = dt[11:]
+        name = warning.get("name")
+        value = warning.get("value")
+        formatted.append(f"{date_part} {time_part}，{name}{value}")
+    return "\n".join(formatted)
+
+
+async def format_meals_info_v2(meals_info):
+    formatted = []
+    for meal in meals_info:
+        time_str = meal.get("meal_time", "")[11:16]  # 获取 HH:MM
+        food_items = meal.get("food_items", [])
+        for food in food_items:
+            name = food.get("food_name")
+            quantity = food.get("quantity")
+            unit = food.get("unit")
+            formatted.append(f"{time_str} {name} {quantity}{unit}")
+    return "\n".join(formatted)
+
+
+
+# import json
+# tt = "{'start_row': 0, 'end_row': 0, 'env': 0, 'now': 0}"
+# t = json.loads(tt)
+# print(t)

@@ -26,7 +26,7 @@ from src.utils.module import (
     format_mem0_search_result, call_mem0_get_all_memories, convert_dict_to_key_value_section, strip_think_block,
     convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
-    format_intervention_plan, get_daily_key_bg, map_diet_analysis
+    format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace
@@ -34,6 +34,7 @@ from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
 from src.utils.langfuse_prompt_manager import LangfusePromptManager
+from src.utils.parameter_fetcher import ParameterFetcher
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import re
@@ -45,6 +46,11 @@ class HealthExpertModel:
     def __init__(self, gsr: InitAllResource) -> None:
         # 初始化实例属性
         self.gsr = gsr
+        self.parameter_fetcher = ParameterFetcher(
+            api_key=self.gsr.api_key,
+            api_secret=self.gsr.api_secret,
+            api_endpoints=self.gsr.api_endpoints
+        )
         self.langfuse_prompt_manager = LangfusePromptManager(
             langfuse_client=self.gsr.langfuse_client,
             prompt_meta_data=self.gsr.prompt_meta_data,
@@ -3339,8 +3345,8 @@ class HealthExpertModel:
         ]
 
         # 给每个分类加推荐克数
-        for item in cate_list:
-            item["weight"] = 100 + int(item["code"]) * 10  # 假数据，可以后面自己调整
+        # for item in cate_list:
+        #     item["weight"] = 100 + int(item["code"]) * 10  # 假数据，可以后面自己调整
 
         return {
             "bmi_desc": bmi_desc,
@@ -3372,6 +3378,110 @@ class HealthExpertModel:
         return {
             "meal_plans": meal_plans
         }
+
+    async def get_parameters(self, **kwargs):
+        """
+        根据 intent_code 获取不同的参数。
+        """
+        intent_code = kwargs.get("intent_code")
+
+        if intent_code == "aigc_functions_blood_sugar_warning_sanliao":
+            # 获取三疗血糖预警所需的参数
+            return await self.get_parameters_for_blood_sugar_warning(
+                user_id=kwargs.get("user_id"),
+                intent_code=intent_code,
+                time_range=kwargs.get("time_range")
+            )
+        # elif intent_code == "aigc_functions_blood_sugar_warning_yaoshukun":
+        #     # 获取姚树坤血糖预警所需的参数
+        #     return await self.get_parameters_for_blood_sugar_warning_yaoshukun(user_id, time_range)
+        else:
+            raise ValueError(f"Unsupported intent code: {intent_code}")
+
+    async def get_parameters_for_blood_sugar_warning(self, **kwargs):
+        """
+        获取血糖预警需要的参数
+        """
+        # 调用 ParameterFetcher 获取用户画像、饮食信息、营养师点评、预警指标等
+        user_id = kwargs.get("user_id")
+        params = self.parameter_fetcher.get_user_profile(user_id)
+
+        user_profile = params.get("user_profile")
+        # meals_info = params.get("meals_info")
+        # nutritionist_feedback = params.get("nutritionist_feedback")
+        # warning_indicators = params.get("warning_indicators")
+
+        # 返回这些参数
+        return {
+            "user_profile": user_profile
+            # "meals_info": meals_info,
+            # "nutritionist_feedback": nutritionist_feedback,
+            # "warning_indicators": warning_indicators
+        }
+
+    async def aigc_functions_blood_sugar_warning(self, **kwargs):
+        """
+        血糖预警评估功能
+
+        根据专家体系（laikang/yaoshukun）与管理群组，统一处理血糖预警分析与建议。
+
+        参数:
+            kwargs (dict): 请求参数，包含用户画像、饮食记录、血糖数据等
+
+        返回:
+            dict: 返回包含血糖预警分析和建议的结构
+        """
+        intent_code = kwargs.get("intentCode")
+
+        # 根据intentCode获取需要的参数
+        params = await self.get_parameters(
+            user_id=kwargs.get("user_id"),
+            intent_code=intent_code,
+            time_range=kwargs.get("time_range")
+        )
+        logger.debug(params)
+
+        expert_system = kwargs.get("expert_system")
+        manage_group = kwargs.get("manage_group")
+        diet_comment = kwargs.get("diet_comment")
+        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=kwargs.get("user_profile", {}))
+
+        # 格式化饮食信息
+        meals_info = await format_meals_info_v2(kwargs.get("meals_info"))
+
+        # 格式化预警指标，统一处理
+        warning_indicators = await format_warning_indicators(kwargs.get("warning_indicators"))
+
+        # 根据专家体系选择intentCode
+        if expert_system == "laikang":
+            kwargs["intentCode"] = "aigc_functions_blood_sugar_warning_sanliao"
+        elif expert_system == "yaoshukun":
+            kwargs["intentCode"] = "aigc_functions_blood_sugar_warning_yaoshukun"
+        else:
+            raise ValueError("不支持的专家体系")
+
+        # 准备提示词变量
+        prompt_vars = {
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "meals_info": f"## 3小时内的饮食信息\n{meals_info}" if meals_info else None,
+            "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else None,
+            "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else None
+        }
+
+        # 更新模型参数
+        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用血糖预警分析模型
+        content = await self.aaigc_functions_general(
+            _event="血糖预警分析",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            **kwargs
+        )
+
+        content = await parse_generic_content(content)
+        content = "".join([value for key, value in content.items()])
+        return content
 
 
 if __name__ == "__main__":

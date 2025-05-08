@@ -43,6 +43,12 @@ class InitAllResource:
         self.__knowledge_connect_check__()
         self.langfuse_client = self.__init_langfuse__()
 
+        # API鉴权信息
+        self.parameter_config = self.api_config.get("parameter_config", {})
+        self.api_key = self.parameter_config.get("api_key")
+        self.api_secret = self.parameter_config.get("api_secret")
+        self.api_endpoints = self.parameter_config.get("api_endpoints", {})
+
         try:
             self.prompt_meta_data = self.req_prompt_data_from_mysql()
         except Exception as e:
