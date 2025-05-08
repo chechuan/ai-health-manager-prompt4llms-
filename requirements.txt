@@ -111,3 +111,5 @@ langfuse
 scikit-learn
 python-Levenshtein
 pika
+tiktoken
+dashscope
