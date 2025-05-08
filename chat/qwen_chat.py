@@ -270,6 +270,7 @@ class Chat:
         logger.debug(kwargs)
         user_id = kwargs.get("user_id", "anonymous")
         session_id = kwargs.get("session_id", "anonymous")
+        history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
         if kwargs.get('scene_code', 'default') != 'doctor':
             open_sch_list = ['打开','日程']
             market_list = ['打开','集市']
@@ -278,7 +279,6 @@ class Chat:
             food_purch_list = ['打开食材采购','食材采购','买什么食材','买什么食物', '买点什么食材', '买点什么食物']
             inter_info_list = ['打开聊天','打开交流','信息交互页面','打开语音交互','语音交互页面','查看聊天','聊天页面', '我的聊天', '看看聊天']
             # st_key, ed_key = "<|im_start|>", "<|im_end|>"
-            history = [{"role": role_map.get(str(i['role']), "user"), "content": i['content']} for i in history]
             gc = ['商量', '医院', '去', '到']
             # his_prompt = "\n".join([f"{st_key}{i['role']}\n{i['content']}{ed_key}" for i in history]) + f"\n{st_key}assistant\n"
             if sum([1 for i in gc if i in history[-1]['content']]) >= 3:
@@ -298,8 +298,8 @@ class Chat:
             if '换回' in history[-1]['content'] and ('数字人' in history[-1]['content'] or '形象' in history[-1]['content'] or '皮肤' in history[-1]['content']):
                 return '换回数字人皮肤'
         if len(history) > 1:
-            h_p = "\n".join([("Question" if i['role'] == "user" else "Answer")
-                + f": {i['content']}" for i in history[-5:-1]])
+            h_p = "\n".join([("user" if i['role'] == "user" else "assistant")
+                + f": {i['content']}" for i in history[-5:]])
         else:
             h_p = "无"
         prefix = "Question" if history[-1]['role'] == "user" else "Answer"
@@ -307,28 +307,41 @@ class Chat:
 
         # prompt = INTENT_PROMPT + his_prompt + "\nThought: "
         if kwargs.get('intentPrompt', ''):
-            prompt = kwargs.get('intentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
+            prompt = kwargs.get('intentPrompt').format(h_p)
         else:
-            scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default')
-            # logger.debug(f"Generated scene_prompt: {scene_prompt}")
-            prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
-            # logger.debug(f"Generated Prompt: {prompt}")
+            scene_code = kwargs.get('scene_code')
+            if scene_code == 'doctor':
+                scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code'))
+                # logger.debug(f"Generated scene_prompt: {scene_prompt}")
+                prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p)
+                model = 'Qwen1.5-32B-Chat'
+                # logger.debug(f"Generated Prompt: {prompt}")
+            else:
+                scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent_detect'],
+                                                       kwargs.get('scene_code') or 'default')
+                prompt = self.prompt_meta_data['intent_detect']['意图模版']['description'].format(scene_prompt, h_p)
+                model = 'Intent-Detect-0.5B'
 
             # if kwargs.get('scene_code', 'default') == 'exhibition_hall_exercise':
             #     scene_prompt = get_scene_intent(self.prompt_meta_data['tool'], 'exhibition_hall_exercise')
             #     prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
             # else:
             #     prompt = self.prompt_meta_data['tool']['父意图']['description'].format(h_p) + "\n\n" + query + "\nThought: "
-        logger.debug('父意图模型输入：' + prompt)
+        logger.debug('意图模型输入：' + prompt)
         # 调用模型（Langfuse 追踪：父意图）
+        his = [{
+            'role': 'user',
+            'content': prompt
+        }]
         generate_text = callLLM(
-            query=prompt,
+            history=his,
+            # query=prompt,
             max_tokens=200,
             top_p=0.8,
-            temperature=0,
+            temperature=0.0,
             do_sample=False,
             stop=['\nThought'],
-            model='Qwen1.5-32B-Chat',
+            model=model,
             extra_params={
                 "langfuse": self.global_share_resource.langfuse_client,
                 "user_id": user_id,
@@ -341,7 +354,7 @@ class Chat:
                 "metadata": {"source": "intent"},
             }
         )
-        logger.debug('父意图识别模型输出：' + generate_text)
+        logger.debug('意图识别模型输出：' + generate_text)
         intentIdx = 0
         if 'Intent:' in generate_text:
             intentIdx = generate_text.find("\nIntent: ") + 9
@@ -351,49 +364,49 @@ class Chat:
             intentIdx = generate_text.find("\nFunction:") + 10
         text = generate_text[intentIdx:].split("\n")[0].strip()
         parant_intent = self.get_parent_intent_name(text)
-        if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询', '健康咨询', '健康处方'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
-            # sub_intent_prompt = self.prompt_meta_data['intent'][parant_intent]['description']
-            if parant_intent in ['呼叫五师意图']:
-                history = history[-1:]
-                query = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
-                h_p = '无'
-            if kwargs.get('subIntentPrompt', ''):
-                prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
-            else:
-                scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default', parant_intent)
-                prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
-                # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
-            logger.debug('子意图模型输入：' + prompt)
-            # 调用模型（Langfuse 追踪：子意图）
-            generate_text = callLLM(
-                query=prompt,
-                max_tokens=200,
-                top_p=0.8,
-                temperature=0,
-                do_sample=False,
-                stop=['\nThought'],
-                model='Qwen1.5-32B-Chat',
-                extra_params={
-                    "langfuse": self.global_share_resource.langfuse_client,
-                    "user_id": user_id,
-                    "session_id": session_id,
-                    "tokenizer": self.global_share_resource.qwen_tokenizer,
-                    "intent_code": "intent_classification",
-                    "name": "sub_intent",
-                    "tags": [parant_intent],
-                    "release": "v1.0.0",
-                    "metadata": {"source": "intent"},
-                }
-            )
-            logger.debug('子意图模型输出：' + generate_text)
-            intentIdx = 0
-            if 'Intent:' in  generate_text:
-                intentIdx = generate_text.find("\nIntent: ") + 9
-            elif '意图:' in generate_text:
-                intentIdx = generate_text.find("\n意图:") + 4
-            elif '\nFunction:' in generate_text:
-                intentIdx = generate_text.find("\nFunction:") + 10
-            text = generate_text[intentIdx:].split("\n")[0]
+        # if parant_intent in ['呼叫五师', '音频播放', '生活工具查询', '医疗健康', '饮食营养', '运动咨询', '健康咨询', '健康处方'] and (not kwargs.get('intentPrompt', '') or (kwargs.get('intentPrompt', '') and kwargs.get('subIntentPrompt', ''))):
+        #     # sub_intent_prompt = self.prompt_meta_data['intent'][parant_intent]['description']
+        #     if parant_intent in ['呼叫五师意图']:
+        #         history = history[-1:]
+        #         query = "\n".join([("Question" if i['role'] == "user" else "Answer") + f": {i['content']}" for i in history])
+        #         h_p = '无'
+        #     if kwargs.get('subIntentPrompt', ''):
+        #         prompt = kwargs.get('subIntentPrompt').format(h_p) + "\n\n" + query + "\nThought: "
+        #     else:
+        #         scene_prompt = get_sub_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code') or 'default', parant_intent)
+        #         prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p) + "\n\n" + query + "\nThought: "
+        #         # prompt = self.prompt_meta_data['tool']['子意图模版']['description'].format(sub_intent_prompt, h_p) + "\n\n" + query + "\nThought: "
+        #     logger.debug('子意图模型输入：' + prompt)
+        #     # 调用模型（Langfuse 追踪：子意图）
+        #     generate_text = callLLM(
+        #         query=prompt,
+        #         max_tokens=200,
+        #         top_p=0.8,
+        #         temperature=0.7,
+        #         do_sample=False,
+        #         stop=['\nThought'],
+        #         model='Qwen2-7B-Instruct',
+        #         extra_params={
+        #             "langfuse": self.global_share_resource.langfuse_client,
+        #             "user_id": user_id,
+        #             "session_id": session_id,
+        #             "tokenizer": self.global_share_resource.qwen_tokenizer,
+        #             "intent_code": "intent_classification",
+        #             "name": "sub_intent",
+        #             "tags": [parant_intent],
+        #             "release": "v1.0.0",
+        #             "metadata": {"source": "intent"},
+        #         }
+        #     )
+        #     logger.debug('子意图模型输出：' + generate_text)
+        #     intentIdx = 0
+        #     if 'Intent:' in  generate_text:
+        #         intentIdx = generate_text.find("\nIntent: ") + 9
+        #     elif '意图:' in generate_text:
+        #         intentIdx = generate_text.find("\n意图:") + 4
+        #     elif '\nFunction:' in generate_text:
+        #         intentIdx = generate_text.find("\nFunction:") + 10
+        #     text = generate_text[intentIdx:].split("\n")[0]
         self.update_mid_vars(mid_vars, key="意图识别", input_text=prompt, output_text=generate_text, intent=text)
         return text
 

@@ -8,19 +8,22 @@
 
 import asyncio
 import copy
-import json
-import sys
+import json, requests
+import sys, os
 import time
 import traceback
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Union, Optional
+from typing import AsyncGenerator, Union, Optional, Dict
 
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel
+
+import pika
+import threading
 
 sys.path.append(str(Path(__file__).parent.parent.absolute()))
 
@@ -69,6 +72,182 @@ from src.pkgs.models.func_eval_model.func_eval_model import (
     daily_diet_eval,
     daily_diet_degree
 )
+
+from contextlib import asynccontextmanager
+from src.pkgs.models.proactivate_service.mq_data_model import TaskParams
+from src.pkgs.models.proactivate_service.func_planning_parallel import (
+    modify_schedule,
+    modify_health_promotion_plan,
+    generate_glucose_alert_plan
+)
+
+def get_register_url(env):
+    if env == 'dev':
+        return 'https://gate-qa.op.laikang.com/proactive-schedule-management-system/task/register'
+    elif env == 'prod':
+        return ''
+    else:
+        return 'https://gate-dev.op.laikang.com/proactive-schedule-management-system/task/register'
+
+# MQ回调函数
+# def callback(ch, method, properties, body):
+#     time.sleep(5)
+#     ch.basic_ack(delivery_tag=method.delivery_tag)
+#     print('消费者收到:{}'.format(body.decode('utf-8')))
+#     data = body.decode('utf-8')
+#     envelope = data['envelope']
+#     payload = data['payload']
+#     scene_type = payload['scenarioType']
+#     if scene_type == 'BLOOD_SUGAR_ALERT':
+#         gap_content = generate_glucose_alert_plan()
+#         param = {
+#           "taskType": "",
+#           "scheduleTime": "",
+#           "tenantId": "",
+#           "configId": "",
+#           "traceId": "",
+#           "contextData": envelope,
+#           "callBackData": {}
+#         }
+#         requests.request("POST", get_register_url(env), data=param,
+#                          headers={'Content-Type': 'application/json'}, timeout=60)
+
+
+
+# def MQConnection():
+#
+#     connection = pika.BlockingConnection(pika.ConnectionParameters('amqp-cn-9lb31jq7o019.cn-beijing.amqp-14.vpc.mq.amqp.aliyuncs.com',
+#                                                                    5672, '/', user_info))
+#     channel = connection.channel()
+#     # 如果指定的queue不存在，则会创建一个queue，如果已经存在 则不会做其他动作，生产者和消费者都做这一步的好处是
+#     # 这样生产者和消费者就没有必要的先后启动顺序了
+#     queues = ['proactive.perception.scene.queue.0', 'proactive.perception.scene.queue.1',
+#               'proactive.perception.scene.queue.2', 'proactive.perception.scene.queue.3',
+#               'proactive.perception.scene.queue.4', 'proactive.perception.scene.queue.5',
+#               'proactive.perception.scene.queue.6', 'proactive.perception.scene.queue.7',
+#               'proactive.perception.scene.queue.8', 'proactive.perception.scene.queue.9', ]
+#     for queue in queues:
+#         channel.queue_declare(queue=queue)
+#         channel.basic_consume(queue=queue,  # 接收指定queue的消息
+#                               auto_ack=False,  # 指定为False，表示取消自动应答，交由回调函数手动应答
+#                               on_message_callback=callback,  # 设置收到消息的回调函数
+#                               )
+#     channel.start_consuming()
+
+app_state: Dict = {}
+class RabbitMQConsumer:
+    def __init__(self, queue_name: str):
+        self.queue_name = queue_name
+        self.should_stop = threading.Event()
+
+    def get_virtual_host(self):
+        env = os.getenv('ZB_ENV', '')
+        if env == 'prod':
+            return '/lk-n-prod'
+        elif env == 'dev':
+            return '/lk-n-qa'
+        elif env == 'local':
+            return '/lk-n-dev'
+        else:
+            return '/lk-n-dev'
+
+    def consume(self):
+        """RabbitMQ 消费者线程函数"""
+        while not self.should_stop.is_set():
+            try:
+                user_info = pika.PlainCredentials('MjphbXFwLWNuLTlsYjMxanE3bzAxOTpMVEFJNXRTVFhoWVpnODRlWUg5aHJyRjI=',
+                                                  'RTI5MzlFQ0FFQzM5Q0I3MkM0MUEzNDc1M0ZFMzU0MkIwNjRFQzg4MToxNjc1MzE4OTMwMTMx')
+                connection = pika.BlockingConnection(
+                    pika.ConnectionParameters('amqp-cn-9lb31jq7o019.cn-beijing.amqp-14.vpc.mq.amqp.aliyuncs.com',
+                                              5672, self.get_virtual_host(), user_info))
+                channel = connection.channel()
+                channel.queue_declare(queue=self.queue_name, durable=True)
+
+                def callback(ch, method, properties, body):
+                    ch.basic_ack(delivery_tag=method.delivery_tag)
+                    logger.info('消费者收到:{}'.format(body.decode('utf-8')))
+                    data = json.loads(json.loads(body.decode('utf-8')))
+                    envelope = data['envelope']
+                    payload = data['payload']
+                    contextData = {}
+                    contextData['context'] = data['payload'].get('transmitContent',{}).get('context',{})
+                    scene_type = payload['scenarioType']
+                    if scene_type == 'BLOOD_SUGAR_ALERT':
+                        gap_content = generate_glucose_alert_plan()
+                        param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
+                        param = param.model_dump_json().encode(encoding='utf-8')
+                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                    elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
+                        sch_content = modify_schedule()
+                        if not sch_content:
+                            sch_content = {}
+                        param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
+                        param = param.model_dump_json().encode(encoding='utf-8')
+                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                        sch_content = modify_health_promotion_plan()
+                        param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
+                                           callBackData=sch_content)
+                        param = param.model_dump_json().encode(encoding='utf-8')
+                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                                         headers={'Content-Type': 'application/json'}, timeout=60)
+
+                channel.basic_qos(prefetch_count=1)
+                channel.basic_consume(
+                    queue=self.queue_name,
+                    on_message_callback=callback,
+                    auto_ack=False
+                )
+
+                logger.info(f"Started consumer for queue: {self.queue_name}")
+                channel.start_consuming()
+
+            except pika.exceptions.AMQPConnectionError:
+                logger.warning(f"Connection lost for {self.queue_name}, reconnecting...")
+                if not self.should_stop.is_set():
+                    time.sleep(5)
+            except Exception as e:
+                logger.error(f"Unexpected error in {self.queue_name} consumer: {e}")
+                if not self.should_stop.is_set():
+                    time.sleep(1)
+            finally:
+                if 'connection' in locals() and connection.is_open:
+                    connection.close()
+
+    def stop(self):
+        """优雅停止消费者"""
+        self.should_stop.set()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 初始化消费者
+    queues = ['proactive.perception.scene.queue.0', 'proactive.perception.scene.queue.1',
+              'proactive.perception.scene.queue.2', 'proactive.perception.scene.queue.3',
+              'proactive.perception.scene.queue.4', 'proactive.perception.scene.queue.5',
+              'proactive.perception.scene.queue.6', 'proactive.perception.scene.queue.7',
+              'proactive.perception.scene.queue.8', 'proactive.perception.scene.queue.9']
+    consumers = {}
+
+    # 为每个队列启动独立消费者线程
+    for queue in queues:
+        consumer = RabbitMQConsumer(queue)
+        thread = threading.Thread(
+            target=consumer.consume,
+            daemon=True  # 设置为守护线程，主进程退出时自动结束
+        )
+        thread.start()
+        consumers[queue] = (consumer, thread)
+
+    app_state["rabbitmq_consumers"] = consumers
+    yield
+
+    # 应用关闭时优雅停止消费者
+    logger.info("Stopping RabbitMQ consumers...")
+    for consumer, _ in consumers.values():
+        consumer.stop()
 
 
 async def accept_param(request: Request, endpoint: str = None):
@@ -1311,6 +1490,7 @@ def create_app():
     app: FastAPI = FastAPI(
         title="智能健康管家-算法",
         description="",
+        lifespan=lifespan,
         version=f"{datetime.now().strftime('%Y.%m.%d %H:%M:%S')}",
     )
     prepare_for_all()
