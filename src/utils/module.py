@@ -3525,30 +3525,52 @@ def map_diet_analysis(diet_data: dict) -> dict:
 async def format_warning_indicators(warning_indicators):
     formatted = []
     for warning in warning_indicators:
-        dt = warning.get("time", "")[:16]  # "2025-04-28 17:00"
+        dt = warning.get("time", "")[:16]  # 例如 "2025-04-28 17:00"
         date_part = dt[:10].replace("-", "年", 1).replace("-", "月", 1) + "日"
         time_part = dt[11:]
-        name = warning.get("name")
         value = warning.get("value")
+        name = warning.get("name")
+
         formatted.append(f"{date_part} {time_part}，{name}{value}")
     return "\n".join(formatted)
 
 
 async def format_meals_info_v2(meals_info):
     formatted = []
-    for meal in meals_info:
-        time_str = meal.get("meal_time", "")[11:16]  # 获取 HH:MM
-        food_items = meal.get("food_items", [])
-        for food in food_items:
-            name = food.get("food_name")
-            quantity = food.get("quantity")
-            unit = food.get("unit")
-            formatted.append(f"{time_str} {name} {quantity}{unit}")
+    for item in meals_info:
+        time_str = item.get("time", "")  # 直接取时间
+        name = item.get("foodname", "")
+        quantity = item.get("count", "")
+        unit = item.get("unit", "")
+        formatted.append(f"{time_str} {name} {quantity}{unit}")
     return "\n".join(formatted)
 
 
+async def get_upcoming_exercise_schedule(group_schedule):
+    """
+    筛选出当天当前时间后面的运动日程，并返回所需的格式。
+    """
+    if not isinstance(group_schedule, dict):
+        return []  # 如果传入的不是 dict，直接返回空
 
-# import json
-# tt = "{'start_row': 0, 'end_row': 0, 'env': 0, 'now': 0}"
-# t = json.loads(tt)
-# print(t)
+    upcoming_schedule = []
+    current_time = datetime.now()
+
+    for date, schedules in group_schedule.items():
+        for schedule in schedules:
+            if schedule.get("type") == "Sport":
+                for time in schedule.get("timeLists", []):
+                    try:
+                        schedule_time = datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M")
+                        if schedule_time > current_time:
+                            upcoming_schedule.append({
+                                "name": schedule.get("name"),
+                                "time": time,
+                                "content": schedule.get("tip")
+                            })
+                    except Exception:
+                        continue  # 忽略格式异常
+
+    return upcoming_schedule
+
+

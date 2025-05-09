@@ -45,6 +45,7 @@ class InitAllResource:
 
         # API鉴权信息
         self.parameter_config = self.api_config.get("parameter_config", {})
+        self.host = self.parameter_config.get("host")
         self.api_key = self.parameter_config.get("api_key")
         self.api_secret = self.parameter_config.get("api_secret")
         self.api_endpoints = self.parameter_config.get("api_endpoints", {})
