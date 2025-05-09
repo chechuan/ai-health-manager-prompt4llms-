@@ -89,51 +89,6 @@ def get_register_url(env):
     else:
         return 'https://gate-dev.op.laikang.com/proactive-schedule-management-system/task/register'
 
-# MQ回调函数
-# def callback(ch, method, properties, body):
-#     time.sleep(5)
-#     ch.basic_ack(delivery_tag=method.delivery_tag)
-#     print('消费者收到:{}'.format(body.decode('utf-8')))
-#     data = body.decode('utf-8')
-#     envelope = data['envelope']
-#     payload = data['payload']
-#     scene_type = payload['scenarioType']
-#     if scene_type == 'BLOOD_SUGAR_ALERT':
-#         gap_content = generate_glucose_alert_plan()
-#         param = {
-#           "taskType": "",
-#           "scheduleTime": "",
-#           "tenantId": "",
-#           "configId": "",
-#           "traceId": "",
-#           "contextData": envelope,
-#           "callBackData": {}
-#         }
-#         requests.request("POST", get_register_url(env), data=param,
-#                          headers={'Content-Type': 'application/json'}, timeout=60)
-
-
-
-# def MQConnection():
-#
-#     connection = pika.BlockingConnection(pika.ConnectionParameters('amqp-cn-9lb31jq7o019.cn-beijing.amqp-14.vpc.mq.amqp.aliyuncs.com',
-#                                                                    5672, '/', user_info))
-#     channel = connection.channel()
-#     # 如果指定的queue不存在，则会创建一个queue，如果已经存在 则不会做其他动作，生产者和消费者都做这一步的好处是
-#     # 这样生产者和消费者就没有必要的先后启动顺序了
-#     queues = ['proactive.perception.scene.queue.0', 'proactive.perception.scene.queue.1',
-#               'proactive.perception.scene.queue.2', 'proactive.perception.scene.queue.3',
-#               'proactive.perception.scene.queue.4', 'proactive.perception.scene.queue.5',
-#               'proactive.perception.scene.queue.6', 'proactive.perception.scene.queue.7',
-#               'proactive.perception.scene.queue.8', 'proactive.perception.scene.queue.9', ]
-#     for queue in queues:
-#         channel.queue_declare(queue=queue)
-#         channel.basic_consume(queue=queue,  # 接收指定queue的消息
-#                               auto_ack=False,  # 指定为False，表示取消自动应答，交由回调函数手动应答
-#                               on_message_callback=callback,  # 设置收到消息的回调函数
-#                               )
-#     channel.start_consuming()
-
 app_state: Dict = {}
 class RabbitMQConsumer:
     def __init__(self, queue_name: str):
@@ -173,25 +128,34 @@ class RabbitMQConsumer:
                     contextData['context'] = data['payload'].get('transmitContent',{}).get('context',{})
                     scene_type = payload['scenarioType']
                     if scene_type == 'BLOOD_SUGAR_ALERT':
-                        gap_content = generate_glucose_alert_plan()
+                        params = {
+                            "intentCode": "aigc_functions_blood_sugar_warning",  # 血糖预警服务
+                            "user_id": envelope.get('userId', ''),  # 用户ID
+                            "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
+                        }
+                        gap_content = health_expert_model.call_function(**params)
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
                         param = param.model_dump_json().encode(encoding='utf-8')
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
-                        sch_content = modify_schedule()
+                        params = {
+                            "user_id": envelope.get('userId', ''),  # 用户ID
+                            "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
+                        }
+                        sch_content = health_expert_model.aigc_functions_update_exercise_schedule(**params)
                         if not sch_content:
                             sch_content = {}
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
                         param = param.model_dump_json().encode(encoding='utf-8')
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
-                        sch_content = modify_health_promotion_plan()
-                        param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
-                                           callBackData=sch_content)
-                        param = param.model_dump_json().encode(encoding='utf-8')
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
-                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                        # sch_content = modify_health_promotion_plan()
+                        # param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
+                        #                    callBackData=sch_content)
+                        # param = param.model_dump_json().encode(encoding='utf-8')
+                        # requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                        #                  headers={'Content-Type': 'application/json'}, timeout=60)
 
                 channel.basic_qos(prefetch_count=1)
                 channel.basic_consume(
@@ -203,17 +167,17 @@ class RabbitMQConsumer:
                 # logger.info(f"Started consumer for queue: {self.queue_name}")
                 channel.start_consuming()
 
-            except pika.exceptions.AMQPConnectionError:
-                # logger.warning(f"Connection lost for {self.queue_name}, reconnecting...")
-                if not self.should_stop.is_set():
-                    time.sleep(5)
+            except pika.exceptions.AMQPConnectionError as e:
+                logger.warning(f"Connection lost for {self.queue_name}, reconnecting...")
+                # if not self.should_stop.is_set():
+
             except Exception as e:
-                # logger.error(f"Unexpected error in {self.queue_name} consumer: {e}")
-                if not self.should_stop.is_set():
-                    time.sleep(1)
-            finally:
-                if 'connection' in locals() and connection.is_open:
-                    connection.close()
+                logger.error(f"Unexpected error in {self.queue_name} consumer: {e}")
+                # if not self.should_stop.is_set():
+                #     time.sleep(1)
+            # finally:
+            #     if 'connection' in locals() and connection.is_open:
+            #         connection.close()
 
     def stop(self):
         """优雅停止消费者"""
