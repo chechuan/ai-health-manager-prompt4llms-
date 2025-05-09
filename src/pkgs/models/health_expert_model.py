@@ -27,10 +27,10 @@ from src.utils.module import (
     convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
     format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators,
-    get_upcoming_exercise_schedule
+    get_upcoming_exercise_schedule, parse_generic_content_sync
 )
 from data.test_param.test import testParam
-from src.prompt.model_init import acallLLM, acallLLtrace
+from src.prompt.model_init import acallLLM, acallLLtrace, callLLM
 from src.utils.Logger import logger
 from src.utils.api_protocal import *
 from src.utils.resources import InitAllResource
@@ -259,6 +259,176 @@ class HealthExpertModel:
         return content
 
     async def __update_model_args__(self, kwargs, **args) -> Dict:
+        if "model_args" in kwargs:
+            if kwargs.get("model_args"):
+                args = {
+                    **args,
+                    **kwargs["model_args"],
+                }
+            del kwargs["model_args"]
+        return args
+
+    def aaigc_functions_general_sync(
+            self,
+            _event: str = "",
+            prompt_vars: dict = {},
+            model_args: Dict = {},
+            prompt_template: str = "",
+            **kwargs,
+    ) -> Union[str, Generator]:
+        """通用生成"""
+
+        extra_params = {
+            "name": _event,
+            "user_id": kwargs.get("user_id", "default"),
+            "session_id": kwargs.get("session_id", "default"),
+            "release": "v1.0.0",
+            "tags": ["AIGC", "health-module", _event],  # 添加 Tags 便于分类追踪
+            "metadata": {
+                "environment": kwargs.get("environment", "production"),
+                "version": kwargs.get("version", "v1.0.0"),
+                "description": f"Processing event {_event}"
+            },
+            "langfuse": self.gsr.langfuse_client,
+            "tokenizer": self.gsr.qwen_tokenizer
+        }
+        # 获取模型及配置
+        event = kwargs.get("intentCode")
+        model = self.gsr.get_model(event)
+        model_args: dict = (
+            {
+                "temperature": 0,
+                "top_p": 1,
+                "repetition_penalty": 1.0,
+            }
+            if not model_args
+            else model_args
+        )
+        logger.debug(f"Prompt Vars Before Formatting: {repr(prompt_vars)}")
+
+        # 格式化 prompt
+        if prompt_template:
+            try:
+                prompt = prompt_template.format(**prompt_vars)
+            except KeyError as e:
+                return f"Error: Missing placeholder for {e} in prompt_vars."
+        else:
+            # 使用 LangfusePromptManager 获取并格式化
+            prompt = self.langfuse_prompt_manager.get_formatted_prompt_sync(event, prompt_vars)
+
+
+        logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
+        his = [{
+            'role': 'system',
+            'content': prompt
+        }]
+        content: Union[str, Generator] = callLLM(
+            model=model,
+            history=his,
+            extra_params=extra_params,
+            **model_args
+        )
+
+        logger.info(f"AIGC Functions {_event} LLM Output: {(content)}")
+
+        return content
+
+    def __compose_user_msg_sync__(
+        self,
+        mode: Literal[
+            "user_profile",
+            "user_profile_new",
+            "messages",
+            "drug_plan",
+            "medical_records",
+            "ietary_guidelines",
+            "key_indicators",
+        ],
+        user_profile: UserProfile = None,
+        medical_records: MedicalRecords = None,
+        ietary_guidelines: DietaryGuidelinesDetails = None,
+        messages: List[ChatMessage] = [],
+        key_indicators: "List[KeyIndicators]" = "[]",
+        drug_plan: "List[DrugPlanItem]" = "[]",
+        role_map: Dict = {},
+    ) -> str:
+        content = ""
+        if mode == "user_profile":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "user_profile_new":
+            if user_profile:
+                for key, value in user_profile.items():
+                    if value and USER_PROFILE_KEY_MAP_SANJI.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP_SANJI[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "messages":
+            assert messages is not None, "messages can't be None"
+            assert messages is not [], "messages can't be empty list"
+            role_map = (
+                {"assistant": "医生", "user": "患者"} if not role_map else role_map
+            )
+            for message in messages:
+                if message.get("role", "other") == "other":
+                    content += f"other: {message['content']}\n"
+                elif role_map.get(message.get("role", "other")):
+                    content += f"{role_map[message['role']]}: {message['content']}\n"
+                else:
+                    content += f"{message['content']}\n"
+        elif mode == "drug_plan":
+            if drug_plan:
+                for item in json5.loads(drug_plan):
+                    content += (
+                        ", ".join(
+                            [
+                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                for k, v in item.items()
+                            ]
+                        )
+                        + "\n"
+                    )
+                content = content.strip()
+        elif mode == "medical_records":
+            if medical_records:
+                for key, value in medical_records.items():
+                    if value and USER_PROFILE_KEY_MAP.get(key):
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "ietary_guidelines":
+            if ietary_guidelines:
+                for key, value in ietary_guidelines.items():
+                    if value and DIETARY_GUIDELINES_KEY_MAP.get(key):
+                        content += f"{DIETARY_GUIDELINES_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
+        elif mode == "key_indicators":
+            # 创建一个字典来存储按日期聚合的数据
+            aggregated_data = {}
+
+            # 遍历数据并聚合
+            for item in key_indicators:
+                for entry in item["data"]:
+                    date, time = entry["time"].split(" ")
+                    value = entry["value"]
+                    if date not in aggregated_data:
+                        aggregated_data[date] = {}
+                    aggregated_data[date][item["key"]] = {"time": time, "value": value}
+
+            # 创建 Markdown 表格
+            content = "| 测量日期 | 测量时间 | 体重 | BMI | 体脂率 |\n"
+            content += "| ------ | ------ | ---- | ----- | ------ |\n"
+
+            # 填充表格
+            for date, measurements in aggregated_data.items():
+                time = measurements.get("体重", {}).get("time", "")
+                weight = measurements.get("体重", {}).get("value", "")
+                bmi = measurements.get("bmi", {}).get("value", "")
+                body_fat_rate = measurements.get("体脂率", {}).get("value", "")
+                row = f"| {date} | {time} | {weight} | {bmi} | {body_fat_rate} |\n"
+                content += row
+        else:
+            logger.error(f"Compose user profile error: mode {mode} not supported")
+        return content
+
+    def __update_model_args_sync__(self, kwargs, **args) -> Dict:
         if "model_args" in kwargs:
             if kwargs.get("model_args"):
                 args = {
@@ -3381,7 +3551,7 @@ class HealthExpertModel:
             "meal_plans": meal_plans
         }
 
-    async def get_parameters(self, **kwargs):
+    def get_parameters(self, **kwargs):
         """
         根据 user_id 获取用户相关信息（包括用户画像、饮食记录、群日程等），
         适应不同的场景需求，如血糖预警、更新运动日程、日程查询等。
@@ -3397,7 +3567,6 @@ class HealthExpertModel:
         profile_data = self.parameter_fetcher.get_user_profile(user_id)
         meals_info = self.parameter_fetcher.get_meals_info(group_id, start_time, end_time)
         group_schedule = self.parameter_fetcher.get_group_schedule(group_id, is_new)
-        # manage_group = self.parameter_fetcher.get_group_info(group_id)
 
         # 提取 expert_system（例如，血糖预警中用到）
         expert_system = profile_data.get("expert_system")
@@ -3418,7 +3587,7 @@ class HealthExpertModel:
             raise ValueError(f"不支持的任务类型: {task_type}")
 
         # 获取当天当前时间后的运动日程
-        exercise_schedule = await get_upcoming_exercise_schedule(group_schedule)
+        exercise_schedule = get_upcoming_exercise_schedule(group_schedule)
 
         # 返回所有相关参数
         return {
@@ -3426,11 +3595,9 @@ class HealthExpertModel:
             "meals_info": meals_info,
             "intent_code": intent_code,
             "group_schedule": exercise_schedule,
-            # "manage_group": manage_group
-
         }
 
-    async def aigc_functions_blood_sugar_warning(self, return_text: bool = True, **kwargs):
+    def aigc_functions_blood_sugar_warning(self, return_text: bool = True, **kwargs):
         """
         血糖预警评估功能，根据用户画像中的专家体系动态选择意图编码。
         需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
@@ -3439,7 +3606,7 @@ class HealthExpertModel:
         end_time = datetime.now()
         start_time = end_time - timedelta(hours=3)
 
-        params = await self.get_parameters(
+        params = self.get_parameters(
             user_id=kwargs.get("user_id"),
             group_id=kwargs.get("group_id"),
             start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -3451,16 +3618,14 @@ class HealthExpertModel:
         intent_code = params.get("intent_code")
         meals_info = params.get("meals_info")
         diet_comment = params.get("diet_comment")
-        # manage_group = params.get("manage_group")
 
         # 更新 intent_code 到 kwargs 以确保下游使用一致
         kwargs["intentCode"] = intent_code
 
         # 补充其它字段
-        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile)
+        user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
 
-        meals_info_str = await format_meals_info_v2(meals_info) if meals_info else None
-        # warning_indicators = await format_warning_indicators(kwargs.get("warning_indicators", []))
+        meals_info_str = format_meals_info_v2(meals_info) if meals_info else None
         warning_indicators = None
 
         prompt_vars = {
@@ -3470,22 +3635,22 @@ class HealthExpertModel:
             "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else None
         }
 
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
-        content = await self.aaigc_functions_general(
+        content = self.aaigc_functions_general_sync(
             _event="血糖预警分析",
             prompt_vars=prompt_vars,
             model_args=model_args,
             **kwargs
         )
 
-        content = await parse_generic_content(content)
+        content = parse_generic_content_sync(content)
         if return_text:
             return "".join([v for k, v in content.items()])
         else:
             return content
 
-    async def aigc_functions_update_exercise_schedule(self, **kwargs):
+    def aigc_functions_update_exercise_schedule(self, **kwargs):
         """
         通过模型生成更新后的运动日程内容
         需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
@@ -3493,25 +3658,23 @@ class HealthExpertModel:
         start_time = datetime.now()
 
         # 获取参数
-        params = await self.get_parameters(
+        params = self.get_parameters(
             user_id=kwargs.get("user_id"),
             group_id=kwargs.get("group_id"),
-            start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),  # 时间格式：yyyy-MM-dd HH:mm:ss
+            start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
             is_new=True,
             task_type="update_exercise_schedule"
         )
 
         user_profile = params.get("user_profile")
         group_schedule = params.get("group_schedule")
-        # manage_group = params.get("manage_group")
         warning_indicators = params.get("warning_indicators")
         intent_code = kwargs.get("intentCode")
 
         # 格式化内容
-        user_profile_str = await self.__compose_user_msg__("user_profile", user_profile)
-        # warning_indicators_str = await format_warning_indicators(warning_indicators)
+        user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
         warning_indicators_str = None
-        result = await self.aigc_functions_blood_sugar_warning(return_text=False, **kwargs)
+        result = self.aigc_functions_blood_sugar_warning(return_text=False, **kwargs)
         exercise_suggestions = result.get("运动建议")
 
         # 构建 prompt_vars
@@ -3523,10 +3686,10 @@ class HealthExpertModel:
         }
 
         # 构建模型参数
-        model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+        model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
 
         # 调用模型
-        content = await self.aaigc_functions_general(
+        content = self.aaigc_functions_general_sync(
             _event="更新运动日程",
             prompt_vars=prompt_vars,
             model_args=model_args,
@@ -3535,9 +3698,9 @@ class HealthExpertModel:
         )
 
         # 模型返回结构统一解析
-        return await parse_generic_content(content)
+        return parse_generic_content_sync(content)
 
-    async def get_nutritionist_feedback_from_conversation(self, **kwargs) -> str:
+    def get_nutritionist_feedback_from_conversation(self, **kwargs):
         """从会话记录中获取最像营养师点评的内容"""
 
         _event = "营养师点评提取"
@@ -3546,22 +3709,22 @@ class HealthExpertModel:
 
         messages = [i for i in messages if i["role"] == "assistant"]
 
-        messages = await self.__compose_user_msg__("messages", messages)
+        messages = self.__compose_user_msg__("messages", messages)
 
         prompt_vars = {
             "messages": messages,
         }
 
         # 调用通用的模型生成接口
-        model_args = await self.__update_model_args__(
+        model_args = self.__update_model_args__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
-        content: str = await self.aaigc_functions_general(
+        content = self.aaigc_functions_general(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
 
         # 解析并返回结果
-        content = await parse_generic_content(content)
+        content = parse_generic_content(content)
         return content
 
 
@@ -3570,3 +3733,23 @@ if __name__ == "__main__":
     agents = HealthExpertModel(gsr)
     param = testParam.param_dev_report_interpretation
     agents.call_function(**param)
+
+    # # 示例 params 参数
+    # params_blood_sugar_warning = {
+    #     "intentCode": "aigc_functions_blood_sugar_warning",
+    #     "user_id": "16191",  # 用户ID
+    #     "group_id": "hb_dev@group_EaeRFM1JVf1yh4o4"  # 群组ID
+    # }
+    #
+    # params_update_exercise_schedule = {
+    #     "intentCode": "aigc_functions_update_exercise_schedule",
+    #     "user_id": "16191",  # 用户ID
+    #     "group_id": "hb_dev@group_EaeRFM1JVf1yh4o4"  # 群组ID
+    # }
+    # # 调用血糖预警服务
+    # result_blood_sugar_warning = agents.aigc_functions_blood_sugar_warning(**params_blood_sugar_warning)
+    # print(f"Result of blood sugar warning: {result_blood_sugar_warning}")
+    #
+    # # 调用更新运动日程服务
+    # result_update_exercise_schedule = agents.aigc_functions_update_exercise_schedule(**params_update_exercise_schedule)
+    # print(f"Result of update exercise schedule: {result_update_exercise_schedule}")

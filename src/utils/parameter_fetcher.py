@@ -175,7 +175,7 @@ class ParameterFetcher:
 
         return management_type
 
-    async def get_parameters(self, user_id: str, group_id: str, start_time: str, end_time: str):
+    def get_parameters(self, user_id: str, group_id: str, start_time: str, end_time: str):
         """
         获取用户所有必要的参数，并根据任务需要调整返回的参数
 

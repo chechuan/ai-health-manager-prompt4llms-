@@ -572,7 +572,6 @@ async def acallLLtrace(
 
     return ret
 
-
 async def callLikangLLM(
         query: str = "",
         history: List[Dict] = [],

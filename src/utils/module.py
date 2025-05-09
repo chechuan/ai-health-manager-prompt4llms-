@@ -1451,6 +1451,157 @@ async def parse_generic_content(content):
     return []
 
 
+def parse_generic_content_sync(content):
+    """异步解析内容为 JSON 对象，如果解析失败则返回一个空列表"""
+
+    if isinstance(content, openai.AsyncStream):
+        return content
+
+    errors = []  # 用于存储所有捕获的异常信息
+
+    try:
+        # 直接尝试解析为 JSON
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        errors.append(f"Direct JSON parsing failed: {e}")
+
+    try:
+        # 将单引号替换为双引号
+        corrected_content = content.replace("'", '"')
+
+        # 解析 JSON
+        parsed_data = json.loads(corrected_content)
+        return parsed_data
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after replacing single quotes: {e}")
+
+    try:
+        # 移除换行符
+        content = content.replace('\n', '')
+        # 在减号后面添加空格
+        content = re.sub(r'(\d)-(\d)', r'\1 - \2', content)
+        # 再次尝试解析
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after removing newlines and adjusting hyphens: {e}")
+
+    try:
+        # 处理JSON代码块
+        content_json = re.findall(r"```json(.*?)```", content, re.DOTALL)
+        if content_json:
+            return json.loads(content_json[0])
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for JSON code block: {e}")
+
+    try:
+        # 处理Python代码块
+        content_python = re.findall(r"```python(.*?)```", content, re.DOTALL)
+        if content_python:
+            # 假设Python代码块中包含的是JSON字符串
+            # 获取第一个匹配项并去掉首尾的空白字符
+            python_code = content_python[0].strip()
+            # 将单引号转换为双引号
+            corrected_content = python_code.replace("'", '"')
+            return json.loads(corrected_content)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for Python code block: {e}")
+
+    try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'{.*}', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(0)
+            return json.loads(json_data)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for embedded JSON in free text: {e}")
+
+    try:
+        # 处理自由文本中嵌入的JSON数据
+        json_match = re.search(r'```\s*(.*)```', content, re.DOTALL)
+        if json_match:
+            json_data = json_match.group(1).strip()
+            return json.loads(json_data)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for embedded code block: {e}")
+
+    try:
+        # 移除三个反引号
+        content = re.sub(r'^```|```$', '', content, flags=re.MULTILINE)
+        # 尝试解析去除了三个反引号的内容
+        return json.loads(content)
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed after removing triple backticks: {e}")
+
+    try:
+        # 尝试将 content 解析为一个 JSON 对象
+        content_obj = json.loads(content)
+        return content_obj
+    except json.JSONDecodeError as e:
+        errors.append(f"Final direct JSON parsing failed: {e}")
+
+    try:
+        # 使用正则表达式精确移除最外层的反引号
+        content = re.sub(r'^```(?P<content>.*)```$', r'\g<content>', content, flags=re.DOTALL)
+
+        # 移除最后一个逗号（如果有）
+        content = re.sub(r',\s*\]', r']', content)
+
+        # 尝试解析去除了反引号和多余逗号的内容
+        return json.loads(content.strip())
+    except json.JSONDecodeError as e:
+        # 记录错误日志
+        errors.append(f"Parsing failed after removing extra commas and backticks: {e}")
+
+    try:
+        # 使用正则表达式来查找并提取JSON数据
+        json_match = re.search(r'\[(.*?)\]', content, re.DOTALL)
+
+        if json_match:
+            # 提取JSON字符串
+            json_data_str = json_match.group(0)
+
+            # 清理JSON数据，移除可能的换行符和多余空格
+            cleaned_json_data = json_data_str.replace('\n', '').replace('\t', '').strip()
+
+            # 尝试解析JSON数据
+            parsed_data = json.loads(cleaned_json_data)
+
+            return parsed_data
+        # 如果没有找到匹配的JSON数据，抛出异常
+        pass
+    except json.JSONDecodeError as e:
+        errors.append(f"Parsing failed for JSON array in content: {e}")
+
+    try:
+        json_string = content
+        # 使用正则表达式找到所有的数学表达式
+        expressions = re.findall(r'\d+\s*[+\-*/]\s*\d+', json_string)
+
+        # 如果没有找到任何表达式，则直接解析JSON
+        if not expressions:
+            return json.loads(json_string)
+
+        # 计算表达式并将结果放回原字符串
+        for expr in expressions:
+            # 使用eval()计算表达式的值
+            # 注意：eval()可能有安全风险，这里假设表达式是安全的
+            result = str(eval(expr))
+            # 替换字符串中的表达式为计算后的结果
+            json_string = json_string.replace(expr, result)
+
+        # 解析修正后的JSON字符串
+        parsed_json = json.loads(json_string)
+        return parsed_json
+    except Exception as e:
+        errors.append(f"Parsing failed after evaluating expressions: {e}")
+
+    # 如果所有尝试都失败，返回空列表
+    # 如果所有尝试都失败，并且返回的内容为空，则记录错误日志
+    logger.error(f"Failed to parse content. Errors encountered: {errors}")
+
+    return []
+
+
 async def handle_calories(content: dict, **kwargs) -> dict:
     """
     如果 'calories' 不是数字类型，将其设置为 0。
@@ -3535,7 +3686,7 @@ async def format_warning_indicators(warning_indicators):
     return "\n".join(formatted)
 
 
-async def format_meals_info_v2(meals_info):
+def format_meals_info_v2(meals_info):
     formatted = []
     for item in meals_info:
         time_str = item.get("time", "")  # 直接取时间
@@ -3546,7 +3697,7 @@ async def format_meals_info_v2(meals_info):
     return "\n".join(formatted)
 
 
-async def get_upcoming_exercise_schedule(group_schedule):
+def get_upcoming_exercise_schedule(group_schedule):
     """
     筛选出当天当前时间后面的运动日程，并返回所需的格式。
     """
