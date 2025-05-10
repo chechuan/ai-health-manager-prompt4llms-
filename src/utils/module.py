@@ -3725,3 +3725,47 @@ def get_upcoming_exercise_schedule(group_schedule):
     return upcoming_schedule
 
 
+def enrich_schedules_with_cate_code(data: dict) -> dict:
+    for item in data.get("schedules", []):
+        name = item.get("schedule_name", "")
+        if "餐" in name:
+            item["cate_code"] = "diet_schedule"
+        elif "运动" in name:
+            item["cate_code"] = "exercise_schedule"
+    return data
+
+
+def convert_nested_schedule(raw: dict) -> dict:
+    result = {
+        "update_reason": "",
+        "schedules": []
+    }
+
+    # 提取修改原因字段
+    for key, val in raw.items():
+        if isinstance(val, str) and "原因" in key:
+            result["update_reason"] = val
+        elif isinstance(val, dict):
+            # 提取 schedule 列表
+            for schedule_name, schedule_data in val.items():
+                if not isinstance(schedule_data, dict):
+                    continue
+
+                schedule_time = None
+                push_text = None
+
+                for sub_key, sub_val in schedule_data.items():
+                    if "时间" in sub_key:
+                        schedule_time = sub_val
+                    elif "内容" in sub_key or "推送" in sub_key:
+                        push_text = sub_val
+
+                if schedule_time and push_text:
+                    result["schedules"].append({
+                        "schedule_name": schedule_name,
+                        "schedule_time": schedule_time,
+                        "push_text": push_text
+                    })
+
+    return result
+

@@ -27,7 +27,8 @@ from src.utils.module import (
     convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
     format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators,
-    get_upcoming_exercise_schedule, parse_generic_content_sync
+    get_upcoming_exercise_schedule, parse_generic_content_sync, enrich_schedules_with_cate_code,
+    convert_nested_schedule
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace, callLLM
@@ -3663,6 +3664,24 @@ class HealthExpertModel:
 2.新的运动日程的字段应该和原日程字段内容匹配，优化对应的日程时间、日程推送内容。另外返回修改原因。按json格式返回。
 3.如果你认为需要取消之前对应的早间运动或午间运动或晚间运动项目，则对应的日程时间、日程推送内容返回`false`。
 4.修改原因可以说明为什么之前的不合适。
+# 输出示例
+{{
+  "运动日程": {{
+    "早间运动": {{
+      "日程时间": "07:00-07:30",
+      "日程推送内容": "请进行20分钟的全身拉伸运动，并进行10分钟的轻松快走或慢跑。"
+    }},
+    "午间运动": {{
+      "日程时间": "12:00-12:30",
+      "日程推送内容": "请在餐后进行20分钟的散步，注意保持轻松的步伐。"
+    }},
+    "晚间运动": {{
+      "日程时间": "19:00-19:30",
+      "日程推送内容": "请进行20分钟的轻松散步或20分钟的轻松游泳。"
+    }}
+  }},
+  "修改原因": "原运动方案中餐后仅建议散步15-30分钟，考虑到用户处于肥胖状态，为了更有效地管理体重和促进健康，增加了早间和晚间运动内容，进一步增加身体活动量，有助于提高基础代谢率和改善心肺功能。"
+}}
                     """
         else:
             raise ValueError(f"不支持的任务类型: {task_type}")
@@ -3781,9 +3800,12 @@ class HealthExpertModel:
             prompt_template=prompt,
             **kwargs
         )
+        content = parse_generic_content_sync(content)
+        content = convert_nested_schedule(content)
+        content = enrich_schedules_with_cate_code(content)
 
         # 模型返回结构统一解析
-        return parse_generic_content_sync(content)
+        return content
 
     def get_nutritionist_feedback_from_conversation(self, **kwargs):
         """从会话记录中获取最像营养师点评的内容"""
