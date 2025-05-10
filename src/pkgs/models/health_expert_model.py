@@ -3779,9 +3779,61 @@ class HealthExpertModel:
             prompt_template=prompt,
             **kwargs
         )
+        today_str = datetime.today().strftime("%Y-%m-%d")
+
+        content = {
+            "modify_reason": "根据用户当前情况，之前的运动计划过于简单，仅包含餐后散步。",
+            "start_date_time": f"{today_str} 14:00:00",
+            "end_date_time": f"{today_str} 19:30:00",
+            "schedules": [
+                {
+                    "schedule_name": "运动打卡",
+                    "schedule_time": "14:00",
+                    "push_text": "下午适合做核心力量训练，如卷腹、踢腿等动作，强度可根据体能调整，有助改善代谢与体态。",
+                    "videos": [
+                        {
+                            "name": "摸膝卷腹",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心-力量/摸膝卷腹.mp4"
+                        },
+                        {
+                            "name": "垫上仰卧踢腿",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/核心结合心肺训练/垫上仰卧踢腿.mp4"
+                        },
+                        {
+                            "name": "垫上对侧抬手抬脚",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/ai-laikang-com/recommend_new/sports/力量-背/垫上对侧抬手抬脚.mp4"
+                        }
+                    ],
+                    "image": [],
+                    "cate_code": "exercise_schedule"
+                },
+                {
+                    "schedule_name": "运动打卡",
+                    "schedule_time": "19:30",
+                    "push_text": "晚饭后建议进行30分钟有氧运动，如快走、游泳或骑车，注意补水及监测血糖，有助提升心肺耐力。",
+                    "videos": None,
+                    "image": [
+                        {
+                            "name": "散步",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/散步.png"
+                        },
+                        {
+                            "name": "游泳",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/游泳.png"
+                        },
+                        {
+                            "name": "跑步",
+                            "url": "https://lk-shuzhizhongtai-common.oss-cn-beijing.aliyuncs.com/姚树坤专家体系20250331/智能日程/有氧运动图片/跑步.png"
+                        }
+                    ],
+                    "cate_code": "exercise_schedule"
+                }
+            ]
+        }
+
 
         # 模型返回结构统一解析
-        return parse_generic_content_sync(content)
+        return content
 
     def get_nutritionist_feedback_from_conversation(self, **kwargs):
         """从会话记录中获取最像营养师点评的内容"""

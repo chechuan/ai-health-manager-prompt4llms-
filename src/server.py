@@ -134,10 +134,10 @@ class RabbitMQConsumer:
                             "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
-                        param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
-                        param = param.model_dump_json()
+                        param = TaskParams(taskType='glucoseWarning', scheduleTime="", schecontextData=contextData, callBackData=gap_content)
+                        param = param.model_dump()
                         logger.info('begin to request glucoseWarning')
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                        requests.post(url=get_register_url(os.getenv('ZB_ENV')), json=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
                         params = {
@@ -148,11 +148,18 @@ class RabbitMQConsumer:
                         sch_content = health_expert_model.aigc_functions_update_exercise_schedule(**params)
                         if not sch_content:
                             sch_content = {}
-                        param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
-                        param = param.model_dump()
+                        param = TaskParams(taskType='modifySchedule', scheduleTime="", contextData=contextData,
+                                           callBackData=sch_content)
+                        param_dict = param.model_dump()  # 保留为 dict，不转成 JSON 字符串
                         logger.info('begin to request modifySchedule')
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
-                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                        pay_load = requests.post(
+                            url=get_register_url(os.getenv('ZB_ENV')),
+                            json=param_dict,  # 用 json 参数，自动转为 JSON 且使用 UTF-8 编码
+                            headers={'Content-Type': 'application/json'},  # 保留 header
+                            timeout=60
+                        )
+                        logger.info(pay_load.content.decode('utf-8'))
+
                         # sch_content = modify_health_promotion_plan()
                         # param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
                         #                    callBackData=sch_content)
