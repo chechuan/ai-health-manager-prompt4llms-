@@ -133,7 +133,7 @@ class RabbitMQConsumer:
                             "user_id": envelope.get('userId', ''),  # 用户ID
                             "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
                         }
-                        gap_content = health_expert_model.call_function(**params)
+                        gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
                         param = param.model_dump_json().encode(encoding='utf-8')
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
