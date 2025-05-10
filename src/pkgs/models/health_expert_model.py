@@ -3553,275 +3553,275 @@ class HealthExpertModel:
             "meal_plans": meal_plans
         }
 
-        def get_parameters(self, **kwargs):
-            """
-            根据 user_id 获取用户相关信息（包括用户画像、饮食记录、群日程等），
-            适应不同的场景需求，如血糖预警、更新运动日程、日程查询等。
-            """
-            user_id = kwargs.get("user_id")
-            group_id = kwargs.get("group_id")
-            start_time = kwargs.get("start_time")
-            end_time = kwargs.get("end_time")
-            is_new = kwargs.get("is_new", True)  # 默认为 True，按需可调整
-            task_type = kwargs.get("task_type")  # 默认任务类型为血糖预警
+    def get_parameters(self, **kwargs):
+        """
+        根据 user_id 获取用户相关信息（包括用户画像、饮食记录、群日程等），
+        适应不同的场景需求，如血糖预警、更新运动日程、日程查询等。
+        """
+        user_id = kwargs.get("user_id")
+        group_id = kwargs.get("group_id")
+        start_time = kwargs.get("start_time")
+        end_time = kwargs.get("end_time")
+        is_new = kwargs.get("is_new", True)  # 默认为 True，按需可调整
+        task_type = kwargs.get("task_type")  # 默认任务类型为血糖预警
 
-            # 获取用户画像、饮食记录、群日程等信息
-            profile_data = self.parameter_fetcher.get_user_profile(user_id)
-            meals_info = self.parameter_fetcher.get_meals_info(group_id, start_time, end_time)
-            group_schedule = self.parameter_fetcher.get_group_schedule(group_id, is_new)
+        # 获取用户画像、饮食记录、群日程等信息
+        profile_data = self.parameter_fetcher.get_user_profile(user_id)
+        meals_info = self.parameter_fetcher.get_meals_info(group_id, start_time, end_time)
+        group_schedule = self.parameter_fetcher.get_group_schedule(group_id, is_new)
 
-            # 提取 expert_system（例如，血糖预警中用到）
-            expert_system = profile_data.get("expert_system")
+        # 提取 expert_system（例如，血糖预警中用到）
+        expert_system = profile_data.get("expert_system")
 
-            # 动态选择 intent_code 和提示词逻辑
-            if task_type == "blood_sugar_warning":
-                # 血糖预警场景下的逻辑
-                if expert_system == "1":
-                    intent_code = "aigc_functions_blood_sugar_warning_sanliao"
-                    prompt = """
-    # 已知信息
-    ## 用户画像
-    {user_profile}
-    {warning_indicators}
-    {meals_info}
-
-    {diet_comment}
-
-    # 任务描述
-    你扮演一位慢病管理专家，你负责管理的客户血糖波动超过正常值，你对该客户出具即时性的处理意见。
-    # 背景描述
-    - 你所在的血糖管理项目，利用慢病管理平台为入组患者提供21天血糖闭环管理服务，对患者进行线上血糖管理。
-    - 患者可以在群聊中向你和你的团队同步他的饮食和运动情况，你也会给予点评和意见。
-    - 患者佩戴有动态血糖仪，你可以通过慢病管理平台实时监测患者动态血糖值，患者血糖超过正常值时你会收到预警通知。
-
-    # 处理流程
-    1.如果存在3小时内的营养师点评信息，需要提及上次营养师点评的内容，肯定营养师之前的评价，对患者做健康教育。例如，可以使用“看到营养师3小时内对您饮食做出过点评，”
-    2.根据上一餐饮食情况和运动情况，帮助推测患者血糖波动原因，以帮助患者纠正错误的生活习惯，建立正确的血糖管理知识。
-    3.如果不存在上一餐饮食情况，则需要询问用户上一餐饮食情况。
-
-    # 输出要求
-    1.输出包含3个字段，`分析预警原因``下一餐饮食建议``运动建议`，按json格式输出。
-    2.语气和态度：无需打招呼，直接输出，保持口语化、专业而友好的语气，避免使用过于医学化的术语，让患者感觉舒适和被支持。例如，可以使用“看到你X点X分血糖值有所升高，达到XXmmol/L，我们分析一下情况”这样的表达。
-    3.提供明确、具体的行动建议，帮助患者立即采取措施。例如，参考当前时间，时间允许情况下可以建议患者进行15-30分钟的散步，以及在下一次餐食中具体建议，例如明天下午加餐可以把芒果换成低GI水果。
-    4.安全提示：提醒患者如果感觉不适或血糖持续升高，应及时联系你。
-    5.后续支持：强调患者可以随时联系你，提供持续的支持和帮助，增加患者的信任感和安全感。
-    5.记录和反馈：鼓励患者充分利用动态血糖仪，感受血糖对用餐情况和运动情况的反应，以便更好地了解哪些措施有效，这有助于未来的管理和调整。
-    6.如何不建议运动，`运动建议`可明确指出。
-    7.总字数不超过300字。
-                            """
-                elif expert_system == "2":
-                    intent_code = "aigc_functions_blood_sugar_warning_yaoshukun"
-                    prompt = """
-    # 已知信息
-    ## 用户画像
-    {user_profile}
-    {warning_indicators}
-    {meals_info}
-
-    {diet_comment}
-
-    # 任务描述
-    你扮演一位慢病管理专家，你负责管理的客户血糖波动超过正常值，你对该客户出具即时性的处理意见。
-    # 背景描述
-    - 你所在的血糖管理项目，利用慢病管理平台为入组患者提供21天血糖闭环管理服务，对患者进行线上血糖管理。
-    - 患者可以在群聊中向你和你的团队同步他的饮食和运动情况，你也会给予点评和意见。
-    - 患者佩戴有动态血糖仪，你可以通过慢病管理平台实时监测患者动态血糖值，患者血糖超过正常值时你会收到预警通知。
-
-    # 处理流程
-    1.如果存在3小时内的营养师点评信息，需要提及上次营养师点评的内容，肯定营养师之前的评价，对患者做健康教育。例如，可以使用“看到营养师3小时内对您饮食做出过点评，”
-    2.根据上一餐饮食情况和运动情况，帮助推测患者血糖波动原因，以帮助患者纠正错误的生活习惯，建立正确的血糖管理知识。
-    3.如果不存在上一餐饮食情况，则需要询问用户上一餐饮食情况。
-
-    # 输出要求
-    1.输出包含3个字段，`分析预警原因``下一餐饮食建议``运动建议`，按json格式输出。
-    2.语气和态度：无需打招呼，直接输出，保持口语化、专业而友好的语气，避免使用过于医学化的术语，让患者感觉舒适和被支持。例如，可以使用“看到你X点X分血糖值有所升高，达到XXmmol/L，我们分析一下情况”这样的表达。
-    3.提供明确、具体的行动建议，帮助患者立即采取措施。例如，参考当前时间，时间允许情况下可以建议患者进行15-30分钟的散步，以及在下一次餐食中具体建议，例如明天下午加餐可以把芒果换成低GI水果。
-    4.安全提示：提醒患者如果感觉不适或血糖持续升高，应及时联系你。
-    5.后续支持：强调患者可以随时联系你，提供持续的支持和帮助，增加患者的信任感和安全感。
-    5.记录和反馈：鼓励患者充分利用动态血糖仪，感受血糖对用餐情况和运动情况的反应，以便更好地了解哪些措施有效，这有助于未来的管理和调整。
-    6.如何不建议运动，`运动建议`可明确指出。
-    7.总字数不超过300字。
-                            """
-                else:
-                    return {"error": "expert_system 未指定有效的值"}
-            elif task_type == "update_exercise_schedule":
-                # 更新运动日程的逻辑
-                intent_code = "aigc_functions_update_exercise_schedule"
+        # 动态选择 intent_code 和提示词逻辑
+        if task_type == "blood_sugar_warning":
+            # 血糖预警场景下的逻辑
+            if expert_system == "1":
+                intent_code = "aigc_functions_blood_sugar_warning_sanliao"
                 prompt = """
-    # 已知信息
-    ## 用户画像
-    {user_profile}
-    {warning_indicators}
-    {exercise_suggestions}
-    {group_schedule}
-    # 任务描述
-    请你扮演一位专业的健康管理师，针对慢病用户的指标预警情况，修改用户的运动日程内容。
-    # 处理流程
-    1.你首先需要判断该用户的运动日程在指标预警后是否需要调整，如果不需要，返回`false`,如果你认为用户原运动方案已经不合适，需要调整，则需要思考如何调整。
-    # 输出要求
-    1.你需要根据用户指标预警的具体情况，健康管理师之前给出的运动建议，优化运动日程。
-    2.新的运动日程的字段应该和原日程字段内容匹配，优化对应的日程时间、日程推送内容。另外返回修改原因。按json格式返回。
-    3.如果你认为需要取消之前对应的早间运动或午间运动或晚间运动项目，则对应的日程时间、日程推送内容返回`false`。
-    4.修改原因可以说明为什么之前的不合适。
+# 已知信息
+## 用户画像
+{user_profile}
+{warning_indicators}
+{meals_info}
+
+{diet_comment}
+
+# 任务描述
+你扮演一位慢病管理专家，你负责管理的客户血糖波动超过正常值，你对该客户出具即时性的处理意见。
+# 背景描述
+- 你所在的血糖管理项目，利用慢病管理平台为入组患者提供21天血糖闭环管理服务，对患者进行线上血糖管理。
+- 患者可以在群聊中向你和你的团队同步他的饮食和运动情况，你也会给予点评和意见。
+- 患者佩戴有动态血糖仪，你可以通过慢病管理平台实时监测患者动态血糖值，患者血糖超过正常值时你会收到预警通知。
+
+# 处理流程
+1.如果存在3小时内的营养师点评信息，需要提及上次营养师点评的内容，肯定营养师之前的评价，对患者做健康教育。例如，可以使用“看到营养师3小时内对您饮食做出过点评，”
+2.根据上一餐饮食情况和运动情况，帮助推测患者血糖波动原因，以帮助患者纠正错误的生活习惯，建立正确的血糖管理知识。
+3.如果不存在上一餐饮食情况，则需要询问用户上一餐饮食情况。
+
+# 输出要求
+1.输出包含3个字段，`分析预警原因``下一餐饮食建议``运动建议`，按json格式输出。
+2.语气和态度：无需打招呼，直接输出，保持口语化、专业而友好的语气，避免使用过于医学化的术语，让患者感觉舒适和被支持。例如，可以使用“看到你X点X分血糖值有所升高，达到XXmmol/L，我们分析一下情况”这样的表达。
+3.提供明确、具体的行动建议，帮助患者立即采取措施。例如，参考当前时间，时间允许情况下可以建议患者进行15-30分钟的散步，以及在下一次餐食中具体建议，例如明天下午加餐可以把芒果换成低GI水果。
+4.安全提示：提醒患者如果感觉不适或血糖持续升高，应及时联系你。
+5.后续支持：强调患者可以随时联系你，提供持续的支持和帮助，增加患者的信任感和安全感。
+5.记录和反馈：鼓励患者充分利用动态血糖仪，感受血糖对用餐情况和运动情况的反应，以便更好地了解哪些措施有效，这有助于未来的管理和调整。
+6.如何不建议运动，`运动建议`可明确指出。
+7.总字数不超过300字。
+                        """
+            elif expert_system == "2":
+                intent_code = "aigc_functions_blood_sugar_warning_yaoshukun"
+                prompt = """
+# 已知信息
+## 用户画像
+{user_profile}
+{warning_indicators}
+{meals_info}
+
+{diet_comment}
+
+# 任务描述
+你扮演一位慢病管理专家，你负责管理的客户血糖波动超过正常值，你对该客户出具即时性的处理意见。
+# 背景描述
+- 你所在的血糖管理项目，利用慢病管理平台为入组患者提供21天血糖闭环管理服务，对患者进行线上血糖管理。
+- 患者可以在群聊中向你和你的团队同步他的饮食和运动情况，你也会给予点评和意见。
+- 患者佩戴有动态血糖仪，你可以通过慢病管理平台实时监测患者动态血糖值，患者血糖超过正常值时你会收到预警通知。
+
+# 处理流程
+1.如果存在3小时内的营养师点评信息，需要提及上次营养师点评的内容，肯定营养师之前的评价，对患者做健康教育。例如，可以使用“看到营养师3小时内对您饮食做出过点评，”
+2.根据上一餐饮食情况和运动情况，帮助推测患者血糖波动原因，以帮助患者纠正错误的生活习惯，建立正确的血糖管理知识。
+3.如果不存在上一餐饮食情况，则需要询问用户上一餐饮食情况。
+
+# 输出要求
+1.输出包含3个字段，`分析预警原因``下一餐饮食建议``运动建议`，按json格式输出。
+2.语气和态度：无需打招呼，直接输出，保持口语化、专业而友好的语气，避免使用过于医学化的术语，让患者感觉舒适和被支持。例如，可以使用“看到你X点X分血糖值有所升高，达到XXmmol/L，我们分析一下情况”这样的表达。
+3.提供明确、具体的行动建议，帮助患者立即采取措施。例如，参考当前时间，时间允许情况下可以建议患者进行15-30分钟的散步，以及在下一次餐食中具体建议，例如明天下午加餐可以把芒果换成低GI水果。
+4.安全提示：提醒患者如果感觉不适或血糖持续升高，应及时联系你。
+5.后续支持：强调患者可以随时联系你，提供持续的支持和帮助，增加患者的信任感和安全感。
+5.记录和反馈：鼓励患者充分利用动态血糖仪，感受血糖对用餐情况和运动情况的反应，以便更好地了解哪些措施有效，这有助于未来的管理和调整。
+6.如何不建议运动，`运动建议`可明确指出。
+7.总字数不超过300字。
                         """
             else:
-                raise ValueError(f"不支持的任务类型: {task_type}")
-
-            # 获取当天当前时间后的运动日程
-            exercise_schedule = get_upcoming_exercise_schedule(group_schedule)
-
-            # 返回所有相关参数
-            return {
-                "user_profile": profile_data.get("user_profile"),
-                "meals_info": meals_info,
-                "intent_code": intent_code,
-                "group_schedule": exercise_schedule,
-                "prompt": prompt
-            }
-
-        def aigc_functions_blood_sugar_warning(self, return_text: bool = True, **kwargs):
-            """
-            血糖预警评估功能，根据用户画像中的专家体系动态选择意图编码。
-            需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
-            """
-            # 自动从用户画像中获取 expert_system 和 intent_code
-            end_time = datetime.now()
-            start_time = end_time - timedelta(hours=3)
-
-            params = self.get_parameters(
-                user_id=kwargs.get("user_id"),
-                group_id=kwargs.get("group_id"),
-                start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                end_time=end_time.strftime("%Y-%m-%d %H:%M:%S"),
-                task_type="blood_sugar_warning"
-            )
-
-            user_profile = params.get("user_profile")
-            intent_code = params.get("intent_code")
-            meals_info = params.get("meals_info")
-            diet_comment = params.get("diet_comment")
-            prompt = params.get("prompt")
-
-            # 更新 intent_code 到 kwargs 以确保下游使用一致
-            kwargs["intentCode"] = intent_code
-
-            # 补充其它字段
-            user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
-
-            meals_info_str = format_meals_info_v2(meals_info) if meals_info else None
-            warning_indicators = None
-
-            prompt_vars = {
-                "user_profile": user_profile_str.rstrip("\n").rstrip(),
-                "meals_info": f"## 3小时内的饮食信息\n{meals_info_str}" if meals_info_str else None,
-                "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else None,
-                "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else None
-            }
-
-            model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
-
-            content = self.aaigc_functions_general_sync(
-                _event="血糖预警分析",
-                prompt_vars=prompt_vars,
-                model_args=model_args,
-                prompt_template=prompt,
-                **kwargs
-            )
-
-            content = parse_generic_content_sync(content)
-            if return_text:
-                return "".join([v for k, v in content.items()])
-            else:
-                return content
-
-        def aigc_functions_update_exercise_schedule(self, **kwargs):
-            """
-            通过模型生成更新后的运动日程内容
-            需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
-            """
-            start_time = datetime.now()
-
-            # 获取参数
-            params = self.get_parameters(
-                user_id=kwargs.get("user_id"),
-                group_id=kwargs.get("group_id"),
-                start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
-                is_new=True,
-                task_type="update_exercise_schedule"
-            )
-
-            user_profile = params.get("user_profile")
-            group_schedule = params.get("group_schedule")
-            warning_indicators = params.get("warning_indicators")
-            intent_code = kwargs.get("intentCode")
-            prompt = params.get("prompt")
-
-            # 格式化内容
-            user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
-            warning_indicators_str = None
-            result = self.aigc_functions_blood_sugar_warning(return_text=False, **kwargs)
-            exercise_suggestions = result.get("运动建议")
-
-            # 构建 prompt_vars
-            prompt_vars = {
-                "user_profile": user_profile_str.rstrip("\n").rstrip(),
-                "warning_indicators": f"## 预警指标\n{warning_indicators_str}" if warning_indicators_str else None,
-                "exercise_suggestions": f"## 运动建议\n{exercise_suggestions}" if exercise_suggestions else None,
-                "group_schedule": f"## 当前运动日程\n{group_schedule}" if group_schedule else None
-            }
-
-            # 构建模型参数
-            model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
-
-            # 调用模型
-            content = self.aaigc_functions_general_sync(
-                _event="更新运动日程",
-                prompt_vars=prompt_vars,
-                model_args=model_args,
-                prompt_template=prompt,
-                **kwargs
-            )
-
-            # 模型返回结构统一解析
-            return parse_generic_content_sync(content)
-
-        def get_nutritionist_feedback_from_conversation(self, **kwargs):
-            """从会话记录中获取最像营养师点评的内容"""
-
+                return {"error": "expert_system 未指定有效的值"}
+        elif task_type == "update_exercise_schedule":
+            # 更新运动日程的逻辑
+            intent_code = "aigc_functions_update_exercise_schedule"
             prompt = """
-            你是一名专业的营养师，请从以下多轮聊天记录中，找出最像“你对用户饮食行为进行点评”的一句话。
+# 已知信息
+## 用户画像
+{user_profile}
+{warning_indicators}
+{exercise_suggestions}
+{group_schedule}
+# 任务描述
+请你扮演一位专业的健康管理师，针对慢病用户的指标预警情况，修改用户的运动日程内容。
+# 处理流程
+1.你首先需要判断该用户的运动日程在指标预警后是否需要调整，如果不需要，返回`false`,如果你认为用户原运动方案已经不合适，需要调整，则需要思考如何调整。
+# 输出要求
+1.你需要根据用户指标预警的具体情况，健康管理师之前给出的运动建议，优化运动日程。
+2.新的运动日程的字段应该和原日程字段内容匹配，优化对应的日程时间、日程推送内容。另外返回修改原因。按json格式返回。
+3.如果你认为需要取消之前对应的早间运动或午间运动或晚间运动项目，则对应的日程时间、日程推送内容返回`false`。
+4.修改原因可以说明为什么之前的不合适。
+                    """
+        else:
+            raise ValueError(f"不支持的任务类型: {task_type}")
 
-            你的任务是：仅返回一句最符合“营养师点评”风格的回复，例如包含膳食建议、饮食行为反馈、摄入结构分析、提醒注意事项等内容。
+        # 获取当天当前时间后的运动日程
+        exercise_schedule = get_upcoming_exercise_schedule(group_schedule)
 
-            如果无法从聊天记录中找到类似内容，请返回空。
+        # 返回所有相关参数
+        return {
+            "user_profile": profile_data.get("user_profile"),
+            "meals_info": meals_info,
+            "intent_code": intent_code,
+            "group_schedule": exercise_schedule,
+            "prompt": prompt
+        }
 
-            【多轮聊天记录】
-            {{messages}}
-            """
+    def aigc_functions_blood_sugar_warning(self, return_text: bool = True, **kwargs):
+        """
+        血糖预警评估功能，根据用户画像中的专家体系动态选择意图编码。
+        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
+        """
+        # 自动从用户画像中获取 expert_system 和 intent_code
+        end_time = datetime.now()
+        start_time = end_time - timedelta(hours=3)
 
-            _event = "营养师点评提取"
+        params = self.get_parameters(
+            user_id=kwargs.get("user_id"),
+            group_id=kwargs.get("group_id"),
+            start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            end_time=end_time.strftime("%Y-%m-%d %H:%M:%S"),
+            task_type="blood_sugar_warning"
+        )
 
-            messages = kwargs.get("messages", [])
+        user_profile = params.get("user_profile")
+        intent_code = params.get("intent_code")
+        meals_info = params.get("meals_info")
+        diet_comment = params.get("diet_comment")
+        prompt = params.get("prompt")
 
-            messages = [i for i in messages if i["role"] == "assistant"]
+        # 更新 intent_code 到 kwargs 以确保下游使用一致
+        kwargs["intentCode"] = intent_code
 
-            messages = self.__compose_user_msg__("messages", messages)
+        # 补充其它字段
+        user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
 
-            prompt_vars = {
-                "messages": messages,
-            }
+        meals_info_str = format_meals_info_v2(meals_info) if meals_info else None
+        warning_indicators = None
 
-            # 调用通用的模型生成接口
-            model_args = self.__update_model_args__(
-                kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
-            )
-            content = self.aaigc_functions_general(
-                _event=_event, prompt_vars=prompt_vars, model_args=model_args, prompt_template=prompt, **kwargs
-            )
+        prompt_vars = {
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "meals_info": f"## 3小时内的饮食信息\n{meals_info_str}" if meals_info_str else None,
+            "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else None,
+            "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else None
+        }
 
-            # 解析并返回结果
-            content = parse_generic_content(content)
+        model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        content = self.aaigc_functions_general_sync(
+            _event="血糖预警分析",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt,
+            **kwargs
+        )
+
+        content = parse_generic_content_sync(content)
+        if return_text:
+            return "".join([v for k, v in content.items()])
+        else:
             return content
+
+    def aigc_functions_update_exercise_schedule(self, **kwargs):
+        """
+        通过模型生成更新后的运动日程内容
+        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncrwjP7DqV3kdP0wQ
+        """
+        start_time = datetime.now()
+
+        # 获取参数
+        params = self.get_parameters(
+            user_id=kwargs.get("user_id"),
+            group_id=kwargs.get("group_id"),
+            start_time=start_time.strftime("%Y-%m-%d %H:%M:%S"),
+            is_new=True,
+            task_type="update_exercise_schedule"
+        )
+
+        user_profile = params.get("user_profile")
+        group_schedule = params.get("group_schedule")
+        warning_indicators = params.get("warning_indicators")
+        intent_code = kwargs.get("intentCode")
+        prompt = params.get("prompt")
+
+        # 格式化内容
+        user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
+        warning_indicators_str = None
+        result = self.aigc_functions_blood_sugar_warning(return_text=False, **kwargs)
+        exercise_suggestions = result.get("运动建议")
+
+        # 构建 prompt_vars
+        prompt_vars = {
+            "user_profile": user_profile_str.rstrip("\n").rstrip(),
+            "warning_indicators": f"## 预警指标\n{warning_indicators_str}" if warning_indicators_str else None,
+            "exercise_suggestions": f"## 运动建议\n{exercise_suggestions}" if exercise_suggestions else None,
+            "group_schedule": f"## 当前运动日程\n{group_schedule}" if group_schedule else None
+        }
+
+        # 构建模型参数
+        model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
+
+        # 调用模型
+        content = self.aaigc_functions_general_sync(
+            _event="更新运动日程",
+            prompt_vars=prompt_vars,
+            model_args=model_args,
+            prompt_template=prompt,
+            **kwargs
+        )
+
+        # 模型返回结构统一解析
+        return parse_generic_content_sync(content)
+
+    def get_nutritionist_feedback_from_conversation(self, **kwargs):
+        """从会话记录中获取最像营养师点评的内容"""
+
+        prompt = """
+        你是一名专业的营养师，请从以下多轮聊天记录中，找出最像“你对用户饮食行为进行点评”的一句话。
+
+        你的任务是：仅返回一句最符合“营养师点评”风格的回复，例如包含膳食建议、饮食行为反馈、摄入结构分析、提醒注意事项等内容。
+
+        如果无法从聊天记录中找到类似内容，请返回空。
+
+        【多轮聊天记录】
+        {{messages}}
+        """
+
+        _event = "营养师点评提取"
+
+        messages = kwargs.get("messages", [])
+
+        messages = [i for i in messages if i["role"] == "assistant"]
+
+        messages = self.__compose_user_msg__("messages", messages)
+
+        prompt_vars = {
+            "messages": messages,
+        }
+
+        # 调用通用的模型生成接口
+        model_args = self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+        content = self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, prompt_template=prompt, **kwargs
+        )
+
+        # 解析并返回结果
+        content = parse_generic_content(content)
+        return content
 
 
 if __name__ == "__main__":
