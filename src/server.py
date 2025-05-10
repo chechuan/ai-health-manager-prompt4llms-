@@ -140,6 +140,7 @@ class RabbitMQConsumer:
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
                         params = {
+                            "intentCode": "aigc_functions_update_exercise_schedule",
                             "user_id": envelope.get('userId', ''),  # 用户ID
                             "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
                         }
