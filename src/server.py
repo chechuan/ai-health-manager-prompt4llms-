@@ -135,7 +135,7 @@ class RabbitMQConsumer:
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
-                        param = param.model_dump_json().encode(encoding='utf-8')
+                        param = param.model_dump_json()
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
@@ -148,13 +148,13 @@ class RabbitMQConsumer:
                         if not sch_content:
                             sch_content = {}
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
-                        param = param.model_dump_json().encode(encoding='utf-8')
+                        param = param.model_dump_json()
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
                         # sch_content = modify_health_promotion_plan()
                         # param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
                         #                    callBackData=sch_content)
-                        # param = param.model_dump_json().encode(encoding='utf-8')
+                        # param = param.model_dump_json()
                         # requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                         #                  headers={'Content-Type': 'application/json'}, timeout=60)
 
