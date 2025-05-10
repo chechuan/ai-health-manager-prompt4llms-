@@ -137,8 +137,9 @@ class RabbitMQConsumer:
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
                         param = param.model_dump_json()
                         logger.info('begin to request glucoseWarning')
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                        resp = requests.post(get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
+                        logger.debug(f'resp: {resp.content}')
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
                         params = {
                             "intentCode": "aigc_functions_update_exercise_schedule",
@@ -151,8 +152,9 @@ class RabbitMQConsumer:
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
                         param = param.model_dump()
                         logger.info('begin to request modifySchedule')
-                        requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
+                        resp = requests.post(get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
+                        logger.debug(f'resp: {resp.content}')
                         # sch_content = modify_health_promotion_plan()
                         # param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
                         #                    callBackData=sch_content)
