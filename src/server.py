@@ -149,7 +149,7 @@ class RabbitMQConsumer:
                         if not sch_content:
                             sch_content = {}
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
-                        param = param.model_dump_json()
+                        param = param.model_dump()
                         logger.info('begin to request modifySchedule')
                         requests.request("POST", get_register_url(os.getenv('ZB_ENV')), data=param,
                                          headers={'Content-Type': 'application/json'}, timeout=60)
