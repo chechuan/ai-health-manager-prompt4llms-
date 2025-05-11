@@ -129,7 +129,7 @@ class RabbitMQConsumer:
                     envelope = data['envelope']
                     payload = data['payload']
                     contextData = {}
-                    contextData['context'] = data['payload'].get('transmitContent', {}).get('context', {})
+                    contextData['context'] = envelope.get('metadata',{})
                     scene_type = payload['scenarioType']
                     if scene_type == 'BLOOD_SUGAR_ALERT':
                         params = {
@@ -139,10 +139,10 @@ class RabbitMQConsumer:
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
                         if isinstance(gap_content, str):
-                            gap_content = {"sugAgent": gap_content}
+                            gap_content = {"text": gap_content}
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
                         param = param.model_dump()
-                        logger.info('begin to request glucoseWarning')
+                        logger.info(f'begin to request glucoseWarning\nparam:{param}')
                         resp = requests.post(url=get_register_url(os.getenv('ZB_ENV')), json=param,
                                              headers={'Content-Type': 'application/json'}, timeout=60)
                         logger.debug(f'resp: {resp.content}')
@@ -157,7 +157,7 @@ class RabbitMQConsumer:
                             sch_content = {}
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
                         param = param.model_dump()
-                        logger.info('begin to request modifySchedule')
+                        logger.info(f'begin to request modifySchedule\nparam:{param}')
                         resp = requests.post(url=get_register_url(os.getenv('ZB_ENV')), json=param,
                                              headers={'Content-Type': 'application/json'}, timeout=60)
                         logger.debug(f'resp: {resp.content}')
