@@ -81,6 +81,7 @@ from src.pkgs.models.proactivate_service.func_planning_parallel import (
     generate_glucose_alert_plan
 )
 
+
 def get_register_url(env):
     if env == 'dev':
         return 'https://gate-qa.op.laikang.com/proactive-schedule-management-system/task/register'
@@ -89,7 +90,10 @@ def get_register_url(env):
     else:
         return 'https://gate-dev.op.laikang.com/proactive-schedule-management-system/task/register'
 
+
 app_state: Dict = {}
+
+
 class RabbitMQConsumer:
     def __init__(self, queue_name: str):
         self.queue_name = queue_name
@@ -125,7 +129,7 @@ class RabbitMQConsumer:
                     envelope = data['envelope']
                     payload = data['payload']
                     contextData = {}
-                    contextData['context'] = data['payload'].get('transmitContent',{}).get('context',{})
+                    contextData['context'] = data['payload'].get('transmitContent', {}).get('context', {})
                     scene_type = payload['scenarioType']
                     if scene_type == 'BLOOD_SUGAR_ALERT':
                         params = {
@@ -135,10 +139,10 @@ class RabbitMQConsumer:
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
-                        param = param.model_dump_json()
+                        param = param.model_dump()
                         logger.info('begin to request glucoseWarning')
-                        resp = requests.post(get_register_url(os.getenv('ZB_ENV')), data=param,
-                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                        resp = requests.post(url=get_register_url(os.getenv('ZB_ENV')), json=param,
+                                             headers={'Content-Type': 'application/json'}, timeout=60)
                         logger.debug(f'resp: {resp.content}')
                     elif scene_type == 'MODIFY_PLAN_AND_SCHEDULE':
                         params = {
@@ -152,8 +156,8 @@ class RabbitMQConsumer:
                         param = TaskParams(taskType='modifySchedule', contextData=contextData, callBackData=sch_content)
                         param = param.model_dump()
                         logger.info('begin to request modifySchedule')
-                        resp = requests.post(get_register_url(os.getenv('ZB_ENV')), data=param,
-                                         headers={'Content-Type': 'application/json'}, timeout=60)
+                        resp = requests.post(url=get_register_url(os.getenv('ZB_ENV')), json=param,
+                                             headers={'Content-Type': 'application/json'}, timeout=60)
                         logger.debug(f'resp: {resp.content}')
                         # sch_content = modify_health_promotion_plan()
                         # param = TaskParams(taskType='modifyHealthPromote', contextData=contextData,
@@ -431,7 +435,7 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+
     @app.route("/health/spe_qa", methods=["post"])
     async def _health_spe_qa(request: Request):
         """问题回答"""
@@ -472,7 +476,7 @@ def mount_rule_endpoints(app: FastAPI):
             await record_monitoring_data([ret], param, start_time, end_time)  # 记录到 Langfuse
         finally:
             return ret
-        
+
     @app.route("/health/blood_glucose_deal", methods=["post"])
     async def _health_blood_glucose_deal(request: Request):
         """血糖预警处理"""
@@ -547,7 +551,7 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+
     @app.route("/health/blood_pressure_warning", methods=["post"])
     async def _health_blood_pressure_warning(request: Request):
         """血糖预警"""
@@ -562,7 +566,7 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-        
+
     @app.route("/health/open_extract", methods=["post"])
     async def _health_open_extract(request: Request):
         """页面打开"""
@@ -577,7 +581,7 @@ def mount_rule_endpoints(app: FastAPI):
             ret = make_result(head=500, msg=repr(err))
         finally:
             return ret
-   
+
     @app.route("/health/warning_solutions_early", methods=["post"])
     async def _health_warning_solutions_early(request: Request):
         """预警解决方案"""
@@ -612,7 +616,7 @@ def mount_rec_endpoints(app: FastAPI):
 
     @app.route("/rec/diet/food_purchasing_list/generate_by_content", methods=["post"])
     async def _rec_diet_create_food_purchasing_list_generate_by_content(
-        request: Request,
+            request: Request,
     ):
         """食材采购清单管理"""
         try:
@@ -721,7 +725,7 @@ def mount_aigc_functions(app: FastAPI):
                 return build_aigc_functions_response(_return)
 
     async def _async_aigc_sanji(
-        request_model: AigcSanjiRequest,
+            request_model: AigcSanjiRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
@@ -750,7 +754,7 @@ def mount_aigc_functions(app: FastAPI):
             return build_aigc_functions_response(_return)
 
     async def _async_aigc_functions_doctor_recommend(
-        request_model: AigcFunctionsDoctorRecommendRequest,
+            request_model: AigcFunctionsDoctorRecommendRequest,
     ) -> Union[AigcFunctionsResponse, AigcFunctionsCompletionResponse]:
         """aigc函数"""
         try:
@@ -1157,7 +1161,7 @@ def mount_aigc_functions(app: FastAPI):
 
             # 不需要流式处理，直接返回结果
             response = replace_you(response) if callable(replace_you) and hasattr(replace_you,
-                                                                                        "__await__") else replace_you(
+                                                                                  "__await__") else replace_you(
                 response)
             ret = AigcFunctionsCompletionResponse(head=200, items=response)
             _return = ret.model_dump_json(exclude_unset=False)
@@ -1318,7 +1322,8 @@ def mount_aigc_functions(app: FastAPI):
             param["tags"] = tags
 
             # 处理返回值
-            response = replace_you(response) if callable(replace_you) and hasattr(replace_you, "__await__") else replace_you(
+            response = replace_you(response) if callable(replace_you) and hasattr(replace_you,
+                                                                                  "__await__") else replace_you(
                 response)
 
             ret = AigcFunctionsCompletionResponse(head=200, items=response)
@@ -1359,15 +1364,18 @@ def mount_aigc_functions(app: FastAPI):
 
     app.post("/aigc/junwang/gongjian")(_async_aigc_functions_junwang_gongjian)
 
-    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(_aigc_functions_generate_itinerary)
+    app.post("/aigc/itinerary/make", description="根据用户的偏好和需求生成个性化行程清单")(
+        _aigc_functions_generate_itinerary)
 
     app.post("/aigc/bath_plan/make", description="生成泡浴方案")(_aigc_functions_generate_bath_plan)
 
-    app.post("/aigc/v1_1_0/itinerary", description="根据用户的偏好和需求生成个性化行程清单（V1.1.0）")(_aigc_functions_generate_itinerary_v1_1_0)
+    app.post("/aigc/v1_1_0/itinerary", description="根据用户的偏好和需求生成个性化行程清单（V1.1.0）")(
+        _aigc_functions_generate_itinerary_v1_1_0)
 
     app.post("/aigc/v1_1_0/bath_plan", description="生成泡浴方案（V1.1.0）")(_aigc_functions_generate_bath_plan_v1_1_0)
 
-    app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(_aigc_functions_likang_introduction_v1_1_0)
+    app.post("/aigc/v1_1_0/likang_introduction", description="固安来康郡介绍（V1.1.0）")(
+        _aigc_functions_likang_introduction_v1_1_0)
 
     app.post("/health/user_labels", description="健康用户标签提取接口")(_aigc_functions_health_user_active_label)
 
@@ -1375,7 +1383,6 @@ def mount_aigc_functions(app: FastAPI):
 
 
 def mount_multimodal_endpoints(app: FastAPI):
-
     @app.route("/func_eval/image_type_recog", methods=["post"])
     async def _func_eval_image_type_recog(request: Request):
         """图片分类，包含：饮食、运动、报告、其他"""
@@ -1501,7 +1508,7 @@ def create_app():
         return response
 
     async def decorate_chat_complete(
-        generator, return_mid_vars=False, return_backend_history=False
+            generator, return_mid_vars=False, return_backend_history=False
     ) -> AsyncGenerator:
         try:
             # while True:
@@ -1628,8 +1635,8 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/func_eval/sport_schedule_modify_suggestion")
             item = await sport_schedule_tips_modify(param.get("schedule", []),
-                                              param.get("history", []),
-                                              param.get("cur_time", ''))
+                                                    param.get("history", []),
+                                                    param.get("cur_time", ''))
             result = make_result(items=item)
         except Exception as err:
             logger.exception(err)
@@ -1647,14 +1654,14 @@ def create_app():
                 result = make_result(items={}, msg='请检查入参格式', head=402)
                 return result
             item = await daily_diet_degree(param.get("userInfo", {}),
-                                   param.get("daily_diet_info", []),
-                                   param.get("daily_blood_glucose", ''),
-                                   param.get("management_tag", '血糖管理'))
+                                           param.get("daily_diet_info", []),
+                                           param.get("daily_blood_glucose", ''),
+                                           param.get("management_tag", '血糖管理'))
             result = make_result(items=item)
         except Exception as err:
             logger.exception(err)
             logger.error(traceback.format_exc())
-            result = make_result(msg=repr(err), items=param,head=402)
+            result = make_result(msg=repr(err), items=param, head=402)
         finally:
             return result
 
@@ -1717,7 +1724,8 @@ def create_app():
         """生成收集用户信息问题"""
         try:
             param = await accept_param(request, endpoint="/gen_userInfo_question")
-            generator: AsyncGenerator = JiaheExpertModel.gather_userInfo(param.get('userInfo', {}), param.get('history', []))
+            generator: AsyncGenerator = JiaheExpertModel.gather_userInfo(param.get('userInfo', {}),
+                                                                         param.get('history', []))
             result = decorate_general_complete(
                 generator
             )
@@ -1733,11 +1741,12 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_diet_principle")
             generator: AsyncGenerator = JiaheExpertModel.gen_diet_principle(param.get('cur_date', ''),
-                                                                       param.get('location', ''),
-                                                                       param.get('personal_dietary_requirements', ''),
-                                                                       param.get('history', []),
-                                                                       param.get('userInfo', {}),
-                                                                       )
+                                                                            param.get('location', ''),
+                                                                            param.get('personal_dietary_requirements',
+                                                                                      ''),
+                                                                            param.get('history', []),
+                                                                            param.get('userInfo', {}),
+                                                                            )
             result = decorate_general_complete(
                 generator
             )
@@ -1785,10 +1794,10 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/child_dish_rec")
             generator: AsyncGenerator = JiaheExpertModel.child_dish_rec(param.get('userInfo', {}),
-                                                                                   param.get('cur_date', ''),
-                                                                                   param.get('location', ''),
-                                                                                   param.get('history_dishes', ''),
-                                                                                   param.get('child_diet_principle', ''))
+                                                                        param.get('cur_date', ''),
+                                                                        param.get('location', ''),
+                                                                        param.get('history_dishes', ''),
+                                                                        param.get('child_diet_principle', ''))
             result = decorate_general_complete(
                 generator
             )
@@ -1823,10 +1832,10 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/family_diet_principle")
             generator: AsyncGenerator = JiaheExpertModel.gen_family_principle(param.get('users', ''),
-                                                                         param.get('cur_date', ''),
-                                                                         param.get('location', ''),
-                                                                         param.get('history', []),
-                                                                         param.get('requirements', []))
+                                                                              param.get('cur_date', ''),
+                                                                              param.get('location', ''),
+                                                                              param.get('history', []),
+                                                                              param.get('requirements', []))
             result = decorate_general_complete(
                 generator
             )
@@ -1842,14 +1851,14 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/family_daily_diet")
             generator: AsyncGenerator = JiaheExpertModel.gen_family_diet(param.get('users', ''),
-                                                                    param.get('cur_date', ''),
-                                                                    param.get('location', ''),
-                                                                    param.get('family_diet_principle', ''),
-                                                                    param.get('days'),
-                                                                    param.get('history', []),
-                                                                    param.get('requirements', []),
-                                                                    param.get('reference_diet', []),
-                                                                    )
+                                                                         param.get('cur_date', ''),
+                                                                         param.get('location', ''),
+                                                                         param.get('family_diet_principle', ''),
+                                                                         param.get('days'),
+                                                                         param.get('history', []),
+                                                                         param.get('requirements', []),
+                                                                         param.get('reference_diet', []),
+                                                                         )
             result = decorate_general_complete(
                 generator
             )
@@ -1865,7 +1874,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/long_term_nutritional_management")
             generator: AsyncGenerator = JiaheExpertModel.long_term_nutritional_management(param.get('userInfo', []),
-                                                                    param.get('history', []))
+                                                                                          param.get('history', []))
             result = decorate_general_complete(
                 generator
             )
@@ -1881,9 +1890,9 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/nutritious_supplementary_principle")
             generator: AsyncGenerator = JiaheExpertModel.gen_nutrious_principle(param.get('cur_date', ''),
-                                                                           param.get('location', ''),
-                                                                           param.get('history', []),
-                                                                           param.get('userInfo', []))
+                                                                                param.get('location', ''),
+                                                                                param.get('history', []),
+                                                                                param.get('userInfo', []))
             result = decorate_general_complete(
                 generator
             )
@@ -1900,11 +1909,11 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/nutritious_supplementary")
             generator: AsyncGenerator = JiaheExpertModel.gen_nutrious(param.get('cur_date', ''),
-                                                                 param.get('location', ''),
-                                                                 param.get('nutrious_principle', ''),
-                                                                 param.get('history', []),
-                                                                 param.get('userInfo', []),
-                                                                 )
+                                                                      param.get('location', ''),
+                                                                      param.get('nutrious_principle', ''),
+                                                                      param.get('history', []),
+                                                                      param.get('userInfo', []),
+                                                                      )
             result = decorate_general_complete(
                 generator
             )
@@ -1920,13 +1929,14 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_daily_diet")
             generator: AsyncGenerator = JiaheExpertModel.gen_n_daily_diet(param.get('cur_date', ''),
-                                                                     param.get('location', ''),
-                                                                     param.get('diet_principle', ''),
-                                                                     param.get('personal_dietary_requirements', ''),
-                                                                     param.get('reference_daily_diets', []),
-                                                                     param.get('days', 0),
-                                                                     param.get('history', []),
-                                                                     param.get('userInfo', {}))
+                                                                          param.get('location', ''),
+                                                                          param.get('diet_principle', ''),
+                                                                          param.get('personal_dietary_requirements',
+                                                                                    ''),
+                                                                          param.get('reference_daily_diets', []),
+                                                                          param.get('days', 0),
+                                                                          param.get('history', []),
+                                                                          param.get('userInfo', {}))
             result = decorate_general_complete(
                 generator
             )
@@ -1942,12 +1952,12 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/gen_current_diet")
             generator: AsyncGenerator = JiaheExpertModel.gen_current_diet(param.get('cur_date', ''),
-                                                                     param.get('location', ''),
-                                                                     param.get('diet_principle', ''),
-                                                                     param.get('reference_daily_diets', []),
-                                                                    param.get('meal_number', ''),
-                                                                     param.get('history', []),
-                                                                     param.get('userInfo', {}),
+                                                                          param.get('location', ''),
+                                                                          param.get('diet_principle', ''),
+                                                                          param.get('reference_daily_diets', []),
+                                                                          param.get('meal_number', ''),
+                                                                          param.get('history', []),
+                                                                          param.get('userInfo', {}),
                                                                           param.get('today_diet', ''))
             result = decorate_general_complete(
                 generator
@@ -1979,7 +1989,8 @@ def create_app():
         """猜你想问-饮食咨询接口"""
         try:
             param = await accept_param(request, endpoint="/guess_asking_nutrition_counseling")
-            generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='intent')
+            generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}),
+                                                                          scene_flag='intent')
             result = decorate_general_complete(
                 generator
             )
@@ -1994,8 +2005,9 @@ def create_app():
         """猜你想问-用户问题接口"""
         try:
             param = await accept_param(request, endpoint="/guess_asking_query")
-            generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='user_query',
-                                                                     question=param.get('query', ''))
+            generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}),
+                                                                          scene_flag='user_query',
+                                                                          question=param.get('query', ''))
             result = decorate_general_complete(
                 generator
             )
@@ -2011,7 +2023,7 @@ def create_app():
         try:
             param = await accept_param(request, endpoint="/guess_asking_diet")
             generator: AsyncGenerator = JiaheExpertModel.gen_guess_asking(param.get('userInfo', {}), scene_flag='diet',
-                                                                     question=param.get('diet', ''))
+                                                                          question=param.get('diet', ''))
             result = decorate_general_complete(
                 generator
             )
@@ -2026,8 +2038,9 @@ def create_app():
         """儿童猜你想问"""
         try:
             param = await accept_param(request, endpoint="/child_guess_asking")
-            generator: AsyncGenerator = JiaheExpertModel.guess_asking_child(param.get('userInfo', {}), param.get('dish_efficacy', ''),
-                                                                          param.get('nutrient_efficacy', ''))
+            generator: AsyncGenerator = JiaheExpertModel.guess_asking_child(param.get('userInfo', {}),
+                                                                            param.get('dish_efficacy', ''),
+                                                                            param.get('nutrient_efficacy', ''))
             result = decorate_general_complete(
                 generator
             )
@@ -2072,7 +2085,9 @@ def create_app():
             if param.get("model_args") and param["model_args"].get("stream") is True:
                 # 流式响应处理，构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
-            elif param.get("intentCode") in ["aigc_jiahe_ingredient_pairing_suggestion", "aigc_jiahe_ingredient_selection_guide", "aigc_jiahe_ingredient_taboo_groups"]:
+            elif param.get("intentCode") in ["aigc_jiahe_ingredient_pairing_suggestion",
+                                             "aigc_jiahe_ingredient_selection_guide",
+                                             "aigc_jiahe_ingredient_taboo_groups"]:
                 # 流式响应处理，构造返回数据的AsyncGenerator
                 _return: AsyncGenerator = response_generator(response)
             else:

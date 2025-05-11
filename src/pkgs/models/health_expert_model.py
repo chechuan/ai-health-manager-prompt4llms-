@@ -27,7 +27,8 @@ from src.utils.module import (
     convert_structured_kv_to_prompt_dict, convert_schedule_fields_to_english, enrich_schedule_with_extras,
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
     format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators,
-    get_upcoming_exercise_schedule, parse_generic_content_sync
+    get_upcoming_exercise_schedule, parse_generic_content_sync, enrich_schedules_with_cate_code,
+    convert_nested_schedule
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace, callLLM
@@ -146,7 +147,6 @@ class HealthExpertModel:
             # 使用 LangfusePromptManager 获取并格式化
             prompt = await self.langfuse_prompt_manager.get_formatted_prompt(event, prompt_vars)
 
-
         logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
         his = [{
             'role': 'system',
@@ -164,23 +164,23 @@ class HealthExpertModel:
         return content
 
     async def __compose_user_msg__(
-        self,
-        mode: Literal[
-            "user_profile",
-            "user_profile_new",
-            "messages",
-            "drug_plan",
-            "medical_records",
-            "ietary_guidelines",
-            "key_indicators",
-        ],
-        user_profile: UserProfile = None,
-        medical_records: MedicalRecords = None,
-        ietary_guidelines: DietaryGuidelinesDetails = None,
-        messages: List[ChatMessage] = [],
-        key_indicators: "List[KeyIndicators]" = "[]",
-        drug_plan: "List[DrugPlanItem]" = "[]",
-        role_map: Dict = {},
+            self,
+            mode: Literal[
+                "user_profile",
+                "user_profile_new",
+                "messages",
+                "drug_plan",
+                "medical_records",
+                "ietary_guidelines",
+                "key_indicators",
+            ],
+            user_profile: UserProfile = None,
+            medical_records: MedicalRecords = None,
+            ietary_guidelines: DietaryGuidelinesDetails = None,
+            messages: List[ChatMessage] = [],
+            key_indicators: "List[KeyIndicators]" = "[]",
+            drug_plan: "List[DrugPlanItem]" = "[]",
+            role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
@@ -210,13 +210,13 @@ class HealthExpertModel:
             if drug_plan:
                 for item in json5.loads(drug_plan):
                     content += (
-                        ", ".join(
-                            [
-                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
-                                for k, v in item.items()
-                            ]
-                        )
-                        + "\n"
+                            ", ".join(
+                                [
+                                    f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                    for k, v in item.items()
+                                ]
+                            )
+                            + "\n"
                     )
                 content = content.strip()
         elif mode == "medical_records":
@@ -316,7 +316,6 @@ class HealthExpertModel:
             # 使用 LangfusePromptManager 获取并格式化
             prompt = self.langfuse_prompt_manager.get_formatted_prompt_sync(event, prompt_vars)
 
-
         logger.debug(f"AIGC Functions {_event} LLM Input: {(prompt)}")
         his = [{
             'role': 'system',
@@ -334,35 +333,35 @@ class HealthExpertModel:
         return content
 
     def __compose_user_msg_sync__(
-        self,
-        mode: Literal[
-            "user_profile",
-            "user_profile_new",
-            "messages",
-            "drug_plan",
-            "medical_records",
-            "ietary_guidelines",
-            "key_indicators",
-        ],
-        user_profile: UserProfile = None,
-        medical_records: MedicalRecords = None,
-        ietary_guidelines: DietaryGuidelinesDetails = None,
-        messages: List[ChatMessage] = [],
-        key_indicators: "List[KeyIndicators]" = "[]",
-        drug_plan: "List[DrugPlanItem]" = "[]",
-        role_map: Dict = {},
+            self,
+            mode: Literal[
+                "user_profile",
+                "user_profile_new",
+                "messages",
+                "drug_plan",
+                "medical_records",
+                "ietary_guidelines",
+                "key_indicators",
+            ],
+            user_profile: UserProfile = None,
+            medical_records: MedicalRecords = None,
+            ietary_guidelines: DietaryGuidelinesDetails = None,
+            messages: List[ChatMessage] = [],
+            key_indicators: "List[KeyIndicators]" = "[]",
+            drug_plan: "List[DrugPlanItem]" = "[]",
+            role_map: Dict = {},
     ) -> str:
         content = ""
         if mode == "user_profile":
             if user_profile:
                 for key, value in user_profile.items():
                     if value and USER_PROFILE_KEY_MAP.get(key):
-                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+                        content += f"{USER_PROFILE_KEY_MAP[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "user_profile_new":
             if user_profile:
                 for key, value in user_profile.items():
                     if value and USER_PROFILE_KEY_MAP_SANJI.get(key):
-                        content += f"{USER_PROFILE_KEY_MAP_SANJI[key]}: {value if isinstance(value, Union[float, int, str]) else json.dumps(value, ensure_ascii=False)}\n"
+                        content += f"{USER_PROFILE_KEY_MAP_SANJI[key]}: {value if isinstance(value, (float, int, str)) else json.dumps(value, ensure_ascii=False)}\n"
         elif mode == "messages":
             assert messages is not None, "messages can't be None"
             assert messages is not [], "messages can't be empty list"
@@ -380,13 +379,13 @@ class HealthExpertModel:
             if drug_plan:
                 for item in json5.loads(drug_plan):
                     content += (
-                        ", ".join(
-                            [
-                                f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
-                                for k, v in item.items()
-                            ]
-                        )
-                        + "\n"
+                            ", ".join(
+                                [
+                                    f"{USER_PROFILE_KEY_MAP.get(k)}: {v}"
+                                    for k, v in item.items()
+                                ]
+                            )
+                            + "\n"
                     )
                 content = content.strip()
         elif mode == "medical_records":
@@ -546,7 +545,7 @@ class HealthExpertModel:
     async def aigc_functions_generate_present_illness(self, **kwargs) -> str:
         """西医决策-现病史生成"""
 
-        #需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiolopcya0m20232q
+        # 需求文档：https://alidocs.dingtalk.com/i/nodes/ZgpG2NdyVXXRGO6gHZ5GLQKjVMwvDqPk?utm_scene=team_space&iframeQuery=anchorId%3Duu_lxiolopcya0m20232q
 
         _event = "西医决策-现病史生成"
 
@@ -587,7 +586,6 @@ class HealthExpertModel:
             # 检查past_history_of_present_illness是否为空
             if not kwargs.get("user_profile", {}).get("past_history_of_present_illness"):
                 raise ValueError("user_profile中必须包含past_history_of_present_illness")
-
 
         user_profile: str = await self.__compose_user_msg__(
             "user_profile", user_profile=kwargs.get("user_profile")
@@ -898,7 +896,6 @@ class HealthExpertModel:
         )
 
         return content
-
 
     async def aigc_functions_dietary_guidelines_generation(self, **kwargs) -> str:
         """饮食调理原则生成"""
@@ -1279,7 +1276,7 @@ class HealthExpertModel:
         return content
 
     async def aigc_functions_sanji_plan_exercise_plan(
-        self, **kwargs
+            self, **kwargs
     ) -> Union[str, Generator]:
         """三济康养方案-运动-运动计划
 
@@ -1371,7 +1368,7 @@ class HealthExpertModel:
         return content
 
     async def aigc_functions_body_fat_weight_management_consultation(
-        self, **kwargs
+            self, **kwargs
     ) -> Union[str, Generator]:
         """体脂体重管理-问诊
 
@@ -1404,7 +1401,8 @@ class HealthExpertModel:
         )
 
         if "messages" in kwargs and kwargs["messages"] and len(kwargs["messages"]) >= 6:
-            messages = await self.__compose_user_msg__("messages", messages=kwargs["messages"], role_map={"assistant": "健康管理师", "user": "客户"})
+            messages = await self.__compose_user_msg__("messages", messages=kwargs["messages"],
+                                                       role_map={"assistant": "健康管理师", "user": "客户"})
             kwargs["intentCode"] = "aigc_functions_body_fat_weight_management_consultation_suggestions"
             _event = "体脂体重管理-问诊-建议"
         else:
@@ -1504,7 +1502,8 @@ class HealthExpertModel:
 
         # 组装用户信息和关键指标字符串
         user_profile_str = await self.__compose_user_msg__("user_profile", user_profile=user_profile)
-        key_indicators_str = await self.__compose_user_msg__("key_indicators", key_indicators=kwargs.get("key_indicators", None))
+        key_indicators_str = await self.__compose_user_msg__("key_indicators",
+                                                             key_indicators=kwargs.get("key_indicators", None))
 
         # 组装提示变量并包含体重状态和目标消息
         prompt_vars = {
@@ -1595,8 +1594,8 @@ class HealthExpertModel:
             body_fat_change_message = (f"最近一次的体脂率比上次测量升高{body_fat_change:.2f}%。"
                                        if body_fat_change > 0
                                        else f"最近一次的体脂率比上次测量降低{abs(body_fat_change):.2f}%。"
-                                       if body_fat_change < 0
-                                       else "最近一次测量的体脂率与上次相比没有变化，保持在相同的数值。")
+            if body_fat_change < 0
+            else "最近一次测量的体脂率与上次相比没有变化，保持在相同的数值。")
 
         # 组装用户和指标信息
         user_profile_str = self.__update_model_args__("user_profile", user_profile=user_profile)
@@ -1773,7 +1772,7 @@ class HealthExpertModel:
 
         # 组合病历信息字符串
         medical_records_str = await self.__compose_user_msg__("medical_records",
-                                                        medical_records=kwargs.get("medical_records", ""))
+                                                              medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
         messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
@@ -1862,7 +1861,7 @@ class HealthExpertModel:
 
         # 组合病历信息字符串
         medical_records_str = await self.__compose_user_msg__("medical_records",
-                                                        medical_records=kwargs.get("medical_records", ""))
+                                                              medical_records=kwargs.get("medical_records", ""))
 
         # 组合消息字符串
         messages_str = await self.__compose_user_msg__("messages", messages=kwargs.get("messages", ""))
@@ -1890,7 +1889,8 @@ class HealthExpertModel:
 
         return content
 
-    async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[Dict[str, List[Dict[str, float]]]]:
+    async def aigc_functions_recommended_meal_plan_with_recipes(self, **kwargs) -> List[
+        Dict[str, List[Dict[str, float]]]]:
         """
         推荐餐次及每餐能量占比和食谱-带量食谱
 
@@ -1962,7 +1962,7 @@ class HealthExpertModel:
 
         # 组合消息字符串
         messages_str = await self.__compose_user_msg__("messages", messages=messages,
-                                       role_map={"assistant": "assistant", "user": "user"})
+                                                       role_map={"assistant": "assistant", "user": "user"})
 
         # 构建提示变量
         prompt_vars = {
@@ -2091,7 +2091,7 @@ class HealthExpertModel:
 
         # 异步获取当天天气信息
         today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
-        )
+                                              )
 
         # 获取最近节气
         recent_solar_terms = await determine_recent_solar_terms()
@@ -2129,7 +2129,7 @@ class HealthExpertModel:
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
         )
         return content
-    
+
     async def aigc_functions_generate_greeting_new(self, **kwargs) -> str:
         """
         生成每日问候开场白
@@ -2163,7 +2163,7 @@ class HealthExpertModel:
 
         # 异步获取当天天气信息
         today_weather = await run_in_executor(lambda: get_weather_info(self.gsr.weather_api_config, city)
-        ) if city else None
+                                              ) if city else None
 
         # 获取最近节气
         recent_solar_terms = await determine_recent_solar_terms()
@@ -2480,7 +2480,8 @@ class HealthExpertModel:
         tcm_four_diagnoses_data = kwargs.get("tcm_four_diagnoses", {})
 
         # 检查字典中是否至少有一个非空列表。如果至少有一个列表非空，则格式化输出。如果所有列表均为空，则输出为空字符串
-        tcm_four_diagnoses = f"## 中医四诊\n{TcmFourDiagnoses(**tcm_four_diagnoses_data).format_tcm_diagnosis()}" if any(tcm_four_diagnoses_data.values()) else ""
+        tcm_four_diagnoses = f"## 中医四诊\n{TcmFourDiagnoses(**tcm_four_diagnoses_data).format_tcm_diagnosis()}" if any(
+            tcm_four_diagnoses_data.values()) else ""
 
         # 构建提示变量
         prompt_vars = {
@@ -2904,7 +2905,8 @@ class HealthExpertModel:
             async with sem:
                 memory_text = "\n".join(memory_list)
                 prompt_vars = {"memory": memory_text}
-                model_args = await self.__update_model_args__(kwargs, temperature=0.7, top_p=1)  # 注意去掉 repetition_penalty
+                model_args = await self.__update_model_args__(kwargs, temperature=0.7,
+                                                              top_p=1)  # 注意去掉 repetition_penalty
                 try:
                     content: str = await self.aaigc_functions_general(
                         _event=_event, prompt_vars=prompt_vars, model_args=model_args, user_id=user_id, **kwargs
@@ -3051,31 +3053,31 @@ class HealthExpertModel:
 
         if has_high_risk_disease:
             raw = {
-                    "戒烟限酒": {
-                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                        "严格戒酒": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
-                    }
+                "戒烟限酒": {
+                    "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                    "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                    "严格戒酒": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
                 }
+            }
         else:
             if gender == "男":
                 raw = {
-                        "戒烟限酒": {
-                            "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                            "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                            "限酒": "男性每次不超过50g酒精，2两酒=80g酒精。3钱的酒杯，建议每次男性不超3杯（1两）。每周不超2次。",
-                            "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
-                        }
+                    "戒烟限酒": {
+                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                        "限酒": "男性每次不超过50g酒精，2两酒=80g酒精。3钱的酒杯，建议每次男性不超3杯（1两）。每周不超2次。",
+                        "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
                     }
+                }
             else:
                 raw = {
-                        "戒烟限酒": {
-                            "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
-                            "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
-                            "限酒": "女性每次不超过30g酒精，2两酒=80g酒精。3钱的酒杯，建议每次女性不超2杯，每周不超2次。",
-                            "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
-                        }
+                    "戒烟限酒": {
+                        "戒烟": "吸烟会增加血管紧张度，可以逐步减量，直至完全戒掉。",
+                        "限酒与降血压显著相关": "酒精摄入量平均减少67%, 收缩压下降3.31 mmHg，舒张压下降2.04 mmHg。",
+                        "限酒": "女性每次不超过30g酒精，2两酒=80g酒精。3钱的酒杯，建议每次女性不超2杯，每周不超2次。",
+                        "注意": "任何含酒精的饮品（如红酒、白酒、啤酒、黄酒等）对人体健康都无益。糖尿病、脂肪肝或肝功能异常的人群应该严格戒酒。"
                     }
+                }
 
         image_url = IMAGE_MAP.get("戒烟限酒", {}).get("url", "")
 
@@ -3107,7 +3109,8 @@ class HealthExpertModel:
             "group": kwargs.get("group"),
             "current_date": kwargs.get("current_date"),
             "diet_weight_control": await convert_structured_kv_to_prompt_dict(kwargs.get("diet_weight_control")),
-            "clear_inflammatory_diet": await convert_structured_kv_to_prompt_dict(kwargs.get("clear_inflammatory_diet")),
+            "clear_inflammatory_diet": await convert_structured_kv_to_prompt_dict(
+                kwargs.get("clear_inflammatory_diet")),
             "salt_intake_control": await convert_structured_kv_to_prompt_dict(kwargs.get("salt_intake_control")),
             "moderate_exercise": await convert_structured_kv_to_prompt_dict(kwargs.get("moderate_exercise")),
         }
@@ -3661,6 +3664,24 @@ class HealthExpertModel:
 2.新的运动日程的字段应该和原日程字段内容匹配，优化对应的日程时间、日程推送内容。另外返回修改原因。按json格式返回。
 3.如果你认为需要取消之前对应的早间运动或午间运动或晚间运动项目，则对应的日程时间、日程推送内容返回`false`。
 4.修改原因可以说明为什么之前的不合适。
+# 输出示例
+{{
+  "运动日程": {{
+    "早间运动": {{
+      "日程时间": "07:00-07:30",
+      "日程推送内容": "请进行20分钟的全身拉伸运动，并进行10分钟的轻松快走或慢跑。"
+    }},
+    "午间运动": {{
+      "日程时间": "12:00-12:30",
+      "日程推送内容": "请在餐后进行20分钟的散步，注意保持轻松的步伐。"
+    }},
+    "晚间运动": {{
+      "日程时间": "19:00-19:30",
+      "日程推送内容": "请进行20分钟的轻松散步或20分钟的轻松游泳。"
+    }}
+  }},
+  "修改原因": "原运动方案中餐后仅建议散步15-30分钟，考虑到用户处于肥胖状态，为了更有效地管理体重和促进健康，增加了早间和晚间运动内容，进一步增加身体活动量，有助于提高基础代谢率和改善心肺功能。"
+}}
                     """
         else:
             raise ValueError(f"不支持的任务类型: {task_type}")
@@ -3779,9 +3800,12 @@ class HealthExpertModel:
             prompt_template=prompt,
             **kwargs
         )
+        content = parse_generic_content_sync(content)
+        content = convert_nested_schedule(content)
+        content = enrich_schedules_with_cate_code(content)
 
         # 模型返回结构统一解析
-        return parse_generic_content_sync(content)
+        return content
 
     def get_nutritionist_feedback_from_conversation(self, **kwargs):
         """从会话记录中获取最像营养师点评的内容"""
