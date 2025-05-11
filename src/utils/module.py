@@ -3727,24 +3727,24 @@ def get_upcoming_exercise_schedule(group_schedule):
 
 def enrich_schedules_with_cate_code(data: dict) -> dict:
     for item in data.get("schedules", []):
-        name = item.get("schedule_name", "")
+        name = item.get("scheduleName", "")
         if "餐" in name:
-            item["cate_code"] = "Cookbook"
+            item["cateCode"] = "Cookbook"
         elif "运动" in name:
-            item["cate_code"] = "Sport"
+            item["cateCode"] = "Sport"
     return data
 
 
 def convert_nested_schedule(raw: dict) -> dict:
     result = {
-        "update_reason": "",
+        "modifyReason": "",
         "schedules": []
     }
 
     # 提取修改原因字段
     for key, val in raw.items():
         if isinstance(val, str) and "原因" in key:
-            result["update_reason"] = val
+            result["modifyReason"] = val
         elif isinstance(val, dict):
             # 提取 schedule 列表
             for schedule_name, schedule_data in val.items():
@@ -3762,10 +3762,38 @@ def convert_nested_schedule(raw: dict) -> dict:
 
                 if schedule_time and push_text:
                     result["schedules"].append({
-                        "schedule_name": schedule_name,
-                        "schedule_time": schedule_time,
-                        "push_text": push_text
+                        "scheduleName": schedule_name,
+                        "scheduleTime": schedule_time,
+                        "pushText": push_text
                     })
 
     return result
 
+
+def add_schedule_datetime(data: dict, date_str: str = None) -> dict:
+    schedules = data.get("schedules", [])
+    if not schedules:
+        return data
+
+    # 提取所有 scheduleTime 字符串
+    times = []
+    for item in schedules:
+        time_range = item.get("scheduleTime") or item.get("schedule_time")
+        if time_range and "-" in time_range:
+            start, end = time_range.split("-")
+            times.append((start.strip(), end.strip()))
+
+    if not times:
+        return data
+
+    # 使用今天作为日期，如果未指定
+    date_str = date_str or datetime.today().strftime("%Y-%m-%d")
+
+    # 第一个时间段的开始 + 最后一个时间段的结束
+    start_time = f"{date_str} {times[0][0]}:00"
+    end_time = f"{date_str} {times[-1][1]}:00"
+
+    # 设置到 data 中
+    data["startDateTime"] = start_time
+    data["endDateTime"] = end_time
+    return data

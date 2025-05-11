@@ -129,7 +129,7 @@ class RabbitMQConsumer:
                     envelope = data['envelope']
                     payload = data['payload']
                     contextData = {}
-                    contextData['context'] = envelope.get('metadata',{})
+                    contextData['context'] = data['payload'].get('transmitContent', {})
                     scene_type = payload['scenarioType']
                     if scene_type == 'BLOOD_SUGAR_ALERT':
                         params = {

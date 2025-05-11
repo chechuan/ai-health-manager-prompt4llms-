@@ -3749,7 +3749,7 @@ class HealthExpertModel:
 
         content = parse_generic_content_sync(content)
         if return_text:
-            return "".join([v for k, v in content.items()])
+            return {"text": "".join([v for k, v in content.items()])}
         else:
             return content
 
