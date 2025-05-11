@@ -28,7 +28,7 @@ from src.utils.module import (
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
     format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators,
     get_upcoming_exercise_schedule, parse_generic_content_sync, enrich_schedules_with_cate_code,
-    convert_nested_schedule
+    convert_nested_schedule, add_schedule_datetime
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace, callLLM
@@ -3803,6 +3803,7 @@ class HealthExpertModel:
         content = parse_generic_content_sync(content)
         content = convert_nested_schedule(content)
         content = enrich_schedules_with_cate_code(content)
+        content = add_schedule_datetime(content)
 
         # 模型返回结构统一解析
         return content

@@ -138,8 +138,6 @@ class RabbitMQConsumer:
                             "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
-                        if isinstance(gap_content, str):
-                            gap_content = {"text": gap_content}
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
                         param = param.model_dump()
                         logger.info(f'begin to request glucoseWarning\nparam:{param}')
