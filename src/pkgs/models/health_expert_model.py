@@ -3164,7 +3164,7 @@ class HealthExpertModel:
                 return await self._diet_eval_blood_sugar_laikang(**kwargs)
             elif manage_group == "血压管理":
                 return await self._diet_eval_blood_pressure_laikang(**kwargs)
-            elif manage_group == "减脂减重管理":
+            elif manage_group == "体脂体重管理":
                 return await self._diet_eval_weight_management_laikang(**kwargs)
         elif expert_system == "yaoshukun":
             if manage_group == "血糖管理" and indicator_type == "blood_sugar":
@@ -3173,7 +3173,7 @@ class HealthExpertModel:
                 return await self._diet_eval_dynamic_blood_sugar_yaoshukun(**kwargs)
             elif manage_group == "血压管理":
                 return await self._diet_eval_blood_pressure_yaoshukun(**kwargs)
-            elif manage_group == "减脂减重管理":
+            elif manage_group == "体脂体重管理":
                 return await self._diet_eval_weight_management_yaoshukun(**kwargs)
 
         raise ValueError("不支持的专家体系或管理群组/指标类型组合")
