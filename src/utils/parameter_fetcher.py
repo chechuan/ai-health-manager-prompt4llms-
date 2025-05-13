@@ -57,7 +57,7 @@ class ParameterFetcher:
 
         res = {
             "user_profile": mapped_data,
-            "expert_system": data.get("smartPlatform", "laikang"),
+            "expert_system": data.get("smartPlatform", "1"),
         }
 
         return res

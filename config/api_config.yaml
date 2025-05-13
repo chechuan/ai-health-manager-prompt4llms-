@@ -46,11 +46,11 @@ dev:
     parameter_config:
         api_key: ak-b03f8bc0-d17a-4d8d-90df-efcb0c380a11
         api_secret: as-575b4109-2013-468a-ae0f-ef70324b16af
-        host: https://gate-dev.op.laikang.com
+        host: https://gate-qa.op.laikang.com
         api_endpoints:
-            获取用户画像: /health-bot/customer/getBaseUserInfo
-            获取饮食信息: /health-bot/groupImage/diet/record
-            获取群日程: /health-bot/groupSchedule/getByGroupId
+            获取用户画像: /health-bot-test/customer/getBaseUserInfo
+            获取饮食信息: /health-bot-test/groupImage/diet/record
+            获取群日程: /health-bot-test/groupSchedule/getByGroupId
 
 prod:
     graph: http://10.4.164.240:26925
@@ -73,7 +73,7 @@ prod:
     parameter_config:
         api_key: ak-b03f8bc0-d17a-4d8d-90df-efcb0c380a11
         api_secret: as-575b4109-2013-468a-ae0f-ef70324b16af
-        host: https://gate-dev.op.laikang.com
+        host: https://gate.op.laikang.com
         api_endpoints:
             获取用户画像: /health-bot/customer/getBaseUserInfo
             获取饮食信息: /health-bot/groupImage/diet/record
