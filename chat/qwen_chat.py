@@ -297,7 +297,7 @@ class Chat:
                 return '打开功能页面'
             if '换回' in history[-1]['content'] and ('数字人' in history[-1]['content'] or '形象' in history[-1]['content'] or '皮肤' in history[-1]['content']):
                 return '换回数字人皮肤'
-        if len(history) > 1:
+        if len(history) > 0:
             h_p = "\n".join([("user" if i['role'] == "user" else "assistant")
                 + f": {i['content']}" for i in history[-5:]])
         else:
@@ -310,7 +310,7 @@ class Chat:
             prompt = kwargs.get('intentPrompt').format(h_p)
         else:
             scene_code = kwargs.get('scene_code')
-            if scene_code == 'doctor':
+            if scene_code in ['doctor', 'dm_expert_scene', "elderly_cognitive_training", "elderly_assistant_menu"]:
                 scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code'))
                 # logger.debug(f"Generated scene_prompt: {scene_prompt}")
                 prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p)

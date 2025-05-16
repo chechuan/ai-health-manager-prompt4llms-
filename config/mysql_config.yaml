@@ -1,9 +1,9 @@
 local:
-    ip: 10.39.10.28
+    ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
     port: 3306
-    user: root
+    user: lk_base_n_dev
     passwd: fpBase09@23aQdn
-    db_name: ai_health_manager_db
+    db_name: lk-h-aihealthmanager-alg
 dev:
     ip: pc-2ze23ih17gujd950v-ww.rwlb.rds.aliyuncs.com
     port: 3306

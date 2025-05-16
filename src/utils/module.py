@@ -263,6 +263,19 @@ def intent_init():
         "猜你想问": ("aigc_functions_generate_related_questions", "猜你想问"),
     }
 
+    # ==================== 老年认知训练 ====================
+    COGNITIVE_TRAINING_INTENTS = {
+        "记数大师": ("count_memory_game", "记数大师"),
+        "连数方格": ("grid_number_order", "连数方格"),
+        "彩画飞舞": ("sensory_stimulation_game", "彩画飞舞"),
+        "纵横方圆": ("shape_response_training", "纵横方圆"),
+        "风暴加法": ("math_speed_addition", "风暴加法"),
+        "认知训练": ("open_cognitive_training", "认知训练模块"),
+        "运动跟练": ("open_exercise_follow", "运动跟练模块"),
+        "饮食营养": ("open_diet_nutrition", "饮食营养模块"),
+        "成员管理": ("open_member_management", "成员管理模块"),
+    }
+
     # 复合条件意图
     COMPOUND_INTENTS = [
         (lambda t: "血压测量" in t or "测量血压" in t,
@@ -304,6 +317,7 @@ def intent_init():
         UTILITY_INTENTS,
         DAYLY_INTENTS,
         OTHER_INTENTS,
+        COGNITIVE_TRAINING_INTENTS
     ]:
         ALL_INTENTS.update(intent_dict)
     return ALL_INTENTS, COMPOUND_INTENTS
@@ -3797,3 +3811,24 @@ def add_schedule_datetime(data: dict, date_str: str = None) -> dict:
     data["startDateTime"] = start_time
     data["endDateTime"] = end_time
     return data
+
+
+async def normalize_meal_plans(meal_plans):
+    normalized = []
+
+    for meal in meal_plans:
+        # 1. ingredients_text：逗号换顿号，结尾加句号
+        ing = meal.get("ingredients_text", "").replace("，", ",")
+        ingredients = [i.strip() for i in ing.split(",") if i.strip()]
+        meal["ingredients_text"] = "、".join(ingredients) + "。"
+
+        # 2. steps：直接加序号 "1."，"2." ...
+        steps = meal.get("steps", [])
+        meal["steps"] = [f"{i + 1}.{step}" for i, step in enumerate(steps)]
+
+        # 3. image：新增字段
+        meal["image"] = ""
+
+        normalized.append(meal)
+
+    return normalized

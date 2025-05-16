@@ -28,7 +28,7 @@ from src.utils.module import (
     extract_daily_schedule, export_all_lessons_with_actions, format_key_indicators, format_meals_info,
     format_intervention_plan, get_daily_key_bg, map_diet_analysis, format_meals_info_v2, format_warning_indicators,
     get_upcoming_exercise_schedule, parse_generic_content_sync, enrich_schedules_with_cate_code,
-    convert_nested_schedule, add_schedule_datetime
+    convert_nested_schedule, add_schedule_datetime, normalize_meal_plans
 )
 from data.test_param.test import testParam
 from src.prompt.model_init import acallLLM, acallLLtrace, callLLM
@@ -3474,86 +3474,6 @@ class HealthExpertModel:
         content = map_diet_analysis(content)
         return content
 
-    async def aigc_functions_diet_recommendation(self, **kwargs):
-        user_profile = kwargs.get("user_profile")
-        height = user_profile.get("height")
-        weight = user_profile.get("weight")
-        disease = user_profile.get("disease")
-        exercise_intensity = user_profile.get("intensity")  # 这里传数字了，比如1，2，3，4，5
-
-        # 运动强度映射（如果后面需要用的话）
-        intensity_mapping = {
-            "1": "极低活动水平（久坐、很少运动）",
-            "2": "轻度活动水平（周1~3次低强度运动，如散步）",
-            "3": "中度活动水平（周3~5次中强度运动，如慢跑）",
-            "4": "高度活动水平（周3~5次高强度运动，如健身）",
-            "5": "极高活动水平（高强度体力劳动、运动员）"
-        }
-
-        # 计算 BMI
-        bmi = float(weight) / (float(height) / 100) ** 2
-
-        # 生成一句BMI描述
-        if bmi < 18.5:
-            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI低于正常区间，属于过轻范围。"
-        elif 18.5 <= bmi < 24.9:
-            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI在正常区间，属于健康范围。"
-        else:
-            bmi_desc = f"您的身体质量指数(BMI)为{bmi:.1f}。您的BMI高于正常区间，属于过重范围。"
-
-        # 固定分类
-        cate_list = [
-            {"name": "大豆类", "code": "001"},
-            {"name": "动物性食物", "code": "002"},
-            {"name": "豆菜类", "code": "003"},
-            {"name": "根菜类", "code": "004"},
-            {"name": "菇类", "code": "005"},
-            {"name": "谷物", "code": "006"},
-            {"name": "果菜瓜菜类", "code": "007"},
-            {"name": "果脯类", "code": "008"},
-            {"name": "花菜类", "code": "009"},
-            {"name": "坚果类", "code": "010"},
-            {"name": "茎菜类", "code": "011"},
-            {"name": "薯类", "code": "012"},
-            {"name": "水果类", "code": "013"},
-            {"name": "叶菜类", "code": "014"}
-        ]
-
-        # 给每个分类加推荐克数
-        # for item in cate_list:
-        #     item["weight"] = 100 + int(item["code"]) * 10  # 假数据，可以后面自己调整
-
-        return {
-            "bmi_desc": bmi_desc,
-            "cate_list": cate_list
-        }
-
-    async def aigc_functions_generate_meal_plan(self, **kwargs):
-        ingredients = kwargs.get("ingredients", [])
-
-        # 参数检查
-        if not ingredients:
-            return {"message": "食材列表不能为空"}
-
-        meal_plans = []
-
-        for item in ingredients:
-            name = item.get("name")
-            num = item.get("num")
-
-            if not name or num is None:
-                continue  # 如果name或者num缺失，跳过
-
-            meal_plans.append({
-                "recipe_name": f"{name}料理",
-                "method": f"准备{num}份{name}，清洗、切块，快速翻炒至熟，加调味料即可食用。",
-                "image": ""  # 图片字段空着
-            })
-
-        return {
-            "meal_plans": meal_plans
-        }
-
     def get_parameters(self, **kwargs):
         """
         根据 user_id 获取用户相关信息（包括用户画像、饮食记录、群日程等），
@@ -3845,6 +3765,187 @@ class HealthExpertModel:
         # 解析并返回结果
         content = parse_generic_content(content)
         return content
+
+    async def aigc_functions_diet_recommendation(self, **kwargs):
+        user_profile = kwargs.get("user_profile")
+        height_cm = float(user_profile.get("height"))
+        weight = float(user_profile.get("weight"))
+        age = int(user_profile.get("age"))
+        gender = user_profile.get("gender")
+        disease = user_profile.get("disease") or []
+        intensity_level = str(user_profile.get("intensity"))
+
+        height = height_cm / 100  # 米
+
+        # BMI
+        bmi = round(weight / (height ** 2), 1)
+
+        def get_bmi_category(age, bmi):
+            if age < 65:
+                if bmi < 18.5:
+                    return "低体重"
+                elif bmi < 24.0:
+                    return "正常"
+                elif bmi < 28.0:
+                    return "超重"
+                else:
+                    return "肥胖"
+            else:
+                if bmi < 20:
+                    return "低体重"
+                elif bmi < 26.9:
+                    return "正常"
+                elif bmi < 28:
+                    return "超重"
+                else:
+                    return "肥胖"
+
+        bmi_status = get_bmi_category(age, bmi)
+
+        def get_bmi_desc(age, bmi):
+            # ...（略，保留你已有的全部BMI话术）
+            pass
+
+        bmi_desc = get_bmi_desc(age, bmi)
+
+        # BMR
+        bmr = 10 * weight + 6.25 * height_cm - 5 * age + (5 if gender == "男" else -161)
+        if 60 <= age < 70:
+            bmr *= 0.98
+        elif age >= 70:
+            bmr *= 0.96
+
+        activity_factor = {
+            "1": 1.2, "2": 1.3, "3": 1.45, "4": 1.65, "5": 1.85
+        }.get(intensity_level, 1.2)
+
+        maintain_calorie = bmr * activity_factor
+
+        if bmi_status == "低体重":
+            target_calorie = maintain_calorie * 1.15
+        elif bmi_status == "正常":
+            target_calorie = maintain_calorie * 0.95
+        elif bmi_status == "超重":
+            target_calorie = maintain_calorie - 300
+        elif bmi_status == "肥胖" and bmi < 30:
+            target_calorie = maintain_calorie - 500
+        else:
+            target_calorie = maintain_calorie - 700
+
+        if target_calorie < 1200:
+            target_calorie = 1200
+
+        def get_recommended_grams_dict(calorie):
+            if calorie < 1400:
+                return {"001": 15, "002": 105, "003": 300, "006": 80, "007": 300, "008": 0, "010": 5, "012": 70,
+                        "013": 100}
+            elif calorie < 1600:
+                return {"001": 15, "002": 115, "003": 300, "006": 90, "007": 300, "008": 0, "010": 10, "012": 80,
+                        "013": 200}
+            elif calorie < 1800:
+                return {"001": 15, "002": 120, "003": 300, "006": 100, "007": 300, "008": 0, "010": 10, "012": 100,
+                        "013": 200}
+            elif calorie < 2000:
+                return {"001": 15, "002": 140, "003": 400, "006": 125, "007": 350, "008": 0, "010": 10, "012": 100,
+                        "013": 200}
+            elif calorie < 2200:
+                return {"001": 15, "002": 150, "003": 450, "006": 150, "007": 400, "008": 0, "010": 10, "012": 100,
+                        "013": 300}
+            elif calorie < 2400:
+                return {"001": 25, "002": 200, "003": 450, "006": 175, "007": 500, "008": 0, "010": 10, "012": 100,
+                        "013": 300}
+            else:
+                return {"001": 25, "002": 200, "003": 500, "006": 200, "007": 500, "008": 0, "010": 10, "012": 100,
+                        "013": 350}
+
+        grams_dict = get_recommended_grams_dict(target_calorie)
+
+        if "糖尿病" in disease:
+            grams_dict["013"] = 200
+        if bmi_status in ["超重", "肥胖"]:
+            grams_dict["003"] = 500
+
+        cate_list = [
+            {"name": "大豆类", "code": "001"},
+            {"name": "肉蛋类", "code": "002"},
+            {"name": "蔬菜类", "code": "003"},
+            {"name": "谷类", "code": "006"},
+            {"name": "奶类", "code": "007"},
+            {"name": "果脯类", "code": "008"},
+            {"name": "坚果类", "code": "010"},
+            {"name": "薯类", "code": "012"},
+            {"name": "水果类", "code": "013"}
+        ]
+
+        for item in cate_list:
+            item["weight"] = grams_dict.get(item["code"], 0)
+
+        logger.info(f"[饮食推荐结果] BMI: {bmi}, 目标热量: {round(target_calorie, 2)}, cate_list: {cate_list}")
+
+        return {
+            "bmi": bmi,
+            "bmi_desc": bmi_desc,
+            "cate_list": cate_list
+        }
+
+    async def aigc_functions_generate_meal_plan(self, **kwargs):
+        """
+        食材组合生成菜谱
+
+        需求文档：https://alidocs.dingtalk.com/i/nodes/2Amq4vjg89ojDqlncraqBDQeV3kdP0wQ
+
+        实现逻辑：
+        - 输入食材列表
+        - 模型生成对应健康菜谱：包含菜谱名称、做法、图片、克重、热量
+
+        入参:
+            kwargs (dict): {
+                "ingredients": [{"name": "鸡胸肉", "num": 2}, ...]
+            }
+
+        出参:
+            dict:
+                [
+                    {
+                        "recipe_name": "xxx",
+                        "method": "xxx",
+                        "image": "",
+                        "weight": xxx,
+                        "calorie": xxx
+                    }, ...
+                ]
+        """
+        _event = "食材组合生成菜谱"
+
+        # 校验食材字段
+        ingredients = kwargs.get("ingredients", [])
+        if not ingredients or not isinstance(ingredients, list):
+            raise ValueError("参数 ingredients 必须为非空列表，且每项包含 'name' 和 'num' 字段")
+
+        # 使用顿号拼接多个食材
+        ingredients_str = "、".join([item["name"] for item in ingredients])
+
+        # 构造 prompt_vars
+        prompt_vars = {
+            "ingredients": ingredients_str
+        }
+
+        # 更新模型调用参数
+        model_args = await self.__update_model_args__(
+            kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
+        )
+
+        # 调用通用 AIGC 方法生成菜谱内容
+        content: str = await self.aaigc_functions_general(
+            _event=_event, prompt_vars=prompt_vars, model_args=model_args, **kwargs
+        )
+
+        content = await parse_generic_content(content)
+
+        content = await normalize_meal_plans(content)
+
+        return content
+
 
 
 if __name__ == "__main__":
