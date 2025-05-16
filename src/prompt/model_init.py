@@ -16,7 +16,8 @@ from src.utils.Logger import logger
 from src.utils.module import (
     apply_chat_template, dumpJS, count_tokens, flatten_input_text, init_langfuse_trace_with_input,
     get_intent_name_and_tags, wrap_stream_with_langfuse, track_completion_with_langfuse,
-    async_init_langfuse_trace_with_input, async_wrap_stream_with_langfuse, async_track_completion_with_langfuse
+    async_init_langfuse_trace_with_input, async_wrap_stream_with_langfuse, async_track_completion_with_langfuse,
+    should_track
 )
 
 from src.utils.Logger import logger
@@ -561,14 +562,18 @@ async def acallLLtrace(
           f"cost: {time_cost}s"
     )
     # 非流式输出监控
-    await async_track_completion_with_langfuse(
-        trace=trace,
-        generation=generation,
-        langfuse=langfuse,
-        input_data=input_data,
-        output_data=ret,
-        tokenizer=tokenizer,
-    )
+
+    if await should_track(ret):
+        await async_track_completion_with_langfuse(
+            trace=trace,
+            generation=generation,
+            langfuse=langfuse,
+            input_data=input_data,
+            output_data=ret,
+            tokenizer=tokenizer,
+        )
+    else:
+        logger.info("[Langfuse] 跳过追踪（输出为空或无效）")
 
     return ret
 

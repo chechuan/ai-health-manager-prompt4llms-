@@ -3331,6 +3331,11 @@ async def async_track_completion_with_langfuse(
         input_tokens = await async_count_tokens(input_text, tokenizer) if tokenizer else 0
         output_tokens = await async_count_tokens(output_data, tokenizer) if tokenizer else 0
 
+        # 若输出 token 数为 0，跳过追踪
+        if output_tokens == 0:
+            logger.info("[Langfuse] 跳过追踪（output token 为 0）")
+            return
+
         usage = {
             "input": input_tokens,
             "output": output_tokens,
@@ -3859,6 +3864,24 @@ def get_dish_from_database(dish):
     logger.debug(f'dish dataset recall data: {json.dumps(target_dish)}')
     if not target_dish:
         logger.warning(f"No similar dish found for input: {dish}")
-        return None  # 或者 return {'name': dish, 'info': '未匹配到菜品'}
+        return {}  # 或者 return {'name': dish, 'info': '未匹配到菜品'}
 
     return target_dish
+
+
+async def should_track(output):
+    # 判断无效输出
+    if not output:
+        return False
+    if isinstance(output, str):
+        stripped = output.strip()
+        if not stripped:
+            return False
+        try:
+            parsed = json.loads(stripped)
+            if isinstance(parsed, (list, dict)) and not parsed:
+                return False
+        except Exception:
+            pass
+    return True
+
