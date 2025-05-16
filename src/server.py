@@ -1250,6 +1250,7 @@ def mount_aigc_functions(app: FastAPI):
         start_time = time.time()
         try:
             param = await async_accept_param_purge(request, endpoint=endpoint)
+            param["endpoint_name"] = "cognitive_improvement"
 
             response: Union[str, AsyncGenerator] = await health_expert_model.call_function(**param)
 
