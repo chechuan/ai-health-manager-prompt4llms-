@@ -3826,9 +3826,39 @@ async def normalize_meal_plans(meal_plans):
         steps = meal.get("steps", [])
         meal["steps"] = [f"{i + 1}.{step}" for i, step in enumerate(steps)]
 
-        # 3. image：新增字段
-        meal["image"] = ""
+        recipe_name = meal.get("recipe_name")
+        meal["image"] = get_dish_from_database(recipe_name).get("image")
 
         normalized.append(meal)
 
     return normalized
+
+
+def get_dish_from_database(dish):
+    # get_em('dish_embedding')
+    # return
+    # return read_dish_xlsx()
+    # # # inputs =
+
+    # 1. 向量/关键词匹配
+    # logger.debug(
+    #     "bce embedding模型输入： " + json.dumps(dish, ensure_ascii=False)
+    # )
+
+    ds = loadJS("data/dishes.json")
+    target_dish = {}
+    # import pdb
+    # pdb.set_trace()
+    for i, x in enumerate(ds):
+        if jaccard_text_similarity(x['name'], dish) < 0.5:
+            continue
+        if not target_dish and jaccard_text_similarity(x['name'], dish) >= 0.5:
+            target_dish = x
+        elif jaccard_text_similarity(x['name'], dish) > jaccard_text_similarity(x['name'], target_dish['name']):
+            target_dish = x
+    logger.debug(f'dish dataset recall data: {json.dumps(target_dish)}')
+    if not target_dish:
+        logger.warning(f"No similar dish found for input: {dish}")
+        return None  # 或者 return {'name': dish, 'info': '未匹配到菜品'}
+
+    return target_dish
