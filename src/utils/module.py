@@ -3869,19 +3869,25 @@ def get_dish_from_database(dish):
     return target_dish
 
 
-async def should_track(output):
-    # 判断无效输出
+async def should_track(output) -> bool:
+    """
+    判断是否应该追踪 Langfuse 输出：
+    - None、空字符串、空列表、空字典、字符串 '[]' / '{}' / '[ ]' 都视为无效输出
+    """
     if not output:
+        return False
+    if isinstance(output, (list, dict)) and len(output) == 0:
         return False
     if isinstance(output, str):
         stripped = output.strip()
-        if not stripped:
+        if stripped == "":
             return False
         try:
+            # 判断像 '[]'、'{}' 这样的 JSON 字符串
             parsed = json.loads(stripped)
-            if isinstance(parsed, (list, dict)) and not parsed:
+            if isinstance(parsed, (list, dict)) and len(parsed) == 0:
                 return False
         except Exception:
-            pass
+            pass  # 正常字符串，不影响追踪
     return True
 

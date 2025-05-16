@@ -420,16 +420,22 @@ async def acallLLtrace(
     aclient = openai.AsyncOpenAI()
 
     # 初始化 Langfuse 跟踪信息
-    trace, generation, langfuse, tokenizer, input_data = await async_init_langfuse_trace_with_input(
-        extra_params=extra_params,
-        model=model,
-        temperature=temperature,
-        top_p=top_p,
-        max_tokens=max_tokens,
-        stream=stream,
-        query=query,
-        history=history,
-    )
+    track_enabled = extra_params.get("name") != "健康用户主动标签提取"
+
+    if track_enabled:
+        trace, generation, langfuse, tokenizer, input_data = await async_init_langfuse_trace_with_input(
+            extra_params=extra_params,
+            model=model,
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+            stream=stream,
+            query=query,
+            history=history,
+        )
+    else:
+        trace = generation = langfuse = tokenizer = input_data = None
+
     # logger.info(f"Starting model invocation with query: {query}")
 
     if stream and stop:
@@ -562,8 +568,7 @@ async def acallLLtrace(
           f"cost: {time_cost}s"
     )
     # 非流式输出监控
-
-    if await should_track(ret):
+    if track_enabled:
         await async_track_completion_with_langfuse(
             trace=trace,
             generation=generation,
@@ -573,7 +578,7 @@ async def acallLLtrace(
             tokenizer=tokenizer,
         )
     else:
-        logger.info("[Langfuse] 跳过追踪（输出为空或无效）")
+        logger.info("[Langfuse] 跳过追踪（指定意图不追踪）")
 
     return ret
 
