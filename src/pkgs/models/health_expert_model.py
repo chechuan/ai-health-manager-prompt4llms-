@@ -3655,14 +3655,14 @@ class HealthExpertModel:
         warning_vitals = kwargs.get("warningVitalSigns")
         warning_indicators = format_warning_indicators(warning_vitals) if warning_vitals else None
 
-        messages = self.get_nutritionist_feedback_from_conversation(messages=messages)
-        print("三个小时内的饮食点评", messages)
+        nutritionist_feedback = self.get_nutritionist_feedback_from_conversation(messages=messages) if messages else ""
+        print("三个小时内的饮食点评", nutritionist_feedback)
 
         prompt_vars = {
             "user_profile": user_profile_str.rstrip("\n").rstrip(),
             "meals_info": f"## 3小时内的饮食信息\n{meals_info_str}" if meals_info_str else "",
             "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else "",
-            "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else ""
+            "diet_comment": f"## 3小时内营养师点评内容\n{nutritionist_feedback}" if nutritionist_feedback else ""
         }
 
         model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
@@ -3753,10 +3753,13 @@ class HealthExpertModel:
 
         _event = "营养师点评提取"
 
-        messages = kwargs.get("messages", [])
+        messages = kwargs.get("messages") or []
 
         messages = "\n".join(
-            f"{item['role']}：{item['content']}" for item in messages if item.get("role") and item.get("content"))
+            f"{str(item.get('role', ''))}：{str(item.get('content', ''))}"
+            for item in messages
+            if item.get("role") and item.get("content") is not None
+        )
 
         prompt_vars = {
             "messages": messages,

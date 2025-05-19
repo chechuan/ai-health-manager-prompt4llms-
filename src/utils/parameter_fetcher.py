@@ -191,8 +191,7 @@ class ParameterFetcher:
         page_size = 100
 
         # 去除微秒部分的时间格式
-        from_date = "2025-04-28 00:00:00"
-        # from_date = (datetime.now() - timedelta(hours=3)).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+        from_date = (datetime.now() - timedelta(hours=3)).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
         print(f"[DEBUG] 拉取聊天记录 groupId = {group_id}")
         print(f"[DEBUG] fromDate = {from_date}")

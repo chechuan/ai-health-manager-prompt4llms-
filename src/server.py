@@ -125,7 +125,78 @@ class RabbitMQConsumer:
                 def callback(ch, method, properties, body):
                     ch.basic_ack(delivery_tag=method.delivery_tag)
                     logger.info('消费者收到:{}'.format(body.decode('utf-8')))
-                    data = json.loads(json.loads(body.decode('utf-8')))
+                    # data = json.loads(json.loads(body.decode('utf-8')))
+                    data = {
+  "envelope": {
+    "messageId": "985be5df27244207a0e394f2a3a8c4ec",
+    "messageType": "SCENE",
+    "metadata": {
+      "contextId": "2ac40f24b9dd42adbc32d9d73ecdf7f3",
+      "groupId": "hb_test@group_1ZdofJrDGriTKO3v"
+    },
+    "timestamp": 1747646135278,
+    "traceId": "7e7f73653eca49c0be7907606faea3e6",
+    "userId": "51639",
+    "version": "1.0"
+  },
+  "payload": {
+    "candidateTasks": [
+      {
+        "confidence": 0,
+        "initialScore": 0,
+        "taskType": "TASK_HEALTH_ALERT",
+        "version": "1.0"
+      }
+    ],
+    "scenarioType": "BLOOD_SUGAR_ALERT",
+    "sceneDefinition": {
+      "events": [
+        {
+          "warningVitalSigns": [
+            {
+              "code": "XYZBXY001009",
+              "name": "随机血糖",
+              "value": "8.2",
+              "valueName": "血糖控制高",
+              "unit": "mmol/L",
+              "appendData": {
+                "vitalSignsSn": 2232430,
+                "userId": 51639,
+                "itemType": "DailyMonitor",
+                "itemTypeName": "日常监测",
+                "itemCode": "53FG",
+                "itemName": "随机血糖",
+                "itemValue": "8.2",
+                "itemValueUnit": "mmol/L",
+                "examTime": 1747646127000,
+                "baseItemCode": "XYZBXY001009",
+                "itemValueName": "血糖控制高",
+                "itemValueLevel": 1,
+                "dailyMonitorId": "184428",
+                "dataSource": 7,
+                "ext": {
+                  "appHomePageText": "今日随机血糖值高，请减少饮食量，增加运动量。",
+                  "deviceSn": "2222222JCP"
+                },
+                "createTime": 1747646128678,
+                "createBy": 51639
+              }
+            }
+          ]
+        }
+      ],
+      "summary": "血糖预警",
+      "title": "血糖预警"
+    },
+    "sceneId": "255d98756eb0401dadd2417d7a5308c7",
+    "sourceSignalIds": [],
+    "transmitContent": {
+      "contextId": "2ac40f24b9dd42adbc32d9d73ecdf7f3",
+      "groupId": "hb_test@group_1ZdofJrDGriTKO3v"
+    }
+  }
+}
+
                     envelope = data['envelope']
                     payload = data['payload']
                     contextData = {}
