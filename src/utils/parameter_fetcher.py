@@ -2,6 +2,7 @@ import requests
 import time
 import hashlib
 from typing import Dict
+from datetime import datetime, timedelta
 
 # 管理群组映射关系字典
 SCENE_MAPPING = {
@@ -174,6 +175,79 @@ class ParameterFetcher:
         management_type = SCENE_MAPPING.get(group_scene_tag_code, "未知管理类型")
 
         return management_type
+
+    def get_all_group_chat_records_recent_3_hours(self, group_id: str):
+        """
+        自动分页拉取过去3小时内的所有有效群聊消息。
+        仅保留 msgContent 存在且非 '[群日程消息]' 的文本，提取 userNick 和 content。
+        """
+        url = self.host + self.api_endpoints.get("获取群组聊天记录")
+        headers = self._generate_headers()
+        headers["Content-Type"] = "application/json"
+
+        all_records = []
+        last_msg_id = None
+        last_msg_seq = None
+        page_size = 100
+
+        # 去除微秒部分的时间格式
+        from_date = "2025-04-28 00:00:00"
+        # from_date = (datetime.now() - timedelta(hours=3)).replace(microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
+
+        print(f"[DEBUG] 拉取聊天记录 groupId = {group_id}")
+        print(f"[DEBUG] fromDate = {from_date}")
+
+        while True:
+            payload = {
+                "groupId": group_id,
+                "pageSize": page_size,
+                "fromDate": from_date
+            }
+
+            if last_msg_id:
+                payload["lastMsgId"] = last_msg_id
+            if last_msg_seq:
+                payload["lastMsgSeq"] = last_msg_seq
+
+            request_json = {"groupChatRecordReq": payload}
+            print(f"[DEBUG] 请求 payload = {request_json}")
+
+            response = requests.post(url=url, headers=headers, json=payload)
+
+            if response.status_code != 200:
+                raise Exception(f"获取聊天记录失败: {response.status_code} - {response.text}")
+
+            raw = response.json()
+            if not raw.get("success"):
+                raise Exception(f"聊天记录请求失败: {raw.get('message')}")
+
+            page_data = raw.get("data", [])
+            if not page_data:
+                break
+
+            # 只保留有意义的聊天内容
+            for msg in page_data:
+                content = msg.get("msgContent", "")
+                if content and isinstance(content, str) \
+                        and "[群日程消息]" not in content \
+                        and "此文本不应该显示" not in content \
+                        and "[图片]" not in content:
+                    base_info = msg.get("baseUserInfo", {})
+                    user_nick = base_info.get("userNick", "未知用户")
+                    all_records.append({
+                        "role": user_nick,
+                        "content": content,
+                        "timestamp": msg.get("msgTime")
+                    })
+
+            if len(page_data) < page_size:
+                break
+
+            last_msg_id = page_data[-1].get("id")
+            last_msg_seq = page_data[-1].get("msgSeq")
+
+        print(f"[DEBUG] 有效聊天记录条数：{len(all_records)}")
+        return all_records
 
     def get_parameters(self, user_id: str, group_id: str, start_time: str, end_time: str):
         """

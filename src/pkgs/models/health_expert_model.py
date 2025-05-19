@@ -2899,7 +2899,7 @@ class HealthExpertModel:
         logger.info(f"[打点] 用户记忆分组耗时: {time.time() - t2:.2f}s，共有用户数: {len(user_memories)}")
 
         # 3. 定义并发处理函数（带并发限制）
-        sem = Semaphore(10)  # 控制最多10个并发
+        sem = Semaphore(3)  # 控制最多10个并发
 
         async def process_user_limited(user_id: str, memory_list: List[str]) -> List[Dict]:
             async with sem:
@@ -3490,6 +3490,7 @@ class HealthExpertModel:
         profile_data = self.parameter_fetcher.get_user_profile(user_id)
         meals_info = self.parameter_fetcher.get_meals_info(group_id, start_time, end_time)
         group_schedule = self.parameter_fetcher.get_group_schedule(group_id, is_new)
+        messages = self.parameter_fetcher.get_all_group_chat_records_recent_3_hours(group_id)
 
         # 提取 expert_system（例如，血糖预警中用到）
         expert_system = profile_data.get("expert_system")
@@ -3615,7 +3616,8 @@ class HealthExpertModel:
             "meals_info": meals_info,
             "intent_code": intent_code,
             "group_schedule": exercise_schedule,
-            "prompt": prompt
+            "prompt": prompt,
+            "messages": messages
         }
 
     def aigc_functions_blood_sugar_warning(self, return_text: bool = True, **kwargs):
@@ -3640,6 +3642,7 @@ class HealthExpertModel:
         meals_info = params.get("meals_info")
         diet_comment = params.get("diet_comment")
         prompt = params.get("prompt")
+        messages = params.get("messages")
 
         # 更新 intent_code 到 kwargs 以确保下游使用一致
         kwargs["intentCode"] = intent_code
@@ -3651,6 +3654,9 @@ class HealthExpertModel:
 
         warning_vitals = kwargs.get("warningVitalSigns")
         warning_indicators = format_warning_indicators(warning_vitals) if warning_vitals else None
+
+        messages = self.get_nutritionist_feedback_from_conversation(messages=messages)
+        print("三个小时内的饮食点评", messages)
 
         prompt_vars = {
             "user_profile": user_profile_str.rstrip("\n").rstrip(),
@@ -3749,24 +3755,23 @@ class HealthExpertModel:
 
         messages = kwargs.get("messages", [])
 
-        messages = [i for i in messages if i["role"] == "assistant"]
-
-        messages = self.__compose_user_msg__("messages", messages)
+        messages = "\n".join(
+            f"{item['role']}：{item['content']}" for item in messages if item.get("role") and item.get("content"))
 
         prompt_vars = {
             "messages": messages,
         }
 
         # 调用通用的模型生成接口
-        model_args = self.__update_model_args__(
+        model_args = self.__update_model_args_sync__(
             kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0
         )
-        content = self.aaigc_functions_general(
+        content = self.aaigc_functions_general_sync(
             _event=_event, prompt_vars=prompt_vars, model_args=model_args, prompt_template=prompt, **kwargs
         )
 
         # 解析并返回结果
-        content = parse_generic_content(content)
+        content = parse_generic_content_sync(content)
         return content
 
     async def aigc_functions_diet_recommendation(self, **kwargs):

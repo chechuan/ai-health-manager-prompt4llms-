@@ -85,6 +85,7 @@ local:
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+        - aigc_functions_health_user_active_label
     DeepSeek-R1-Distill-32B:
         - aigc_functions_recommended_daily_calorie_intake_yaoshukun # 2025年03月30日 姚院专项_推荐每日饮食摄入热量值
         - aigc_functions_emotion_mind_adjustment # 2025年03月30日 情志调整心态
@@ -177,6 +178,7 @@ dev:
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+        - aigc_functions_health_user_active_label
     DeepSeek-R1-Distill-32B:
         - aigc_functions_recommended_daily_calorie_intake_yaoshukun # 2025年03月30日 姚院专项_推荐每日饮食摄入热量值
         - aigc_functions_emotion_mind_adjustment # 2025年03月30日 情志调整心态
@@ -267,3 +269,4 @@ prod:
         - aigc_functions_itinerary_summary # 2024年11月21日 生成行程总结
         - aigc_functions_test1230
         - aigc_functions_physician_consultation_decision_support_v2 # 2024年7月24日 医师问诊决策支持-v2
+        - aigc_functions_health_user_active_label
