@@ -3782,9 +3782,9 @@ def enrich_schedules_with_cate_code(data: dict) -> dict:
     for item in data.get("schedules", []):
         name = item.get("scheduleName", "")
         if "餐" in name:
-            item["cateCode"] = "Cookbook"
+            item["cateCode"] = "diet_schedule"
         elif "运动" in name:
-            item["cateCode"] = "Sport"
+            item["cateCode"] = "exercise_schedule"
     return data
 
 
