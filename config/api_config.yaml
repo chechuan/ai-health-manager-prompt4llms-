@@ -52,6 +52,7 @@ dev:
             获取用户画像: /health-bot-test/customer/getBaseUserInfo
             获取饮食信息: /health-bot-test/groupImage/diet/record
             获取群日程: /health-bot-test/groupSchedule/getByGroupId
+            获取群组聊天记录: /health-bot-test/im/getGroupChatRecord
 
 prod:
     graph: http://10.4.164.240:26925
@@ -79,3 +80,4 @@ prod:
             获取用户画像: /health-bot/customer/getBaseUserInfo
             获取饮食信息: /health-bot/groupImage/diet/record
             获取群日程: /health-bot/groupSchedule/getByGroupId
+            获取群组聊天记录: /health-bot/im/getGroupChatRecord
