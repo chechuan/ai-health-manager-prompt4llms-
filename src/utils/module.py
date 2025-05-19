@@ -3449,6 +3449,10 @@ async def format_key_indicators(key_indicators):
     result_lines = []
     indicator_type = key_indicators.get("type")
     data_list = key_indicators.get("data")
+
+    if not data_list or not isinstance(data_list, list):
+        return ""
+
     if indicator_type == "blood_sugar":
         result_lines.append("## 血糖数据：")
         for item in data_list:
@@ -3692,17 +3696,47 @@ def map_diet_analysis(diet_data: dict) -> dict:
     }
 
 
-async def format_warning_indicators(warning_indicators):
-    formatted = []
-    for warning in warning_indicators:
-        dt = warning.get("time", "")[:16]  # 例如 "2025-04-28 17:00"
-        date_part = dt[:10].replace("-", "年", 1).replace("-", "月", 1) + "日"
-        time_part = dt[11:]
-        value = warning.get("value")
-        name = warning.get("name")
+def format_warning_indicators(warning_vitals: list) -> str:
+    """
+    将 warningVitalSigns 列表转为可读格式：
+    "2025年4月28日，17:00，血糖值10"
+    """
+    if not isinstance(warning_vitals, list):
+        return ""
 
-        formatted.append(f"{date_part} {time_part}，{name}{value}")
-    return "\n".join(formatted)
+    from datetime import datetime
+    import json
+
+    lines = []
+
+    for item in warning_vitals:
+        try:
+            append_data_raw = item.get("appendData", {})
+            # 支持字符串或字典
+            if isinstance(append_data_raw, str):
+                append_data = json.loads(append_data_raw)
+            elif isinstance(append_data_raw, dict):
+                append_data = append_data_raw
+            else:
+                append_data = {}
+
+            # 获取时间
+            timestamp = append_data.get("examTime")
+            dt_str = "未知时间"
+            if isinstance(timestamp, (int, float)):
+                dt = datetime.fromtimestamp(timestamp / 1000)
+                dt_str = dt.strftime("%Y年%m月%d日，%H:%M")
+
+            # 获取名称和值
+            value = item.get("value") or append_data.get("itemValue") or "未知值"
+            name = item.get("name") or append_data.get("itemName") or "未知指标"
+
+            lines.append(f"{dt_str}，{name}值{value}")
+        except Exception as e:
+            # 某条出错就跳过，不影响整体
+            lines.append("【指标解析失败】")
+
+    return "\n".join(lines)
 
 
 def format_meals_info_v2(meals_info):

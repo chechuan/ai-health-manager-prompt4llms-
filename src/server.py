@@ -131,11 +131,20 @@ class RabbitMQConsumer:
                     contextData = {}
                     contextData['context'] = data['payload'].get('transmitContent', {})
                     scene_type = payload['scenarioType']
+                    warning_vitals = []
+
+                    # 安全获取 warningVitalSigns
+                    try:
+                        warning_vitals = payload.get("sceneDefinition", {}).get("events", [{}])[0].get(
+                            "warningVitalSigns", [])
+                    except Exception as e:
+                        logger.warning(f"解析 warningVitalSigns 失败: {e}")
                     if scene_type == 'BLOOD_SUGAR_ALERT':
                         params = {
                             "intentCode": "aigc_functions_blood_sugar_warning",  # 血糖预警服务
                             "user_id": envelope.get('userId', ''),  # 用户ID
-                            "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
+                            "group_id": envelope.get('metadata', {}).get('groupId', ''),  # 群组ID
+                            "warningVitalSigns": warning_vitals  # 传入预警指标
                         }
                         gap_content = health_expert_model.aigc_functions_blood_sugar_warning(**params)
                         param = TaskParams(taskType='glucoseWarning', contextData=contextData, callBackData=gap_content)
@@ -148,7 +157,8 @@ class RabbitMQConsumer:
                         params = {
                             "intentCode": "aigc_functions_update_exercise_schedule",
                             "user_id": envelope.get('userId', ''),  # 用户ID
-                            "group_id": envelope.get('metadata', {}).get('groupId', '')  # 群组ID
+                            "group_id": envelope.get('metadata', {}).get('groupId', ''),  # 群组ID
+                            "warningVitalSigns": warning_vitals  # 传入预警指标
                         }
                         sch_content = health_expert_model.aigc_functions_update_exercise_schedule(**params)
                         if not sch_content:

@@ -3648,13 +3648,15 @@ class HealthExpertModel:
         user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
 
         meals_info_str = format_meals_info_v2(meals_info) if meals_info else None
-        warning_indicators = None
+
+        warning_vitals = kwargs.get("warningVitalSigns")
+        warning_indicators = format_warning_indicators(warning_vitals) if warning_vitals else None
 
         prompt_vars = {
             "user_profile": user_profile_str.rstrip("\n").rstrip(),
-            "meals_info": f"## 3小时内的饮食信息\n{meals_info_str}" if meals_info_str else None,
-            "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else None,
-            "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else None
+            "meals_info": f"## 3小时内的饮食信息\n{meals_info_str}" if meals_info_str else "",
+            "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else "",
+            "diet_comment": f"## 3小时内营养师点评内容\n{diet_comment}" if diet_comment else ""
         }
 
         model_args = self.__update_model_args_sync__(kwargs, temperature=0.7, top_p=1, repetition_penalty=1.0)
@@ -3691,22 +3693,23 @@ class HealthExpertModel:
 
         user_profile = params.get("user_profile")
         group_schedule = params.get("group_schedule")
-        warning_indicators = params.get("warning_indicators")
-        intent_code = kwargs.get("intentCode")
+        intent_code = params.get("intentCode")
         prompt = params.get("prompt")
 
-        # 格式化内容
+        # 格式化内容yige
         user_profile_str = self.__compose_user_msg_sync__("user_profile", user_profile)
-        warning_indicators_str = None
         result = self.aigc_functions_blood_sugar_warning(return_text=False, **kwargs)
         exercise_suggestions = result.get("运动建议")
+
+        warning_vitals = kwargs.get("warningVitalSigns")
+        warning_indicators = format_warning_indicators(warning_vitals) if warning_vitals else None
 
         # 构建 prompt_vars
         prompt_vars = {
             "user_profile": user_profile_str.rstrip("\n").rstrip(),
-            "warning_indicators": f"## 预警指标\n{warning_indicators_str}" if warning_indicators_str else None,
-            "exercise_suggestions": f"## 运动建议\n{exercise_suggestions}" if exercise_suggestions else None,
-            "group_schedule": f"## 当前运动日程\n{group_schedule}" if group_schedule else None
+            "warning_indicators": f"## 预警指标\n{warning_indicators}" if warning_indicators else "",
+            "exercise_suggestions": f"## 运动建议\n{exercise_suggestions}" if exercise_suggestions else "",
+            "group_schedule": f"## 原运动日程\n{group_schedule}" if group_schedule else ""
         }
 
         # 构建模型参数
