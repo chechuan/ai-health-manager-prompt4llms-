@@ -361,6 +361,11 @@ Begin!"""
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
 
+        if kwargs.get("mode") == "deepseek":
+            model = "DeepSeek-R1-Distill-32B"
+        else:
+            model = "Qwen1.5-32B-Chat"
+
         # ================== 提取意图 & 获取 Langfuse 配置 ====================
         intent_code = "other"
         user_id = kwargs.get("customId", "anonymous")
@@ -368,7 +373,7 @@ Begin!"""
         # 调用模型
         response = callLLM(
             history=messages,
-            model="Qwen1.5-32B-Chat",
+            model=model,
             temperature=0.7,
             top_p=0.8,
             n=1,

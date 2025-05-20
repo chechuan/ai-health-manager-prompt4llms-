@@ -2179,6 +2179,60 @@ def create_app():
 
             return StreamingResponse(error_generator(), media_type="text/event-stream")
 
+    @app.route("/chat_deepseek", methods=["POST"])
+    async def get_chat_deepseek(request: Request):
+        global chat
+
+        start_time = time.time()
+        try:
+            # 获取参数并设置默认 tags 和 endpoint_name
+            param = await accept_param(request, endpoint="/chat_deepseek")
+            param['tags'] = ["chat_deepseek", "会话生成", "对话管理", "用户交互"]
+            param['endpoint_name'] = "chat_deepseek"  # 设置端点名称
+
+            generator: AsyncGenerator = chat_v2.general_yield_result(
+                sys_prompt=param.get("prompt"),
+                mid_vars=[],
+                use_sys_prompt=False,
+                **param,
+            )
+
+            # 包装生成器，记录数据
+            wrapped_generator = logging_wrapper(generator, param, start_time)
+
+            user_id = param.get("customId", "unknown")
+            messages = param.get("history", [])
+            # **异步调用 mem0 记录对话**
+            if hasattr(gsr, "mem0_url") and gsr.mem0_url:
+                try:
+                    asyncio.create_task(call_mem0_add_memory(gsr.mem0_url, user_id, messages))
+                except Exception as mem0_err:
+                    pass
+                    # logger.exception(f"mem0 调用失败: {mem0_err}")
+
+            # 原逻辑保持不变
+            result = decorate_chat_complete(
+                wrapped_generator,  # 使用包装后的生成器
+                return_mid_vars=False,
+                return_backend_history=True
+            )
+
+            # 返回流式响应
+            return StreamingResponse(result, media_type="text/event-stream")
+
+        except Exception as err:
+            logger.exception(err)
+
+            # 异常处理返回流式错误
+            async def error_generator():
+                yield json.dumps({"error": repr(err)}, ensure_ascii=False)
+
+            end_time = time.time()
+            # 创建异步任务记录监控数据
+            asyncio.create_task(record_monitoring_data([], param, start_time, end_time))
+
+            return StreamingResponse(error_generator(), media_type="text/event-stream")
+
     @app.route("/chat/complete", methods=["post"])
     async def _chat_complete(request: Request):
         """demo,主要用于展示返回的中间变量"""
