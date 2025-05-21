@@ -494,7 +494,7 @@ class Chat_v2:
             return content
 
     def chatter_gaily_new(self, mid_vars, **kwargs):
-        """组装mysql中闲聊对应的prompt，支持 mode=deepseek 跳过ReAct流程"""
+        """组装mysql中闲聊对应的prompt"""
 
         def __chatter_gaily_compose_func_reply__(messages):
             """拼接func中回复的内容到history中, 最终的history只有role/content字段"""
@@ -507,30 +507,19 @@ class Chat_v2:
                     role = i["role"]
                     content = f"{func_args['arguments']}"
                     history.append({"role": role, "content": content})
-            return history[-8:]  # 只保留最近 8 条
+            # 2024年1月24日13:54:32 闲聊轮次太多 保留4轮历史
+            history = history[-8:]
+            return history
 
         intentCode = kwargs.get("intentCode", "other")
         messages = [i for i in kwargs["history"] if i.get("intentCode") == intentCode]
-        mode = kwargs.get("mode", "")
+        # messages = __chatter_gaily_compose_func_reply__(messages)
 
-        # ✳️ 深度模型直聊模式
-        if mode == "deepseek":
-            messages = __chatter_gaily_compose_func_reply__(messages)
-            content, messages = self.chatter_assistant.run(messages, kwargs)
-            self.update_mid_vars(
-                mid_vars,
-                key="日常闲聊-deepseek",
-                input_text=json.dumps(messages, ensure_ascii=False),
-                output_text=content,
-            )
-            return messages if kwargs.get("return_his") else content
-
-        # ✳️ 默认 ReAct 推理模式
         next_step, messages = self.chatter_assistant.get_next_step(messages)
         self.update_mid_vars(
             mid_vars,
             key="日常闲聊-next_step",
-            input_text=json.dumps(messages, ensure_ascii=False),
+            input_text=messages,
             output_text=next_step,
         )
 
@@ -541,6 +530,12 @@ class Chat_v2:
             content = history[-1]["content"]
             messages[-1]["function_call"]["name"] = "AskHuman"
             messages[-1]["function_call"]["arguments"] = content
+        # elif next_step == "searchEngine":
+        #     history, dataSource = self.funcall._call(out_history=messages, intentCode=intentCode, mid_vars=mid_vars)
+        #     content = history[-1]["content"]
+        #     messages[-1]['function_call']['name'] = 'AskHuman'
+        #     messages[-1]['function_call']['arguments'] = content
+        # elif next_step == "AskHuman":
         else:
             content, messages = self.chatter_assistant.run(messages, kwargs)
             self.update_mid_vars(
@@ -549,8 +544,13 @@ class Chat_v2:
                 input_text=json.dumps(messages, ensure_ascii=False),
                 output_text=content,
             )
+        # else:
+        #     content, messages = self.chatter_assistant.run(messages)
 
-        return messages if kwargs.get("return_his") else content
+        if kwargs.get("return_his"):
+            return messages
+        else:
+            return content
 
     def chatter_gaily_knowledge(self, mid_vars, **kwargs):
         """组装mysql中闲聊对应的prompt"""
@@ -754,7 +754,10 @@ class Chat_v2:
 
             logger.info(f"Process message {kwargs.get('history')}")
 
-            _iterable: AsyncGenerator = self.pipeline(*args, **kwargs)
+            if kwargs.get("mode") == "deepseek":
+                _iterable = self.chatter_assistant.run_yield(history=kwargs["history"], kwargs=kwargs)
+            else:
+                _iterable = self.pipeline(*args, **kwargs)
             # while True:
             async for yield_item in _iterable:
                 try:

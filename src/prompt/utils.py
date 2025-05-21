@@ -9,8 +9,9 @@
 import json
 import re
 import sys
-from typing import Dict
+from typing import Dict, AsyncGenerator, List
 from datetime import datetime
+from time import time
 
 import openai
 from src.utils.resources import InitAllResource
@@ -21,7 +22,7 @@ from src.utils.module import (
 )
 
 sys.path.append(".")
-from src.prompt.model_init import callLLM
+from src.prompt.model_init import callLLM, acallLLtrace
 from src.utils.Logger import logger
 
 
@@ -361,11 +362,6 @@ Begin!"""
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
 
-        if kwargs.get("mode") == "deepseek":
-            model = "DeepSeek-R1-Distill-32B"
-        else:
-            model = "Qwen1.5-32B-Chat"
-
         # ================== 提取意图 & 获取 Langfuse 配置 ====================
         intent_code = "other"
         user_id = kwargs.get("customId", "anonymous")
@@ -373,7 +369,7 @@ Begin!"""
         # 调用模型
         response = callLLM(
             history=messages,
-            model=model,
+            model="Qwen1.5-32B-Chat",
             temperature=0.7,
             top_p=0.8,
             n=1,
@@ -411,6 +407,143 @@ Begin!"""
             )
 
         return content, history
+
+    async def run_yield(self, history: List[Dict], kwargs: Dict) -> AsyncGenerator[Dict, None]:
+        """
+        DeepSeek 模式流式输出，使用 acallLLtrace 调用模型，基于 <think> 标签判断输出类型，支持思考时间和总时长，并在最后追加完整内容。
+        """
+        custom_id = kwargs.get("customId", "anonymous")
+
+        if kwargs.get("mode") == "deepseek":
+            messages = [{"role": m["role"], "content": m["content"]} for m in history]
+        else:
+            messages = self.__compose_func_reply__(history)
+
+        messages = [{"role": "system", "content": "You are a helpful assistant"}] + messages
+        logger.debug(f"闲聊 LLM Input (stream):\n{json.dumps(messages, ensure_ascii=False)}")
+
+        model = "DeepSeek-R1-Distill-32B"
+        extra_params = {
+            "langfuse": self.gsr.langfuse_client,
+            "user_id": custom_id,
+            "session_id": "anonymous",
+            "tokenizer": self.gsr.qwen_tokenizer,
+            "intent_code": "other",
+            "name": "chat_deepseek",
+            "tags": ["chat_deepseek", "日常闲聊"],
+            "release": "v1.0.0",
+            "metadata": {"source": "deepseek-run"},
+        }
+        model_args = {
+            "temperature": 0.7,
+            "top_p": 0.8,
+            "max_tokens": 1024,
+            "stream": True,
+        }
+
+        final_content = ""
+        seen_think = False
+        in_thinking = False
+        force_thinking_next = False
+        think_start_time = None
+        total_start_time = time()
+
+        try:
+            stream_response = await acallLLtrace(
+                model=model,
+                history=messages,
+                extra_params=extra_params,
+                **model_args
+            )
+
+            async for chunk in stream_response:
+                delta = chunk.choices[0].delta
+                if not delta or not hasattr(delta, "content"):
+                    continue
+
+                message = delta.content
+                final_content += message
+
+                if "<think>" in message:
+                    in_thinking = True
+                    seen_think = True
+                    think_start_time = time()
+
+                thinking_time = None
+                if "</think>" in message:
+                    in_thinking = False
+                    force_thinking_next = True
+                    if think_start_time:
+                        thinking_time = round(time() - think_start_time)
+
+                if in_thinking or force_thinking_next or not seen_think:
+                    msg_type = "Thinking"
+                else:
+                    msg_type = "Result"
+
+                if force_thinking_next:
+                    force_thinking_next = False
+
+                seen_think = True
+
+                data_block = {
+                    "type": msg_type,
+                    "message": message,
+                    "intentCode": "other",
+                    "init_intent": False,
+                    "dataSource": "语言模型",
+                    "intentDesc": "日常对话",
+                    "end": False,
+                }
+
+                if thinking_time is not None:
+                    data_block["thinkingTime"] = thinking_time
+
+                yield {
+                    "data": data_block,
+                    "mid_vars": [],
+                    "history": [],
+                    "appendData": {}
+                }
+
+            total_duration = round(time() - total_start_time)
+
+            yield {
+                "data": {
+                    "type": "Result",
+                    "message": "",
+                    "intentCode": "other",
+                    "init_intent": False,
+                    "dataSource": "语言模型",
+                    "intentDesc": "日常对话",
+                    "end": True,
+                    "totalTime": total_duration
+                },
+                "mid_vars": [],
+                "history": history + [{
+                    "role": "assistant",
+                    "content": final_content,
+                    "intentCode": "other",
+                    "function_call": {
+                        "name": "convComplete",
+                        "arguments": final_content
+                    }
+                }],
+                "appendData": {}
+            }
+
+        except Exception as e:
+            logger.exception("流式生成失败")
+            yield {
+                "data": {
+                    "type": "Error",
+                    "message": repr(e),
+                    "end": True,
+                },
+                "mid_vars": [],
+                "history": [],
+                "appendData": {}
+            }
 
     def generate_chat_response(self, messages):
         system_prompt = """你是由来康生命研发的智小伴, 你模拟极其聪明的真人和我聊天，请回复简洁精炼，100字以内。

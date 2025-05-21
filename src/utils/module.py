@@ -3565,6 +3565,10 @@ def get_meal_name(time_str):
 async def get_daily_key_bg(bg_info, diet_info):
     res = []
     buckets = OrderedDict()
+    data = bg_info.get("data") if isinstance(bg_info, dict) else None
+    if not data:
+        return "暂无血糖数据，无法进行血糖分析。"
+
     processed_blood_glucose_data = [
         {**entry, 'time': entry['datetime'], 'value': float(entry['value'])}
         for entry in bg_info.get("data")
@@ -3924,39 +3928,3 @@ async def should_track(output) -> bool:
         except Exception:
             pass  # 正常字符串，不影响追踪
     return True
-
-
-a = [
-            {
-              "code": "XYZBXY001008",
-              "name": "空腹血糖",
-              "value": "28",
-              "valueName": "血糖控制高危",
-              "unit": "mmol/L",
-              "appendData": {
-                "vitalSignsSn": 2232479,
-                "userId": 21419,
-                "itemType": "DailyMonitor",
-                "itemTypeName": "日常监测",
-                "itemCode": "06EX",
-                "itemName": "空腹血糖",
-                "itemValue": "28",
-                "itemValueUnit": "mmol/L",
-                "examTime": 1747704199000,
-                "examTime_readable": "2025-05-20 09:03:19",
-                "baseItemCode": "XYZBXY001008",
-                "itemValueName": "血糖控制高危",
-                "itemValueLevel": 2,
-                "itemMonitorPeriod": "空腹",
-                "dailyMonitorId": "184475",
-                "dataSource": 1,
-                "tenantId": 1,
-                "createTime": 1747704205539,
-                "createBy": 8
-              }
-            }
-          ]
-
-
-b = format_warning_indicators(a)
-print(b)
