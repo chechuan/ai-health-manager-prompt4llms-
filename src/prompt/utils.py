@@ -489,10 +489,6 @@ Begin!"""
                 data_block = {
                     "type": msg_type,
                     "message": message,
-                    "intentCode": "other",
-                    "init_intent": False,
-                    "dataSource": "语言模型",
-                    "intentDesc": "日常对话",
                     "end": False,
                 }
 
@@ -500,10 +496,7 @@ Begin!"""
                     data_block["thinkingTime"] = thinking_time
 
                 yield {
-                    **data_block,
-                    "mid_vars": [],
-                    "history": [],
-                    "appendData": {}
+                    **data_block
                 }
 
             total_duration = round(time() - total_start_time)
