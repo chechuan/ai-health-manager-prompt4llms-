@@ -762,13 +762,17 @@ class Chat_v2:
             async for yield_item in _iterable:
                 try:
                     # yield_item = next(_iterable)
-                    if not yield_item["data"].get("type"):
-                        yield_item["data"]["type"] = "Result"
-                    if yield_item["data"]["type"] == "Result" and not yield_item[
-                        "data"
-                    ].get("dataSource"):
-                        yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
-                    yield yield_item
+                    if kwargs.get("mode") == "deepseek":
+                        # DeepSeek 模式：不做任何结构修改，直接 yield
+                        yield yield_item
+                    else:
+                        if not yield_item["data"].get("type"):
+                            yield_item["data"]["type"] = "Result"
+                        if yield_item["data"]["type"] == "Result" and not yield_item[
+                            "data"
+                        ].get("dataSource"):
+                            yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
+                        yield yield_item
                 except StopIteration as err:
                     break
 
