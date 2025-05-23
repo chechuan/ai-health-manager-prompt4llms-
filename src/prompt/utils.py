@@ -500,7 +500,7 @@ Begin!"""
                     data_block["thinkingTime"] = thinking_time
 
                 yield {
-                    "data": data_block,
+                    **data_block,
                     "mid_vars": [],
                     "history": [],
                     "appendData": {}
@@ -509,16 +509,14 @@ Begin!"""
             total_duration = round(time() - total_start_time)
 
             yield {
-                "data": {
-                    "type": "Result",
-                    "message": "",
-                    "intentCode": "other",
-                    "init_intent": False,
-                    "dataSource": "语言模型",
-                    "intentDesc": "日常对话",
-                    "end": True,
-                    "totalTime": total_duration
-                },
+                "type": "Result",
+                "message": "",
+                "intentCode": "other",
+                "init_intent": False,
+                "dataSource": "语言模型",
+                "intentDesc": "日常对话",
+                "end": True,
+                "totalTime": total_duration,
                 "mid_vars": [],
                 "history": history + [{
                     "role": "assistant",
@@ -535,11 +533,9 @@ Begin!"""
         except Exception as e:
             logger.exception("流式生成失败")
             yield {
-                "data": {
-                    "type": "Error",
-                    "message": repr(e),
-                    "end": True,
-                },
+                "type": "Error",
+                "message": repr(e),
+                "end": True,
                 "mid_vars": [],
                 "history": [],
                 "appendData": {}
