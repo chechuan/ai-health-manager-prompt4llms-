@@ -1423,15 +1423,30 @@ def mount_multimodal_endpoints(app: FastAPI):
     @app.route("/func_eval/diet_recog_customer", methods=["post"])
     async def _func_eval_diet_recog_customer(request: Request):
         """C端菜品识别，提取菜品名称、数量、单位、克重、能量信息"""
+        endpoint = "/func_eval/diet_recog_customer"
+        endpoint_name = "diet_recog_customer"
+        start_time = time.time()
+
         try:
-            param = await async_accept_param_purge(request, endpoint="/func_eval/diet_recog_customer")
+            param = await async_accept_param_purge(request, endpoint=endpoint)
+            param["endpoint_name"] = endpoint_name
+            param["tags"] = ["diet_recognition", "菜品识别", "健康评估"]
+
             ret = await multimodal_model.diet_recog_customer(**param)
-            ret = make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+
+            end_time = time.time()
+            await record_monitoring_data([ret], param, start_time, end_time)
+
+            return make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
+
         except Exception as err:
             logger.exception(err)
-            ret = make_result(head=500, msg=repr(err))
-        finally:
-            return ret
+            ret = {"head": 500, "msg": repr(err), "items": None}
+
+            end_time = time.time()
+            await record_monitoring_data([ret], param if "param" in locals() else {}, start_time, end_time)
+
+            return make_result(head=ret["head"], items=ret["items"], msg=ret["msg"])
 
     @app.route("/func_eval/diet_eval", methods=["post"])
     async def _func_eval_diet_eval(request: Request):
