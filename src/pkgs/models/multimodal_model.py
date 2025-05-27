@@ -21,6 +21,7 @@ import time
 from src.utils.resources import InitAllResource
 from src.utils.Logger import logger
 from src.prompt.model_init import acallLLM, callLLM
+from src.utils.module import check_image_accessible
 
 
 class MultiModalModel:
@@ -219,10 +220,9 @@ class MultiModalModel:
             return self._get_result(400, {}, "image_url is required and cannot be empty.")
 
         # 检查图片 URL 是否可访问
-        async with aiohttp.ClientSession() as session:
-            async with session.head(image_url) as response:
-                if not (response.status == 200):
-                    return self._get_result(400, {}, "image_url is not accessible.")
+        accessible = await check_image_accessible(image_url)
+        if not accessible:
+            return self._get_result(400, {}, "image_url is not accessible.")
 
         # 直接调用多模态大模型识别菜品名称以及数量
         messages = [{

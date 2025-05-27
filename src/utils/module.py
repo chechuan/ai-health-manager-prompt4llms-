@@ -6,6 +6,7 @@
 """
 
 import sys
+import ssl
 import time
 import json
 import re
@@ -3894,3 +3895,36 @@ async def should_track(output) -> bool:
         except Exception:
             pass  # 正常字符串，不影响追踪
     return True
+
+
+async def check_image_accessible(image_url: str, timeout: int = 5) -> bool:
+    """
+    检查图片链接是否可访问。优先用 HEAD 方法，如果失败则 fallback 用 GET。
+    遇到异常、网络问题、SSL 失败等都会统一返回 False。
+    """
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+
+    async with aiohttp.ClientSession() as session:
+        # Step 1: HEAD 尝试
+        try:
+            async with session.head(image_url, timeout=timeout, ssl=ssl_ctx) as response:
+                logger.debug(f"[check_image_accessible] HEAD {image_url} -> {response.status}")
+                if response.status == 200:
+                    return True
+                logger.warning(f"[check_image_accessible] HEAD returned {response.status} for: {image_url}")
+        except Exception as e:
+            logger.warning(f"[check_image_accessible] HEAD failed: {image_url} | err: {repr(e)}")
+
+        # Step 2: fallback 用 GET 再试一次
+        try:
+            async with session.get(image_url, timeout=timeout, ssl=ssl_ctx) as response:
+                logger.debug(f"[check_image_accessible] GET {image_url} -> {response.status}")
+                if response.status == 200:
+                    return True
+                logger.error(f"[check_image_accessible] GET returned {response.status} for: {image_url}")
+        except Exception as e:
+            logger.exception(f"[check_image_accessible] GET failed: {image_url} | err: {repr(e)}")
+
+    return False
