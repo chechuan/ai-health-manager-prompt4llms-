@@ -310,7 +310,7 @@ class Chat:
             prompt = kwargs.get('intentPrompt').format(h_p)
         else:
             scene_code = kwargs.get('scene_code')
-            if scene_code in ['doctor', 'dm_expert_scene', "elderly_cognitive_training", "elderly_assistant_menu"]:
+            if scene_code in ['doctor', 'dm_expert_scene', "elderly_cognitive_training"]:
                 scene_prompt = get_parent_scene_intent(self.prompt_meta_data['intent'], kwargs.get('scene_code'))
                 # logger.debug(f"Generated scene_prompt: {scene_prompt}")
                 prompt = self.prompt_meta_data['intent']['意图模版']['description'].format(scene_prompt, h_p)
@@ -558,13 +558,22 @@ class Chat:
         mid_vars = kwargs.get('mid_vars', [])
         task = kwargs.get('task', '')
         input_prompt = kwargs.get('prompt', [])
+        scene_code = kwargs.get('scene_code')
 
         if task == 'verify' and input_prompt:
-            intent, desc = get_intent(self.cls_intent_verify(history, mid_vars,
-                input_prompt),self.global_share_resource.all_intent,self.global_share_resource.com_intent)
+            intent, desc = get_intent(
+                self.cls_intent_verify(history, mid_vars, input_prompt),
+                self.global_share_resource.all_intent,
+                self.global_share_resource.com_intent,
+                scene_code=scene_code
+            )
         else:
-            intent, desc = get_intent(self.cls_intent(history, mid_vars, **kwargs),
-                                      self.global_share_resource.all_intent,self.global_share_resource.com_intent)
+            intent, desc = get_intent(
+                self.cls_intent(history, mid_vars, **kwargs),
+                self.global_share_resource.all_intent,
+                self.global_share_resource.com_intent,
+                scene_code=scene_code
+            )
         if self.intent_map['callout'].get(intent):
             out_text = {'message':get_doc_role(intent),
                         'intentCode':'doc_role', 'processCode':'trans_back',

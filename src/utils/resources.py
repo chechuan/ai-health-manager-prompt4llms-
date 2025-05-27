@@ -60,7 +60,7 @@ class InitAllResource:
         self.aclient = openai.AsyncOpenAI()
 
         self.weather_api_config = self.__load_weather_api_config__()
-        self.all_intent, self.com_intent = intent_init()
+        self.all_intent, self.com_intent = intent_init()[:2]
 
         # **预加载家康宝数据**
         self.jia_kang_bao_data = self.__load_jia_kang_bao_data__()

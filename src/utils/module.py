@@ -162,185 +162,147 @@ class NpEncoder(json.JSONEncoder):
 
 
 def intent_init():
-    # ==================== 糖尿病专病父+子意图 ====================
-    DM_EXPERT_INTENTS = {
-        "健康咨询": ("dm_health", "健康咨询"),
-        "健康处方": ("dm_diet", "健康处方"),
-        "健康管理总原则咨询": ("dm_principle", "健康管理总原则咨询"),
-        "饮食原则咨询": ("dm_diet_rule", "饮食原则咨询"),
-        "饮食知识咨询": ("dm_diet_knowledge", "饮食知识咨询"),
-        "饮食适宜、禁忌咨询": ("dm_diet_suit", "饮食适宜、禁忌咨询"),
-        "食物营养成分查询": ("dm_food_nutrition", "食物营养成分查询"),
-        "生成食谱": ("dm_diet_rec", "食谱处方解答"),
+    """
+    初始化意图结构，支持多场景结构化组织。
+    返回:
+        - all_scene_intents: dict[str, dict[str, (code, desc)]]
+        - com_intent: list[tuple[condition_fn, (code, desc)]]
+        - flat_all_intents: dict[str, (code, desc)]
+    """
+    all_scene_intents = {
+        "dm_expert": {
+            "健康咨询": ("dm_health", "健康咨询"),
+            "健康处方": ("dm_diet", "健康处方"),
+            "健康管理总原则咨询": ("dm_principle", "健康管理总原则咨询"),
+            "饮食原则咨询": ("dm_diet_rule", "饮食原则咨询"),
+            "饮食知识咨询": ("dm_diet_knowledge", "饮食知识咨询"),
+            "饮食适宜、禁忌咨询": ("dm_diet_suit", "饮食适宜、禁忌咨询"),
+            "食物营养成分查询": ("dm_food_nutrition", "食物营养成分查询"),
+            "生成食谱": ("dm_diet_rec", "食谱处方解答"),
+        },
+        "laikang": {
+            "温泉推荐": ("spa_rec", "温泉推荐"),
+            "温泉知识": ("spa_knowledge", "温泉知识"),
+            "行程推荐": ("route_rec", "行程推荐"),
+            "固安来康郡": ("gu_an_laikangjun", "固安来康郡"),
+        },
+        "medical": {
+            "医疗": ("med_health", "医疗健康"),
+            "辅助诊断": ("auxiliary_diagnosis", "辅助诊断"),
+            "问诊": ("auxiliary_diagnosis", "辅助诊断"),
+            "用药": ("drug_rec", "用药咨询"),
+            "血糖": ("blood_glucose_counseling", "血糖咨询"),
+            "低血压": ("hypotensive_consultation", "低血压咨询"),
+            "BMI": ("bmi_query", "BMI"),
+            "健康知识咨询": ("health_qa", "健康知识科普"),
+            "家康宝": ("jia_kang_bao", "家康宝服务咨询"),
+        },
+        "food": {
+            "饮食": ("food_rec", "饮食处方推荐"),
+        },
+        "purchase": {
+            "食材采购": ("food_purchasing", "食材采购"),
+        },
+        "expert": {
+            "医师": ("call_doctor", "呼叫医师"),
+            "医生": ("call_doctor", "呼叫医师"),
+        },
+        "content": {
+            "音乐": ("musicX", "音乐播放"),
+            "音频": ("audio", "音频播放"),
+            "新闻": ("news", "新闻"),
+            "故事": ("story", "故事"),
+            "圣经": ("AIUI.Bible", "圣经"),
+            "戏曲": ("drama", "戏曲"),
+            "评书": ("storyTelling", "评书"),
+            "有声书": ("AIUI.audioBook", "有声书"),
+            "笑话": ("joke", "笑话"),
+        },
+        "utility": {
+            "天气": ("weather", "天气查询"),
+            "网络": ("websearch", "网络搜索"),
+            "彩票": ("lottery", "彩票"),
+            "解梦": ("dream", "周公解梦"),
+            "计算器": ("AIUI.calc", "计算器"),
+            "翻译": ("translation", "翻译"),
+            "垃圾": ("garbageClassifyPro", "垃圾分类"),
+            "尾号限行": ("carNumber", "尾号限行"),
+            "单位换算": ("AIUI.unitConversion", "单位换算"),
+            "汇率": ("AIUI.forexPro", "汇率"),
+            "眼保健操": ("AIUI.ocularGym", "眼保健操"),
+            "时间日期": ("datetimePro", "时间日期"),
+            "万年历": ("calendar", "万年历"),
+        },
+        "calendar": {
+            "日程管理": ("schedule_manager", "日程管理"),
+        },
+        "other": {
+            "拉群共策": ("shared_decision", "拉群共策"),
+            "新奥百科": ("enn_wiki", "新奥百科知识"),
+            "猜你想问": ("aigc_functions_generate_related_questions", "猜你想问"),
+        },
+        "elderly_cognitive_training": {
+            "记数大师": ("count_memory_game", "记数大师"),
+            "连数方格": ("grid_number_order", "连数方格"),
+            "彩画飞舞": ("sensory_stimulation_game", "彩画飞舞"),
+            "纵横方圆": ("shape_response_training", "纵横方圆"),
+            "风暴加法": ("math_speed_addition", "风暴加法"),
+            "认知训练": ("open_cognitive_training", "认知训练模块"),
+            "运动跟练": ("open_exercise_follow", "运动跟练模块"),
+            "饮食营养": ("open_diet_nutrition", "饮食营养模块"),
+            "成员管理": ("open_member_management", "成员管理模块"),
+        }
     }
 
-    # ==================== 固安来康郡相关 ====================
-    LAKANG_INTENTS = {
-        "温泉推荐": ("spa_rec", "温泉推荐"),
-        "温泉知识": ("spa_knowledge", "温泉知识"),
-        "行程推荐": ("route_rec", "行程推荐"),
-        "固安来康郡": ("gu_an_laikangjun", "固安来康郡"),
-    }
+    # 合并所有关键词意图为扁平结构
+    flat_all_intents = {}
+    for scene_map in all_scene_intents.values():
+        flat_all_intents.update(scene_map)
 
-    # ==================== 医疗健康相关 ====================
-    MEDICAL_INTENTS = {
-        "医疗": ("med_health", "医疗健康"),
-        "辅助诊断": ("auxiliary_diagnosis", "辅助诊断"),
-        "问诊": ("auxiliary_diagnosis", "辅助诊断",),
-        "用药": ("drug_rec", "用药咨询"),
-        "血糖": ("blood_glucose_counseling", "血糖咨询"),
-        "低血压": ("hypotensive_consultation", "低血压咨询"),
-        "BMI": ("bmi_query", "BMI"),
-        "健康知识咨询": ("health_qa", "健康知识科普"),
-        "家康宝": ("jia_kang_bao", "家康宝服务咨询"),
-    }
-
-    # ==================== 饮食营养相关 ====================
-    FOOD_INTENTS = {
-        "饮食": ("food_rec", "饮食处方推荐"),
-        # "饮食营养": ("food_nutri", "饮食营养"),
-        # "饮食处方": ("food_rec", "饮食处方推荐"),
-        # "饮食评价": ("food_eval", "饮食评价"),
-        # "营养其他": ("nutri_other", "营养其他"),
-        # "菜谱": ("cookbook", "菜谱"),
-    }
-
-    # ==================== 食材采购相关 ====================
-    PURCHASE_INTENTS = {
-        "食材采购": ("food_purchasing", "食材采购"),
-    }
-
-    # ==================== 专业人员咨询 ====================
-    EXPERT_INTENTS = {
-        "医师": ("call_doctor", "呼叫医师"),
-        "医生": ("call_doctor", "呼叫医师"),
-        # "运动师": ("call_sportMaster", "呼叫运动师"),
-        # "心理": ("call_psychologist", "呼叫情志师"),
-        # "情志": ("call_psychologist", "呼叫情志师"),
-        # "营养师": ("call_dietista", "呼叫营养师"),
-        # "健管师": ("call_health_manager", "呼叫健管师"),
-        # "五师": ("wushi", "呼叫五师"),
-        # "呼叫其他": ("call_other", "呼叫其他"),
-    }
-
-    # ==================== 内容服务相关 ====================
-    CONTENT_INTENTS = {
-        "音乐": ("musicX", "音乐播放"),
-        "音频": ("audio", "音频播放"),
-        "新闻": ("news", "新闻"),
-        "故事": ("story", "故事"),
-        "圣经": ("AIUI.Bible", "圣经"),
-        "戏曲": ("drama", "戏曲"),
-        "评书": ("storyTelling", "评书"),
-        "有声书": ("AIUI.audioBook", "有声书"),
-        "笑话": ("joke", "笑话"),
-    }
-
-    # ==================== 实用工具相关 ====================
-    UTILITY_INTENTS = {
-        "天气": ("weather", "天气查询"),
-        "网络": ("websearch", "网络搜索"),
-        "彩票": ("lottery", "彩票"),
-        "解梦": ("dream", "周公解梦"),
-        "计算器": ("AIUI.calc", "计算器"),
-        "翻译": ("translation", "翻译"),
-        "垃圾": ("garbageClassifyPro", "垃圾分类"),
-        "尾号限行": ("carNumber", "尾号限行"),
-        "单位换算": ("AIUI.unitConversion", "单位换算"),
-        "汇率": ("AIUI.forexPro", "汇率"),
-        "眼保健操": ("AIUI.ocularGym", "眼保健操"),
-        "时间日期": ("datetimePro", "时间日期"),
-        "万年历": ("calendar", "万年历"),
-    }
-    # ==================== 日程管理 ====================
-    DAYLY_INTENTS = {
-        "日程管理": ("schedule_manager", "日程管理"), }
-
-    # ==================== 其他功能 ====================
-    OTHER_INTENTS = {
-        "拉群共策": ("shared_decision", "拉群共策"),
-        "新奥百科": ("enn_wiki", "新奥百科知识"),
-        "猜你想问": ("aigc_functions_generate_related_questions", "猜你想问"),
-    }
-
-    # ==================== 老年认知训练 ====================
-    COGNITIVE_TRAINING_INTENTS = {
-        "记数大师": ("count_memory_game", "记数大师"),
-        "连数方格": ("grid_number_order", "连数方格"),
-        "彩画飞舞": ("sensory_stimulation_game", "彩画飞舞"),
-        "纵横方圆": ("shape_response_training", "纵横方圆"),
-        "风暴加法": ("math_speed_addition", "风暴加法"),
-        "认知训练": ("open_cognitive_training", "认知训练模块"),
-        "运动跟练": ("open_exercise_follow", "运动跟练模块"),
-        "饮食营养": ("open_diet_nutrition", "饮食营养模块"),
-        "成员管理": ("open_member_management", "成员管理模块"),
-    }
-
-    # 复合条件意图
-    COMPOUND_INTENTS = [
-        (lambda t: "血压测量" in t or "测量血压" in t,
-         ("remind_take_blood_pressure", "提醒他人测量血压")),
-        (lambda t: "运动切换" in t or "切换运动" in t,
-         ("switch_exercise", "运动切换")),
-        (lambda t: "数字人" in t and "换回" in t,
-         ("digital_image_back", "换回数字人皮肤")),
-        (lambda t: "数字人" in t and "切换" in t,
-         ("digital_image_switch", "切换数字人皮肤")),
-        (lambda t: "功能页面" in t and "打开" in t,
-         ("open_Function", "打开功能页面")),
-        (lambda t: "设置页面" in t and "打开" in t,
-         ("open_page", "打开页面")),
-        (lambda t: "非会议" in t and "日程管理" in t,
-         ("other_schedule", "非会议日程管理")),
-        (lambda t: "会议" in t and "日程管理" in t and "非会议" not in t,
-         ("meeting_schedule", "会议日程管理")),
-        (lambda t: "食材采购清单" in t and "管理" in t,
-         ("food_purchasing_list_management", "食材采购清单管理")),
-        (lambda t: "食材采购清单" in t and "确认" in t,
-         ("food_purchasing_list_verify", "食材采购清单确认")),
-        (lambda t: "食材采购清单" in t and "关闭" in t,
-         ("food_purchasing_list_close", "食材采购清单关闭")),
-        (lambda t: "食材采购清单" in t and "生成" in t,
-         ("create_food_purchasing_list", "生成食材采购清单")),
+    # 复合条件意图规则
+    com_intent = [
+        (lambda t: "血压测量" in t or "测量血压" in t, ("remind_take_blood_pressure", "提醒他人测量血压")),
+        (lambda t: "运动切换" in t or "切换运动" in t, ("switch_exercise", "运动切换")),
+        (lambda t: "数字人" in t and "换回" in t, ("digital_image_back", "换回数字人皮肤")),
+        (lambda t: "数字人" in t and "切换" in t, ("digital_image_switch", "切换数字人皮肤")),
+        (lambda t: "功能页面" in t and "打开" in t, ("open_Function", "打开功能页面")),
+        (lambda t: "设置页面" in t and "打开" in t, ("open_page", "打开页面")),
+        (lambda t: "非会议" in t and "日程管理" in t, ("other_schedule", "非会议日程管理")),
+        (lambda t: "会议" in t and "日程管理" in t and "非会议" not in t, ("meeting_schedule", "会议日程管理")),
+        (lambda t: "食材采购清单" in t and "管理" in t, ("food_purchasing_list_management", "食材采购清单管理")),
+        (lambda t: "食材采购清单" in t and "确认" in t, ("food_purchasing_list_verify", "食材采购清单确认")),
+        (lambda t: "食材采购清单" in t and "关闭" in t, ("food_purchasing_list_close", "食材采购清单关闭")),
+        (lambda t: "食材采购清单" in t and "生成" in t, ("create_food_purchasing_list", "生成食材采购清单")),
     ]
 
-    # 合并所有简单意图
-    ALL_INTENTS = {}
-    for intent_dict in [
-        DM_EXPERT_INTENTS,
-        LAKANG_INTENTS,
-        MEDICAL_INTENTS,
-        FOOD_INTENTS,
-        PURCHASE_INTENTS,
-        EXPERT_INTENTS,
-        CONTENT_INTENTS,
-        UTILITY_INTENTS,
-        DAYLY_INTENTS,
-        OTHER_INTENTS,
-        COGNITIVE_TRAINING_INTENTS
-    ]:
-        ALL_INTENTS.update(intent_dict)
-    return ALL_INTENTS, COMPOUND_INTENTS
+    return all_scene_intents, com_intent, flat_all_intents
 
-
-def get_intent(text, all_intent, com_intent):
-    """通过关键词解析意图->code"""
-    # 1. 检查复合条件
-    for condition, intent in com_intent:
-        if condition(text):
-            code, desc = intent
-            logger.debug(f"识别出的意图:{text} code:{code}")
+def get_intent(text, all_intent, com_intent, scene_code=None):
+    """
+    :param text: 用户输入内容
+    :param all_intent: 所有场景意图结构
+    :param com_intent: 复合意图列表
+    :param scene_code: 场景编码，只有 cognitive_training 才启用分场景匹配
+    """
+    # ✅ Step 1：先走复合意图匹配
+    for cond_fn, (code, desc) in com_intent:
+        if cond_fn(text):
             return code, desc
 
-    # 2. 检查简单映射
-    for keyword in all_intent.keys():
+    # ✅ Step 2：仅当是 cognitive_training，才走场景内匹配
+    if scene_code == "elderly_cognitive_training":
+        intent_pool = all_intent.get("elderly_cognitive_training", {})
+    else:
+        # ✅ 默认老逻辑：合并所有场景词典做全局匹配
+        intent_pool = {}
+        for group in all_intent.values():
+            intent_pool.update(group)
+
+    # ✅ Step 3：关键词匹配（按长度倒序）
+    for keyword in sorted(intent_pool.keys(), key=len, reverse=True):
         if keyword in text:
-            (code, desc) = all_intent[keyword]
-            logger.debug(f"识别出的意图:{text} code:{code}")
-            return code, desc
+            return intent_pool[keyword]
 
-    # 3. 默认返回
-    logger.debug(f"识别出的意图:{text} code:other")
     return "other", "日常对话"
 
 
@@ -3265,10 +3227,14 @@ async def async_init_langfuse_trace_with_input(
     return trace, generation, langfuse, tokenizer, input_data
 
 
-ALL_INTENTS, _ = intent_init()
+ALL_INTENTS, COM_INTENT = intent_init()[:2]
 
-# 构建 intent_code -> intent_name 的映射
-INTENT_NAME_MAP = {v[0]: (v[0], v[1]) for v in ALL_INTENTS.values()}
+# 扁平合并所有意图（兼容旧逻辑）
+flat_all_intents = {}
+for group in ALL_INTENTS.values():
+    flat_all_intents.update(group)
+
+INTENT_NAME_MAP = {code: (code, desc) for code, desc in flat_all_intents.values()}
 INTENT_NAME_MAP["other"] = ("other", "闲聊/其他")
 
 
