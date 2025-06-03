@@ -3932,17 +3932,6 @@ async def check_image_accessible(image_url: str, timeout: int = 5) -> bool:
     return False
 
 
-def clean_input(text: str) -> str:
-    # 去除不可见字符（保留空格）
-    text = re.sub(r"[\u200b\u3000\uFEFF]", "", text)
-    # 全角转半角
-    text = ''.join(
-        chr(ord(char) - 65248) if 65281 <= ord(char) <= 65374 else char
-        for char in text
-    )
-    return text
-
-
 def exact_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
     return {word for word in sensitive_words if word in user_input}
 
@@ -3957,13 +3946,10 @@ def regex_match(user_input: str, regex_patterns: List[str]) -> Set[str]:
 
 
 def detect_sensitive_all(user_input: str, sensitive_words: Set[str], regex_patterns: List[str]) -> Dict[str, any]:
-    # Step 1: 清洗输入
-    cleaned_input = clean_input(user_input)
-
-    # Step 2: 多种匹配方式
-    matched_exact = exact_match(cleaned_input, sensitive_words)
-    matched_token = token_match(cleaned_input, sensitive_words)
-    matched_regex = regex_match(cleaned_input, regex_patterns)
+    # 多种匹配方式
+    matched_exact = exact_match(user_input, sensitive_words)
+    matched_token = token_match(user_input, sensitive_words)
+    matched_regex = regex_match(user_input, regex_patterns)
 
     matched_all = matched_exact | matched_token | matched_regex
 
