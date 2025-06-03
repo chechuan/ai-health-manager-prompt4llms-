@@ -24,8 +24,6 @@ from src.utils.module import (
 sys.path.append(".")
 from src.prompt.model_init import callLLM, acallLLtrace
 from src.utils.Logger import logger
-from data.sensitive_data.regex_patterns import REGEX_PATTERNS
-from src.utils.module import detect_sensitive_all
 
 
 class ChatterGailyAssistant:
@@ -268,29 +266,6 @@ Begin!"""
         messages = [{"role": "system", "content": system_prompt}] + history
         messages = compose_prompt_react(messages)
 
-        # ✅ Step: 提取用户输入（从 history 中逆序找最后一个 user 发言）
-        user_input = ""
-        for item in reversed(history):
-            if item.get("role") == "user":
-                user_input = item.get("content", "")
-                break
-
-        # ✅ Step: 敏感词风控检查
-        detect_result = detect_sensitive_all(
-            user_input=user_input,
-            sensitive_words=self.gsr.sensitive_words,
-            regex_patterns=REGEX_PATTERNS,
-        )
-        if detect_result["is_blocked"]:
-            logger.warning(f"⚠️ get_next_step 命中敏感词: {detect_result['matched']}")
-            history.append({
-                "intentCode": "other",
-                "role": "assistant",
-                "content": detect_result["response"],
-                "function_call": {"name": "convBlocked", "arguments": detect_result["response"]}
-            })
-            return "convBlocked", history  # action 是 convBlocked，直接返回
-
         logger.debug(
             f"闲聊识别Action LLM Input: \n{json.dumps(messages, ensure_ascii=False)}"
         )
@@ -387,31 +362,6 @@ Begin!"""
         messages = self.__compose_func_reply__(history)
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
-
-        # 从 history 中逆序查找，取最后一个用户发言
-        user_input = ""
-        for item in reversed(history):
-            if item.get("role") == "user":
-                user_input = item.get("content", "")
-                break
-
-        # ② 敏感词检测（同步版）
-        detect_result = detect_sensitive_all(
-            user_input=user_input,
-            sensitive_words=self.gsr.sensitive_words,
-            regex_patterns=REGEX_PATTERNS
-        )
-
-        if detect_result["is_blocked"]:
-            logger.warning(f"❌ 输入包含敏感内容，匹配项: {detect_result['matched']}")
-            content = detect_result["response"]
-            history.append({
-                "intentCode": "other",
-                "role": "assistant",
-                "content": content,
-                "function_call": {"name": "convBlocked", "arguments": content},
-            })
-            return content, history
 
         # ================== 提取意图 & 获取 Langfuse 配置 ====================
         intent_code = "other"
@@ -598,24 +548,6 @@ Begin!"""
                         8. 你要具备积极的价值观，避免输出有毒有害的内容禁止输出黄赌毒相关信息
                         9. 当我问你我是谁时，你要知道我是你的客户"""
         messages = [{"role": "system", "content": system_prompt}] + messages
-        # 获取最后一条用户输入
-        user_input = ""
-        for msg in reversed(messages):
-            if msg.get("role") == "user":
-                user_input = msg.get("content", "")
-                break
-
-        # 敏感词检测
-        detect_result = detect_sensitive_all(
-            user_input=user_input,
-            sensitive_words=self.gsr.sensitive_words,
-            regex_patterns=REGEX_PATTERNS
-        )
-
-        if detect_result["is_blocked"]:
-            logger.warning(f"❌ 输入包含敏感内容，匹配项: {detect_result['matched']}")
-            return detect_result["response"]
-
         logger.debug(f"闲聊 LLM Input: {repr(messages)}")
         response = callLLM(
             history=messages,

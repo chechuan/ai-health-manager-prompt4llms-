@@ -48,7 +48,9 @@ from src.utils.module import (
     get_intent,
     make_meta_ret,
     parse_latest_plugin_call,
+    detect_sensitive_all
 )
+from data.sensitive_data.regex_patterns import REGEX_PATTERNS
 from src.pkgs.models.health_expert_model import HealthExpertModel
 
 
@@ -758,6 +760,14 @@ class Chat_v2:
                 _iterable = self.chatter_assistant.run_yield(history=kwargs["history"], kwargs=kwargs)
             else:
                 _iterable = self.pipeline(*args, **kwargs)
+
+            # 风控：从 history 中拿最近一条 user 输入
+            user_input = ""
+            for msg in reversed(kwargs.get("history", [])):
+                if msg.get("role") == "user":
+                    user_input = msg.get("content", "")
+                    break
+
             # while True:
             async for yield_item in _iterable:
                 try:
@@ -772,6 +782,18 @@ class Chat_v2:
                             "data"
                         ].get("dataSource"):
                             yield_item["data"]["dataSource"] = DEFAULT_DATA_SOURCE
+
+                        # 🔒 风控判断，仅在 Result 类型时触发
+                        if yield_item["data"]["type"] == "Result":
+                            detect_result = await detect_sensitive_all(
+                                user_input=user_input,
+                                sensitive_words=self.gsr.sensitive_words,
+                                regex_patterns=REGEX_PATTERNS
+                            )
+                            if detect_result["is_blocked"]:
+                                logger.warning(f"⚠️ 命中敏感词，替换回答: {detect_result['matched']}")
+                                yield_item["data"]["message"] = detect_result["response"]
+
                         yield yield_item
                 except StopIteration as err:
                     break

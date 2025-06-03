@@ -3932,24 +3932,23 @@ async def check_image_accessible(image_url: str, timeout: int = 5) -> bool:
     return False
 
 
-def exact_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
+async def exact_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
     return {word for word in sensitive_words if word in user_input}
 
 
-def token_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
+async def token_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
     tokens = jieba.lcut(user_input)
     return {token for token in tokens if token in sensitive_words}
 
 
-def regex_match(user_input: str, regex_patterns: List[str]) -> Set[str]:
+async def regex_match(user_input: str, regex_patterns: List[str]) -> Set[str]:
     return {pat for pat in regex_patterns if re.search(pat, user_input, re.IGNORECASE)}
 
 
-def detect_sensitive_all(user_input: str, sensitive_words: Set[str], regex_patterns: List[str]) -> Dict[str, any]:
-    # 多种匹配方式
-    matched_exact = exact_match(user_input, sensitive_words)
-    matched_token = token_match(user_input, sensitive_words)
-    matched_regex = regex_match(user_input, regex_patterns)
+async def detect_sensitive_all(user_input: str, sensitive_words: Set[str], regex_patterns: List[str]) -> Dict[str, any]:
+    matched_exact = await exact_match(user_input, sensitive_words)
+    matched_token = await token_match(user_input, sensitive_words)
+    matched_regex = await regex_match(user_input, regex_patterns)
 
     matched_all = matched_exact | matched_token | matched_regex
 
