@@ -21,11 +21,13 @@ import pandas as pd
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import (
-    Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional
+    Any, AnyStr, AsyncGenerator, Dict, Generator, List, Tuple, Union, Optional, Set
 )
 from contextlib import contextmanager
 from collections import OrderedDict
 from scipy.signal import find_peaks
+import jieba
+jieba.setLogLevel(20)
 
 from lunar_python import Lunar, Solar
 
@@ -3928,3 +3930,49 @@ async def check_image_accessible(image_url: str, timeout: int = 5) -> bool:
             logger.exception(f"[check_image_accessible] GET failed: {image_url} | err: {repr(e)}")
 
     return False
+
+
+def clean_input(text: str) -> str:
+    # 去除不可见字符和空格
+    text = re.sub(r"[\s\u200b\u3000\uFEFF]", "", text)
+    # 全角转半角（ＡＢＣ１２３ → ABC123）
+    text = ''.join(
+        chr(ord(char) - 65248) if 65281 <= ord(char) <= 65374 else char
+        for char in text
+    )
+    return text
+
+
+def exact_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
+    return {word for word in sensitive_words if word in user_input}
+
+
+def token_match(user_input: str, sensitive_words: Set[str]) -> Set[str]:
+    tokens = jieba.lcut(user_input)
+    return {token for token in tokens if token in sensitive_words}
+
+
+def regex_match(user_input: str, regex_patterns: List[str]) -> Set[str]:
+    return {pat for pat in regex_patterns if re.search(pat, user_input, re.IGNORECASE)}
+
+
+def detect_sensitive_all(user_input: str, sensitive_words: Set[str], regex_patterns: List[str]) -> Dict[str, any]:
+    # Step 1: 清洗输入
+    cleaned_input = clean_input(user_input)
+
+    # Step 2: 多种匹配方式
+    matched_exact = exact_match(cleaned_input, sensitive_words)
+    matched_token = token_match(cleaned_input, sensitive_words)
+    matched_regex = regex_match(cleaned_input, regex_patterns)
+
+    matched_all = matched_exact | matched_token | matched_regex
+
+    return {
+        "matched": list(matched_all),
+        "is_blocked": bool(matched_all),
+        "response": (
+            "这个问题我还没学会怎么回答。如果你有其他健康、运动、饮食方面的问题，我很乐意帮忙～"
+            if matched_all else None
+        )
+    }
+

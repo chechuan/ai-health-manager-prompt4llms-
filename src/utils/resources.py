@@ -12,7 +12,7 @@ import os
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import Generator, Dict, Union, List, Literal, AsyncGenerator
+from typing import Generator, Dict, Union, List, Literal, AsyncGenerator, Set
 from transformers import AutoTokenizer
 
 import openai
@@ -75,6 +75,14 @@ class InitAllResource:
         self.exercise_data = self.__load_exercise_data__()
 
         self.qwen_tokenizer = self.__init_qwen_tokenizer__()
+
+        self.sensitive_words = self.__load_sensitive_words__()
+
+    def __load_sensitive_words__(self) -> Set[str]:
+        """加载敏感词表（从 .txt 文件）"""
+        txt_path = Path("data", "sensitive_data", "sensitive_words.txt")
+        with txt_path.open("r", encoding="utf-8") as f:
+            return set(f.read().splitlines())
 
     def __init_qwen_tokenizer__(self):
         """加载 Qwen Tokenizer（本地）"""

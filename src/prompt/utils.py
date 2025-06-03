@@ -24,6 +24,8 @@ from src.utils.module import (
 sys.path.append(".")
 from src.prompt.model_init import callLLM, acallLLtrace
 from src.utils.Logger import logger
+from data.sensitive_data.regex_patterns import REGEX_PATTERNS
+from src.utils.module import detect_sensitive_all
 
 
 class ChatterGailyAssistant:
@@ -361,6 +363,31 @@ Begin!"""
         messages = self.__compose_func_reply__(history)
         messages = [{"role": "system", "content": system_prompt}] + messages
         logger.debug(f"闲聊 LLM Input: \n{json.dumps(messages, ensure_ascii=False)}")
+
+        # 从 history 中逆序查找，取最后一个用户发言
+        user_input = ""
+        for item in reversed(history):
+            if item.get("role") == "user":
+                user_input = item.get("content", "")
+                break
+
+        # ② 敏感词检测（同步版）
+        detect_result = detect_sensitive_all(
+            user_input=user_input,
+            sensitive_words=self.gsr.sensitive_words,
+            regex_patterns=REGEX_PATTERNS
+        )
+
+        if detect_result["is_blocked"]:
+            logger.warning(f"❌ 输入包含敏感内容，匹配项: {detect_result['matched']}")
+            content = detect_result["response"]
+            history.append({
+                "intentCode": "other",
+                "role": "assistant",
+                "content": content,
+                "function_call": {"name": "convBlocked", "arguments": content},
+            })
+            return content, history
 
         # ================== 提取意图 & 获取 Langfuse 配置 ====================
         intent_code = "other"
