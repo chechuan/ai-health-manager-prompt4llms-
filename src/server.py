@@ -187,11 +187,13 @@ class RabbitMQConsumer:
                 channel.start_consuming()
 
             except pika.exceptions.AMQPConnectionError as e:
-                logger.warning(f"Connection lost for {self.queue_name}, reconnecting...")
+                # logger.warning(f"Connection lost for {self.queue_name}, reconnecting...")
+                pass
                 # if not self.should_stop.is_set():
 
             except Exception as e:
-                logger.error(f"Unexpected error in {self.queue_name} consumer: {e}")
+                # logger.error(f"Unexpected error in {self.queue_name} consumer: {e}")
+                pass
                 # if not self.should_stop.is_set():
                 #     time.sleep(1)
             # finally:

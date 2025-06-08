@@ -78,6 +78,19 @@ class InitAllResource:
 
         self.sensitive_words = self.__load_sensitive_words__()
 
+        self.simulation_rule_base = self.__load_simulation_rule_base__()
+
+    def __load_simulation_rule_base__(self) -> List[Dict]:
+        """通用规则加载：用于诊断、预测等用途"""
+        try:
+            mysql_conn = MysqlConnector(**self.mysql_config)
+            rules = mysql_conn.query("SELECT * FROM simulation_rules")
+            logger.info(f"✅ 加载 simulation_rules 表成功，共 {len(rules)} 条启用规则")
+            return rules
+        except Exception as e:
+            logger.error(f"❌ 加载 simulation_rules 表失败: {e}")
+            return []
+
     def __load_sensitive_words__(self) -> Set[str]:
         """加载敏感词表（从 .txt 文件）"""
         txt_path = Path("data", "sensitive_data", "sensitive_words.txt")
