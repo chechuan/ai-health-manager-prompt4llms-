@@ -1627,3 +1627,50 @@ class JunWangGongJianRequest(BaseModel):
         ],
         description="健康检测数据"
     )
+class WeightStatusEvaluationRequest(BaseModel):
+    """体重状态评估请求模型"""
+    intentCode: Literal["aigc_functions_weight_status_evaluation"] = Field(
+        description="意图编码/事件编码"
+    )
+    age: int = Field(..., description="年龄")
+    gender: Literal["男", "女"] = Field(..., description="性别")
+    height: float = Field(..., description="身高(cm)")
+    weight: float = Field(..., description="体重(kg)")
+    bodyFatRate: Optional[float] = Field(None, description="体脂率(%)")
+
+
+class AbdominalObesityEvaluationRequest(BaseModel):
+    """腹型肥胖评估请求模型"""
+    intentCode: Literal["aigc_functions_abdominal_obesity_evaluation"] = Field(
+        description="意图编码/事件编码"
+    )
+    gender: Literal["男", "女"] = Field(..., description="性别")
+    height: float = Field(..., description="身高(cm)")
+    waistline: float = Field(..., description="腰围(cm)")
+    hipline: float = Field(..., description="臀围(cm)")
+    weightStatus: str = Field(..., description="体重状态")
+
+
+class BmrCalculationRequest(BaseModel):
+    """基础代谢计算请求模型"""
+    intentCode: Literal["aigc_functions_bmr_calculation"] = Field(
+        description="意图编码/事件编码"
+    )
+    age: int = Field(..., description="年龄")
+    gender: Literal["男", "女"] = Field(..., description="性别")
+    height: float = Field(..., description="身高(cm)")
+    weight: float = Field(..., description="体重(kg)")
+
+
+class PalEnergyCostRequest(BaseModel):
+    """日常体力活动消耗请求模型"""
+    intentCode: Literal["aigc_functions_pal_energy_cost"] = Field(
+        description="意图编码/事件编码"
+    )
+    bmr: float = Field(..., description="基础代谢(kcal)")
+    palCategory: Literal["极轻", "轻", "中", "高", "极高"] = Field(
+        ..., description="体力活动等级"
+    )
+
+
+

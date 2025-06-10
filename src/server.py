@@ -35,6 +35,7 @@ from src.pkgs.models.health_expert_model import HealthExpertModel
 from src.pkgs.models.itinerary_model import ItineraryModel
 from src.pkgs.models.bath_plan_model import BathPlanModel
 from src.pkgs.models.multimodal_model import MultiModalModel
+from src.pkgs.models.simulation_model import SimulationModel
 from src.pkgs.pipeline import Chat_v2
 from src.utils.api_protocal import (
     AigcFunctionsCompletionResponse,
@@ -1409,6 +1410,18 @@ def mount_multimodal_endpoints(app: FastAPI):
         finally:
             return ret
 
+
+def mount_weight_management_endpoints(app: FastAPI):
+    @app.route("/weight_management", methods=["POST"])
+    async def _weight_management(request: Request):
+        """体重管理相关算法接口"""
+        try:
+            param = await async_accept_param_purge(request, endpoint="/weight_management")
+            ret = await simulation_model.call_function(**param)
+            return make_result(items=ret)
+        except Exception as err:
+            logger.exception(err)
+            return make_result(head=500, msg=repr(err))
     @app.route("/func_eval/diet_recog", methods=["post"])
     async def _func_eval_diet_recog(request: Request):
         """菜品识别，提取菜品名称、数量、单位信息"""
@@ -2440,6 +2453,7 @@ def create_app():
     mount_rule_endpoints(app)
     mount_rec_endpoints(app)
     mount_multimodal_endpoints(app)
+    mount_weight_management_endpoints(app)
     MakeFastAPIOffline(app)
     return app
 
@@ -2456,6 +2470,7 @@ def prepare_for_all():
     global itinerary_model
     global bath_plan_model
     global multimodal_model
+    global simulation_model
 
     gsr = InitAllResource()
     args = gsr.args
@@ -2468,6 +2483,7 @@ def prepare_for_all():
     itinerary_model = ItineraryModel(gsr)
     bath_plan_model = BathPlanModel(gsr)
     multimodal_model = MultiModalModel(gsr)
+    simulation_model = SimulationModel(gsr)
 
 
 # app = create_app()
